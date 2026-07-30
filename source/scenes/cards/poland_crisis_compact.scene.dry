@@ -1,0 +1,148 @@
+title: A Crisis Compact
+subtitle: A hostile cabinet may still need votes for a narrow material response.
+new-page: true
+is-card: true
+tags: poland_negotiation_card
+view-if: left_in_government = 0 and government_has_confidence = 1 and caretaker_government = 0 and month_actions < max_month_actions and poland_crisis_compact_timer <= 0 and national_crisis_pressure >= 25
+on-arrival: month_actions += 1; poland_crisis_compact_timer = 4
+card-image: img/poland/deck_social.svg
+
+= A crisis compact from opposition
+
+**Government:** [+ government_name +], led by [+ prime_minister +].  
+**Lewica's role:** [+ left_role +].
+
+The cabinet does not become friendly because the country is under pressure.
+It may, however, exchange a bounded concession for votes, implementation
+capacity and shared responsibility.
+
+Current leverage: **[+ negotiation_leverage +]/100**. Crisis pressure:
+**[+ national_crisis_pressure +]/100**. Government hostility:
+**[+ government_negotiation_hostility +]/100**.
+
+[? if government_party = "pis": PiS demands **54** for a deal. The score is
+the visible leverage above plus the option bonus; there is no hidden roll.?]
+[? if government_party != "pis": The current cabinet demands **44**. The score
+is the visible leverage above plus the option bonus; there is no hidden roll.?]
+
+- @targeted
+- @maximal
+- @walk
+
+@targeted
+title: Offer votes for a ninety-day wage, energy and care shield
+subtitle: Cost: 1 resource · score +10 · success at 54 under PiS, 44 otherwise.
+choose-if: resources >= 1
+unavailable-subtitle: A costed amendment and monitoring team require one resource.
+on-arrival: {!
+Q.resources -= 1;
+Q.negotiation_attempts += 1;
+Q.negotiation_last_score = Math.round(
+    (Number(Q.negotiation_leverage) || 0) + 10
+);
+Q.negotiation_last_threshold =
+    Q.government_party == "pis" ? 54 : 44;
+Q.negotiation_last_result =
+    Q.negotiation_last_score >= Q.negotiation_last_threshold
+        ? "Targeted crisis compact accepted"
+        : "Targeted crisis compact refused";
+Q.negotiation_success =
+    Q.negotiation_last_score >= Q.negotiation_last_threshold ? 1 : 0;
+if (Q.negotiation_success) {
+    Q.negotiation_successes += 1;
+    Q.negotiation_capital += 3;
+    Q.household_security += 5;
+    Q.health_capacity += 2;
+    Q.government_delivery += 3;
+    Q.public_service_families_left_affinity += 3;
+    Q.industrial_logistics_left_affinity += 3;
+    Q.provincial_welfare_left_affinity += 2;
+    Q.pis_relation += Q.government_party == "pis" ? 3 : 0;
+    Q.ko_relation += Q.government_party == "ko" ? 3 : 0;
+    Q.public_trust += 2;
+    Q.news_headline =
+        "A costed opposition compact wins a narrow government concession";
+} else {
+    Q.negotiation_capital -= 2;
+    Q.public_trust -= 1;
+    Q.pis_cohabitation_rally +=
+        Q.government_party == "pis" ? 3 : 0;
+    Q.news_headline =
+        "The government refuses the crisis compact and claims the offer was theatre";
+}
+!}
+go-to: result
+
+@maximal
+title: Demand the whole Left emergency programme
+subtitle: Cost: 2 resources · score +16 · threshold rises by 12 for the larger package.
+choose-if: resources >= 2
+unavailable-subtitle: The full package requires two resources of drafting and coalition work.
+on-arrival: {!
+Q.resources -= 2;
+Q.negotiation_attempts += 1;
+Q.negotiation_last_score = Math.round(
+    (Number(Q.negotiation_leverage) || 0) + 16
+);
+Q.negotiation_last_threshold =
+    (Q.government_party == "pis" ? 54 : 44) + 12;
+Q.negotiation_last_result =
+    Q.negotiation_last_score >= Q.negotiation_last_threshold
+        ? "Full emergency programme accepted"
+        : "Full emergency programme refused";
+Q.negotiation_success =
+    Q.negotiation_last_score >= Q.negotiation_last_threshold ? 1 : 0;
+if (Q.negotiation_success) {
+    Q.negotiation_successes += 1;
+    Q.negotiation_capital += 5;
+    Q.household_security += 8;
+    Q.health_capacity += 4;
+    Q.labor_credibility += 5;
+    Q.government_delivery += 5;
+    Q.public_service_families_left_affinity += 4;
+    Q.industrial_logistics_left_affinity += 4;
+    Q.provincial_welfare_left_affinity += 3;
+    Q.party_unity += 2;
+    Q.fiscal_stress += 4;
+    Q.news_headline =
+        "Crisis pressure forces the cabinet to accept a broad Left package";
+} else {
+    Q.negotiation_capital -= 3;
+    Q.party_unity += 1;
+    Q.public_trust -= 2;
+    Q.pis_cohabitation_rally +=
+        Q.government_party == "pis" ? 5 : 0;
+    Q.news_headline =
+        "The maximal package unites the Left and gives the cabinet an easy refusal";
+}
+!}
+go-to: result
+
+@walk
+title: Refuse shared responsibility and publish the government's refusal price
+subtitle: No deal test · opposition clarity +3 unity · crisis delivery does not improve.
+on-arrival: negotiation_success = 0; negotiation_last_result = "No compact attempted"; negotiation_last_score = negotiation_leverage; negotiation_last_threshold = 54 if government_party = "pis"; negotiation_last_threshold = 44 if government_party != "pis"; party_unity += 3; media_capacity += 2; government_delivery -= 1; public_trust -= 1; pis_relation -= 2; ko_relation -= 1; news_headline = "Lewica leaves the crisis response entirely to the cabinet"
+go-to: result
+
+@result
+title: The crisis offer
+new-page: true
+
+= A visible bargaining result
+
+**[+ negotiation_last_result +]**  
+Score **[+ negotiation_last_score +]** · required **[+
+negotiation_last_threshold +]**.
+
+[? if negotiation_success: The agreement is narrow, published and
+implementable. Lewica remains outside government; it has bought policy, not a
+ministry or a share of the state budget.?]
+
+[? if not negotiation_success and negotiation_last_result != "No compact attempted":
+The cabinet keeps control of the response and gains a short confrontation.
+Lewica keeps its votes and pays for a failed approach.?]
+
+[? if negotiation_last_result = "No compact attempted": No causal ambiguity
+remains: cabinet delivery and failure now belong to the government alone.?]
+
+- #poland_card_finish

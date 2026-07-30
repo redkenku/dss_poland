@@ -1,376 +1,1129 @@
-title: Status
+title: Polish Red Autumn status
 new-page: true
 is-special: true
 on-arrival: {!
-if (Q.unemployed) {
-    Q.unemployed_2 = Q.unemployed.toFixed(1);
+const statusNumber = function(value, fallback) {
+    const parsed = Number(value);
+    return Number.isFinite(parsed) ? parsed : fallback;
+};
+const statusText = function(value, fallback) {
+    return typeof value === "string" && value.trim().length
+        ? value
+        : fallback;
+};
+const statusOneDecimal = function(value, fallback) {
+    return Math.round(statusNumber(value, fallback) * 10) / 10;
+};
+
+// The sidebar owns display-only aliases. It deliberately does not normalise or
+// repair substantive campaign state merely because the player changed tabs.
+Q.status_started = Q.started ? 1 : 0;
+Q.status_date = statusText(Q.date_label, "October 2019");
+Q.status_headline = statusText(
+    Q.news_headline,
+    "The Left prepares its return to the Sejm"
+);
+Q.status_difficulty = statusText(Q.difficulty_name, "Precarious");
+Q.status_position = statusText(Q.position, "Parliamentary opposition");
+Q.status_project = statusText(
+    Q.left_project,
+    "Lewica parliamentary alliance"
+);
+Q.status_candidate = statusText(Q.presidential_candidate, "Undecided");
+Q.status_pres_phase = statusText(Q.pres_2020_phase, "Not begun");
+Q.status_pres_visible =
+    Q.pres_2020_active || Q.pres_first_round_complete ? 1 : 0;
+Q.status_pres_r1_complete = Q.pres_first_round_complete ? 1 : 0;
+Q.status_pres_runoff_complete = Q.pres_runoff_complete ? 1 : 0;
+Q.status_pres_left_r1 = statusOneDecimal(Q.presidential_result, 0);
+Q.status_pres_r1_leader = statusText(Q.pres_r1_leader_name, "—");
+Q.status_pres_r1_runner = statusText(Q.pres_r1_runner_name, "—");
+Q.status_pres_finalist_a = statusText(Q.pres_finalist_a_name, "—");
+Q.status_pres_finalist_b = statusText(Q.pres_finalist_b_name, "—");
+Q.status_pres_runoff_a = statusOneDecimal(Q.pres_runoff_display_a, 0);
+Q.status_pres_runoff_b = statusOneDecimal(Q.pres_runoff_display_b, 0);
+Q.status_pres_winner = statusText(Q.pres_runoff_winner_name, "—");
+Q.status_pres_result_label = Q.trz_blocked
+    ? "Certified winner"
+    : (Q.trzaskowski_won && !Q.trz_inaugurated
+        ? "President-elect"
+        : "President");
+Q.status_trz_route_visible = Q.trzaskowski_won ? 1 : 0;
+Q.status_trz_inauguration = statusText(
+    Q.trz_inauguration_status,
+    "Certification pending"
+);
+Q.status_trz_temperature = Math.round(
+    statusNumber(Q.trz_cohabitation_temperature, 0)
+);
+Q.status_trz_backlash = Math.round(
+    statusNumber(Q.trz_right_backlash, 0)
+);
+Q.status_trz_fragmentation = Math.round(
+    statusNumber(Q.trz_right_fragmentation, 0)
+);
+Q.status_trz_vetoes = Math.round(statusNumber(Q.trz_vetoes, 0));
+Q.status_trz_abortion = statusText(
+    Q.trz_abortion_veto_policy,
+    "No commitment"
+);
+Q.status_trz_marriage = statusText(
+    Q.trz_marriage_veto_policy,
+    "No commitment"
+);
+Q.status_pres_endorsement = statusText(
+    Q.pres_runoff_endorsement,
+    "Not chosen"
+);
+Q.status_budget_strategy = statusText(Q.budget_strategy, "Unsettled");
+Q.status_next_budget = statusText(Q.next_budget_label, "December 2019");
+
+Q.status_resources = statusNumber(Q.resources, 0);
+Q.status_party_income = statusNumber(Q.party_income, 0);
+Q.status_member_dues = statusNumber(Q.member_dues, 2);
+Q.status_seat_subvention = statusNumber(Q.seat_subvention, 0);
+Q.status_subvention_seats = statusNumber(Q.seat_subvention_seats, 0);
+Q.status_last_annual_payout = statusNumber(Q.last_annual_payout, 0);
+Q.status_last_annual_payout_label = statusText(
+    Q.last_annual_payout_label,
+    "No annual payout yet"
+);
+Q.status_fundraising_timer = Math.max(
+    0,
+    statusNumber(Q.emergency_fundraising_timer, 0)
+);
+Q.status_budget = statusNumber(Q.budget, 0);
+Q.status_budget_authority = statusText(
+    Q.budget_authority,
+    "Opposition — no state spending authority"
+);
+Q.status_month_actions = statusNumber(Q.month_actions, 0);
+Q.status_max_month_actions = statusNumber(Q.max_month_actions, 1);
+Q.status_advisor_timer = Math.max(
+    0,
+    statusNumber(Q.advisor_action_timer, 0)
+);
+Q.status_reshuffle_timer = Math.max(
+    0,
+    statusNumber(Q.leadership_reshuffle_timer, 0)
+);
+Q.status_advisors = statusNumber(Q.n_advisors, 3);
+const activeAdvisorNames = [];
+const advisorStatusRoster = [
+    ["czarzasty", "Włodzimierz Czarzasty"],
+    ["biedron", "Robert Biedroń"],
+    ["zandberg", "Adrian Zandberg"],
+    ["dziemianowicz_bak", "Agnieszka Dziemianowicz-Bąk"],
+    ["zukowska", "Anna-Maria Żukowska"],
+    ["kotula", "Katarzyna Kotula"],
+    ["biejat", "Magdalena Biejat"],
+    ["wieczorek", "Dariusz Wieczorek"],
+    ["gawkowski", "Krzysztof Gawkowski"],
+    ["nowicka", "Wanda Nowicka"],
+    ["zawisza", "Marcelina Zawisza"],
+    ["matysiak", "Paulina Matysiak"]
+];
+for (const advisor of advisorStatusRoster) {
+    if (Number(Q[advisor[0] + "_advisor"]) === 1) {
+        activeAdvisorNames.push(advisor[1]);
+    }
 }
-if (Q.inflation) {
-    Q.inflation_2 = Q.inflation.toFixed(1);
+Q.status_active_advisors = activeAdvisorNames.length
+    ? activeAdvisorNames.join(" · ")
+    : "Vacant bureau";
+Q.status_barons_advisors = statusNumber(Q.barons_advisor_count, 0);
+Q.status_spring_advisors = statusNumber(Q.spring_advisor_count, 0);
+Q.status_labor_advisors = statusNumber(Q.labor_advisor_count, 0);
+Q.status_progressives_advisors =
+    statusNumber(Q.progressives_advisor_count, 0);
+Q.status_razem_advisors = statusNumber(Q.razem_advisor_count, 0);
+Q.status_leadership_actions = statusNumber(
+    Q.leadership_actions_taken,
+    0
+);
+Q.status_party_unity = Math.round(statusNumber(Q.party_unity, 58));
+Q.status_left_poll = statusOneDecimal(Q.left_poll, 12.6);
+Q.status_left_seats = statusNumber(Q.left_seats, 49);
+Q.status_public_trust = Math.round(statusNumber(Q.public_trust, 43));
+Q.status_media_capacity = Math.round(statusNumber(Q.media_capacity, 16));
+Q.status_local_network = Math.round(statusNumber(Q.local_network, 42));
+
+Q.status_president = statusText(Q.president_name, "Andrzej Duda");
+Q.status_prime_minister = statusText(
+    Q.prime_minister,
+    "Mateusz Morawiecki"
+);
+Q.status_government = statusText(
+    Q.government_name,
+    "PiS–United Right majority"
+);
+Q.status_sejm_speaker = statusText(Q.sejm_speaker, "Elżbieta Witek");
+if (Q.caretaker_government) {
+    Q.status_left_role = Q.left_in_government
+        ? "Caretaker cabinet — executive action suspended"
+        : "Outside the caretaker cabinet";
+} else if (Q.left_in_government) {
+    Q.status_left_role =
+        "Government — ministers and collective cabinet responsibility";
+} else if (
+    String(Q.position || "").toLowerCase().includes("confidence")
+) {
+    Q.status_left_role =
+        "Outside government — confidence-and-supply only";
+} else {
+    Q.status_left_role =
+        "Opposition — no ministers or state-budget authority";
 }
-Q.economic_growth_2 = '0';
-if (Q.economic_growth) {
-    Q.economic_growth_2 = Q.economic_growth.toFixed(1);
+const primeMinisterParty = function(name, government) {
+    const combined = (name + " " + government).toLowerCase();
+    if (
+        combined.includes("morawiecki") ||
+        combined.includes("szydło") ||
+        combined.includes("szydlo") ||
+        combined.includes("czarnek") ||
+        combined.includes("pis")
+    ) {
+        return "pis";
+    }
+    if (
+        combined.includes("tusk") ||
+        combined.includes("trzaskowski") ||
+        combined.includes("nowacka") ||
+        combined.includes("sikorski") ||
+        combined.includes("kierwiński") ||
+        combined.includes("kierwinski") ||
+        combined.includes("ko-led")
+    ) {
+        return "ko";
+    }
+    if (
+        combined.includes("dziemianowicz-bąk") ||
+        combined.includes("dziemianowicz-bak") ||
+        combined.includes("biedroń") ||
+        combined.includes("biedron") ||
+        combined.includes("zandberg") ||
+        combined.includes("lewica")
+    ) {
+        return "lewica";
+    }
+    if (
+        combined.includes("kosiniak-kamysz") ||
+        combined.includes("psl")
+    ) {
+        return "psl";
+    }
+    if (
+        combined.includes("hołownia") ||
+        combined.includes("holownia") ||
+        combined.includes("poland 2050")
+    ) {
+        return "p2050";
+    }
+    return "other";
+};
+Q.status_prime_minister_party = primeMinisterParty(
+    Q.status_prime_minister,
+    Q.status_government
+);
+Q.status_government_party = Q.status_prime_minister_party;
+Q.status_negotiation_leverage = Math.round(
+    statusNumber(Q.negotiation_leverage, 0)
+);
+Q.status_crisis_pressure = Math.round(
+    statusNumber(Q.national_crisis_pressure, 0)
+);
+Q.status_government_hostility = Math.round(
+    statusNumber(Q.government_negotiation_hostility, 50)
+);
+Q.status_negotiation_forecast = statusText(
+    Q.negotiation_forecast,
+    "No government negotiation forecast"
+);
+Q.status_negotiation_last = statusText(
+    Q.negotiation_last_result,
+    "No negotiation attempted"
+);
+Q.status_negotiation_successes = statusNumber(
+    Q.negotiation_successes,
+    0
+);
+Q.status_pis_cohabitation_stress = Math.round(
+    statusNumber(Q.pis_cohabitation_stress, 0)
+);
+Q.status_pis_cohabitation_rally = Math.round(
+    statusNumber(Q.pis_cohabitation_rally, 0)
+);
+Q.status_pis_cohabitation_state = statusText(
+    Q.pis_cohabitation_state,
+    "No hostile cohabitation"
+);
+
+Q.status_pis_poll = statusOneDecimal(Q.pis_poll, 43.6);
+Q.status_ko_poll = statusOneDecimal(Q.ko_poll, 27.4);
+Q.status_psl_poll = statusOneDecimal(Q.psl_poll, 8.6);
+Q.status_konf_poll = statusOneDecimal(Q.konf_poll, 6.8);
+Q.status_p2050_poll = statusOneDecimal(Q.p2050_poll, 0);
+Q.status_other_poll = statusOneDecimal(Q.other_poll, 1.0);
+Q.status_pis_seats = statusNumber(Q.pis_seats, 235);
+Q.status_ko_seats = statusNumber(Q.ko_seats, 134);
+Q.status_psl_seats = statusNumber(Q.psl_seats, 30);
+Q.status_konf_seats = statusNumber(Q.konf_seats, 11);
+Q.status_p2050_seats = statusNumber(Q.p2050_seats, 0);
+Q.status_other_seats = statusNumber(Q.other_seats, 1);
+Q.status_left_intent = statusOneDecimal(Q.left_vote_intent, 12.6);
+Q.status_pis_intent = statusOneDecimal(Q.pis_vote_intent, 43.6);
+Q.status_ko_intent = statusOneDecimal(Q.ko_vote_intent, 27.4);
+Q.status_psl_intent = statusOneDecimal(Q.psl_vote_intent, 8.6);
+Q.status_konf_intent = statusOneDecimal(Q.konf_vote_intent, 6.8);
+Q.status_p2050_intent = statusOneDecimal(Q.p2050_vote_intent, 0);
+Q.status_other_intent = statusOneDecimal(Q.other_vote_intent, 1.0);
+Q.status_left_projection = statusNumber(Q.left_projected_seats, 49);
+Q.status_pis_projection = statusNumber(Q.pis_projected_seats, 235);
+Q.status_ko_projection = statusNumber(Q.ko_projected_seats, 134);
+Q.status_psl_projection = statusNumber(Q.psl_projected_seats, 30);
+Q.status_konf_projection = statusNumber(Q.konf_projected_seats, 11);
+Q.status_p2050_projection = statusNumber(
+    Q.p2050_projected_seats,
+    0
+);
+Q.status_other_projection = statusNumber(Q.other_projected_seats, 0);
+Q.status_poll_sample = statusNumber(Q.poll_sample_size, 1400);
+Q.status_poll_margin = statusOneDecimal(Q.poll_margin_error, 2.6);
+Q.status_poll_updated = statusText(Q.poll_last_updated, "Opening baseline");
+Q.status_poll_total = statusOneDecimal(
+    Q.status_left_poll +
+        Q.status_pis_poll +
+        Q.status_ko_poll +
+        Q.status_psl_poll +
+        Q.status_konf_poll +
+        Q.status_p2050_poll +
+        Q.status_other_poll,
+    100
+);
+Q.status_p2050_visible =
+    Q.p2050_emerged || Q.status_p2050_poll > 0 ? 1 : 0;
+
+Q.status_pis_leader = statusText(Q.pis_leader, "Jarosław Kaczyński");
+Q.status_ko_leader = statusText(Q.ko_leader, "Grzegorz Schetyna");
+Q.status_psl_leader = statusText(
+    Q.psl_leader,
+    "Władysław Kosiniak-Kamysz"
+);
+Q.status_konf_leader = statusText(
+    Q.konf_leader,
+    "Kulesza–Korwin–Braun"
+);
+Q.status_p2050_leader = statusText(
+    Q.p2050_leader,
+    "Movement not yet formed"
+);
+Q.status_pis_ideology = statusText(
+    Q.pis_ideology,
+    "National-conservative · welfare-statist"
+);
+Q.status_ko_ideology = statusText(
+    Q.ko_ideology,
+    "Broad-tent liberal · pro-European"
+);
+Q.status_psl_ideology = statusText(
+    Q.psl_ideology,
+    "Agrarian centrist · socially cautious"
+);
+Q.status_konf_ideology = statusText(
+    Q.konf_ideology,
+    "Radical-right federation"
+);
+Q.status_p2050_ideology = statusText(
+    Q.p2050_ideology,
+    "Centrist institutionalism"
+);
+const leftPoleIntent = statusNumber(
+    Q.left_vote_intent,
+    statusNumber(Q.left_poll, 12.6)
+);
+const konfPoleIntent = statusNumber(
+    Q.konf_vote_intent,
+    statusNumber(Q.konf_poll, 6.8)
+);
+let fallbackPartySystemClimate =
+    "The centre is balancing between social and radical-right pressure";
+if (leftPoleIntent >= konfPoleIntent + 4) {
+    fallbackPartySystemClimate =
+        "The Left is setting the competitive agenda";
+} else if (konfPoleIntent >= leftPoleIntent + 4) {
+    fallbackPartySystemClimate =
+        "Konfederacja is pulling the party system to the right";
+}
+Q.status_party_system_climate = statusText(
+    Q.party_system_climate,
+    fallbackPartySystemClimate
+);
+const civicPatriotism = statusNumber(Q.civic_patriotism, 10);
+const farRightStreetCapacity = statusNumber(
+    Q.far_right_street_capacity,
+    25
+);
+Q.status_independence_field =
+    civicPatriotism >= farRightStreetCapacity + 8
+        ? "A civic-patriotic counter-tradition is taking root"
+        : (
+            farRightStreetCapacity >= civicPatriotism + 15
+                ? "The radical right dominates the Independence Day street"
+                : (
+                    farRightStreetCapacity >= civicPatriotism + 5
+                        ? "The radical right retains the street advantage"
+                        : "Independence Day remains politically contested"
+                )
+        );
+const wingFallbacks = {
+    pis: "Social-solidarist apparatus",
+    ko: "Broad-tent liberal centre",
+    psl: "Agrarian and local-government brokers",
+    konf: "Libertarian-nationalist federation",
+    p2050: "Institutional reformers"
+};
+for (const party of ["pis", "ko", "psl", "konf", "p2050"]) {
+    Q["status_" + party + "_org_resources"] = statusNumber(
+        Q[party + "_org_resources"],
+        0
+    );
+    Q["status_" + party + "_org_income"] = statusNumber(
+        Q[party + "_org_income"],
+        0
+    );
+    Q["status_" + party + "_dominant_wing"] = statusText(
+        Q[party + "_dominant_wing"],
+        wingFallbacks[party]
+    );
+    Q["status_" + party + "_ideology_drift"] = statusText(
+        Q[party + "_ideology_drift"],
+        "No clear ideological drift"
+    );
+    Q["status_" + party + "_ai_headline"] = statusText(
+        Q[party + "_ai_headline"],
+        "No background action"
+    );
+}
+Q.status_rival_month_headline = statusText(
+    Q.rival_month_headline,
+    "Rival parties have not acted yet"
+);
+Q.status_rival_coalition_signal = statusText(
+    Q.rival_coalition_signal,
+    "Coalition channels are still being mapped"
+);
+
+Q.status_barons_strength = statusNumber(Q.barons_strength, 28);
+Q.status_barons_dissent = statusNumber(Q.barons_dissent, 12);
+Q.status_spring_strength = statusNumber(Q.spring_strength, 20);
+Q.status_spring_dissent = statusNumber(Q.spring_dissent, 16);
+Q.status_labor_strength = statusNumber(Q.labor_strength, 14);
+Q.status_labor_dissent = statusNumber(Q.labor_dissent, 18);
+Q.status_progressives_strength = statusNumber(
+    Q.progressives_strength,
+    18
+);
+Q.status_progressives_dissent = statusNumber(
+    Q.progressives_dissent,
+    14
+);
+Q.status_razem_strength = statusNumber(Q.razem_strength, 20);
+Q.status_razem_dissent = statusNumber(Q.razem_dissent, 28);
+Q.status_internal_dissent = Math.round(
+    statusNumber(Q.internal_dissent, 18)
+);
+Q.status_faction_vetoes = statusNumber(Q.faction_vetoes, 0);
+
+Q.status_ko_relation = statusNumber(Q.ko_relation, 44);
+Q.status_psl_relation = statusNumber(Q.psl_relation, 24);
+Q.status_p2050_relation = statusNumber(Q.p2050_relation, 0);
+Q.status_pis_relation = statusNumber(Q.pis_relation, 8);
+Q.status_konf_relation = statusNumber(Q.konf_relation, 2);
+Q.status_president_relation = statusNumber(Q.president_relation, 18);
+Q.status_razem_cooperation = Math.round(
+    statusNumber(Q.razem_cooperation, 52)
+);
+
+Q.status_judicial_legitimacy = Math.round(
+    statusNumber(Q.judicial_legitimacy, 36)
+);
+Q.status_constitutional_restraint = Math.round(
+    statusNumber(Q.constitutional_restraint, 50)
+);
+Q.status_tribunal_legality = Math.round(
+    statusNumber(Q.tribunal_composition_legality, 18)
+);
+Q.status_tribunal_recognition = Math.round(
+    statusNumber(Q.tribunal_domestic_recognition, 34)
+);
+Q.status_krs_independence = Math.round(
+    statusNumber(Q.krs_independence, 22)
+);
+Q.status_krs_accountability = Math.round(
+    statusNumber(Q.krs_democratic_accountability, 28)
+);
+Q.status_supreme_court_recognition = Math.round(
+    statusNumber(Q.supreme_court_chamber_recognition, 36)
+);
+Q.status_prosecution_independence = Math.round(
+    statusNumber(Q.prosecution_independence, 24)
+);
+Q.status_prosecution_command = Math.round(
+    statusNumber(Q.prosecution_command_clarity, 76)
+);
+Q.status_european_compliance = Math.round(
+    statusNumber(Q.european_judgment_compliance, 34)
+);
+Q.status_government_restraint = Math.round(
+    statusNumber(Q.government_procedural_restraint, 50)
+);
+Q.status_court_backlog = Math.round(statusNumber(Q.court_backlog, 42));
+Q.status_court_user_trust = Math.round(
+    statusNumber(Q.court_user_trust, 38)
+);
+Q.status_judicial_vacancies = Math.round(
+    statusNumber(Q.judicial_vacancies, 14)
+);
+Q.status_president_judiciary = Math.round(
+    statusNumber(Q.president_judiciary_cooperation, 30)
+);
+Q.status_legal_dualism = Math.round(
+    statusNumber(Q.legal_dualism, 52)
+);
+Q.status_judicial_repair_mandate = Math.round(
+    statusNumber(Q.judicial_repair_mandate, 38)
+);
+Q.status_tribunal_reform = statusText(
+    Q.tribunal_reform_status,
+    "Captured and contested"
+);
+Q.status_krs_reform = statusText(
+    Q.krs_reform_status,
+    "Judge-members elected by the Sejm"
+);
+Q.status_prosecution = statusText(
+    Q.prosecution_status,
+    "Ministerial chain of command"
+);
+Q.status_rule_of_law_eu = statusText(
+    Q.rule_of_law_eu_status,
+    "Article 7 procedure open"
+);
+Q.status_health_capacity = Math.round(
+    statusNumber(Q.health_capacity, 48)
+);
+Q.status_household_security = Math.round(
+    statusNumber(Q.household_security, 45)
+);
+Q.status_police_trust = Math.round(statusNumber(Q.police_trust, 45));
+Q.status_military_trust = Math.round(
+    statusNumber(Q.military_trust, 66)
+);
+Q.status_border_confidence = Math.round(
+    statusNumber(Q.border_security_confidence, 48)
+);
+Q.status_minority_safety = Math.round(
+    statusNumber(Q.minority_safety, 56)
+);
+Q.status_far_right_agenda = Math.round(
+    statusNumber(Q.far_right_agenda, 32)
+);
+
+const publicOpinionStatusDefinitions = {
+    abortion_rights: "Abortion rights",
+    refugee_solidarity: "Refugee and asylum solidarity",
+    border_security: "Eastern-border security",
+    vaccination: "Vaccination and public health",
+    social_spending: "Social spending and public services",
+    lgbt_equality: "LGBT equality",
+    secular_state: "Secular state and schools",
+    rule_of_law: "Rule-of-law repair",
+    national_security: "Defence and allied security"
+};
+const publicSupportBand = function(value) {
+    if (value < 35) {
+        return "minority position";
+    }
+    if (value < 47) {
+        return "weak plurality";
+    }
+    if (value < 55) {
+        return "closely contested";
+    }
+    if (value < 65) {
+        return "working majority";
+    }
+    return "broadly popular";
+};
+const publicSalienceBand = function(value) {
+    if (value < 30) {
+        return "low attention";
+    }
+    if (value < 55) {
+        return "active concern";
+    }
+    if (value < 75) {
+        return "high salience";
+    }
+    return "public panic";
+};
+const publicBacklashBand = function(value) {
+    if (value < 30) {
+        return "limited backlash";
+    }
+    if (value < 55) {
+        return "organised opposition";
+    }
+    if (value < 75) {
+        return "polarised";
+    }
+    return "explosive backlash";
+};
+const publicClimateBand = function(support, salience, backlash) {
+    if (salience >= 75 && backlash >= 70) {
+        return "Panic and polarisation dominate every move";
+    }
+    if (support >= 65 && backlash < 55) {
+        return "A broad mandate is available";
+    }
+    if (support >= 55 && backlash >= 65) {
+        return "Popular, but capable of a severe counter-mobilisation";
+    }
+    if (support < 40 && salience >= 55) {
+        return "A hostile high-attention climate";
+    }
+    if (support >= 47 && support < 55) {
+        return "The electorate is almost evenly divided";
+    }
+    if (salience < 30) {
+        return "Public attitudes are latent rather than politically urgent";
+    }
+    if (support >= 55) {
+        return "Favourable terrain with an active opposition";
+    }
+    return "Difficult terrain, but not a settled verdict";
+};
+for (const issue of Object.keys(publicOpinionStatusDefinitions)) {
+    const support = Math.round(statusNumber(Q[issue + "_support"], 50));
+    const salience = Math.round(statusNumber(Q[issue + "_salience"], 40));
+    const backlash = Math.round(statusNumber(Q[issue + "_backlash"], 40));
+    Q["status_" + issue + "_label"] =
+        publicOpinionStatusDefinitions[issue];
+    Q["status_" + issue + "_support"] = support;
+    Q["status_" + issue + "_salience"] = salience;
+    Q["status_" + issue + "_backlash"] = backlash;
+    Q["status_" + issue + "_support_band"] =
+        publicSupportBand(support);
+    Q["status_" + issue + "_salience_band"] =
+        publicSalienceBand(salience);
+    Q["status_" + issue + "_backlash_band"] =
+        publicBacklashBand(backlash);
+    Q["status_" + issue + "_climate"] =
+        publicClimateBand(support, salience, backlash);
+}
+Q.status_public_panic = Math.round(
+    statusNumber(Q.public_panic_index, 46)
+);
+Q.status_public_consensus = Math.round(
+    statusNumber(Q.public_consensus_index, 24)
+);
+Q.status_public_panic_band = publicSalienceBand(
+    Q.status_public_panic
+);
+Q.status_public_hottest = statusText(
+    Q.public_opinion_hottest_issue,
+    "Social spending and public services"
+);
+Q.status_public_last_issue = statusText(
+    Q.public_opinion_last_issue,
+    "None"
+);
+Q.status_public_last_action = statusText(
+    Q.public_opinion_last_action,
+    "No public-opinion test yet"
+);
+Q.status_public_last_reception = statusText(
+    Q.public_opinion_last_reception,
+    "No recent test"
+);
+Q.status_public_last_delta = statusNumber(
+    Q.public_opinion_last_delta,
+    0
+);
+Q.status_public_updated = statusText(
+    Q.public_opinion_last_updated,
+    "October 2019 baseline"
+);
+Q.status_public_bridge_pressure = Math.round(
+    statusNumber(Q.public_opinion_bridge_pressure, 0)
+);
+
+Q.status_economic_growth = statusOneDecimal(Q.economic_growth, 4.5);
+Q.status_inflation = statusOneDecimal(Q.inflation, 2.6);
+Q.status_unemployment = statusOneDecimal(Q.unemployment, 5.1);
+Q.status_public_debt = statusOneDecimal(Q.public_debt, 45.7);
+Q.status_budget_balance = statusOneDecimal(Q.budget_balance, -0.7);
+
+Q.status_workers_support = Math.round(
+    statusNumber(Q.workers_support, 15)
+);
+Q.status_public_sector_support = Math.round(
+    statusNumber(Q.public_sector_support, 18)
+);
+Q.status_young_support = Math.round(statusNumber(Q.young_support, 20));
+Q.status_women_support = Math.round(statusNumber(Q.women_support, 15));
+Q.status_urban_support = Math.round(
+    statusNumber(Q.urban_progressive_support, 27)
+);
+Q.status_rural_support = Math.round(statusNumber(Q.rural_support, 5));
+Q.status_pensioner_support = Math.round(
+    statusNumber(Q.pensioner_support, 6)
+);
+Q.status_turnout = Math.round(statusNumber(Q.turnout_readiness, 58));
+Q.status_labor_credibility = Math.round(
+    statusNumber(Q.labor_credibility, 46)
+);
+Q.status_progressive_credibility = Math.round(
+    statusNumber(Q.progressive_credibility, 50)
+);
+Q.status_feminist_trust = Math.round(
+    statusNumber(Q.feminist_trust, 44)
+);
+
+Q.status_covid_policy = statusText(Q.covid_policy, "Unprepared");
+Q.status_postal_stance = statusText(
+    Q.postal_election_stance,
+    "Undecided"
+);
+Q.status_abortion_strategy = statusText(
+    Q.abortion_strategy,
+    "Unsettled"
+);
+Q.status_pandemic_pressure = Math.round(
+    statusNumber(Q.pandemic_deaths_pressure, 0)
+);
+Q.status_budget_breaches = statusNumber(Q.budget_breaches, 0);
+Q.status_budget_2019_backing = Math.round(
+    statusNumber(Q.budget_2019_backing, 0)
+);
+Q.status_budget_2019_done = Q.budget_2019_done ? 1 : 0;
+Q.status_budget_2019_ratified = Q.budget_2019_ratified ? 1 : 0;
+Q.status_budget_2019_vetoes = statusNumber(Q.budget_2019_vetoes, 0);
+Q.status_budget_2020_backing = Math.round(
+    statusNumber(Q.budget_backing, 0)
+);
+Q.status_budget_2020_done = Q.budget_2020_done ? 1 : 0;
+Q.status_budget_2020_ratified = Q.budget_2020_ratified ? 1 : 0;
+Q.status_budget_2020_vetoes = statusNumber(Q.budget_vetoes, 0);
+Q.status_senate_total = statusNumber(Q.senate_total, 100);
+Q.status_senate_pis = statusNumber(Q.senate_pis_seats, 48);
+Q.status_senate_ko = statusNumber(Q.senate_ko_seats, 43);
+Q.status_senate_psl = statusNumber(Q.senate_psl_seats, 3);
+Q.status_senate_left = statusNumber(Q.senate_left_seats, 2);
+Q.status_senate_independent = statusNumber(
+    Q.senate_independent_seats,
+    4
+);
+Q.status_senate_working_votes = statusNumber(
+    Q.senate_working_votes,
+    51
+);
+Q.status_senate_cohesion = Math.round(
+    statusNumber(Q.senate_cohesion, 52)
+);
+Q.status_senate_left_leverage = Math.round(
+    statusNumber(Q.senate_left_leverage, 18)
+);
+Q.status_senate_credit = statusNumber(Q.senate_amendment_credit, 0);
+Q.status_senate_marshal = statusText(Q.senate_marshal, "Tomasz Grodzki");
+Q.status_senate_control = statusText(
+    Q.senate_control,
+    "Fragile opposition pact"
+);
+Q.status_senate_last_vote = statusText(
+    Q.senate_last_vote,
+    "No common vote yet"
+);
+Q.status_coalition_status = statusText(
+    Q.coalition_status,
+    "PiS majority government"
+);
+Q.status_government_coalition_dissent = Math.round(
+    statusNumber(Q.government_coalition_dissent, 16)
+);
+Q.status_coalition_seats = statusNumber(Q.coalition_seats, 0);
+Q.status_confidence_mode = statusText(Q.confidence_mode, "None");
+Q.status_confidence_candidate = statusText(
+    Q.confidence_candidate,
+    "None"
+);
+Q.status_confidence_present = statusNumber(Q.confidence_present, 0);
+Q.status_confidence_threshold = statusNumber(Q.confidence_threshold, 0);
+Q.status_confidence_yes = statusNumber(Q.confidence_yes, 0);
+Q.status_confidence_no = statusNumber(Q.confidence_no, 0);
+Q.status_confidence_abstain = statusNumber(Q.confidence_abstain, 0);
+Q.status_primary_electorate = statusText(
+    Q.primary_electorate,
+    "Not chosen"
+);
+Q.status_primary_rules = statusText(Q.primary_rules, "Not chosen");
+Q.status_primary_campaign = statusText(Q.primary_campaign, "Not chosen");
+Q.status_primary_winner = statusText(Q.primary_winner, "Undecided");
+for (const coalition of [
+    "democratic", "right", "center", "pis_psl"
+]) {
+    Q["status_coalition_" + coalition + "_seats"] = statusNumber(
+        Q["coalition_" + coalition + "_seats"],
+        0
+    );
+    Q["status_coalition_" + coalition + "_score"] = Math.round(
+        statusNumber(Q["coalition_" + coalition + "_score"], 0)
+    );
+}
+const voterGroupsForStatus = [
+    "metropolitan_liberals",
+    "liberal_professionals",
+    "public_service_families",
+    "industrial_logistics",
+    "provincial_welfare",
+    "rural_localists",
+    "older_welfare_households",
+    "anti_establishment_youth"
+];
+for (const group of voterGroupsForStatus) {
+    Q["status_" + group + "_size"] = statusNumber(
+        Q[group + "_size"],
+        0
+    );
+    Q["status_" + group + "_turnout"] = Math.round(
+        statusNumber(Q[group + "_turnout"], 0)
+    );
+    Q["status_" + group + "_leader"] = statusText(
+        Q[group + "_leader"],
+        "Unsettled"
+    );
+    Q["status_" + group + "_runner"] = statusText(
+        Q[group + "_runner"],
+        "Unsettled"
+    );
+    Q["status_" + group + "_margin"] = statusOneDecimal(
+        Q[group + "_margin"],
+        0
+    );
+    Q["status_" + group + "_left"] = statusOneDecimal(
+        Q[group + "_left"],
+        0
+    );
 }
 !}
 
-= Status
+= Overview
 
-[+ month : month +] [+ year +][? if rubicon:, Week [+ week +]?]
+<div class="ledger-masthead"><b>[+ status_date +]</b><span>[+ status_difficulty +]</span></div>
+<div class="ledger-headline">[+ status_headline +]</div>
+[? if not status_started: <div class="ledger-notice">Preview of the October 2019 starting position. Begin a campaign to activate the ledger.</div>?]
 
-Resources available: [+ resources +]
+<div class="ledger-section"><div class="ledger-title"><span class="party party-lewica">Lewica</span></div>
+<div class="ledger-row"><span>Position</span><b>[+ status_position +]</b></div>
+<div class="ledger-row"><span>Poll / current seats</span><b>[+ status_left_poll +]% · [+ status_left_seats +]</b></div>
+<div class="ledger-row"><span>Modelled vote / projection</span><b>[+ status_left_intent +]% · [+ status_left_projection +]</b></div>
+<div class="ledger-row"><span>Alliance unity</span><b>[+ status_party_unity +]/100</b></div>
+<div class="ledger-subrow">[? if status_party_unity < 30: <span class="meter-critical">fracture imminent</span>?][? if status_party_unity >= 30 and status_party_unity < 50: <span class="meter-warning">brittle</span>?][? if status_party_unity >= 50 and status_party_unity < 70: <span class="meter-steady">negotiated</span>?][? if status_party_unity >= 70: <span class="meter-good">cohesive</span>?]</div>
+<div class="ledger-row"><span>Party resources</span><b>[+ status_resources +] · annual income +[+ status_party_income +]</b></div>
+<div class="ledger-subrow">Dues [+ status_member_dues +] + seat subvention [+ status_seat_subvention +] ([+ status_subvention_seats +] seats). Last payout: [+ status_last_annual_payout_label +].</div>
+<div class="ledger-row"><span>Emergency appeal</span><b>[? if status_fundraising_timer = 0: available?][? if status_fundraising_timer > 0: [+ status_fundraising_timer +] mo.?]</b></div>
+ [? if scenario_mode != "formation_2023":
+<div class="ledger-row"><span>Monthly action</span><b>[+ status_month_actions +]/[+ status_max_month_actions +]</b></div>
+<div class="ledger-row"><span>Advisor action</span><b>[? if status_advisor_timer = 0: available?][? if status_advisor_timer > 0: [+ status_advisor_timer +] mo.?]</b></div>
+<div class="ledger-row"><span>Leadership slate</span><b>[+ status_advisors +] advisors</b></div>
+<div class="ledger-subrow">[+ status_active_advisors +]</div>
+<div class="ledger-subrow">Old SLD [+ status_barons_advisors +] · Wiosna [+ status_spring_advisors +] · labour [+ status_labor_advisors +] · new SLD/progressives [+ status_progressives_advisors +] · Razem [+ status_razem_advisors +]</div>
+<div class="ledger-row"><span>Reshuffle</span><b>[? if status_reshuffle_timer = 0: available?][? if status_reshuffle_timer > 0: [+ status_reshuffle_timer +] mo.?]</b></div>
+<div class="ledger-row"><span>Months led</span><b>[+ status_leadership_actions +]/87</b></div>
+?]</div>
 
-<span style="color: #c00000;">**SPD**</span> position: [? if spd_toleration : toleration ?][? if spd_in_government : in government - ?][? if spd_toleration == 0 and spd_in_government == 0 and spd_caretaker == 0 : opposition ?][? if spd_caretaker : caretaker government ?]
-[? if in_weimar_coalition and not in_social_catholic_coalition and not in_social_liberal_coalition and spd_in_government: <span style="color: #000000;">We</span><span style="color: #DD0000;">im</span><span style="color: #FFCC00;">ar</span> Coalition ?][? if in_social_catholic_coalition and spd_in_government: <span style="color: #c00000;">Social</span>-[? if not stegerwald_path: <span style="color: #000000;">Catholic</span>?][? if stegerwald_path: <span style="color: #000000;">Christian</span>?] Coalition ?][? if in_social_liberal_coalition and spd_in_government: <span style="color: #c00000;">Ketchup</span> and [? if not lvp_formed: <span style="color: #D3C24D;">Mustard</span>?][? if lvp_formed: <span style="color: #FFCC00;">Mustard</span>?] Coalition ?][? if in_grand_coalition and spd_in_government: [? if not in_wholesome_coalition: Grand Coalition?][? if in_wholesome_coalition: Wholesome Coalition?] ?][? if in_popular_front and spd_in_government: Popular Front ?][? if in_left_front and spd_in_government: Left Front ?][? if in_spd_majority and spd_in_government: <span style="color: #c00000;">**SPD**</span> majority ?][? if in_minority_government and spd_in_government: minority government ?][? if in_emergency_government and spd_in_government: emergency government ?]
+<div class="ledger-section"><div class="ledger-title">Government</div>
+<div class="ledger-row"><span>Cabinet</span><b>[? if status_government_party = "pis": <span class="party party-pis">[+ status_government +]</span>?][? if status_government_party = "ko": <span class="party party-ko">[+ status_government +]</span>?][? if status_government_party = "lewica": <span class="party party-lewica">[+ status_government +]</span>?][? if status_government_party = "psl": <span class="party party-psl">[+ status_government +]</span>?][? if status_government_party = "p2050": <span class="party party-p2050">[+ status_government +]</span>?][? if status_government_party = "other": <span class="party">[+ status_government +]</span>?]</b></div>
+<div class="ledger-row"><span>President</span><b>[+ status_president +]</b></div>
+<div class="ledger-row"><span>Prime Minister</span><b>[? if status_prime_minister_party = "pis": <span class="party party-pis">[+ status_prime_minister +]</span>?][? if status_prime_minister_party = "ko": <span class="party party-ko">[+ status_prime_minister +]</span>?][? if status_prime_minister_party = "lewica": <span class="party party-lewica">[+ status_prime_minister +]</span>?][? if status_prime_minister_party = "psl": <span class="party party-psl">[+ status_prime_minister +]</span>?][? if status_prime_minister_party = "p2050": <span class="party party-p2050">[+ status_prime_minister +]</span>?][? if status_prime_minister_party = "other": <span class="party">[+ status_prime_minister +]</span>?]</b></div>
+<div class="ledger-row"><span>Lewica's role</span><b>[+ status_left_role +]</b></div>
+<div class="ledger-row"><span>Sejm Marshal</span><b>[+ status_sejm_speaker +]</b></div>
+<div class="ledger-row"><span>Coalition</span><b>[+ status_coalition_status +]</b></div>
+<div class="ledger-row"><span>Coalition dissent</span><b>[+ status_government_coalition_dissent +]/100</b></div>
+[? if not left_in_government and government_has_confidence and not caretaker_government: <div class="ledger-row"><span>Negotiating position</span><b>[+ status_negotiation_leverage +] leverage · [+ status_government_hostility +] hostility</b></div><div class="ledger-subrow">Crisis pressure [+ status_crisis_pressure +]/100 · [+ status_negotiation_forecast +]</div><div class="ledger-subrow">Last result: [+ status_negotiation_last +] · [+ status_negotiation_successes +] agreements</div>?]
+[? if status_president = "Rafał Trzaskowski" and status_government_party = "pis": <div class="ledger-row"><span>PiS cohabitation</span><b>stress [+ status_pis_cohabitation_stress +] · rally [+ status_pis_cohabitation_rally +]</b></div><div class="ledger-subrow">[+ status_pis_cohabitation_state +]</div>?]</div>
 
-[? if bruning_time and spd_toleration: Bruning's reichstag backing: [+ bruning_coalition +]% ?]
+<div class="ledger-section"><div class="ledger-title">Political line</div>
+<div class="ledger-row"><span>Project</span><b>[+ status_project +]</b></div>
+[? if scenario_mode != "formation_2023": <div class="ledger-row"><span>President 2020</span><b>[+ status_candidate +]</b></div>?]
+<div class="ledger-row"><span>Budget line</span><b>[+ status_budget_strategy +]</b></div>
+<div class="ledger-row"><span>Next fiscal test</span><b>[+ status_next_budget +]</b></div>
+[? if scenario_mode != "formation_2023": <div class="ledger-row"><span>Public mood</span><b>[+ status_public_panic +]/100 pressure</b></div><div class="ledger-subrow">Hottest: [+ status_public_hottest +]</div>?]
+[? if left_in_government: <div class="ledger-row"><span>State-budget capacity</span><b>[+ status_budget +]</b></div><div class="ledger-subrow">[+ status_budget_authority +]</div>?]</div>
 
-[? if bruning_time and president == "Hindenburg": Hindenburg's approval: [+ hindenburg_angry_bruning : hindenburg_angry_bruning +] ?]
-
-[? if spd_government_burden_seen: Government Goals: [? if goal_spd_cancel == 0: [+ goal_spd_total +]?][? if goal_spd_cancel >= 1: Failed?] / 2 completed, due in [+ spd_government_burden_timer +] months ?]
-
-[? if spd_government_burden_peoples: Secondary Government Goals: [? if goal_spd_cancel_peoples == 0: [+ goal_spd_total_peoples +]?][? if goal_spd_cancel_peoples >= 1: Failed?] / 1 completed, due in [+ spd_government_burden_timer +] months ?]
-
-Prussian government: [? if spd_prussia : in government - ?]
-[? if in_social_catholic_coalition_prussia: [? if in_minority_social_catholic_coalition_prussia: minority ?] <span style="color: #c00000;">Social</span>-<span style="color: #000000;">Christian</span> Coalition ?][? if in_social_liberal_coalition_prussia: [? if in_minority_social_liberal_coalition_prussia: minority ?] <span style="color: #c00000;">Ketchup</span> and [? if not lvp_formed: <span style="color: #D3C24D;">Mustard</span>?][? if lvp_formed: <span style="color: #FFCC00;">Mustard</span>?] Coalition ?][? if in_weimar_coalition_prussia: [? if in_minority_weimar_coalition_prussia: minority ?] <span style="color: #000000;">We</span><span style="color: #DD0000;">im</span><span style="color: #FFCC00;">ar</span> Coalition ?][? if in_grand_coalition_prussia: [? if in_minority_grand_coalition_prussia: minority ?] Grand Coalition ?][? if in_far_right_coalition_prussia and prussia_leader = "Goring" and not dnf_formed: <span style="color: #7A3C00;">Far</span>-<span style="color: #3E88B3;">right</span> Coalition ?][? if in_far_right_coalition_prussia and prussia_leader = "Goring" and dnf_formed: <span style="color: #7A3C00;">Far</span>-<span style="color: #003755;">right</span> Coalition ?][? if in_popular_front_prussia: Popular Front ?][? if in_left_front_prussia: Left Front ?][? if in_spd_majority_prussia: <span style="color: #c00000;">**SPD**</span> majority ?][? if in_center_right_coalition_prussia: Center-right Coalition ?][? if in_right_coalition_prussia: Right Coalition ?][? if spd_toleration_prussia: Bourgeois Coalition ?][? if ((prussia_leader = "Papen" or prussia_leader == "Schleicher" or prussia_leader == "Goerdeler") or (chancellor == nsdap_chancellor and (not rubicon_mini or game_over) and not prussia_leader == "Goring")) and not in_schleicher_majority_coalition_prussia and not in_schleicher_right_coalition_prussia and started: <span style="color: #808080;"><i>Reichskommissar</i></span> ruled ?][? if in_schleicher_majority_coalition_prussia: <span style="color: #BFC8CC;">**DNEF**</span> majority ?][? if in_schleicher_right_coalition_prussia: Schleicher Right Coalition ?][? if not in_social_liberal_coalition_prussia and not in_social_catholic_coalition_prussia and not in_weimar_coalition_prussia and not in_grand_coalition_prussia and not in_far_right_coalition_prussia and not in_popular_front_prussia and not in_left_front_prussia and not in_center_right_coalition_prussia and not in_right_coalition_prussia and not spd_toleration_prussia and not prussia_leader == "Papen" and prussia_leader != "Schleicher" and chancellor != nsdap_chancellor and ddp_name != 0: caretaker government ?]
-
-[? if spd_in_government and not in_spd_majority and not in_left_front : Coalition dissent: [+ coalition_dissent : coalition_dissent +] ?]
-
-[? if spd_in_government and president == "Hindenburg" : Hindenburg's approval: [+ hindenburg_angry : hindenburg_angry +] ?]
-
-[? if spd_in_government and (in_left_front or in_popular_front): <span style="color: #700000;">**KPD**</span> coalition dissent: [+ kpd_coalition_dissent : coalition_dissent +] ?]
-
-Internal dissent: [+ dissent_percent : dissent +]
-
-= Government
-
-President: [? if president == "Hindenburg": <span style="color: #808080;">Hindenburg</span> ?][? if president == "Braun" or president == "Schumacher" or president == "Wels" or president == "Grzesinski" or president == "Juchacz" or (president == "Rosenfeld" and not left_split): <span style="color: #c00000;">[+ president +]</span> ?][? if president == "Rosenfeld" and left_split: <span style="color: #9B0000;">[+ president +]</span> ?][? if president == "Thälmann": <span style="color: #700000;">[+ president +]</span> ?][? if president == "Münzenberg": <span style="color: #9B0000;">[+ president +]</span> ?][? if president == "Hitler" or president == "Göring" or president == "Frick": <span style="color: #7A3C00;">[+ president +]</span> ?][? if president == "Eckener": <span style="color: #000000;">Ec</span><span style="color: #DD0000;">ken</span><span style="color: #FFCC00;">er</span> ?][? if (president == "Gessler" or president == "Heuss") and not lvp_formed: <span style="color: #D3C24D;">[+ president +]</span> ?][? if (president == "Luther" or president == "Jarres") and not lvp_formed: <span style="color: #C0A054;">[+ president +]</span> ?][? if (president == "Gessler" or president == "Heuss" or president == "Jarres" or president == "Luther") and lvp_formed: <span style="color: #FFCC00;">[+ president +]</span> ?][? if (president == "Adenauer" or president == "Brüning" or president == "Stegerwald") or ((president == "Westarp" or president == "Lettow-Vorbeck") and cvp_formed): <span style="color: #000000;">[+ president +]</span> ?][? if president == "Seldte" or president == "Hergt" or ((president == "Westarp" or president == "Lettow-Vorbeck") and dnvp_ideology == "Moderate" and not cvp_formed): <span style="color: #3E88B3;">[+ president +]</span> ?][? if (president == "Westarp" or president == "Lettow-Vorbeck") and dnvp_ideology == "Radical" and not cvp_kvp_formed: <span style="color: #0087DC;">[+ president +]</span> ?][? if president == "Großmann (acting)" or president == "Bumke (acting)" or president == "Seeckt": <span style="color: #808080;">[+ president +]</span> ?][? if president == "Hammerstein": <span style="color: #BFC8CC;">[+ president +]</span> ?][? if president == "Mann" or president == "Ossietzky": <span style="color: #E0A0A0;">[+ president +]</span> ?][? if president == "Einstein": <span style="color: #CFC88F;">[+ president +]</span> ?] ([? if (president == "Adenauer" or president == "Brüning" or president == "Stegerwald") or ((president == "Westarp" or president == "Lettow-Vorbeck") and cvp_formed):<span style="color: #000000;">**[+ z_party_name +]**</span>?][? if president == "Braun" or president == "Schumacher" or president == "Wels" or president == "Juchacz" or (president == "Rosenfeld" and not left_split):<span style="color: #c00000;">**SPD**</span>?][? if president == "Rosenfeld" and left_split:<span style="color: #9B0000;">**SAPD**</span>?][? if president == "Thälmann" or president == "Münzenberg":<span style="color: #700000;">**KPD**</span>?][? if president == "Seldte" or president == "Hergt" or ((president == "Westarp" or president == "Lettow-Vorbeck") and dnvp_ideology == "Moderate" and not cvp_formed): <span style="color: #3E88B3;">**DNVP**</span>?][? if (president == "Westarp" or president == "Lettow-Vorbeck") and dnvp_ideology == "Radical" and not cvp_kvp_formed: <span style="color: #0087DC;">**KVP**</span>?][? if president == "Hitler" or president == "Göring" or president == "Frick":<span style="color: #7A3C00;">**NSDAP**</span>?][? if (president == "Gessler" or president == "Heuss") and not lvp_formed: <span style="color: #D3C24D;">**[+ ddp_name +]**</span>?][? if (president == "Luther" or president == "Jarres") and not lvp_formed: <span style="color: #C0A054;">**DVP**</span>?][? if (president == "Gessler" or president == "Heuss" or president == "Jarres" or president == "Luther") and lvp_formed: <span style="color: #FFCC00;">**LVP**</span>?][? if president == "Eckener" or president == "Hindenburg" or president == "Großmann (acting)" or president == "Bumke (acting)" or president == "Seeckt": <span style="color: #808080;">I</span>?][? if president == "Hammerstein": <span style="color: #BFC8CC;">**DNEF**</span>?][? if president == "Mann" or president == "Ossietzky": <span style="color: #E0A0A0;">I</span>?][? if president == "Einstein": <span style="color: #CFC88F;">I</span>?])
-
-Chancellor: [? if chancellor_party == "SPD": <span style="color: #c00000;">[+ chancellor +]</span>?][? if chancellor_party == "Z": <span style="color: #000000;">[+ chancellor +]</span>?][? if chancellor_party == "NSDAP": <span style="color: #7A3C00;">[+ chancellor +]</span>?][? if chancellor_party == "DSU": <span style="color: #6A1E1E;">[+ chancellor +]</span>?][? if chancellor_party == "KPD": <span style="color: #700000;">[+ chancellor +]</span>?][? if chancellor_party == "DNVP": <span style="color: #3E88B3;">[+ chancellor +]</span>?][? if (chancellor == "Schleicher" and not dnef_formed) or chancellor == "Papen": <span style="color: #808080;">[+ chancellor +]</span>?][? if (chancellor == "Schleicher" or chancellor == "Goerdeler" or chancellor == "Bredow") and dnef_formed: <span style="color: #BFC8CC;">[+ chancellor +]</span>?][? if chancellor == "Goerdeler" and not dnef_formed: <span style="color: #808080;">[+ chancellor +]</span>?] ([? if chancellor_party == "Z":<span style="color: #000000;">**[+ z_party_name +]**</span>?][? if chancellor_party == "SPD":<span style="color: #c00000;">**SPD**</span>?][? if chancellor_party == "KPD":<span style="color: #700000;">**KPD**</span>?][? if chancellor_party == "DNVP": <span style="color: #3E88B3;">**DNVP**</span>?][? if chancellor_party == "DSU":<span style="color: #6A1E1E;">**DSU**</span>?][? if chancellor_party == "NSDAP":<span style="color: #7A3C00;">**NSDAP**</span>?][? if chancellor_party == "I":<span style="color: #808080;">I</span>?][? if chancellor_party == "DNEF":<span style="color: #BFC8CC;">**DNEF**</span>?])
-
-Prussian Minister-President: [? if prussia_leader = "Braun" and (chancellor != nsdap_chancellor or (rubicon_mini and not game_over)): <span style="color: #c00000;">Braun</span> (<span style="color: #c00000;">**SPD**</span>)?][? if prussia_leader = "Rosenfeld" and not left_split and (chancellor != nsdap_chancellor or (rubicon_mini and not game_over)): <span style="color: #c00000;">Rosenfeld</span> (<span style="color: #c00000;">**SPD**</span>)?][? if prussia_leader = "Rosenfeld" and left_split and (chancellor != nsdap_chancellor or (rubicon_mini and not game_over)): <span style="color: #9B0000;">Rosenfeld</span> (<span style="color: #9B0000;">**SAPD**</span>)?][? if prussia_leader = "Stegerwald" and (chancellor != nsdap_chancellor or (rubicon_mini and not game_over)): <span style="color: #000000;">Stegerwald</span> (<span style="color: #000000;">**[+ z_party_name +]**</span>)?][? if prussia_leader = "Brüning" and (chancellor != nsdap_chancellor or (rubicon_mini and not game_over)): <span style="color: #000000;">Brüning</span> (<span style="color: #000000;">**[+ z_party_name +]**</span>)?][? if prussia_leader = "Luther" and (chancellor != nsdap_chancellor or (rubicon_mini and not game_over)) and not lvp_formed and dvp_exist: <span style="color: #C0A054;">Luther</span> (<span style="color: #C0A054;">**DVP**</span>)?][? if prussia_leader = "Luther" and (chancellor != nsdap_chancellor or (rubicon_mini and not game_over)) and not lvp_formed and not dvp_exist: <span style="color: #D3C24D;">Luther</span> (<span style="color: #D3C24D;">**DVP**</span>)?][? if prussia_leader = "Luther" and (chancellor != nsdap_chancellor or (rubicon_mini and not game_over)) and lvp_formed: <span style="color: #FFCC00;">Luther</span> (<span style="color: #FFCC00;">**LVP**</span>)?][? if prussia_leader = "Goring": <span style="color: #7A3C00;">Göring</span> (<span style="color: #7A3C00;">**NSDAP**</span>)?][? if (prussia_leader = "Papen" or (chancellor == nsdap_chancellor and (not rubicon_mini or game_over)) and not prussia_leader == "Goring") and started: <span style="color: #808080;">Papen</span> (<span style="color: #808080;">I</span>)?][? if prussia_leader = "Schleicher" and (chancellor != nsdap_chancellor or (rubicon_mini and not game_over)): [? if not dnef_formed: <span style="color: #808080;">Schleicher</span>?][? if dnef_formed: <span style="color: #BFC8CC;">Schleicher</span>?] ([? if not dnef_formed: <span style="color: #808080;">I</span>?][? if dnef_formed: <span style="color: #BFC8CC;">**DNEF**</span>?])?][? if prussia_leader = "Goerdeler" and (chancellor != nsdap_chancellor or (rubicon_mini and not game_over)): <span style="color: #808080;">Goerdeler</span> (<span style="color: #808080;">I</span>)?][? if prussia_leader = "Strasser" and (chancellor != nsdap_chancellor or (rubicon_mini and not game_over)): <span style="color: #6A1E1E;">Strasser</span> (<span style="color: #6A1E1E;">**DSU**</span>)?][? if prussia_leader = "joavig" and (chancellor != nsdap_chancellor or (rubicon_mini and not game_over)): <span style="color: #700000;">joavig</span> (<span style="color: #7A3C00;">**NSDAP**</span>)?]
-
-Reichstag composition:
-
-# 1928: 30, 1930: 25, 1932: 22
-
-[? if dnef_formed: <span class="tooltip-text" title="German National Unity Front" style="color: #BFC8CC;">**DNEF**</span>: [+ dnef_r +]% ?]
-<span class="tooltip-text" title="Social Democratic Party of Germany" style="color: #c00000;">**SPD**</span>: [+ spd_r +]%
-[? if sapd_formed and sapd_r > 0: <span class="tooltip-text" title="Socialist Workers' Party of Germany" style="color: #9B0000;">**SAPD**</span>: [+ sapd_r +]% ?]
-# 1928: 15, 1930: 15, 1932: 
-[? if started: [? if z_party_name != "CVP": <span class="tooltip-text" title="Center Party + Bavarian People's Party"><span style="color: #000000;">**[+ z_party_name +]**</span> + <span style="color: #A2D8E0;">**BVP**</span></span>?][? if z_party_name == "CVP": <span class="tooltip-text" title="Christian People's Party + Bavarian People's Party"><span style="color: #000000;">**[+ z_party_name +]**</span> + <span style="color: #A2D8E0;">**BVP**</span></span>?]?][? if not started: <span class="tooltip-text" title="Center Party + Bavarian People's Party"><span style="color: #000000;">**Z**</span> + <span style="color: #A2D8E0;">**BVP**</span></span> ?]: [+ z_r +]%
-# 1928: 10, 1930: 13
-<span class="tooltip-text" title="Communist Party of Germany" style="color: #700000;">**KPD**</span>: [+ kpd_r +]%
-# 1928: 5, 1930: 4 (as DStP)
-[? if lvp_formed: <span class="tooltip-text" title="Liberal People's Party" style="color: #FFCC00;">**LVP**</span>: [+ lvp_r +]% ?]
-[? if (not lvp_formed or not ddp_name) : [? if not ddp_name:<span class="tooltip-text" title="German Democratic Party" style="color: #D3C24D;">**DDP**</span>?][? if ddp_name = "DDP":<span class="tooltip-text" title="German Democratic Party" style="color: #D3C24D;">**[+ ddp_name +]**</span>?][? if ddp_name = "DStP":<span class="tooltip-text" title="German State Party" style="color: #D3C24D;">**[+ ddp_name +]**</span>?]: [+ ddp_r +]% ?]
-# 1928: 9, 1930: 5
-[? if not lvp_formed and dvp_exist : <span class="tooltip-text" title="German People's Party" style="color: #C0A054;">**DVP**</span>: [+ dvp_r +]% ?]
-[? if kvp_formed and not dnvp_dvp_formed : <span class="tooltip-text" title="Conservative People's Party" style="color: #0087DC;">**KVP**</span>: [+ kvp_r +]% ?]
-[? if dnvp_dvp_formed: <span class="tooltip-text" title="Free Conserative Party" style="color: #00C0FF;">**FKP**</span>: [+ kvp_r +]% ?]
-# 1928: 14, 1930: 7
-[? if not cvp_formed and not dnvp_defunct: <span class="tooltip-text" title="German National People's Party" style="color: #3E88B3;">**DNVP**</span>: [+ dnvp_r +]%?]
-[? if dnf_formed: <span class="tooltip-text" title="German National Front" style="color: #003755;">**DNF**</span>: [+ dnf_r +]% ?]
-# 1928: 3, 1930: 18
-[? if dsu_exist: <span class="tooltip-text" title="German Social Union" style="color: #6A1E1E;">**DSU**</span>: [+ dsu_r +]%?]
-[? if not nsdap_split: <span class="tooltip-text" title="National-Socialist German Worker's Party (Nazis)" style="color: #7A3C00;">**NSDAP**</span>: [+ nsdap_r +]%?]
-[? if nsdap_split: <span class="tooltip-text" title="National-Socialist German Worker's Party (Nazis)" style="color: #7A3C00;">**NSDAP**</span>: [+ nsdap_hitler_r +]%?]
-[? if nvf_exist: <span class="tooltip-text" title="National People's Front" style="color: #142e20;">**NVF**</span>: [+ nvf_r +]%?]
-# 1928: 9, 1930: 10
-**Others**: [+ other_r +]%
-
-[? if spd_in_government = 1 : Budget: [+ budget +] ?]
-
-Next election: [+ next_election_month : month +] [+ next_election_year +]
-
-Next Prussian election: [? if prussia_leader != "Papen" and prussia_leader != "Schleicher": [+ next_election_month_prussia : month +] [+ next_election_year_prussia +][? if rubicon:, Week [+ next_election_week_prussia +] ?] ?][? if prussia_leader == "Papen" or prussia_leader == "Schleicher": postponed indefinitely ?]
-
-= Economics
-
-Inflation: [+ inflation_2 +]%
-
-[? if black_thursday_seen = 1 : Unemployment: [+ unemployed_2 +]% ?]
-
-Economic growth: [+ economic_growth_2 +]%
-
-# = Public Opinion
-
-@emergency
-on-arrival: {!
-if (Q.unemployed) {
-    Q.unemployed_2 = Q.unemployed.toFixed(1);
-}
-if (Q.inflation) {
-    Q.inflation_2 = Q.inflation.toFixed(1);
-}
-Q.economic_growth_2 = '0';
-if (Q.economic_growth) {
-    Q.economic_growth_2 = Q.economic_growth.toFixed(1);
-}
-Q.pro_republic_disp = Math.round(Q.pro_republic);
-!}
-
-= Emergency Status
-
-<div style="text-align: center;">[+ month : month +] [+ year +][? if rubicon:, Week [+ week +]?]</div>
-<div style="text-align: center;">Chancellor: [? if chancellor_party == "SPD": <span style="color: #c00000;">[+ chancellor +]</span>?][? if chancellor_party == "Z": <span style="color: #000000;">[+ chancellor +]</span>?][? if chancellor_party == "NSDAP": <span style="color: #7A3C00;">Hitler</span>?][? if chancellor_party == "KPD": <span style="color: #700000;">[+ chancellor +]</span>?][? if (chancellor == "Schleicher" and not dnef_formed) or chancellor == "Papen": <span style="color: #808080;">[+ chancellor +]</span>?][? if (chancellor == "Schleicher" or chancellor == "Goerdeler" or chancellor == "Bredow" or (chancellor == "Treviranus" and treviranus_party == "DNEF")) and dnef_formed: <span style="color: #BFC8CC;">[+ chancellor +]</span>?][? if chancellor_party == "KVP": <span style="color: #0087DC;">[+ chancellor +]</span>?][? if chancellor_party == "DNVP": <span style="color: #3E88B3;">[+ chancellor +]</span>?] [? if chancellor_party == "Z":(<span style="color: #000000;">**[+ z_party_name +]**</span>) ?][? if chancellor_party == "SPD":(<span style="color: #c00000;">**SPD**</span>) ?][? if chancellor_party == "KPD":(<span style="color: #700000;">**KPD**</span>) ?][? if chancellor_party == "NSDAP":(<span style="color: #7A3C00;">**NSDAP**</span>) ?][? if chancellor_party == "I":(<span style="color: #808080;">I</span>) ?][? if chancellor_party == "DNVP":(<span style="color: #3E88B3;">**DNVP**</span>) ?][? if chancellor_party == "KVP":(<span style="color: #0087DC;">**KVP**</span>) ?][? if chancellor_party == "DNEF":(<span style="color: #BFC8CC;">**DNEF**</span>) ?]</div>
-<div style="text-align: center;">Vice-Chancellor: [? if vice_chancellor == "Hammerstein": <span style="color: #BFC8CC;">[+ vice_chancellor +]</span> ?][? if vice_chancellor == "Papen": <span style="color: #808080;">[+ vice_chancellor +]</span> ?][? if vice_chancellor == "Strasser": <span style="color: #6A1E1E;">[+ vice_chancellor +]</span> ?][? if vice_chancellor == "Stegerwald": <span style="color: #000000;">[+ vice_chancellor +]</span> ?][? if vice_chancellor == "Papen": (<span style="color: #808080;">I</span>) ?][? if vice_chancellor == "Strasser": (<span style="color: #6A1E1E;">**DSU**</span>) ?][? if vice_chancellor == "Stegerwald": (<span style="color: #000000;">**Z**</span>) ?][? if vice_chancellor == "Hammerstein": (<span style="color: #BFC8CC;">**DNEF**</span>) ?][? if not vice_chancellor: Vacant ?]</div>
-<div style="text-align: center;">Prussian Minister-President: [? if prussia_leader = "Braun" and chancellor != nsdap_chancellor: <span style="color: #c00000;">Braun</span> (<span style="color: #c00000;">**SPD**</span>)?][? if prussia_leader = "Rosenfeld" and not left_split and chancellor != nsdap_chancellor: <span style="color: #c00000;">Rosenfeld</span> (<span style="color: #c00000;">**SPD**</span>)?][? if prussia_leader = "Rosenfeld" and left_split and chancellor != nsdap_chancellor: <span style="color: #9B0000;">Rosenfeld</span> (<span style="color: #9B0000;">**SAPD**</span>)?][? if prussia_leader = "Stegerwald" and chancellor != nsdap_chancellor: <span style="color: #000000;">Stegerwald</span> (<span style="color: #000000;">**[+ z_party_name +]**</span>)?][? if prussia_leader = "Brüning" and chancellor != nsdap_chancellor: <span style="color: #000000;">Brüning</span> (<span style="color: #000000;">**[+ z_party_name +]**</span>)?][? if prussia_leader = "Luther" and chancellor != nsdap_chancellor and not lvp_formed and dvp_exist: <span style="color: #C0A054;">Luther</span> (<span style="color: #C0A054;">**DVP**</span>)?][? if prussia_leader = "Luther" and chancellor != nsdap_chancellor and not lvp_formed and not dvp_exist: <span style="color: #D3C24D;">Luther</span> (<span style="color: #D3C24D;">**DVP**</span>)?][? if prussia_leader = "Luther" and chancellor != nsdap_chancellor and lvp_formed: <span style="color: #FFCC00;">Luther</span> (<span style="color: #FFCC00;">**LVP**</span>)?][? if prussia_leader = "Goring": <span style="color: #7A3C00;">Göring</span> (<span style="color: #7A3C00;">**NSDAP**</span>)?][? if prussia_leader = "Papen" or (chancellor == nsdap_chancellor and (not rubicon_mini or game_over)) and not prussia_leader == "Goring": <span style="color: #808080;">Papen</span> (<span style="color: #808080;">I</span>)?][? if prussia_leader = "Schleicher" and chancellor != nsdap_chancellor: [? if not dnef_formed: <span style="color: #808080;">Schleicher</span>?][? if dnef_formed: <span style="color: #BFC8CC;">Schleicher</span>?] ([? if not dnef_formed: <span style="color: #808080;">I</span>?][? if dnef_formed: <span style="color: #BFC8CC;">**DNEF**</span>?])?][? if prussia_leader = "Goerdeler" and chancellor != nsdap_chancellor: [? if not dnef_formed: <span style="color: #808080;">Goerdeler</span> (<span style="color: #808080;">I</span>)?][? if dnef_formed: <span style="color: #BFC8CC;">Goerdeler</span> (<span style="color: #BFC8CC;">**DNEF**</span>)?]?][? if prussia_leader = "Strasser" and chancellor != nsdap_chancellor: <span style="color: #6A1E1E;">Strasser</span> (<span style="color: #6A1E1E;">**DSU**</span>)?][? if prussia_leader = "joavig" and chancellor != nsdap_chancellor: <span style="color: #700000;">joavig</span> (<span style="color: #7A3C00;">**NSDAP**</span>)?]</div>
-[? if chancellor == "Papen": <div style="display: flex;gap: 5px;margin-bottom: 5px;margin-left: -3px;"><img src="img/portraits/PapenFranz.jpg" alt="Franz von Papen" style="width: 50%;"> ?][? if chancellor == "Schleicher" and not schleicher_portrait: <div style="display: flex;gap: 5px;margin-bottom: 5px;margin-left: -3px;"><img src="img/portraits/SchleicherKurt.jpg" alt="Kurt von Schleicher" style="width: 50%;"> ?][? if chancellor == "Schleicher" and schleicher_portrait: <div style="display: flex;gap: 5px;margin-bottom: 5px;margin-left: -3px;"><img src="img/portraits/schleicher_cooler.jpg" alt="Kurt von Schleicher" style="width: 50%;"> ?][? if chancellor == "Goerdeler": <div style="display: flex;gap: 5px;margin-bottom: 5px;margin-left: -3px;"><img src="img/portraits/goerdeler.jpg" alt="Carl Friedrich Goerdeler" style="width: 50%;"> ?][? if chancellor == "Bredow": <div style="display: flex;gap: 5px;margin-bottom: 5px;margin-left: -3px;"><img src="img/portraits/bredow.jpg" alt="Ferdinand von Bredow" style="width: 50%;"> ?][? if chancellor == "Treviranus": <div style="display: flex;gap: 5px;margin-bottom: 5px;margin-left: -3px;"><img src="img/portraits/Treviranus.jpg" alt="Gottfried Reinhold Treviranus" style="width: 50%;"> ?][? if chancellor == "Hitler": <div style="display: flex;gap: 5px;margin-bottom: 5px;margin-left: -3px;"><img src="img/portraits/hitler2.jpg" alt="Kurt von Schleicher" style="width: 50%;"> ?][? if chancellor == "Göring": <div style="display: flex;gap: 5px;margin-bottom: 5px;margin-left: -3px;"><img src="img/portraits/goring.jpg" alt="Kurt von Schleicher" style="width: 50%;"> ?][? if vice_chancellor == "Papen": <img src="img/portraits/PapenFranz.jpg" alt="Franz von Papen" style="width: 50%;"></div> ?][? if vice_chancellor == "Strasser": <img src="img/portraits/strasser.jpg" alt="Gregor Strasser" style="width: 50%;"></div> ?][? if vice_chancellor == "Stegerwald": <img src="img/portraits/stegerwald.jpg" alt="Adam Stegerwald" style="width: 50%;"></div> ?][? if vice_chancellor == "Hammerstein": <img src="img/portraits/hammerstein.jpg" alt="Kurt von Hammerstein" style="width: 50%;"></div> ?][? if not vice_chancellor: <img src="img/placeholder.jpg" alt="Vacant" style="width: 50%;"></div> ?]
-Method of governing: Presidential decrees
-[? if chancellor == "Papen": Hindenburg's confidence: [+ hindenburg_papen_r : confidence +]<br> ?]
-[? if chancellor == "Schleicher": Hindenburg's confidence: [+ hindenburg_schleicher_r : confidence +]<br> ?]
-[? if chancellor == "Schleicher" or chancellor == "Bredow" or chancellor == "Goerdeler" or chancellor == "Treviranus": [+ chancellor +]'s public popularity: [+ schleicher_approval : schleicher_popularity +]<br> ?]
-[? if chancellor == "Papen": Schleicher's confidence: [+ schleicher_papen_r : confidence +]<br> ?]
-[? if red_general_unlock: [? if chancellor == "Schleicher" or not schleicher_post: Schleicher?][? if chancellor != "Schleicher" and schleicher_post: State?]-<span style="color: #c00000;">**SPD**</span> relations: [+ schleicher_spd_r : schleicher_spd +]<br> ?]
-[? if reichswehr_strength > 100 and chancellor == "Schleicher": Reichswehr: 100 thousand troops.<br> ?]
-[? if reichswehr_strength > 100 and chancellor == "Schleicher": State "Militia": [+ reichswehr_strength - 100 +] thousand troops. ?]
-
-= Government
-
-[? if chancellor == "Schleicher" and not schleicher_economy_time: Public Works: being formulated <br>?][? if chancellor == "Schleicher" and schleicher_economy_time: Public Works: in effect <br>?]
-Reichstag: [? if reichstag_rubicon: in session?][? if not reichstag_rubicon and not reichstag_break: dissolved?][? if next_reichstag_time > rubicon_time and next_reichstag_time and not reichstag_rubicon and next_election_time - time > 2:, reconvenes on [+ next_reichstag_month : month +] [+ next_reichstag_year +], Week [+ next_reichstag_week +]. ?][? if reichstag_break: indefinitely adjourned ?]<br>
-Next election: [? if not marburg_trigger: [+ next_election_month : month +] [+ next_election_year +], Week [+ next_election_week +] ?][? if marburg_trigger: postponed indefinitely ?]<br>
-Next Prussian election: [? if prussia_leader != "Papen" and prussia_leader != "Schleicher": [+ next_election_month_prussia : month +] [+ next_election_year_prussia +], Week [+ next_election_week_prussia +] ?][? if prussia_leader == "Papen" or prussia_leader == "Schleicher": postponed indefinitely ?]
-[? if chancellor == "Schleicher" and year == 1933 and month < 2 and week < 3: <br>Next state election: January 1933, Week 3 ?]
-
-= Party
-
-Resources available: [+ resources +]<br>
-Internal dissent: [+ dissent_percent : dissent +]<br>
-Support for the Republic: [+ pro_republic_disp +]%<br>
-[? if red_general_unlock: <span style="color: #c00000;">**SPD**</span> stance on [? if chancellor == "Schleicher" or not schleicher_post: Schleicher?][? if chancellor != "Schleicher" and schleicher_post: the State?]: [+ schleicher_spd_support : schleicher_spd_2 +]<br> ?]
-[? if schleicher_spd_influence and schleicher_time >= 8: [? if chancellor == "Schleicher": Schleicher?][? if chancellor != "Schleicher" and schleicher_post: The State?]'s influence in <span style="color: #c00000;">**SPD**</span>: [+ schleicher_spd_influence : schleicher_spd_3 +]<br> ?]
-<span style="color: #7A3C00;">**NSDAP**</span> financial situation: [+ nazi_funds : nazi_funds +]<br>
-[? if not streetfighting_joever: Currently, the streets are [? if far_right_paramilitary and rfb_force < far_right_force:[? if far_right_paramilitary_highest: fully controlled by the <span style="color: #7A3C00;">far</span>-<span style="color: #3E88B3;">right</span>?][? if far_right_paramilitary_high: dominated by the <span style="color: #7A3C00;">far</span>-<span style="color: #3E88B3;">right</span>?][? if far_right_paramilitary_med: controlled by the <span style="color: #7A3C00;">far</span>-<span style="color: #3E88B3;">right</span>?][? if far_right_paramilitary_low: in the slight control of the <span style="color: #7A3C00;">far</span>-<span style="color: #3E88B3;">right</span>?][? if sa_paramilitary:, mainly by the violent <span style="color: #7A3C00;">**SA**</span>?]?][? if rfb_force >= far_right_force and far_right_paramilitary: controlled by the <span style="color: #700000;">**RFB**</span>?][? if democracy_paramilitary and rfb_force < democracy_force:[? if democracy_paramilitary_highest: fully controlled by the <span style="color: #000000;">repu</span><span style="color: #DD0000;">bli</span><span style="color: #FFCC00;">cans</span>?][? if democracy_paramilitary_high: dominated by the <span style="color: #000000;">repu</span><span style="color: #DD0000;">bli</span><span style="color: #FFCC00;">cans</span>?][? if democracy_paramilitary_med: controlled by the <span style="color: #000000;">repu</span><span style="color: #DD0000;">bli</span><span style="color: #FFCC00;">cans</span>?][? if democracy_paramilitary_low: in the slight control of the <span style="color: #000000;">repu</span><span style="color: #DD0000;">bli</span><span style="color: #FFCC00;">cans</span>?]?][? if rfb_force >= democracy_force and democracy_paramilitary: controlled by the <span style="color: #700000;">**RFB**</span>?][? if state_paramilitary:[? if state_paramilitary_highest: fully controlled by the <span style="color: #BFC8CC;">**State**</span>?][? if state_paramilitary_high: dominated by the <span style="color: #BFC8CC;">**State**</span>?][? if state_paramilitary_med: controlled by the <span style="color: #BFC8CC;">**State**</span>?][? if state_paramilitary_low: in the slight control of the <span style="color: #BFC8CC;">**State**</span>?]?].?]
-
-= Economics
-
-Inflation: [+ inflation_2 +]%<br>
-[? if black_thursday_seen = 1 : Unemployment: [+ unemployed_2 +]% ?]<br>
-Economic growth: [+ economic_growth_2 +]%
+<div class="ledger-section"><div class="ledger-title">Economy</div>
+<div class="ledger-row"><span>Real growth</span><b>[+ status_economic_growth +]%</b></div>
+<div class="ledger-row"><span>Inflation</span><b>[+ status_inflation +]%</b></div>
+<div class="ledger-row"><span>Registered unemployment</span><b>[+ status_unemployment +]%</b></div>
+<div class="ledger-row"><span>Public debt</span><b>[+ status_public_debt +]% GDP</b></div>
+<div class="ledger-row"><span>Budget balance</span><b>[+ status_budget_balance +]% GDP</b></div></div>
 
 @politics
+title: Parties
+new-page: true
+is-special: true
+call: status
 
-= Inter-party Relations
+= Parties and caucuses
 
-[? if dnef_formed: <span class="tooltip-text" title="German National Unity Front" style="color: #BFC8CC;">**DNEF**</span>: [+ dnef_relation : relationships +] ?]
+<div class="ledger-section ledger-section-first"><div class="ledger-title">The Left is a coalition</div>
+<div class="faction-row"><span class="party party-sld tooltip-text" title="Old SLD elites, regional machinery and post-communist organisational networks"><b>SLD barons</b></span><span>[+ status_barons_strength : strength +] · dissent [+ status_barons_dissent : dissent +]</span></div>
+<div class="faction-row"><span class="party party-wiosna tooltip-text" title="Wiosna leadership, activists and candidate network"><b>Wiosna</b></span><span>[+ status_spring_strength : strength +] · dissent [+ status_spring_dissent : dissent +]</span></div>
+<div class="faction-row"><span class="party party-left-labor tooltip-text" title="Trade-union, workplace and public-service social democrats"><b>Labour left</b></span><span>[+ status_labor_strength : strength +] · dissent [+ status_labor_dissent : dissent +]</span></div>
+<div class="faction-row"><span class="party party-progressive tooltip-text" title="The younger, more women-led New Left current associated with figures such as Żukowska and Kotula"><b>Younger progressives</b></span><span>[+ status_progressives_strength : strength +] · dissent [+ status_progressives_dissent : dissent +]</span></div>
+<div class="faction-row"><span class="party party-razem tooltip-text" title="Razem remains an autonomous party with its own programme and organisers"><b>Razem</b></span><span>[+ status_razem_strength : strength +] · dissent [+ status_razem_dissent : dissent +]</span></div>
+<div class="ledger-row"><span>Weighted internal dissent</span><b>[+ status_internal_dissent +]/100</b></div>
+<div class="ledger-row"><span>Active caucus vetoes</span><b>[+ status_faction_vetoes +]</b></div>
+<div class="ledger-row"><span>Razem cooperation</span><b>[+ status_razem_cooperation +]/100</b></div></div>
 
-[? if z_party_name != "CVP": <span class="tooltip-text" title="Center Party" style="color: #000000;">**[+ z_party_name +]**</span>?][? if z_party_name == "CVP": <span class="tooltip-text" title="Christian People's Party" style="color: #000000;">**[+ z_party_name +]**</span>?]: [+ z_relation : relationships +]
+<div class="ledger-section"><div class="ledger-title">Relations</div>
+<div class="ledger-row"><span class="party party-ko"><b>KO</b></span><span>[+ status_ko_relation : relationships +] · [+ status_ko_relation +]</span></div>
+<div class="ledger-row"><span class="party party-psl"><b>PSL</b></span><span>[+ status_psl_relation : relationships +] · [+ status_psl_relation +]</span></div>
+[? if status_p2050_visible: <div class="ledger-row"><span class="party party-p2050"><b>Poland 2050</b></span><span>[+ status_p2050_relation : relationships +] · [+ status_p2050_relation +]</span></div>?]
+<div class="ledger-row"><span class="party party-pis"><b>PiS</b></span><span>[+ status_pis_relation : relationships +] · [+ status_pis_relation +]</span></div>
+<div class="ledger-row"><span class="party party-konf"><b>Konfederacja</b></span><span>[+ status_konf_relation : relationships +] · [+ status_konf_relation +]</span></div>
+<div class="ledger-row"><span>President [+ status_president +]</span><span>[+ status_president_relation : relationships +] · [+ status_president_relation +]</span></div></div>
 
-[? if not lvp_formed or not ddp_name: [? if not ddp_name:<span class="tooltip-text" title="German Democratic Party" style="color: #D3C24D;">**DDP**</span>?][? if ddp_name = "DDP":<span class="tooltip-text" title="German Democratic Party" style="color: #D3C24D;">**[+ ddp_name +]**</span>?][? if ddp_name = "DStP":<span class="tooltip-text" title="German State Party" style="color: #D3C24D;">**[+ ddp_name +]**</span>?]: [+ ddp_relation : relationships +] ?]
+<div class="ledger-section"><div class="ledger-title">Other party leadership</div>
+<div class="ledger-row"><span class="party party-pis"><b>PiS</b></span><span>[+ status_pis_leader +]</span></div>
+<div class="ledger-subrow">[+ status_pis_ideology +]</div>
+<div class="ledger-row"><span class="party party-ko"><b>KO</b></span><span>[+ status_ko_leader +]</span></div>
+<div class="ledger-subrow">[+ status_ko_ideology +]</div>
+<div class="ledger-row"><span class="party party-psl"><b>PSL</b></span><span>[+ status_psl_leader +]</span></div>
+<div class="ledger-subrow">[+ status_psl_ideology +]</div>
+<div class="ledger-row"><span class="party party-konf"><b>Konf.</b></span><span>[+ status_konf_leader +]</span></div>
+<div class="ledger-subrow">[+ status_konf_ideology +]</div>
+[? if status_p2050_visible: <div class="ledger-row"><span class="party party-p2050"><b>PL2050</b></span><span>[+ status_p2050_leader +]</span></div><div class="ledger-subrow">[+ status_p2050_ideology +]</div>?]</div>
 
-[? if lvp_formed: <span class="tooltip-text" title="Liberal People's Party" style="color: #FFCC00;">**LVP**</span>: [+ lvp_relation : relationships +]?]
+<div class="ledger-section"><div class="ledger-title">Rival party activity</div>
+<div class="ledger-subrow">[+ status_rival_month_headline +]</div>
+<div class="ledger-subrow">[+ status_party_system_climate +]</div>
+<div class="ledger-subrow">Independence Day: [+ status_independence_field +]</div>
+<div class="ledger-row"><span class="party party-pis"><b>PiS</b> · [+ status_pis_dominant_wing +]</span><span>[+ status_pis_org_resources +] (+[+ status_pis_org_income +]/yr) · [+ status_pis_ideology_drift +]</span></div>
+<div class="ledger-subrow">[+ status_pis_ai_headline +]</div>
+<div class="ledger-row"><span class="party party-ko"><b>KO</b> · [+ status_ko_dominant_wing +]</span><span>[+ status_ko_org_resources +] (+[+ status_ko_org_income +]/yr) · [+ status_ko_ideology_drift +]</span></div>
+<div class="ledger-subrow">[+ status_ko_ai_headline +]</div>
+<div class="ledger-row"><span class="party party-psl"><b>PSL</b> · [+ status_psl_dominant_wing +]</span><span>[+ status_psl_org_resources +] (+[+ status_psl_org_income +]/yr) · [+ status_psl_ideology_drift +]</span></div>
+<div class="ledger-subrow">[+ status_psl_ai_headline +]</div>
+<div class="ledger-row"><span class="party party-konf"><b>Konf.</b> · [+ status_konf_dominant_wing +]</span><span>[+ status_konf_org_resources +] (+[+ status_konf_org_income +]/yr) · [+ status_konf_ideology_drift +]</span></div>
+<div class="ledger-subrow">[+ status_konf_ai_headline +]</div>
+[? if status_p2050_visible: <div class="ledger-row"><span class="party party-p2050"><b>PL2050</b> · [+ status_p2050_dominant_wing +]</span><span>[+ status_p2050_org_resources +] (+[+ status_p2050_org_income +]/yr) · [+ status_p2050_ideology_drift +]</span></div><div class="ledger-subrow">[+ status_p2050_ai_headline +]</div>?]
+<div class="ledger-subrow">[+ status_rival_coalition_signal +]</div></div>
 
-[? if not lvp_formed and dvp_exist: <span class="tooltip-text" title="German People's Party" style="color: #C0A054;">**DVP**</span>: [+ dvp_relation : relationships +] ?]
+@institutions
+title: Institutions
+new-page: true
+is-special: true
+call: status
 
-<span class="tooltip-text" title="Communist Party of Germany" style="color: #700000;">**KPD**</span>: [+ kpd_relation : relationships +]
+= Institutions
 
-[? if kvp_formed and not dnvp_dvp_formed : <span class="tooltip-text" title="Conservative People's Party" style="color: #0087DC;">**KVP**</span>: [+ kvp_relation : relationships +] ?]
+<div class="ledger-section ledger-section-first"><div class="ledger-title">Constitutional order</div>
+<div class="ledger-row"><span>Judicial legitimacy</span><b>[+ status_judicial_legitimacy +]/100</b></div>
+<div class="ledger-row"><span>Procedural restraint</span><b>[+ status_constitutional_restraint +]/100</b></div>
+<div class="ledger-row"><span>Legal dualism</span><b>[+ status_legal_dualism +]/100</b></div>
+<div class="ledger-row"><span>Repair mandate</span><b>[+ status_judicial_repair_mandate +]/100</b></div>
+<div class="ledger-subrow">[? if status_judicial_legitimacy < 30: <span class="meter-critical">constitutional crisis</span>?][? if status_judicial_legitimacy >= 30 and status_judicial_legitimacy < 50: <span class="meter-warning">deeply contested</span>?][? if status_judicial_legitimacy >= 50 and status_judicial_legitimacy < 70: <span class="meter-steady">strained legitimacy</span>?][? if status_judicial_legitimacy >= 70: <span class="meter-good">broad legitimacy</span>?]</div></div>
 
-[? if dnvp_dvp_formed: <span class="tooltip-text" title="Free Conserative Party" style="color: #00C0FF;">**FKP**</span>: [+ fkp_relation : relationships +]?]
+<div class="ledger-section"><div class="ledger-title">Constitutional Tribunal</div>
+<div class="ledger-row"><span>Composition legality</span><b>[+ status_tribunal_legality +]/100</b></div>
+<div class="ledger-row"><span>Domestic recognition</span><b>[+ status_tribunal_recognition +]/100</b></div>
+<div class="ledger-subrow">[+ status_tribunal_reform +]</div></div>
 
-[? if not cvp_formed and not dnvp_defunct: <span class="tooltip-text" title="German National People's Party" style="color: #3E88B3;">**DNVP**</span>: [+ dnvp_relation : relationships +]?]
+<div class="ledger-section"><div class="ledger-title">Appointments and courts</div>
+<div class="ledger-row"><span>KRS independence / accountability</span><b>[+ status_krs_independence +] / [+ status_krs_accountability +]</b></div>
+<div class="ledger-subrow">[+ status_krs_reform +]</div>
+<div class="ledger-row"><span>Supreme Court recognition</span><b>[+ status_supreme_court_recognition +]/100</b></div>
+<div class="ledger-row"><span>Vacancies / backlog</span><b>[+ status_judicial_vacancies +] / [+ status_court_backlog +]</b></div>
+<div class="ledger-row"><span>Court-user trust</span><b>[+ status_court_user_trust +]/100</b></div></div>
 
-[? if dnf_formed : <span class="tooltip-text" title="German National Front" style="color: #003755;">**DNF**</span>: [+ dnf_relation : relationships +] ?]
+<div class="ledger-section"><div class="ledger-title">Prosecution and Europe</div>
+<div class="ledger-row"><span>Prosecutor independence</span><b>[+ status_prosecution_independence +]/100</b></div>
+<div class="ledger-row"><span>Command clarity</span><b>[+ status_prosecution_command +]/100</b></div>
+<div class="ledger-subrow">[+ status_prosecution +]</div>
+<div class="ledger-row"><span>European judgments</span><b>[+ status_european_compliance +]/100</b></div>
+<div class="ledger-subrow">[+ status_rule_of_law_eu +]</div>
+<div class="ledger-row"><span>Palace cooperation</span><b>[+ status_president_judiciary +]/100</b></div></div>
 
-<span class="tooltip-text" title="National-Socialist German Worker's Party (Nazis)" style="color: #7A3C00;">**NSDAP**</span>[? if nsdap_split: (and its splinters)?]: [+ nsdap_relation : relationships +]
+<div class="ledger-section"><div class="ledger-title">Senate</div>
+<div class="ledger-row"><span>Marshal</span><b>[+ status_senate_marshal +]</b></div>
+<div class="ledger-row"><span>Control</span><b>[+ status_senate_control +]</b></div>
+<div class="poll-row"><span class="party party-pis"><b>PiS</b></span><span>[+ status_senate_pis +]</span><span>senators</span></div>
+<div class="poll-row"><span class="party party-ko"><b>KO</b></span><span>[+ status_senate_ko +]</span><span>senators</span></div>
+<div class="poll-row"><span class="party party-psl"><b>PSL</b></span><span>[+ status_senate_psl +]</span><span>senators</span></div>
+<div class="poll-row"><span class="party party-lewica"><b>Left</b></span><span>[+ status_senate_left +]</span><span>senators</span></div>
+<div class="poll-row"><span>Independent</span><span>[+ status_senate_independent +]</span><span>senators</span></div>
+<div class="ledger-row"><span>Deliverable opposition votes</span><b>[+ status_senate_working_votes +]/[+ status_senate_total +]</b></div>
+<div class="ledger-row"><span>Pact cohesion</span><b>[+ status_senate_cohesion +]/100</b></div>
+<div class="ledger-row"><span>Left leverage / amendment credit</span><b>[+ status_senate_left_leverage +]/100 · [+ status_senate_credit +]</b></div>
+<div class="ledger-subrow">Last vote: [+ status_senate_last_vote +]</div></div>
 
-= Party Leadership
+<div class="ledger-section"><div class="ledger-title">State capacity</div>
+<div class="ledger-row"><span>Health service</span><b>[+ status_health_capacity +]/100</b></div>
+<div class="ledger-row"><span>Household security</span><b>[+ status_household_security +]/100</b></div>
+<div class="ledger-row"><span>Police confidence</span><b>[+ status_police_trust +]/100</b></div>
+<div class="ledger-row"><span>Military confidence</span><b>[+ status_military_trust +]/100</b></div>
+<div class="ledger-row"><span>Border confidence</span><b>[+ status_border_confidence +]/100</b></div></div>
 
-[? if dnef_formed: <span class="tooltip-text" title="German National Unity Front" style="color: #BFC8CC;">**DNEF**</span>: [? if dnef_ideology == "Left": Syncretic?][? if dnef_ideology == "Moderate": Syncretic?][? if dnef_ideology == "Right": Syncretic?] ([+ dnef_leader +])?]
-
-[? if not ddp_name: UNINITIALIZED ?][? if ddp_name != 0: [? if z_party_name != "CVP": <span class="tooltip-text" title="Center Party" style="color: #000000;">**[+ z_party_name +]**</span>?][? if z_party_name == "CVP": <span class="tooltip-text" title="Christian People's Party" style="color: #000000;">**[+ z_party_name +]**</span>?]: [? if not cvp_formed: [? if z_ideology == "Right" and not cvp_kvp_formed and z_leader != "Joos" and z_leader != "Bracht": Center to center-right?][? if z_ideology == "Right" and cvp_kvp_formed: Christian democracy?][? if z_leader == "Joos": Center-left to center-right?][? if z_leader == "Kaiser": Center-left to center?][? if z_leader == "Bracht": Catholic conservatism?]?][? if cvp_formed: [? if cvp_leader == "Lambach": Christian corporatism?][? if cvp_leader == "Stegerwald": Paternalistic conservatism?][? if cvp_leader == "Gereke": Agrarian conservatism?][? if cvp_leader == "Westarp" or cvp_leader == "Goerdeler" or cvp_leader = "Lejeune-Jung" or cvp_leader == "Lettow-Vorbeck": National conservatism?][? if cvp_leader == "Adenauer": Christian democracy?][? if cvp_leader == "Bolz": Christian conservatism?][? if cvp_leader == "Treviranus": Tory democracy?]?] ([? if not cvp_formed:[+ z_leader +]?][? if cvp_formed:[+ cvp_leader +]?])?]
-
-[? if not ddp_name and not lvp_formed: UNINITIALIZED ?][? if not lvp_formed and ddp_name != 0 and not dstp_dnef: [? if ddp_name = "DDP" and ddp_ideology == "Right":<span class="tooltip-text" title="German Democratic Party" style="color: #D3C24D;">**[+ ddp_name +]**</span>: Classical liberalism ([+ ddp_leader +])?][? if ddp_name = "DDP" and ddp_ideology == "Moderate":<span class="tooltip-text" title="German Democratic Party" style="color: #D3C24D;">**[+ ddp_name +]**</span>: Left liberalism ([+ ddp_leader +])?][? if ddp_name = "DDP" and ddp_ideology == "Left":<span class="tooltip-text" title="German Democratic Party" style="color: #D3C24D;">**[+ ddp_name +]**</span>: Progressive liberalism ([+ ddp_leader +])?]?][? if not lvp_formed and ddp_name = "DDP" and dstp_dnef: <span class="tooltip-text" title="German Democratic Party" style="color: #D3C24D;">**[+ ddp_name +]**</span>: Liberal corporatism ([+ ddp_leader +])?]
-
-[? if ddp_name = "DStP" and not lvp_formed and (not dstp_collapsed or dstp_dnef):<span class="tooltip-text" title="German State Party" style="color: #D3C24D;">**[+ ddp_name +]**</span>: Liberal corporatism ([+ ddp_leader +])?][? if ddp_name = "DStP" and not lvp_formed and dstp_collapsed and not dstp_dnef:<span class="tooltip-text" title="German State Party" style="color: #D3C24D;">**[+ ddp_name +]**</span>: [? if ddp_ideology == "Right": Statist liberalism ?][? if ddp_ideology == "Moderate": Classical liberalism ?][? if ddp_ideology == "Left": Left liberalism?] ([+ ddp_leader +])?]
-
-[? if lvp_formed and not lvp_dnef: <span class="tooltip-text" title="Liberal People's Party" style="color: #FFCC00;">**LVP**</span>: [? if lvp_ideology == "Left": Left liberalism ([+ lvp_leader +])?][? if lvp_ideology == "Moderate": Classical liberalism ([+ lvp_leader +])?][? if lvp_ideology == "Right": National liberalism ([+ lvp_leader +])?]?]
-
-[? if lvp_formed and lvp_dnef: <span class="tooltip-text" title="Liberal People's Party" style="color: #FFCC00;">**LVP**</span>: Liberal corporatism ([+ lvp_leader +])?]
-
-[? if not ddp_name and not lvp_formed: UNINITIALIZED ?][? if not lvp_formed and dvp_exist and ddp_name != 0 and not dvp_dnef: [? if ddp_name != 0 and dvp_leader != "Thiel" and dvp_leader != "Glatzel": <span class="tooltip-text" title="German People's Party" style="color: #C0A054;">**DVP**</span>: [? if dvp_ideology = "Left": Classical liberalism ?][? if dvp_ideology = "Moderate": Conservative liberalism?][? if dvp_ideology = "Right" and (dvp_right - dvp_left < 10 or dvp_leader == "Stresemann"): National liberalism?][? if dvp_ideology = "Right" and dvp_right - dvp_left >= 10 and dvp_leader != "Stresemann": National capitalism?] ([+ dvp_leader +])?][? if ddp_name != 0 and (dvp_leader == "Thiel" or dvp_leader == "Glatzel"): <span class="tooltip-text" title="German People's Party" style="color: #C0A054;">**DVP**</span>: Paternalistic liberalism ([+ dvp_leader +])?]?]
-
-[? if not lvp_formed and dvp_exist and ddp_name != 0 and dvp_dnef: <span class="tooltip-text" title="German People's Party" style="color: #C0A054;">**DVP**</span>: National liberalism ([+ dvp_leader +])?]
-
-[? if not ddp_name: UNINITIALIZED ?][? if ddp_name != 0: <span class="tooltip-text" title="Communist Party of Germany" style="color: #700000;">**KPD**</span>: [? if kpd_leader = "Conciliators": Luxemburgism?][? if kpd_leader = "Thälmann": Stalinism?] ([+ kpd_leader +])?]
-
-[? if kvp_formed and not dnvp_dvp_formed: <span class="tooltip-text" title="Conservative People's Party" style="color: #0087DC;">**KVP**</span>: [? if not kvp_dnef: Christian conservatism?][? if kvp_dnef: National conservatism?] ([+ kvp_leader +])?]
-
-[? if dnvp_dvp_formed: <span class="tooltip-text" title="Free Conserative Party" style="color: #00C0FF;">**FKP**</span>: [+ fkp_ideology +]: ([+ fkp_leader +])?]
-
-[? if not ddp_name: UNINITIALIZED ?][? if ddp_name != 0 and not cvp_formed and not dnvp_dnef and not dnvp_defunct: <span class="tooltip-text" title="German National People's Party" style="color: #3E88B3;">**DNVP**</span>: [? if dnvp_leader = "Hugenberg" or dnvp_leader = "Triumvirate": Authoritarian conservatism?][? if dnvp_leader = "Westarp" or dnvp_leader = "Hergt" or dnvp_leader == "Lejeune-Jung" or dnvp_leader == "Keudell": National conservatism?][? if dnvp_leader = "Lambach": Christian socialism?][? if dnvp_leader = "Treviranus" and not true_christian_democracy: National conservatism?][? if dnvp_leader = "Treviranus" and true_christian_democracy: Tory democracy?][? if dnvp_leader = "Schiele": Agrarian conservatism?] ([+ dnvp_leader +])?]
-
-[? if ddp_name != 0 and not cvp_formed and dnvp_dnef: <span class="tooltip-text" title="German National People's Party" style="color: #3E88B3;">**DNVP**</span>: [? if dnvp_leader == "Lambach": Christian socialism?][? if dnvp_leader == "Treviranus": National conservatism?] ([+ dnvp_leader +])?]
-
-[? if dnf_formed : <span class="tooltip-text" title="German National Front" style="color: #003755;">**DNF**</span>: Authoritarian conservatism (Hugenberg) ?]
-
-[? if dsu_exist: <span class="tooltip-text" title="German Social Union" style="color: #6A1E1E;">**DSU**</span>: [? if not dsu_alt: Strasserism?][? if dsu_alt: Center Nazism?] ([+ dsu_leader +])?]
-
-[? if not ddp_name: UNINITIALIZED ?][? if ddp_name != 0: <span class="tooltip-text" title="National-Socialist German Worker's Party (Nazis)" style="color: #7A3C00;">**NSDAP**</span>: National Socialism ([+ nsdap_leader +])?]
-
-[? if nvf_exist: <span class="tooltip-text" title="National People's Front" style="color: #142e20;">**NVF**</span>: Revolutionary Volkism (Röhm)?]
-
-= Industrial Backing
-
-[? if dnef_formed: <span class="tooltip-text" title="German National Unity Front" style="color: #BFC8CC;">**DNEF**</span>: [? if industrial_dnef_backing == 3: high?][? if industrial_dnef_backing == 4: highest?] ?]
-
-[? if z_party_name == "CVP": <span class="tooltip-text" title="Christian People's Party" style="color: #000000;">**[+ z_party_name +]**</span>: [? if industrial_z_backing == 3: high?][? if industrial_z_backing == 4: highest?]  ?]
-
-[? if not lvp_formed: [? if ddp_name == "DStP": <span class="tooltip-text" title="German State Party" style="color: #D3C24D;">**[+ ddp_name +]**</span>?][? if ddp_name == "DDP": <span class="tooltip-text" title="German Democratic Party" style="color: #D3C24D;">**[+ ddp_name +]**</span>?]: [? if industrial_ddp_backing == 0: none?][? if industrial_ddp_backing == 1: low?][? if industrial_ddp_backing == 2: medium?]  ?]
-
-[? if lvp_formed: <span class="tooltip-text" title="Liberal People's Party" style="color: #FFCC00;">**LVP**</span>: [? if industrial_lvp_backing == 2: medium?][? if industrial_lvp_backing == 3: high?][? if industrial_lvp_backing == 4: highest?] ?]
-
-[? if not lvp_formed and dvp_exist: <span class="tooltip-text" title="German People's Party" style="color: #C0A054;">**DVP**</span>: [? if industrial_dvp_backing == 1: low?][? if industrial_dvp_backing == 2: medium?][? if industrial_dvp_backing == 3: high?] ?]
-
-[? if not cvp_formed and not dnvp_defunct: <span class="tooltip-text" title="German National People's Party" style="color: #3E88B3;">**DNVP**</span>: [? if industrial_dnvp_backing == 4: highest?][? if industrial_dnvp_backing == 3: high?][? if industrial_dnvp_backing == 2: medium?][? if industrial_dnvp_backing == 1: low?][? if industrial_dnvp_backing == 0: [? if dnvp_ideology == "Moderate": none?][? if dnvp_ideology == "Radical": Hugenberg funded?]?]?]
-
-[? if dnvp_ideology == "Moderate": <span class="tooltip-text" title="German National Front" style="color: #003755;">**DNF**</span>: Hugenberg funded ?]
-
-[? if kvp_formed and not dnvp_dvp_formed: <span class="tooltip-text" title="Conservative People's Party" style="color: #0087DC;">**KVP**</span>: high ?]
-
-[? if dnvp_dvp_formed: <span class="tooltip-text" title="Free Conserative Party" style="color: #00C0FF;">**FKP**</span>: high ?] 
-
-[? if dsu_exist: <span class="tooltip-text" title="German Social Union" style="color: #6A1E1E;">**DSU**</span>: none ?]
-
-<span class="tooltip-text" title="National-Socialist German Worker's Party (Nazis)" style="color: #7A3C00;">**NSDAP**</span>: [? if industrial_nsdap_backing == 0: none?][? if industrial_nsdap_backing == 1: low?][? if industrial_nsdap_backing == 2: medium?]
-
-[? if nvf_exist: <span class="tooltip-text" title="National People's Front" style="color: #142e20;">**NVF**</span>: none ?]
-
-= Internal Factions of the <span style="color: #c00000;">**SPD**</span>
-
-{!<span class="tooltip-text" title="The Left is interested in radical, transformative policies and cooperation with the KPD.">Left</span>!} strength: [+ left_strength : strength +], dissent: [+ left_dissent : dissent +]
-
-{!<span class="tooltip-text" title="The Center is a faction of Center Marxists, between reform and revolution.">Center</span>!} strength: [+ center_strength : strength +], dissent: [+ center_dissent : dissent +]
-
-{!<span class="tooltip-text" title="Labor's goal is economic reform and benefits for organized workers.">Labor</span>!} strength: [+ labor_strength : strength +], dissent: [+ labor_dissent : dissent +]
-
-{!<span class="tooltip-text" title="Reformists are pragmatic participants in government, and seek to expand the welfare state and defend democracy.">Reformist</span>!} strength: [+ reformist_strength : strength +], dissent: [+ reformist_dissent : dissent +]
-
+<div class="ledger-section"><div class="ledger-title">Democratic climate</div>
+<div class="ledger-row"><span>Minority safety</span><b>[+ status_minority_safety +]/100</b></div>
+<div class="ledger-row"><span>Far-right agenda power</span><b>[+ status_far_right_agenda +]/100</b></div>
+<div class="ledger-note">Police and military values measure professional public confidence—not partisan loyalty, militancy or coup power.</div></div>
 
 @paramilitaries
-on-arrival: {!
-Q.rb_strength_2 = Q.rb_strength.toFixed(1);
-Q.rfb_strength_2 = Q.rfb_strength.toFixed(1);
-Q.sh_strength_2 = Q.sh_strength.toFixed(1);
-Q.sa_strength_2 = Q.sa_strength.toFixed(1);
-!}
+title: Institutions
+new-page: true
+is-special: true
+call: status
 
-= Paramilitaries
+= Institutions
 
-<span class="tooltip-text" title="The Reichsbanner Schwarz-Rot-Gold is a popular organization for defending democracy, mostly affiliated with the SPD." style="color: #c00000;">**Reichsbanner**</span> Strength: [+ rb_strength_2 +] thousand
-
-<span style="color: #c00000;">**Reichsbanner**</span> Militarization: [+ rb_militancy : militancy +]
-
-<span class="tooltip-text" title="The RFB (Rotfrontkämpferbund) is a communist group associated with the KPD." style="color: #8B0000;">**RFB**</span> Strength: [+ rfb_strength_2 +] thousand
-
-<span style="color: #8B0000;">**RFB**</span> Militarization: [+ rfb_militancy : militancy +]
-
-<span class="tooltip-text" title="The Stahlhelm is a right-wing organization of war veterans associated with the DNVP." style="color:#3E88B3;">**Stahlhelm**</span> Strength: [+ sh_strength_2 +] thousand
-
-<span style="color: #3E88B3;">**Stahlhelm**</span> Militarization: [+ sh_militancy : militancy +]
-
-<span class="tooltip-text" title="The SA (Sturmabteilung) is the Nazi paramilitary." style="color: #7A3C00;">**SA**</span> Strength: [+ sa_strength_2 +] thousand
-
-<span style="color: #7A3C00;">**SA**</span> Militarization: [+ sa_militancy : militancy +]
-
-[? if year >= 1930 and not streetfighting_joever: <h1>Distribution of Power</h1> ?]
-
-[? if year >= 1930 and not streetfighting_joever: <h4>[? if not kpd_truce: <span style="color: #000000;">Dem</span><span style="color: #DD0000;">ocra</span><span style="color: #FFCC00;">tic</span>?][? if kpd_truce: Anti-<span style="color: #7A3C00;">Fascist</span>?] strength: [+ democracy_force +]%</h4>?]
-
-[? if year >= 1930 and not streetfighting_joever: <span style="color: #c00000;">**Reichsbanner**</span>: [+ rb_force +]%?]
-
-[? if year >= 1930 and not streetfighting_joever and prussia_leader != "Papen" and prussia_leader != "Schleicher" and prussia_leader != "Strasser": <b>Prussian police: [+ prussia_force +]%</b>?]
-
-[? if year >= 1930 and not streetfighting_joever and kpd_truce: <span style="color: #8B0000;">**RFB**</span>: [+ rfb_force +]%?]
-
-[? if year >= 1930 and not streetfighting_joever: <h4><span style="color: #7A3C00;">Far</span>-<span style="color: #3E88B3;">right</span> strength: [+ far_right_force +]%</h4>?]
-
-[? if year >= 1930 and not streetfighting_joever: <span style="color: #7A3C00;">**SA**</span>: [+ sa_force +]%?]
-
-[? if year >= 1930 and not streetfighting_joever: <span style="color: #3E88B3;">**Stahlhelm**</span>: [+ sh_force +]%?]
-
-[? if year >= 1930 and not streetfighting_joever and not kpd_truce: <span style="color: #8B0000;">**RFB**</span>: [+ rfb_force +]%?]
-
-[? if year >= 1930 and not streetfighting_joever and (prussia_leader == "Papen" or prussia_leader == "Schleicher" or prussia_leader == "Strasser") or reichswehr_street: <h4><span style="color: #BFC8CC;">**State**</span> strength: [+ state_force +]%</h4>?]
-
-[? if year >= 1930 and not streetfighting_joever and prussia_leader == "Papen" or prussia_leader == "Schleicher" or prussia_leader == "Strasser": <b>Prussian police: [+ prussia_force +]%</b>?]
-
-[? if year >= 1930 and not streetfighting_joever and reichswehr_street: <b>Reichswehr Gendarmerie: [+ reichswehr_force +]%</b>?]
-
-[? if year >= 1930 and not streetfighting_joever: Currently, the streets are [? if far_right_paramilitary and rfb_force < far_right_force:[? if far_right_paramilitary_highest: fully controlled by the <span style="color: #7A3C00;">far</span>-<span style="color: #3E88B3;">right</span>?][? if far_right_paramilitary_high: dominated by the <span style="color: #7A3C00;">far</span>-<span style="color: #3E88B3;">right</span>?][? if far_right_paramilitary_med: controlled by the <span style="color: #7A3C00;">far</span>-<span style="color: #3E88B3;">right</span>?][? if far_right_paramilitary_low: in the slight control of the <span style="color: #7A3C00;">far</span>-<span style="color: #3E88B3;">right</span>?][? if sa_paramilitary:, mainly by the violent <span style="color: #7A3C00;">**SA**</span>?]?][? if rfb_force >= far_right_force and far_right_paramilitary: controlled by the <span style="color: #700000;">**RFB**</span>?][? if democracy_paramilitary and rfb_force < democracy_force:[? if democracy_paramilitary_highest: fully controlled by the <span style="color: #000000;">repu</span><span style="color: #DD0000;">bli</span><span style="color: #FFCC00;">cans</span>?][? if democracy_paramilitary_high: dominated by the <span style="color: #000000;">repu</span><span style="color: #DD0000;">bli</span><span style="color: #FFCC00;">cans</span>?][? if democracy_paramilitary_med: controlled by the <span style="color: #000000;">repu</span><span style="color: #DD0000;">bli</span><span style="color: #FFCC00;">cans</span>?][? if democracy_paramilitary_low: in the slight control of the <span style="color: #000000;">repu</span><span style="color: #DD0000;">bli</span><span style="color: #FFCC00;">cans</span>?]?][? if rfb_force >= democracy_force and democracy_paramilitary: controlled by the <span style="color: #700000;">**RFB**</span>?][? if state_paramilitary:[? if state_paramilitary_highest: fully controlled by the <span style="color: #BFC8CC;">**State**</span>?][? if state_paramilitary_high: dominated by the <span style="color: #BFC8CC;">**State**</span>?][? if state_paramilitary_med: controlled by the <span style="color: #BFC8CC;">**State**</span>?][? if state_paramilitary_low: in the slight control of the <span style="color: #BFC8CC;">**State**</span>?]?].?]
-
-
-= Official military/paramilitaries
-
-Reichswehr: [+ reichswehr_strength +] thousand troops.
-
-Reichswehr Loyalty: [+ reichswehr_loyalty : loyalty +]
-
-Prussian police: [+ prussian_police_strength +] thousand members.
-
-Prussian police loyalty: [+ prussian_police_loyalty : loyalty +]
-
-[? if spd_in_government : Interior police loyalty: [+ interior_police_loyalty : loyalty +] ?]
+This compatibility tab has moved to **Institutions**. It tracks lawful state
+capacity, democratic legitimacy and public confidence rather than partisan
+armed formations.
 
 @polls
-on-arrival: {!
-Q.pro_republic_disp = Math.round(Q.pro_republic);
-Q.nationalism_disp = Math.round(Q.nationalism);
-Q.socialism_disp = Math.round(Q.socialism);
-!}
+title: Indicators
+new-page: true
+is-special: true
+call: status
 
-= Projected election results
+= Indicators
 
-(if the election were to be held now):
+<div class="ledger-section ledger-section-first"><div class="ledger-title">Likely-voter poll</div>
+<div class="poll-row"><span class="party party-pis"><b>PiS</b></span><span>[+ status_pis_poll +]% · intent [+ status_pis_intent +]%</span><span>[+ status_pis_projection +] projected</span></div>
+<div class="poll-row"><span class="party party-ko"><b>KO</b></span><span>[+ status_ko_poll +]% · intent [+ status_ko_intent +]%</span><span>[+ status_ko_projection +] projected</span></div>
+<div class="poll-row"><span class="party party-lewica"><b>Lewica</b></span><span>[+ status_left_poll +]% · intent [+ status_left_intent +]%</span><span>[+ status_left_projection +] projected</span></div>
+<div class="poll-row"><span class="party party-psl"><b>PSL</b></span><span>[+ status_psl_poll +]% · intent [+ status_psl_intent +]%</span><span>[+ status_psl_projection +] projected</span></div>
+[? if status_p2050_visible: <div class="poll-row"><span class="party party-p2050"><b>PL2050</b></span><span>[+ status_p2050_poll +]% · intent [+ status_p2050_intent +]%</span><span>[+ status_p2050_projection +] projected</span></div>?]
+<div class="poll-row"><span class="party party-konf"><b>Konf.</b></span><span>[+ status_konf_poll +]% · intent [+ status_konf_intent +]%</span><span>[+ status_konf_projection +] projected</span></div>
+<div class="poll-row"><span>Others</span><span>[+ status_other_poll +]% · intent [+ status_other_intent +]%</span><span>below/list-specific</span></div>
+<div class="ledger-subrow">[+ status_poll_sample +] likely voters · ±[+ status_poll_margin +] points · updated [+ status_poll_updated +]</div></div>
 
-[? if dnef_formed: <span style="color: #BFC8CC;">**DNEF**</span>: [+ dnef_votes +]% ?]
+[? if status_pres_visible: <div class="ledger-section"><div class="ledger-title">Presidential election</div>?]
+[? if status_pres_visible: <div class="ledger-row"><span>Phase</span><b>[+ status_pres_phase +]</b></div>?]
+[? if status_pres_visible: <div class="ledger-row"><span>Lewica candidate</span><b>[+ status_candidate +]</b></div>?]
+[? if status_pres_r1_complete: <div class="ledger-row"><span>First ballot</span><b>[+ status_pres_r1_leader +] · [+ status_pres_r1_runner +]</b></div><div class="ledger-subrow">Lewica [+ status_pres_left_r1 +]%</div>?]
+[? if status_pres_r1_complete and not status_pres_runoff_complete: <div class="ledger-row"><span>Runoff</span><b>[+ status_pres_finalist_a +] · [+ status_pres_finalist_b +]</b></div><div class="ledger-subrow">Left line: [+ status_pres_endorsement +]</div>?]
+[? if status_pres_runoff_complete: <div class="ledger-row"><span>[+ status_pres_result_label +]</span><b>[+ status_pres_winner +]</b></div><div class="ledger-subrow">[+ status_pres_finalist_a +] [+ status_pres_runoff_a +]% · [+ status_pres_finalist_b +] [+ status_pres_runoff_b +]%</div>?]
+[? if status_trz_route_visible: <div class="ledger-row"><span>Certification</span><b>[+ status_trz_inauguration +]</b></div>?]
+[? if status_trz_route_visible and trz_inaugurated: <div class="ledger-row"><span>War of the Powers</span><b>[+ status_trz_temperature +] pressure · [+ status_trz_vetoes +] vetoes</b></div><div class="ledger-subrow">United Right fracture [+ status_trz_fragmentation +] · right backlash [+ status_trz_backlash +]</div><div class="ledger-subrow">Abortion: [+ status_trz_abortion +] · marriage: [+ status_trz_marriage +]</div>?]
+[? if status_pres_visible: </div>?]
 
-<span style="color: #c00000;">**SPD**</span>: [+ spd_votes +]%
+<div class="ledger-section"><div class="ledger-title">Current Sejm</div>
+<div class="poll-row"><span class="party party-pis"><b>PiS</b></span><span></span><span>[+ status_pis_seats +] seats</span></div>
+<div class="poll-row"><span class="party party-ko"><b>KO</b></span><span></span><span>[+ status_ko_seats +] seats</span></div>
+<div class="poll-row"><span class="party party-lewica"><b>Lewica</b></span><span></span><span>[+ status_left_seats +] seats</span></div>
+<div class="poll-row"><span class="party party-psl"><b>PSL</b></span><span></span><span>[+ status_psl_seats +] seats</span></div>
+[? if status_p2050_visible: <div class="poll-row"><span class="party party-p2050"><b>PL2050</b></span><span></span><span>[+ status_p2050_seats +] seats</span></div>?]
+<div class="poll-row"><span class="party party-konf"><b>Konf.</b></span><span></span><span>[+ status_konf_seats +] seats</span></div>
+<div class="poll-row"><span>Others</span><span></span><span>[+ status_other_seats +] seat</span></div>
+</div>
 
-[? if sapd_formed: <span style="color: #9B0000;">**SAPD**</span>: [+ sapd_votes +]% ?]
+<div class="ledger-section"><div class="ledger-title">Projected governing arithmetic</div>
+<div class="faction-row"><span>KO · PL2050 · PSL · Lewica</span><span>[+ status_coalition_democratic_seats +] seats · compatibility [+ status_coalition_democratic_score +]/100</span></div>
+<div class="faction-row"><span>KO · PL2050 · PSL</span><span>[+ status_coalition_center_seats +] · [+ status_coalition_center_score +]/100</span></div>
+<div class="faction-row"><span>PiS · Konfederacja</span><span>[+ status_coalition_right_seats +] · [+ status_coalition_right_score +]/100</span></div>
+<div class="faction-row"><span>PiS · PSL</span><span>[+ status_coalition_pis_psl_seats +] · [+ status_coalition_pis_psl_score +]/100</span></div></div>
 
-<span style="color: #000000;">**[+ z_party_name +]**</span> + <span style="color: #A2D8E0;">**BVP**</span>: [+ z_votes +]%
+<div class="ledger-section"><div class="ledger-title">Mutually exclusive voter blocs</div>
+<div class="faction-row"><span><b>Metropolitan liberals</b></span><span>[+ status_metropolitan_liberals_size +]% electorate · Lewica [+ status_metropolitan_liberals_left +]% · [+ status_metropolitan_liberals_turnout +]% turnout · [+ status_metropolitan_liberals_leader +] leads</span></div>
+<div class="faction-row"><span><b>Liberal professionals</b></span><span>[+ status_liberal_professionals_size +]% · Lewica [+ status_liberal_professionals_left +]% · [+ status_liberal_professionals_turnout +]% turnout · [+ status_liberal_professionals_leader +] leads</span></div>
+<div class="faction-row"><span><b>Public-service families</b></span><span>[+ status_public_service_families_size +]% · Lewica [+ status_public_service_families_left +]% · [+ status_public_service_families_turnout +]% turnout · [+ status_public_service_families_leader +] leads</span></div>
+<div class="faction-row"><span><b>Industrial and logistics</b></span><span>[+ status_industrial_logistics_size +]% · Lewica [+ status_industrial_logistics_left +]% · [+ status_industrial_logistics_turnout +]% turnout · [+ status_industrial_logistics_leader +] leads</span></div>
+<div class="faction-row"><span><b>Provincial welfare voters</b></span><span>[+ status_provincial_welfare_size +]% · Lewica [+ status_provincial_welfare_left +]% · [+ status_provincial_welfare_turnout +]% turnout · [+ status_provincial_welfare_leader +] leads</span></div>
+<div class="faction-row"><span><b>Rural localists</b></span><span>[+ status_rural_localists_size +]% · Lewica [+ status_rural_localists_left +]% · [+ status_rural_localists_turnout +]% turnout · [+ status_rural_localists_leader +] leads</span></div>
+<div class="faction-row"><span><b>Older welfare households</b></span><span>[+ status_older_welfare_households_size +]% · Lewica [+ status_older_welfare_households_left +]% · [+ status_older_welfare_households_turnout +]% turnout · [+ status_older_welfare_households_leader +] leads</span></div>
+<div class="faction-row"><span><b>Anti-establishment youth</b></span><span>[+ status_anti_establishment_youth_size +]% · Lewica [+ status_anti_establishment_youth_left +]% · [+ status_anti_establishment_youth_turnout +]% turnout · [+ status_anti_establishment_youth_leader +] leads</span></div>
+<div class="ledger-note">These eight groups are the complete electorate and sum to 100. The Lewica share is recalculated after every month from choices, rival actions, issue fit and turnout.</div></div>
 
-<span style="color: #700000;">**KPD**</span>: [+ kpd_votes +]%
+<div class="ledger-section"><div class="ledger-title">Campaign capacity</div>
+<div class="ledger-row"><span>Public trust</span><b>[+ status_public_trust +]/100</b></div>
+<div class="ledger-row"><span>Labour credibility</span><b>[+ status_labor_credibility +]/100</b></div>
+<div class="ledger-row"><span>Progressive credibility</span><b>[+ status_progressive_credibility +]/100</b></div>
+<div class="ledger-row"><span>Feminist trust</span><b>[+ status_feminist_trust +]/100</b></div>
+<div class="ledger-row"><span>Media capacity</span><b>[+ status_media_capacity +]/100</b></div>
+<div class="ledger-row"><span>Local network</span><b>[+ status_local_network +]/100</b></div></div>
 
-[? if not lvp_formed: [? if not ddp_name: <span style="color: #D3C24D;">**DDP**</span>?][? if ddp_name != 0: <span style="color: #D3C24D;">**[+ ddp_name +]**</span>?]: [+ ddp_votes +]% ?]
+@opinion
+title: Public mood
+new-page: true
+is-special: true
+call: status
 
-[? if lvp_formed: <span style="color: #FFCC00;">**LVP**</span>: [+ lvp_votes +]% ?]
+= Public mood
 
-[? if not lvp_formed and dvp_exist: <span style="color: #C0A054;">**DVP**</span>: [+ dvp_votes +]% ?]
+<div class="ledger-section ledger-section-first"><div class="ledger-title">National pressure</div>
+<div class="ledger-row"><span>Panic / issue pressure</span><b>[+ status_public_panic +]/100</b></div>
+<div class="ledger-subrow">[+ status_public_panic_band +] · hottest field: [+ status_public_hottest +]</div>
+<div class="ledger-row"><span>Cross-issue consensus</span><b>[+ status_public_consensus +]/100</b></div>
+<div class="ledger-row"><span>Legacy-event pressure this month</span><b>[+ status_public_bridge_pressure +]/100</b></div>
+<div class="ledger-subrow">Updated [+ status_public_updated +]</div></div>
 
-[? if kvp_formed and not dnvp_dvp_formed: <span style="color: #0087DC;">**KVP**</span>: [+ kvp_votes +]% ?]
+<div class="ledger-section"><div class="ledger-title">Rights, family and church</div>
+<div class="ledger-row"><span>Abortion rights</span><b>[+ status_abortion_rights_support +] · [+ status_abortion_rights_salience +] · [+ status_abortion_rights_backlash +]</b></div>
+<div class="ledger-subrow">[+ status_abortion_rights_support_band +] · [+ status_abortion_rights_salience_band +] · [+ status_abortion_rights_backlash_band +]. [+ status_abortion_rights_climate +].</div>
+<div class="ledger-row"><span>LGBT equality</span><b>[+ status_lgbt_equality_support +] · [+ status_lgbt_equality_salience +] · [+ status_lgbt_equality_backlash +]</b></div>
+<div class="ledger-subrow">[+ status_lgbt_equality_support_band +] · [+ status_lgbt_equality_salience_band +] · [+ status_lgbt_equality_backlash_band +]. [+ status_lgbt_equality_climate +].</div>
+<div class="ledger-row"><span>Secular state and schools</span><b>[+ status_secular_state_support +] · [+ status_secular_state_salience +] · [+ status_secular_state_backlash +]</b></div>
+<div class="ledger-subrow">[+ status_secular_state_support_band +] · [+ status_secular_state_salience_band +] · [+ status_secular_state_backlash_band +]. [+ status_secular_state_climate +].</div></div>
 
-[? if dnvp_dvp_formed: <span class="tooltip-text" title="Free Conserative Party" style="color: #00C0FF;">**FKP**</span>: [+ kvp_votes +]% ?]
+<div class="ledger-section"><div class="ledger-title">Borders, refugees and security</div>
+<div class="ledger-row"><span>Refugee and asylum solidarity</span><b>[+ status_refugee_solidarity_support +] · [+ status_refugee_solidarity_salience +] · [+ status_refugee_solidarity_backlash +]</b></div>
+<div class="ledger-subrow">[+ status_refugee_solidarity_support_band +] · [+ status_refugee_solidarity_salience_band +] · [+ status_refugee_solidarity_backlash_band +]. [+ status_refugee_solidarity_climate +].</div>
+<div class="ledger-row"><span>Eastern-border security</span><b>[+ status_border_security_support +] · [+ status_border_security_salience +] · [+ status_border_security_backlash +]</b></div>
+<div class="ledger-subrow">[+ status_border_security_support_band +] · [+ status_border_security_salience_band +] · [+ status_border_security_backlash_band +]. [+ status_border_security_climate +].</div>
+<div class="ledger-row"><span>Defence and allied security</span><b>[+ status_national_security_support +] · [+ status_national_security_salience +] · [+ status_national_security_backlash +]</b></div>
+<div class="ledger-subrow">[+ status_national_security_support_band +] · [+ status_national_security_salience_band +] · [+ status_national_security_backlash_band +]. [+ status_national_security_climate +].</div></div>
 
-[? if not cvp_formed and not dnvp_defunct: <span style="color: #3E88B3;">**DNVP**</span>: [+ dnvp_votes +]%?]
+<div class="ledger-section"><div class="ledger-title">Material, health and institutions</div>
+<div class="ledger-row"><span>Social spending and services</span><b>[+ status_social_spending_support +] · [+ status_social_spending_salience +] · [+ status_social_spending_backlash +]</b></div>
+<div class="ledger-subrow">[+ status_social_spending_support_band +] · [+ status_social_spending_salience_band +] · [+ status_social_spending_backlash_band +]. [+ status_social_spending_climate +].</div>
+<div class="ledger-row"><span>Vaccination and public health</span><b>[+ status_vaccination_support +] · [+ status_vaccination_salience +] · [+ status_vaccination_backlash +]</b></div>
+<div class="ledger-subrow">[+ status_vaccination_support_band +] · [+ status_vaccination_salience_band +] · [+ status_vaccination_backlash_band +]. [+ status_vaccination_climate +].</div>
+<div class="ledger-row"><span>Rule-of-law repair</span><b>[+ status_rule_of_law_support +] · [+ status_rule_of_law_salience +] · [+ status_rule_of_law_backlash +]</b></div>
+<div class="ledger-subrow">[+ status_rule_of_law_support_band +] · [+ status_rule_of_law_salience_band +] · [+ status_rule_of_law_backlash_band +]. [+ status_rule_of_law_climate +].</div></div>
 
-[? if dnf_formed: <span style="color: #003755;">**DNF**</span>: [+ dnf_votes +]% ?]
+<div class="ledger-section"><div class="ledger-title">Latest public test</div>
+<div class="ledger-row"><span>[+ status_public_last_action +]</span><b>[+ status_public_last_reception +] · [+ status_public_last_delta +]</b></div>
+<div class="ledger-subrow">Issue field: [+ status_public_last_issue +]</div>
+<div class="ledger-note">Every issue reads support · salience/panic · backlash. Support names the proposition shown; the figures are independent and do not sum to 100.</div></div>
 
-[? if dsu_exist: <span style="color: #6A1E1E;">**DSU**</span>: [+ dsu_votes +]% ?]
+@emergency
+title: Crisis
+new-page: true
+is-special: true
+call: status
 
-[? if not nsdap_split: <span style="color: #7A3C00;">**NSDAP**</span>: [+ nsdap_votes +]% ?]
+= Crisis and budgets
 
-[? if nsdap_split: <span style="color: #7A3C00;">**NSDAP**</span>: [+ nsdap_hitler_votes +]% ?]
+<div class="ledger-section ledger-section-first"><div class="ledger-title">Current doctrines</div>
+<div class="ledger-row"><span>COVID-19</span><b>[+ status_covid_policy +]</b></div>
+<div class="ledger-row"><span>Postal election</span><b>[+ status_postal_stance +]</b></div>
+<div class="ledger-row"><span>Abortion</span><b>[+ status_abortion_strategy +]</b></div>
+<div class="ledger-row"><span>Pandemic pressure</span><b>[+ status_pandemic_pressure +]/100</b></div>
+<div class="ledger-row"><span>Broken fiscal promises</span><b>[+ status_budget_breaches +]</b></div></div>
 
-[? if nvf_exist: <span style="color: #142e20;">**NVF**</span>: [+ nvf_votes +]% ?]
+<div class="ledger-section"><div class="ledger-title">Annual confidence tests</div>
+<div class="ledger-row"><span>2019 backing</span><b>[? if status_budget_2019_done: [+ status_budget_2019_backing +]%?][? if not status_budget_2019_done: —?]</b></div>
+<div class="ledger-subrow">[? if not status_budget_2019_done: pending?][? if status_budget_2019_done and status_budget_2019_ratified: <span class="meter-good">ratified</span>?][? if status_budget_2019_done and not status_budget_2019_ratified: <span class="meter-warning">not ratified</span>?][? if status_budget_2019_done: · [+ status_budget_2019_vetoes +] caucus vetoes?]</div>
+<div class="ledger-row"><span>2020 backing</span><b>[? if status_budget_2020_done: [+ status_budget_2020_backing +]%?][? if not status_budget_2020_done: —?]</b></div>
+<div class="ledger-subrow">[? if not status_budget_2020_done: pending?][? if status_budget_2020_done and status_budget_2020_ratified: <span class="meter-good">ratified</span>?][? if status_budget_2020_done and not status_budget_2020_ratified: <span class="meter-warning">not ratified</span>?][? if status_budget_2020_done: · [+ status_budget_2020_vetoes +] caucus vetoes?]</div>
+<div class="ledger-note">In opposition, these values measure a common Left voting line—not control of state spending. In government, an internal mandate must then survive coalition and chamber votes.</div></div>
 
-**Others**: [+ other_votes +]%
-
-Support for the Republic: [+ pro_republic_disp +]%
-
-**Detailed results for each demographic**
-
-Workers: [? if dnef_formed: DNEF: [+ workers_dnef_display +]%, ?]SPD: [+ workers_spd_display +]%, [+ z_party_name +]: [+ workers_z_display +]%, KPD: [+ workers_kpd_display +]%, [? if not lvp_formed: [+ ddp_name +]: [+ workers_ddp_display +]%, [? if dvp_exist: DVP: [+ workers_dvp_display +]%,?]?][? if lvp_formed: LVP: [+ workers_lvp_display +]%,?] [? if not cvp_formed: DNVP: [+ workers_dnvp_display +]%,?] [? if dnf_formed: DNF: [+ workers_dnf_display +]%  ?][? if kvp_formed: KVP: [+ workers_kvp_display +]%  ?]NSDAP: [+ workers_nsdap_display +]%, Others: [+ workers_other_display +]%
-
-New Middle Class: [? if dnef_formed: DNEF: [+ new_middle_dnef_display +]%, ?]SPD: [+ new_middle_spd_display +]%, [+ z_party_name +]: [+ new_middle_z_display +]%, KPD: [+ new_middle_kpd_display +]%, [? if not lvp_formed: [+ ddp_name +]: [+ new_middle_ddp_display +]%, [? if dvp_exist: DVP: [+ new_middle_dvp_display +]%,?]?][? if lvp_formed: LVP: [+ new_middle_lvp_display +]%,?] [? if not cvp_formed: DNVP: [+ new_middle_dnvp_display +]%,?] [? if dnf_formed: DNF: [+ new_middle_dnf_display +]%  ?][? if kvp_formed: KVP: [+ new_middle_kvp_display +]%  ?]NSDAP: [+ new_middle_nsdap_display +]%, Others: [+ new_middle_other_display +]%
-
-Old Middle Class: [? if dnef_formed: DNEF: [+ old_middle_dnef_display +]%, ?]SPD: [+ old_middle_spd_display +]%, [+ z_party_name +]: [+ old_middle_z_display +]%, KPD: [+ old_middle_kpd_display +]%, [? if not lvp_formed: [+ ddp_name +]: [+ old_middle_ddp_display +]%, [? if dvp_exist: DVP: [+ old_middle_dvp_display +]%,?]?][? if lvp_formed: LVP: [+ old_middle_lvp_display +]%,?] [? if not cvp_formed: DNVP: [+ old_middle_dnvp_display +]%,?] [? if dnf_formed: DNF: [+ old_middle_dnf_display +]%  ?][? if kvp_formed: KVP: [+ old_middle_kvp_display +]%  ?]NSDAP: [+ old_middle_nsdap_display +]%, Others: [+ old_middle_other_display +]%
-
-Rural: [? if dnef_formed: DNEF: [+ rural_dnef_display +]%, ?]SPD: [+ rural_spd_display +]%, [+ z_party_name +]: [+ rural_z_display +]%, KPD: [+ rural_kpd_display +]%, [? if not lvp_formed: [+ ddp_name +]: [+ rural_ddp_display +]%, [? if dvp_exist: DVP: [+ rural_dvp_display +]%,?]?][? if lvp_formed: LVP: [+ rural_lvp_display +]%,?] [? if not cvp_formed: DNVP: [+ rural_dnvp_display +]%,?] [? if dnf_formed: DNF: [+ rural_dnf_display +]%  ?][? if kvp_formed: KVP: [+ rural_kvp_display +]%  ?]NSDAP: [+ rural_nsdap_display +]%, Others: [+ rural_other_display +]%
-
-Unemployed: [? if dnef_formed: DNEF: [+ unemployed_dnef_display +]%, ?]SPD: [+ unemployed_spd_display +]%, [+ z_party_name +]: [+ unemployed_z_display +]%, KPD: [+ unemployed_kpd_display +]%, [? if not lvp_formed: [+ ddp_name +]: [+ unemployed_ddp_display +]%, [? if dvp_exist: DVP: [+ unemployed_dvp_display +]%,?]?][? if lvp_formed: LVP: [+ unemployed_lvp_display +]%,?] [? if not cvp_formed: DNVP: [+ unemployed_dnvp_display +]%,?] [? if dnf_formed: DNF: [+ unemployed_dnf_display +]%  ?][? if kvp_formed: KVP: [+ unemployed_kvp_display +]%  ?]NSDAP: [+ unemployed_nsdap_display +]%, Others: [+ unemployed_other_display +]%
-
-Catholics: [? if dnef_formed: DNEF: [+ catholics_dnef_display +]%, ?]SPD: [+ catholics_spd_display +]%, [+ z_party_name +]: [+ catholics_z_display +]%, KPD: [+ catholics_kpd_display +]%, [? if not lvp_formed: [+ ddp_name +]: [+ catholics_ddp_display +]%, [? if dvp_exist: DVP: [+ catholics_dvp_display +]%,?]?][? if lvp_formed: LVP: [+ catholics_lvp_display +]%,?] [? if not cvp_formed: DNVP: [+ catholics_dnvp_display +]%,?] [? if dnf_formed: DNF: [+ catholics_dnf_display +]%  ?][? if kvp_formed: KVP: [+ catholics_kvp_display +]%  ?]NSDAP: [+ catholics_nsdap_display +]%, Others: [+ catholics_other_display +]%
+<div class="ledger-section"><div class="ledger-title">Cabinet confidence</div>
+<div class="ledger-row"><span>Procedure</span><b>[+ status_confidence_mode +]</b></div>
+<div class="ledger-row"><span>Candidate</span><b>[+ status_confidence_candidate +]</b></div>
+<div class="ledger-row"><span>Roll call</span><b>[+ status_confidence_yes +] yes · [+ status_confidence_no +] no · [+ status_confidence_abstain +] abstain</b></div>
+<div class="ledger-row"><span>Threshold</span><b>[+ status_confidence_threshold +] of [+ status_confidence_present +] present</b></div>
+<div class="ledger-row"><span>Coalition seats</span><b>[+ status_coalition_seats +]/460</b></div></div>

@@ -1,0 +1,64 @@
+title: Dated political events
+new-page: true
+call: poland_normalize
+on-arrival: {!
+Q.poland_event_phase = 1;
+const queueScene =
+    this.game.scenes["poland_event_queue.events_choice"];
+const allEventsScene =
+    this.game.scenes["poland_event_queue.all_events"];
+const compiled = this._compileChoices(queueScene) || [];
+const allCompiled = this._compileChoices(allEventsScene) || [];
+const rootId = this.state.rootSceneId;
+const activeTier = compiled.filter(function(choice) {
+    return choice.id !== rootId;
+});
+const datedEvents = allCompiled.filter(function(choice) {
+    return choice.id !== rootId;
+});
+Q.poland_event_queue_count = datedEvents.length;
+Q.poland_event_queue_tier_count = activeTier.length;
+Q.poland_event_queue_titles = datedEvents.map(function(choice) {
+    return choice.title;
+}).join(" · ");
+Q.poland_event_queue_tier_titles = activeTier.map(function(choice) {
+    return choice.title;
+}).join(" · ");
+Q.poland_event_queue_date = Q.date_label;
+!}
+go-to: events_choice if poland_event_queue_count > 0; complete if poland_event_queue_count = 0
+
+@events_choice
+title: Events on the desk
+new-page: true
+
+= [+ date_label +] — events on the desk
+
+**Cabinet:** [+ government_name +], led by **[+ prime_minister +]**.  
+**President:** [+ president_name +].  
+**Lewica's authority:** [+ left_role +].
+
+[? if poland_event_queue_count = 1: One dated decision must be resolved before
+the leadership table reopens.?]
+[? if poland_event_queue_count > 1: **[+ poland_event_queue_count +] crises
+remain in this month.** Resolve every one before the leadership table
+reopens.?]
+[? if poland_event_queue_count > poland_event_queue_tier_count:
+The **[+ poland_event_queue_tier_count +]** most urgent
+[? if poland_event_queue_tier_count = 1:issue is?][? if
+poland_event_queue_tier_count != 1:issues are?] on the desk now. Lower-priority
+files open as soon as this tier is exhausted.?]
+
+- #poland_event
+
+@all_events
+title: Every pending event
+min-choices: 999
+
+- #poland_event
+
+@complete
+title: The desk clears
+new-page: true
+on-arrival: poland_event_phase = 0; poland_event_queue_count = 0; poland_event_queue_tier_count = 0; poland_event_queue_titles = ""; poland_event_queue_tier_titles = ""; poland_event_months_cleared += 1
+go-to: poland_ending.final_assessment if year = 2026 and month = 12; poland_hub if not (year = 2026 and month = 12)

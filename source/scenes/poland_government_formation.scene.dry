@@ -1,0 +1,2373 @@
+title: The 2023 transfer of power
+
+@campaign_entry
+title: October 2023 — certify the new Sejm
+new-page: true
+on-arrival: {!
+const finiteFormation = function(value, fallback) {
+    return Number.isFinite(Number(value)) ? Number(value) : fallback;
+};
+const apportionFormation = function(total, entries) {
+    const safeTotal = Math.max(0, Math.round(finiteFormation(total, 0)));
+    const weights = entries.map(function(entry) {
+        return {
+            id: entry.id,
+            weight: Math.max(0, finiteFormation(entry.weight, 0))
+        };
+    });
+    let weightTotal = weights.reduce(function(sum, entry) {
+        return sum + entry.weight;
+    }, 0);
+    if (weightTotal <= 0) {
+        weightTotal = weights.length;
+        for (const entry of weights) entry.weight = 1;
+    }
+    const allocated = {};
+    const remainders = [];
+    let used = 0;
+    for (const entry of weights) {
+        const exact = safeTotal * entry.weight / weightTotal;
+        const base = Math.floor(exact);
+        allocated[entry.id] = base;
+        used += base;
+        remainders.push({
+            id: entry.id,
+            remainder: exact - base
+        });
+    }
+    remainders.sort(function(a, b) {
+        if (b.remainder != a.remainder) {
+            return b.remainder - a.remainder;
+        }
+        return a.id < b.id ? -1 : 1;
+    });
+    for (let i = 0; i < safeTotal - used; i += 1) {
+        allocated[remainders[i % remainders.length].id] += 1;
+    }
+    return allocated;
+};
+
+Q.started = 1;
+Q.prototype_complete = 0;
+Q.continuous_campaign = 1;
+Q.formation_entry_mode = "continuous";
+Q.formation_continuous = 1;
+Q.formation_requested = 1;
+Q.formation_in_progress = 1;
+Q.formation_return_ready = 0;
+Q.formation_complete = 0;
+Q.formation_outcome_score = 0;
+Q.election_2023_certified = 1;
+Q.post_formation_return_pending = 0;
+
+// This entry is deliberately not a new-game setup. Party resources, the
+// agenda hand, advisors, factional history, rival AI, ideology, relations,
+// presidential history and the judicial record all remain untouched.
+Q.year = 2023;
+Q.month = 10;
+Q.month_name = "October";
+Q.date_label = "October 2023";
+Q.position = "Parliamentary opposition";
+Q.prime_minister = "Mateusz Morawiecki";
+Q.government_name = "Outgoing PiS caretaker cabinet";
+Q.caretaker_government = 1;
+Q.government_has_confidence = 0;
+Q.left_in_government = 0;
+Q.budget = 0;
+Q.budget_authority = "Opposition — no state spending authority";
+Q.coalition_broken = 0;
+Q.coalition_status = "No new cabinet has won confidence";
+Q.coalition_seats = 0;
+Q.sejm_total = 460;
+Q.sejm_quorum_floor = 230;
+Q.sejm_statutory_majority = 231;
+
+const partyIds = [
+    "pis", "ko", "p2050", "psl", "left", "konf", "other"
+];
+const projectedEntries = partyIds.map(function(id) {
+    return {
+        id: id,
+        weight: finiteFormation(Q[id + "_projected_seats"], 0)
+    };
+});
+let projectedTotal = projectedEntries.reduce(function(sum, entry) {
+    return sum + Math.max(0, Math.round(entry.weight));
+}, 0);
+let certified;
+if (projectedTotal > 0) {
+    certified = apportionFormation(Q.sejm_total, projectedEntries);
+} else {
+    certified = apportionFormation(
+        Q.sejm_total,
+        partyIds.map(function(id) {
+            return {
+                id: id,
+                weight: finiteFormation(
+                    Q[id + "_vote_intent"],
+                    finiteFormation(Q[id + "_poll"], 0)
+                )
+            };
+        })
+    );
+}
+for (const id of partyIds) {
+    Q[id + "_seats"] = certified[id];
+    Q[id + "_projected_seats"] = certified[id];
+    Q["election_2023_" + id + "_vote"] = finiteFormation(
+        Q[id + "_vote_intent"],
+        finiteFormation(Q[id + "_poll"], 0)
+    );
+}
+
+const leftCaucuses = apportionFormation(Q.left_seats, [
+    {id: "barons", weight: 6},
+    {id: "new_generation", weight: 8},
+    {id: "spring", weight: 5},
+    {id: "razem", weight: 7}
+]);
+Q.left_barons_seats = leftCaucuses.barons;
+Q.left_new_generation_seats = leftCaucuses.new_generation;
+Q.left_spring_seats = leftCaucuses.spring;
+Q.razem_seats = leftCaucuses.razem;
+Q.nowa_lewica_seats = Math.max(0, Q.left_seats - Q.razem_seats);
+
+const pslCaucuses = apportionFormation(Q.psl_seats, [
+    {id: "core", weight: 19},
+    {id: "regional", weight: 11},
+    {id: "conservative", weight: 2}
+]);
+Q.psl_core_seats = pslCaucuses.core;
+Q.psl_regional_seats = pslCaucuses.regional;
+Q.psl_conservative_seats = pslCaucuses.conservative;
+
+const p2050Caucuses = apportionFormation(Q.p2050_seats, [
+    {id: "loyalist", weight: 20},
+    {id: "liberal", weight: 10},
+    {id: "independent", weight: 3}
+]);
+Q.p2050_loyalist_seats = p2050Caucuses.loyalist;
+Q.p2050_liberal_seats = p2050Caucuses.liberal;
+Q.p2050_independent_seats = p2050Caucuses.independent;
+
+Q.coalition_democratic_seats =
+    Q.ko_seats + Q.p2050_seats + Q.psl_seats + Q.left_seats;
+Q.coalition_center_seats =
+    Q.ko_seats + Q.p2050_seats + Q.psl_seats;
+Q.coalition_right_seats = Q.pis_seats + Q.konf_seats;
+Q.coalition_pis_psl_seats = Q.pis_seats + Q.psl_seats;
+Q.seat_subvention_seats = Q.left_seats;
+Q.seat_subvention = Q.left_seats > 0
+    ? Math.max(1, Math.round(Q.left_seats / 25))
+    : 0;
+Q.party_income =
+    Math.max(0, finiteFormation(Q.member_dues, 0)) + Q.seat_subvention;
+
+// The Senate currently has no election simulator. Certify its historical
+// 2023 composition while retaining all campaign-built institutional scores.
+Q.senate_total = 100;
+Q.senate_pis_seats = 34;
+Q.senate_ko_seats = 41;
+Q.senate_psl_seats = 11;
+Q.senate_left_seats = 9;
+Q.senate_independent_seats = 5;
+Q.senate_opposition_seats = 66;
+Q.senate_working_votes = 66;
+Q.senate_marshal = "Małgorzata Kidawa-Błońska";
+Q.senate_control = "Democratic coalition majority";
+
+Q.election_summary_seen = 0;
+Q.election_coalition_seen = 0;
+Q.election_2023_seen = 0;
+Q.confidence_stage = 0;
+Q.confidence_mode = "Government formation has not begun";
+Q.confidence_candidate = "None";
+Q.confidence_present = 0;
+Q.confidence_threshold = 0;
+Q.confidence_yes = 0;
+Q.confidence_no = 0;
+Q.confidence_abstain = 0;
+Q.morawiecki_votes = 0;
+Q.democratic_votes = 0;
+Q.democratic_candidate = "Undecided";
+Q.democratic_pact = "Not negotiated";
+Q.early_election_risk = 0;
+Q.first_psl_yes = 0;
+Q.first_psl_abstain = 0;
+Q.first_left_yes = 0;
+Q.first_left_abstain = 0;
+Q.first_konf_yes = 0;
+Q.first_konf_abstain = 0;
+Q.first_pis_absent = Math.min(4, Q.pis_seats);
+Q.candidate_right_absent = Math.min(
+    11,
+    Q.pis_seats + Q.konf_seats
+);
+Q.first_confidence_passed = 0;
+Q.formation_discipline = 0;
+Q.presidential_channel_open = finiteFormation(
+    Q.presidential_channel_open,
+    0
+);
+Q.candidate_ko_votes = 0;
+Q.candidate_p2050_votes = 0;
+Q.candidate_psl_votes = 0;
+Q.candidate_psl_cap = 0;
+Q.candidate_left_votes = 0;
+Q.candidate_vote_passed = 0;
+Q.left_cabinet_committed = 0;
+Q.left_cabinet_model = "Not negotiated";
+Q.ministry_return_mode = "cabinet_program";
+Q.ministries_finalized = 0;
+Q.ministry_count = 0;
+Q.cabinet_confidence_passed = 0;
+Q.cabinet_program = "Not negotiated";
+Q.coalition_break_threat = 0;
+Q.news_headline =
+    "The election certifies " + Q.coalition_democratic_seats +
+    " democratic seats and " + Q.coalition_right_seats +
+    " seats for PiS and Konfederacja";
+!}
+go-to: poland_election.results_2023
+
+@setup
+title: October 2023 — no one has a government
+new-page: true
+on-arrival: {!
+Q.started = 1;
+Q.prototype_complete = 0;
+Q.scenario_mode = "formation_2023";
+Q.formation_entry_mode = "standalone";
+Q.formation_continuous = 0;
+Q.formation_requested = 1;
+Q.formation_in_progress = 1;
+Q.formation_return_ready = 0;
+Q.formation_complete = 0;
+Q.formation_outcome_score = 0;
+Q.left_in_government = 0;
+
+Q.year = 2023;
+Q.month = 10;
+Q.month_name = "October";
+Q.date_label = "October 2023";
+Q.economic_growth = 0.2;
+Q.inflation = 11.4;
+Q.unemployment = 5.1;
+Q.public_debt = 49.7;
+Q.budget_balance = -5.3;
+Q.position = "Parliamentary opposition";
+Q.prime_minister = "Mateusz Morawiecki";
+Q.government_name = "Outgoing PiS caretaker cabinet";
+Q.caretaker_government = 1;
+Q.government_has_confidence = 0;
+Q.coalition_broken = 0;
+Q.coalition_status = "No new cabinet has won confidence";
+Q.sejm_speaker = "Elżbieta Witek";
+Q.president_name = "Andrzej Duda";
+
+Q.sejm_total = 460;
+Q.sejm_quorum_floor = 230;
+Q.sejm_statutory_majority = 231;
+Q.pis_seats = 194;
+Q.ko_seats = 157;
+Q.p2050_seats = 33;
+Q.psl_seats = 32;
+Q.left_seats = 26;
+Q.konf_seats = 18;
+Q.other_seats = 0;
+Q.coalition_seats = 0;
+
+Q.left_barons_seats = 6;
+Q.left_new_generation_seats = 8;
+Q.left_spring_seats = 5;
+Q.razem_seats = 7;
+Q.nowa_lewica_seats = 19;
+Q.psl_core_seats = 19;
+Q.psl_regional_seats = 11;
+Q.psl_conservative_seats = 2;
+Q.p2050_loyalist_seats = 20;
+Q.p2050_liberal_seats = 10;
+Q.p2050_independent_seats = 3;
+
+Q.senate_total = 100;
+Q.senate_pis_seats = 34;
+Q.senate_ko_seats = 41;
+Q.senate_psl_seats = 11;
+Q.senate_left_seats = 9;
+Q.senate_independent_seats = 5;
+Q.senate_opposition_seats = 66;
+Q.senate_working_votes = 66;
+Q.senate_marshal = "Małgorzata Kidawa-Błońska";
+Q.senate_control = "Democratic coalition majority";
+Q.senate_cohesion = 72;
+Q.senate_left_leverage = 22;
+
+Q.pis_poll = 35.4;
+Q.ko_poll = 30.7;
+Q.p2050_poll = 7.2;
+Q.psl_poll = 7.2;
+Q.left_poll = 8.6;
+Q.konf_poll = 7.2;
+Q.other_poll = 3.7;
+Q.p2050_emerged = 1;
+Q.poll_model_initialized = 1;
+Q.poll_sample_size = 1400;
+Q.poll_margin_error = 2.6;
+Q.polling_house = "2023 election baseline · national model";
+Q.poll_last_updated = "15 October 2023 election baseline";
+Q.poll_reference_left = 8.6;
+Q.poll_reference_pis = 35.4;
+Q.poll_reference_ko = 30.7;
+Q.poll_reference_psl = 7.2;
+Q.poll_reference_konf = 7.2;
+Q.poll_reference_p2050 = 7.2;
+Q.poll_reference_other = 3.7;
+Q.poll_last_model_left = 8.6;
+Q.poll_last_model_pis = 35.4;
+Q.poll_last_model_ko = 30.7;
+Q.poll_last_model_psl = 7.2;
+Q.poll_last_model_konf = 7.2;
+Q.poll_last_model_p2050 = 7.2;
+Q.poll_last_model_other = 3.7;
+Q.left_poll_momentum = 0;
+Q.pis_poll_momentum = 0;
+Q.ko_poll_momentum = 0;
+Q.psl_poll_momentum = 0;
+Q.konf_poll_momentum = 0;
+Q.p2050_poll_momentum = 0;
+Q.other_poll_momentum = 0;
+Q.poll_calibration_left = 0;
+Q.poll_calibration_pis = 0;
+Q.poll_calibration_ko = 0;
+Q.poll_calibration_psl = 0;
+Q.poll_calibration_konf = 0;
+Q.poll_calibration_p2050 = 0;
+Q.poll_calibration_other = 0;
+Q.left_vote_intent = 8.6;
+Q.pis_vote_intent = 35.4;
+Q.ko_vote_intent = 30.7;
+Q.psl_vote_intent = 7.2;
+Q.konf_vote_intent = 7.2;
+Q.p2050_vote_intent = 7.2;
+Q.other_vote_intent = 3.7;
+Q.left_projected_seats = 26;
+Q.pis_projected_seats = 194;
+Q.ko_projected_seats = 157;
+Q.psl_projected_seats = 32;
+Q.konf_projected_seats = 18;
+Q.p2050_projected_seats = 33;
+Q.other_projected_seats = 0;
+Q.pis_org_resources = 11;
+Q.ko_org_resources = 10;
+Q.psl_org_resources = 7;
+Q.konf_org_resources = 7;
+Q.p2050_org_resources = 8;
+Q.pis_org_income = 7;
+Q.ko_org_income = 6;
+Q.psl_org_income = 4;
+Q.konf_org_income = 4;
+Q.p2050_org_income = 5;
+Q.national_turnout_climate = 74;
+Q.pis_leader = "Jarosław Kaczyński";
+Q.ko_leader = "Donald Tusk";
+Q.p2050_leader = "Szymon Hołownia";
+Q.psl_leader = "Władysław Kosiniak-Kamysz";
+Q.konf_leader = "Sławomir Mentzen";
+
+// The standalone formation chapter needs its own authored ideological
+// snapshot. A continuous 2019 campaign reaches 2023 with its evolved balances
+// and never enters this setup.
+Q.left_economic_position = 35;
+Q.left_cultural_position = 24;
+Q.pis_economic_position = 34;
+Q.pis_cultural_position = 89;
+Q.ko_economic_position = 58;
+Q.ko_cultural_position = 37;
+Q.psl_economic_position = 52;
+Q.psl_cultural_position = 70;
+Q.konf_economic_position = 91;
+Q.konf_cultural_position = 92;
+Q.p2050_economic_position = 55;
+Q.p2050_cultural_position = 49;
+Q.left_right_score = 27;
+Q.pis_right_score = 64;
+Q.ko_right_score = 48;
+Q.psl_right_score = 62;
+Q.konf_right_score = 91;
+Q.p2050_right_score = 51;
+Q.party_system_left_pull = 18;
+Q.party_system_konf_pull = 28;
+Q.party_system_pendulum = 10;
+Q.party_system_climate = "Konfederacja is pulling the centre to the right";
+Q.covid_anti_system_pressure = 26;
+Q.pis_solidarist_share = 55;
+Q.pis_market_hardliner_share = 45;
+Q.ko_social_liberal_share = 52;
+Q.ko_classical_liberal_share = 48;
+Q.psl_agrarian_pragmatist_share = 39;
+Q.psl_conservative_share = 38;
+Q.psl_coalition_manager_share = 23;
+Q.konf_braunist_share = 15;
+Q.konf_mentzenite_share = 55;
+Q.konf_nationalist_share = 30;
+Q.p2050_state_capacity_share = 42;
+Q.p2050_christian_dem_share = 34;
+Q.p2050_personalist_share = 24;
+Q.pis_dominant_wing = "social-solidarist machine";
+Q.ko_dominant_wing = "social-liberal coalition";
+Q.psl_dominant_wing = "agrarian and conservative brokers";
+Q.konf_dominant_wing = "Mentzenite market radicals";
+Q.p2050_dominant_wing = "green state-capacity current";
+Q.rival_wings_initialized = 1;
+Q.rival_wings_version = 1;
+
+Q.resources = 6;
+Q.member_dues = 2;
+Q.seat_subvention_seats = 26;
+Q.seat_subvention = 1;
+Q.party_income = Q.member_dues + Q.seat_subvention;
+Q.party_unity = 51;
+Q.public_trust = 39;
+Q.media_capacity = 20;
+Q.local_network = 48;
+Q.labor_credibility = 48;
+Q.progressive_credibility = 52;
+Q.feminist_trust = 47;
+Q.razem_cooperation = 44;
+Q.workers_support = 20;
+Q.public_sector_support = 24;
+Q.young_support = 17;
+Q.women_support = 19;
+Q.urban_progressive_support = 22;
+Q.rural_support = 8;
+Q.pensioner_support = 8;
+Q.turnout_readiness = 67;
+Q.household_security = 40;
+Q.constitutional_restraint = 54;
+Q.minority_safety = 51;
+Q.far_right_agenda = 47;
+Q.government_delivery = 0;
+Q.budget = 0;
+Q.budget_authority = "Opposition — no state spending authority";
+Q.budget_cycle_year = 2024;
+Q.next_budget_label = "December 2024";
+Q.budget_breaches = 0;
+Q.fiscal_stress = 8;
+
+Q.ko_relation = 49;
+Q.p2050_relation = 42;
+Q.psl_relation = 34;
+Q.pis_relation = 8;
+Q.konf_relation = 3;
+Q.president_relation = 19;
+Q.third_way_cohesion = 58;
+Q.ko_coalition_dissent = 8;
+Q.p2050_coalition_dissent = 11;
+Q.psl_coalition_dissent = 18;
+Q.left_coalition_dissent = 16;
+Q.government_coalition_dissent = 0;
+Q.pis_accept_social = 43;
+Q.pis_accept_rights = 10;
+Q.pis_accept_order = 77;
+Q.pis_accept_market = 51;
+Q.pis_coalition_openness = 15;
+Q.ko_accept_social = 58;
+Q.ko_accept_rights = 66;
+Q.ko_accept_order = 55;
+Q.ko_accept_market = 52;
+Q.ko_coalition_openness = 63;
+Q.psl_accept_social = 55;
+Q.psl_accept_rights = 31;
+Q.psl_accept_order = 68;
+Q.psl_accept_market = 49;
+Q.psl_coalition_openness = 57;
+Q.konf_accept_social = 8;
+Q.konf_accept_rights = 3;
+Q.konf_accept_order = 72;
+Q.konf_accept_market = 88;
+Q.konf_coalition_openness = 4;
+Q.p2050_accept_social = 51;
+Q.p2050_accept_rights = 56;
+Q.p2050_accept_order = 53;
+Q.p2050_accept_market = 48;
+Q.p2050_coalition_openness = 61;
+
+Q.factions = ["barons", "spring", "labor", "progressives", "razem"];
+Q.barons_strength = 23;
+Q.spring_strength = 18;
+Q.labor_strength = 16;
+Q.progressives_strength = 20;
+Q.razem_strength = 23;
+Q.barons_dissent = 25;
+Q.spring_dissent = 18;
+Q.labor_dissent = 21;
+Q.progressives_dissent = 16;
+Q.razem_dissent = 31;
+Q.internal_dissent = 23;
+Q.faction_vetoes = 0;
+
+Q.confidence_stage = 0;
+Q.confidence_mode = "Government formation has not begun";
+Q.confidence_candidate = "None";
+Q.confidence_present = 0;
+Q.confidence_threshold = 0;
+Q.confidence_yes = 0;
+Q.confidence_no = 0;
+Q.confidence_abstain = 0;
+Q.morawiecki_votes = 0;
+Q.democratic_votes = 0;
+Q.democratic_candidate = "Undecided";
+Q.democratic_pact = "Not negotiated";
+Q.constructive_vonc_cooldown = 0;
+Q.early_election_risk = 0;
+
+Q.first_psl_yes = 0;
+Q.first_psl_abstain = 0;
+Q.first_left_yes = 0;
+Q.first_left_abstain = 0;
+Q.first_konf_yes = 0;
+Q.first_konf_abstain = 0;
+Q.first_pis_absent = 4;
+Q.candidate_right_absent = 11;
+Q.first_confidence_passed = 0;
+Q.formation_discipline = 0;
+Q.presidential_channel_open = 0;
+
+Q.candidate_ko_votes = 0;
+Q.candidate_p2050_votes = 0;
+Q.candidate_psl_votes = 0;
+Q.candidate_left_votes = 0;
+Q.candidate_vote_passed = 0;
+Q.left_cabinet_committed = 0;
+Q.left_cabinet_model = "Not negotiated";
+Q.ministry_return_mode = "cabinet_program";
+Q.cabinet_confidence_passed = 0;
+Q.cabinet_program = "Not negotiated";
+
+Q.annual_budget_done = 0;
+Q.annual_budget_passed = 0;
+Q.annual_budget_package = "Not negotiated";
+Q.annual_budget_package_code = 0;
+Q.annual_budget_internal_backing = 0;
+Q.annual_budget_internal_vetoes = 0;
+Q.annual_budget_left_votes = 0;
+Q.annual_budget_left_no = 0;
+Q.annual_budget_ko_votes = 0;
+Q.annual_budget_p2050_votes = 0;
+Q.annual_budget_psl_votes = 0;
+Q.annual_budget_psl_no = 0;
+Q.annual_budget_psl_abstain = 0;
+Q.coalition_break_threat = 0;
+
+Q.ending_score = 0;
+Q.ending_name = "The transfer remains open";
+Q.news_headline = "The election produces 248 democratic seats and no incumbent majority";
+!}
+go-to: poland_election.results_2023
+
+@first_sitting
+title: The first sitting
+new-page: true
+
+= 13 November 2023 — two clocks begin
+
+The election has returned a precise and awkward chamber:
+
+<div class="ledger-section ledger-section-first"><div class="ledger-title">The
+new Sejm — 460 seats</div>
+<div class="poll-row"><span class="party party-pis"><b>PiS</b></span><span>[+ pis_seats +]</span><span>largest right club</span></div>
+<div class="poll-row"><span class="party party-ko"><b>KO</b></span><span>[+ ko_seats +]</span><span>civic coalition</span></div>
+<div class="poll-row"><span class="party party-p2050"><b>Poland 2050</b></span><span>[+ p2050_seats +]</span><span>Third Way</span></div>
+<div class="poll-row"><span class="party party-psl"><b>PSL</b></span><span>[+ psl_seats +]</span><span>Third Way</span></div>
+<div class="poll-row"><span class="party party-lewica"><b>Lewica</b></span><span>[+ left_seats +]</span><span>[+ nowa_lewica_seats +] New Left · [+ razem_seats +] Razem</span></div>
+<div class="poll-row"><span class="party party-konf"><b>Konfederacja</b></span><span>[+ konf_seats +]</span><span>federal caucus</span></div>
+<div class="ledger-subrow">KO + Poland 2050 + PSL + Lewica = <b>[+
+coalition_democratic_seats +]</b>. Without Lewica: [+
+coalition_center_seats +]. Without PSL: [+ coalition_democratic_seats -
+psl_seats +]. Neither partner is automatically ornamental.</div></div>
+
+[? if not trz_inaugurated: President [+ president_name +] accepts the outgoing
+cabinet's resignation but lets it remain as caretaker. The Palace is
+constitutionally free to designate a first candidate, and PiS argues that the
+largest parliamentary club should receive the attempt. ?]
+
+[? if trz_inaugurated: President Trzaskowski faces the opposite dilemma:
+whether respecting the certified parliamentary agreement requires bypassing a
+performative Morawiecki attempt. ?]
+
+The Left cannot choose whom the President nominates. It can decide whether the
+potential majority behaves like a coalition before any minister exists.
+
+- @first_democratic_protocol
+- @first_presidential_channel
+- @first_rural_channel
+- @trzaskowski_majority_designation
+
+@first_democratic_protocol
+title: Sign a public democratic voting protocol
+subtitle: Cost: 1 party resource. Discipline first; ministries later.
+view-if: not trz_inaugurated
+choose-if: resources >= 1
+unavailable-subtitle: The parliamentary and legal teams need one party resource.
+on-arrival: resources -= 1; formation_discipline = 2; party_unity += 3; ko_relation += 3; p2050_relation += 3; psl_relation += 2; constitutional_restraint += 2; news_headline = "The democratic clubs publish a joint transfer protocol"
+go-to: psl_courting
+
+@first_presidential_channel
+title: Court the President as an institutional actor
+subtitle: Ask for a timetable and clean procedure without pretending he is a coalition partner.
+view-if: not trz_inaugurated
+on-arrival: presidential_channel_open = 1; president_relation += 12; constitutional_restraint += 4; psl_relation -= 1; barons_dissent -= 2; razem_dissent += 3; news_headline = "Lewica opens a narrow constitutional channel to the Palace"
+go-to: psl_courting
+
+@first_rural_channel
+title: Secure PSL before securing the whole democratic bloc
+subtitle: A practical hedge that gives the most nervous partner the first private meeting.
+view-if: not trz_inaugurated
+on-arrival: formation_discipline = 1; psl_relation += 8; ko_relation -= 2; p2050_relation -= 2; barons_dissent -= 3; progressives_dissent += 3; news_headline = "The Left treats PSL as the hinge of the transfer"
+go-to: psl_courting
+
+@trzaskowski_majority_designation
+title: Ask Trzaskowski to recognise the certified majority
+subtitle: Skip a knowingly futile PiS attempt and make the coalition name its candidate.
+view-if: trz_inaugurated
+on-arrival: confidence_stage = 2; confidence_mode = "Presidential designation after a certified majority agreement"; constitutional_restraint += 3; president_relation += 4; pis_relation -= 5; news_headline = "President Trzaskowski asks the parliamentary majority to name a government"
+go-to: sejm_candidate
+
+@psl_courting
+title: PiS calls the PSL offices
+new-page: true
+
+= The agrarian hinge
+
+PiS has **[+ pis_seats +] seats**. Even every one of PSL's **[+ psl_seats +]
+deputies** would only produce **[+ coalition_pis_psl_seats +]** before any
+other defection. That does not make the offer meaningless: ministries,
+agricultural agencies and a conservative social truce could split Third Way,
+then invite individual deputies from elsewhere.
+
+PSL itself is not one vote. Its **[+ psl_core_seats +]-seat core**, **[+
+psl_regional_seats +] regional brokers** and **[+ psl_conservative_seats +]
+especially conservative deputies** hear different promises. The threat to
+leave a coalition is also how the party increases its value inside one.
+
+- @psl_public_lock
+- @psl_rural_counteroffer
+- @psl_free_hand
+
+@psl_public_lock
+title: Bind PSL to a named democratic protocol
+subtitle: Cost: 1 party resource. Public rural guarantees in exchange for zero PiS votes.
+choose-if: resources >= 1
+unavailable-subtitle: A common negotiating and communications team costs one resource.
+on-arrival: resources -= 1; first_psl_yes = 0; first_psl_abstain = 0; psl_relation += 5; third_way_cohesion += 6; formation_discipline += 1; news_headline = "PSL signs its name under the democratic transfer"
+go-to: left_courting
+
+@psl_rural_counteroffer
+title: Beat PiS to the rural and local-government guarantees
+subtitle: Cost: 2 party resources. Expensive solidarity, but it closes the agency auction.
+choose-if: resources >= 2
+unavailable-subtitle: A costed rural package and local negotiations require two resources.
+on-arrival: resources -= 2; first_psl_yes = 0; first_psl_abstain = 0; psl_relation += 9; labor_credibility += 3; rural_support += 4; annual_rural_guarantee = 1; news_headline = "A democratic rural protocol deprives PiS of its easiest offer"
+go-to: left_courting
+
+@psl_free_hand
+title: Do not police PSL's talks
+subtitle: The dangerous bargain: up to 21 deputies may back Morawiecki and five may abstain.
+on-arrival: {!
+Q.first_psl_yes = Math.min(21, Q.psl_seats);
+Q.first_psl_abstain = Math.min(
+    5,
+    Math.max(0, Q.psl_seats - Q.first_psl_yes)
+);
+Q.psl_relation -= 10;
+Q.p2050_relation -= 8;
+Q.third_way_cohesion -= 18;
+Q.party_unity -= 2;
+Q.public_trust -= 3;
+Q.news_headline = "Regional PSL brokers keep the PiS offer alive";
+!}
+go-to: left_courting
+
+@left_courting
+title: Morawiecki offers the Left a social ledger
+new-page: true
+
+= A programme without trust
+
+The designated candidate talks about pharmacies, Sunday trading, public-sector
+pay and housing. The offer is designed for television and for the Left's
+internal fault line: **[+ left_barons_seats +] old SLD barons** value access
+and social conservatism; **[+ left_new_generation_seats +] younger,
+women-led deputies** demand rights; Wiosna wants equality; Razem wants
+enforceable labour and housing policy.
+
+PiS does not need all **[+ left_seats +]**. It needs photographs, abstentions
+and the argument that the democratic coalition has no monopoly on social
+policy.
+
+- @left_united_rejection
+- @left_extract_and_expose
+- @left_issue_pact
+
+@left_united_rejection
+title: Reject the offer as one parliamentary club
+subtitle: The historical line. No confidence votes, no abstentions.
+on-arrival: first_left_yes = 0; first_left_abstain = 0; party_unity += 5; razem_dissent -= 5; progressives_dissent -= 3; pis_relation -= 5; news_headline = "Every Left deputy rejects Morawiecki"
+go-to: right_auction
+
+@left_extract_and_expose
+title: Demand written social promises, then publish the omissions
+subtitle: Cost: 1 party resource. Turn courtship into an opposition dossier.
+choose-if: resources >= 1
+unavailable-subtitle: Legal costing and coordinated media work need one resource.
+on-arrival: resources -= 1; first_left_yes = 0; first_left_abstain = 2; public_trust += 4; media_capacity += 3; labor_credibility += 3; barons_dissent += 2; razem_dissent -= 2; news_headline = "Lewica publishes the price and loopholes in Morawiecki's offer"
+go-to: right_auction
+
+@left_issue_pact
+title: Let the barons and labour wing sign an issue pact
+subtitle: Up to eleven yes and three abstentions. It may make PiS viable—and may break the Left.
+on-arrival: {!
+Q.first_left_yes = Math.min(11, Q.left_seats);
+Q.first_left_abstain = Math.min(
+    3,
+    Math.max(0, Q.left_seats - Q.first_left_yes)
+);
+Q.party_unity -= 18;
+Q.barons_dissent -= 12;
+Q.labor_dissent -= 7;
+Q.progressives_dissent += 16;
+Q.spring_dissent += 14;
+Q.razem_dissent += 22;
+Q.pis_relation += 15;
+Q.ko_relation -= 13;
+Q.p2050_relation -= 9;
+Q.public_trust -= 7;
+Q.news_headline = "A group of Left deputies accepts a PiS social pact";
+!}
+go-to: right_auction
+
+@right_auction
+title: Konfederacja names its price
+new-page: true
+
+= The last pool of votes
+
+Konfederacja's 18 deputies are a federation, not a disciplined successor to a
+Weimar mass movement. Nationalists want a harder border and culture war;
+libertarians want tax concessions; Grzegorz Braun's two closest deputies want
+spectacle and impunity. PiS can buy parts of that menu but not assume the whole
+club.
+
+The Left's choice is whether to make the auction politically toxic or let the
+right negotiate in the hope that its contradictions defeat it.
+
+- @konf_isolate
+- @konf_counterprogram
+- @konf_let_bid
+
+@konf_isolate
+title: Build a common constitutional cordon
+subtitle: Cost: 1 party resource. Make every confidence vote a recorded choice.
+choose-if: resources >= 1
+unavailable-subtitle: A cross-party whip and public record require one resource.
+on-arrival: resources -= 1; first_konf_yes = 0; first_konf_abstain = 0; formation_discipline += 1; constitutional_restraint += 4; far_right_agenda -= 2; news_headline = "The democratic clubs deny Konfederacja a hidden auction"
+go-to: first_confidence_roll
+
+@konf_counterprogram
+title: Separate material grievances from the far-right package
+subtitle: A visible workers-and-small-business answer; two Konfederacja deputies abstain.
+on-arrival: first_konf_yes = 0; first_konf_abstain = 2; labor_credibility += 3; rural_support += 2; far_right_agenda -= 1; news_headline = "Lewica contests the grievance vote without laundering the far right"
+go-to: first_confidence_roll
+
+@konf_let_bid
+title: Let PiS and Konfederacja bid against each other
+subtitle: Eight votes may move to Morawiecki. This becomes fatal if PSL and Left already fractured.
+on-arrival: {!
+Q.first_konf_yes = Math.min(8, Q.konf_seats);
+Q.first_konf_abstain = Math.min(
+    3,
+    Math.max(0, Q.konf_seats - Q.first_konf_yes)
+);
+Q.far_right_agenda += 8;
+Q.minority_safety -= 5;
+Q.public_trust -= 2;
+Q.news_headline = "PiS buys a fragment of Konfederacja's programme";
+!}
+go-to: first_confidence_roll
+
+@first_confidence_roll
+title: Morawiecki asks for confidence
+new-page: true
+on-arrival: {!
+const boundedFirst = function(value, low, high) {
+    const numeric = Number.isFinite(Number(value)) ? Number(value) : low;
+    return Math.max(low, Math.min(high, Math.round(numeric)));
+};
+const pslYes = boundedFirst(Q.first_psl_yes, 0, Q.psl_seats);
+const pslAbstain = boundedFirst(
+    Q.first_psl_abstain,
+    0,
+    Math.max(0, Q.psl_seats - pslYes)
+);
+const leftYes = boundedFirst(Q.first_left_yes, 0, Q.left_seats);
+const leftAbstain = boundedFirst(
+    Q.first_left_abstain,
+    0,
+    Math.max(0, Q.left_seats - leftYes)
+);
+const konfYes = boundedFirst(Q.first_konf_yes, 0, Q.konf_seats);
+const konfAbstain = boundedFirst(
+    Q.first_konf_abstain,
+    0,
+    Math.max(0, Q.konf_seats - konfYes)
+);
+const firstYesTransfers = pslYes + leftYes + konfYes;
+const firstAbstainTransfers = pslAbstain + leftAbstain + konfAbstain;
+const pisAbsent = boundedFirst(Q.first_pis_absent, 0, Q.pis_seats);
+const pisYes = Math.max(0, Q.pis_seats - pisAbsent);
+Q.confidence_stage = 1;
+Q.confidence_mode =
+    "Article 154 first attempt — absolute majority of deputies present";
+Q.confidence_candidate = "Mateusz Morawiecki";
+Q.confidence_yes = pisYes + firstYesTransfers;
+Q.confidence_abstain = firstAbstainTransfers;
+Q.confidence_no = Math.max(0,
+    Q.sejm_total - pisAbsent - Q.confidence_yes - Q.confidence_abstain
+);
+Q.confidence_present =
+    Q.confidence_yes + Q.confidence_no + Q.confidence_abstain;
+Q.confidence_threshold = Math.floor(Q.confidence_present / 2) + 1;
+Q.morawiecki_votes = Q.confidence_yes;
+Q.first_confidence_passed =
+    Q.confidence_present >= Q.sejm_quorum_floor &&
+    Q.confidence_yes > Q.confidence_no + Q.confidence_abstain ? 1 : 0;
+if (Q.first_confidence_passed) {
+    Q.news_headline = "Morawiecki finds an alternative majority";
+} else {
+    Q.news_headline = "The presidential first attempt fails";
+}
+!}
+
+= First attempt — the Palace's candidate
+
+Article 154 requires an **absolute majority among deputies present**, with at
+least half the statutory Sejm present. Abstentions therefore raise the hurdle
+just like votes against.
+
+<div class="ledger-section ledger-section-first"><div class="ledger-title">Roll
+call</div>
+<div class="ledger-row"><span>Candidate</span><b>Mateusz Morawiecki</b></div>
+<div class="ledger-row"><span>Yes</span><b>[+ confidence_yes +]</b></div>
+<div class="ledger-row"><span>No</span><b>[+ confidence_no +]</b></div>
+<div class="ledger-row"><span>Abstain</span><b>[+ confidence_abstain +]</b></div>
+<div class="ledger-row"><span>Present</span><b>[+ confidence_present +]</b></div>
+<div class="ledger-row"><span>Required</span><b>[+ confidence_threshold +]</b></div></div>
+
+[? if not first_confidence_passed: The cabinet fails. In the historical
+configuration the board reads **190–266**, and the initiative passes to the
+Sejm. ?]
+
+[? if first_confidence_passed: The cabinet survives because separate PSL, Left
+and Konfederacja bargains became one numerical majority. Nobody can now claim
+that those agreements were merely exploratory. ?]
+
+- @first_confidence_continue: Continue from the roll call
+
+@first_confidence_continue
+go-to: morawiecki_cabinet if first_confidence_passed = 1; sejm_candidate if first_confidence_passed = 0
+
+@morawiecki_cabinet
+title: An alternative majority takes office
+new-page: true
+on-arrival: {!
+Q.left_in_government = 0;
+Q.formation_complete = 1;
+Q.caretaker_government = 0;
+Q.government_has_confidence = 1;
+Q.prime_minister = "Mateusz Morawiecki";
+Q.government_name = "PiS-led bargain cabinet";
+Q.position = "Parliamentary opposition";
+Q.coalition_status = "PiS-led confidence pact";
+Q.coalition_seats = Q.confidence_yes;
+Q.budget = 0;
+Q.budget_authority = "Opposition — no state spending authority";
+Q.ending_name = "The democratic transfer dissolved before taking office";
+if (Q.formation_continuous) {
+    Q.formation_outcome_score = 12;
+    Q.ending_score =
+        (Number.isFinite(Number(Q.ending_score)) ? Number(Q.ending_score) : 0) -
+        8;
+} else {
+    Q.ending_score = 12;
+}
+Q.party_unity -= 8;
+!}
+
+= The majority that was supposed not to exist
+
+Morawiecki has confidence. A confidence vote is not automatically a coalition
+agreement: some PSL and Left deputies may have bought issues without taking
+ministries, while Konfederacja reserves the right to deny responsibility. The
+result is still a government, and the Left is still outside it.
+
+There is no government budget interface here. Opposition can propose,
+condition or reject spending, but it cannot spend the cabinet's fiscal
+capacity.
+
+- @formation_exit: Record the new opposition
+
+@sejm_candidate
+title: The Sejm chooses a candidate
+new-page: true
+on-arrival: sejm_speaker = "Szymon Hołownia"; confidence_stage = 2; confidence_mode = "Article 154 Sejm initiative — candidate selection"
+
+= The second constitutional attempt
+
+The failed presidential cabinet transfers initiative to the Sejm. A candidate
+must assemble an absolute majority with quorum. The democratic parties possess
+**[+ coalition_democratic_seats +] seats**, but the name at the top changes
+which mini-parties consider themselves bound.
+
+- @nominate_tusk
+- @nominate_kosiniak
+- @nominate_left_compromise
+
+@nominate_tusk
+title: Nominate Donald Tusk
+subtitle: Historical choice. Every KO deputy begins committed.
+on-arrival: democratic_candidate = "Donald Tusk"; candidate_ko_votes = ko_seats; candidate_p2050_votes = p2050_seats; candidate_psl_cap = psl_seats; candidate_code = 1; ko_relation += 4; barons_dissent += 2; news_headline = "The democratic clubs name Donald Tusk"
+go-to: democratic_left_mandate
+
+@nominate_kosiniak
+title: Nominate Władysław Kosiniak-Kamysz
+subtitle: A rural-centrist compromise; six KO deputies withhold their first vote.
+on-arrival: {!
+Q.democratic_candidate = "Władysław Kosiniak-Kamysz";
+Q.candidate_ko_votes = Math.max(
+    0,
+    Q.ko_seats - Math.min(6, Q.ko_seats)
+);
+Q.candidate_p2050_votes = Q.p2050_seats;
+Q.candidate_psl_cap = Q.psl_seats;
+Q.candidate_code = 2;
+Q.psl_relation += 8;
+Q.ko_relation -= 5;
+Q.progressives_dissent += 3;
+Q.news_headline = "The coalition tests a Kosiniak-Kamysz premiership";
+!}
+go-to: democratic_left_mandate
+
+@nominate_left_compromise
+title: Nominate Agnieszka Dziemianowicz-Bąk
+subtitle: A generational Left bid. Admired by activists; not automatically accepted by KO or Third Way.
+on-arrival: {!
+Q.democratic_candidate = "Agnieszka Dziemianowicz-Bąk";
+Q.candidate_ko_votes = Math.max(
+    0,
+    Q.ko_seats - Math.min(12, Q.ko_seats)
+);
+Q.candidate_p2050_votes = Math.max(
+    0,
+    Q.p2050_seats - Math.min(4, Q.p2050_seats)
+);
+Q.candidate_psl_cap = Math.max(
+    0,
+    Q.psl_seats - Math.min(10, Q.psl_seats)
+);
+Q.candidate_code = 3;
+Q.party_unity += 6;
+Q.labor_credibility += 5;
+Q.women_support += 4;
+Q.ko_relation -= 7;
+Q.psl_relation -= 5;
+Q.news_headline =
+    "Lewica asks the democratic majority to accept its candidate";
+!}
+go-to: democratic_left_mandate
+
+@democratic_left_mandate
+title: One club is not one instruction
+new-page: true
+
+= The Left decides what “joining” means
+
+New Left's **[+ nowa_lewica_seats +] seats** contain old barons, younger
+progressive women and the remaining Spring network. Razem's **[+ razem_seats
++] deputies** have their own executive and will not treat a ministerial
+photograph as a programme.
+
+Only a cabinet that actually contains Lewica will grant the player government
+authority. Voting confidence from outside does not.
+
+- @left_new_left_cabinet
+- @left_whole_cabinet
+- @left_supply_only
+- @left_maximal_terms
+- @left_withhold
+
+@left_new_left_cabinet
+title: Put New Left in cabinet; let Razem support from outside
+subtitle: Historical architecture: New Left governs while Razem votes under a written social floor.
+on-arrival: candidate_left_votes = left_seats; left_cabinet_committed = 1; left_cabinet_model = "New Left ministers · Razem external support"; democratic_pact = "Coalition cabinet with Razem support"; barons_dissent -= 4; progressives_dissent -= 3; razem_dissent += 5; coalition_seats = coalition_democratic_seats; news_headline = "New Left takes ministries while Razem keeps one foot outside"
+go-to: democratic_psl_mandate
+
+@left_whole_cabinet
+title: Require the whole Left to enter and own the cabinet
+subtitle: Cost: 1 party resource. Strong collective responsibility, difficult Razem ratification.
+choose-if: resources >= 1
+unavailable-subtitle: A joint programme convention and ministerial vetting cost one resource.
+on-arrival: resources -= 1; candidate_left_votes = left_seats; left_cabinet_committed = 1; left_cabinet_model = "Whole Left coalition delegation"; democratic_pact = "Whole-Left cabinet entry"; party_unity += 5; razem_dissent += 8; barons_dissent += 3; coalition_seats = coalition_democratic_seats; news_headline = "The whole Left assumes cabinet responsibility"
+go-to: democratic_psl_mandate
+
+@left_supply_only
+title: Keep every Left current outside on confidence and supply
+subtitle: The whole club votes yes, with no ministers and no government budget authority.
+on-arrival: candidate_left_votes = left_seats; left_cabinet_committed = 0; left_cabinet_model = "Confidence and supply from opposition"; democratic_pact = "External Left support"; razem_dissent -= 8; barons_dissent += 8; government_delivery -= 2; news_headline = "Lewica offers votes without joining the cabinet"
+go-to: democratic_psl_mandate
+
+@left_maximal_terms
+title: Demand binding abortion, housing and labour deadlines
+subtitle: The Left offers its whole club and cabinet service; PSL begins the next meeting near the exit.
+on-arrival: candidate_left_votes = left_seats; left_cabinet_committed = 1; left_cabinet_model = "Programme-bound Left cabinet entry"; democratic_pact = "Maximal social and rights timetable"; party_unity += 7; razem_dissent -= 8; progressives_dissent -= 5; psl_coalition_dissent += 18; psl_relation -= 9; coalition_seats = coalition_democratic_seats; news_headline = "Lewica makes its cabinet votes conditional"
+go-to: democratic_psl_mandate
+
+@left_withhold
+title: Withhold every Left vote
+subtitle: Preserve opposition purity and force the coalition to find a majority it does not have.
+on-arrival: candidate_left_votes = 0; left_cabinet_committed = 0; left_cabinet_model = "Opposition"; democratic_pact = "No Left confidence votes"; razem_dissent -= 4; barons_dissent += 12; ko_relation -= 15; p2050_relation -= 10; psl_relation -= 8; party_unity -= 4; news_headline = "The democratic nominee loses the Left before the vote"
+go-to: democratic_psl_mandate
+
+@democratic_psl_mandate
+title: Third Way writes its escape clauses
+new-page: true
+
+= The partner that keeps a hand on the door
+
+Poland 2050 and PSL ran on one list, not as one party. Hołownia wants the
+marshalship, institutional repair and proof that a new centre exists. PSL
+wants agriculture, local government, defence credibility and freedom from
+being made the decisive vote on every cultural question.
+
+How much autonomy does the Left concede before the first roll call?
+
+- @psl_full_protocol
+- @psl_conscience_clause
+- @psl_free_vote
+- @psl_exclusion_threat
+
+@psl_full_protocol
+title: Sign rural delivery and a cabinet dispute protocol
+subtitle: Cost: 1 party resource. Full PSL delegation, but annual budgets get their own veto stage.
+choose-if: resources >= 1 and psl_relation >= 25
+unavailable-subtitle: Requires one resource and a PSL relationship of at least 25.
+on-arrival: resources -= 1; candidate_psl_votes = candidate_psl_cap; psl_relation += 7; third_way_cohesion += 5; psl_coalition_dissent -= 5; coalition_dispute_protocol = 1; news_headline = "PSL signs after securing a separate dispute procedure"
+go-to: democratic_candidate_roll
+
+@psl_conscience_clause
+title: Accept a conscience clause on cultural bills
+subtitle: Most or all PSL votes return; progressive trust pays the price.
+on-arrival: candidate_psl_votes = candidate_psl_cap; psl_relation += 5; psl_coalition_dissent -= 3; progressive_credibility -= 4; feminist_trust -= 5; razem_dissent += 5; coalition_conscience_clause = 1; news_headline = "A conscience clause keeps PSL at the table"
+go-to: democratic_candidate_roll
+
+@psl_free_vote
+title: Let PSL whip only its core and regional majority
+subtitle: Eight of its possible votes withhold support.
+on-arrival: {!
+Q.candidate_psl_votes = Math.max(0, Q.candidate_psl_cap - 8);
+Q.psl_relation += 1;
+Q.third_way_cohesion -= 4;
+Q.psl_coalition_dissent += 6;
+Q.news_headline = "PSL enters the roll call without a full whip";
+!}
+go-to: democratic_candidate_roll
+
+@psl_exclusion_threat
+title: Tell PSL that the other democratic parties will govern around it
+subtitle: It is a bluff: without PSL, the democratic parties hold [+ coalition_democratic_seats - psl_seats +] seats.
+on-arrival: {!
+Q.candidate_psl_votes = Math.max(0, Q.candidate_psl_cap - 14);
+Q.psl_relation -= 12;
+Q.psl_coalition_dissent += 14;
+Q.public_trust -= 3;
+Q.party_unity += 2;
+Q.news_headline = "The Left challenges PSL to leave before entering";
+!}
+go-to: democratic_candidate_roll
+
+@democratic_candidate_roll
+title: The Sejm elects a prime minister
+new-page: true
+on-arrival: {!
+const clampCandidateVotes = function(value, seats) {
+    const numeric = Number.isFinite(Number(value)) ? Number(value) : 0;
+    return Math.max(0, Math.min(Math.max(0, seats), Math.round(numeric)));
+};
+Q.candidate_ko_votes =
+    clampCandidateVotes(Q.candidate_ko_votes, Q.ko_seats);
+Q.candidate_p2050_votes =
+    clampCandidateVotes(Q.candidate_p2050_votes, Q.p2050_seats);
+Q.candidate_psl_votes =
+    clampCandidateVotes(Q.candidate_psl_votes, Q.psl_seats);
+Q.candidate_left_votes =
+    clampCandidateVotes(Q.candidate_left_votes, Q.left_seats);
+Q.confidence_stage = 2;
+Q.confidence_mode =
+    "Article 154 Sejm initiative — absolute majority of deputies present";
+Q.confidence_candidate = Q.democratic_candidate;
+Q.confidence_yes =
+    Q.candidate_ko_votes + Q.candidate_p2050_votes +
+    Q.candidate_psl_votes + Q.candidate_left_votes;
+const rightSeats = Math.max(0, Q.pis_seats + Q.konf_seats);
+const rightAbsent = clampCandidateVotes(
+    Q.candidate_right_absent,
+    rightSeats
+);
+Q.confidence_no = Math.max(0, rightSeats - rightAbsent);
+const democraticSeats = Math.max(
+    0,
+    Q.ko_seats + Q.p2050_seats + Q.psl_seats + Q.left_seats
+);
+Q.confidence_abstain =
+    Math.max(0, democraticSeats - Q.confidence_yes) +
+    Math.max(0, Q.other_seats);
+Q.confidence_present =
+    Q.confidence_yes + Q.confidence_no + Q.confidence_abstain;
+Q.confidence_threshold = Math.floor(Q.confidence_present / 2) + 1;
+Q.democratic_votes = Q.confidence_yes;
+Q.candidate_vote_passed =
+    Q.confidence_present >= Q.sejm_quorum_floor &&
+    Q.confidence_yes > Q.confidence_no + Q.confidence_abstain ? 1 : 0;
+if (Q.candidate_vote_passed) {
+    Q.news_headline =
+        Q.democratic_candidate + " is elected by the Sejm";
+} else {
+    Q.news_headline =
+        "The Sejm fails to elect " + Q.democratic_candidate;
+}
+!}
+
+= The Sejm's candidate
+
+<div class="ledger-section ledger-section-first"><div class="ledger-title">Roll
+call</div>
+<div class="ledger-row"><span>Candidate</span><b>[+ confidence_candidate +]</b></div>
+<div class="ledger-row"><span>Yes</span><b>[+ confidence_yes +]</b></div>
+<div class="ledger-row"><span>No</span><b>[+ confidence_no +]</b></div>
+<div class="ledger-row"><span>Abstain</span><b>[+ confidence_abstain +]</b></div>
+<div class="ledger-row"><span>Required</span><b>[+ confidence_threshold +]</b></div></div>
+
+[? if candidate_vote_passed: The candidate is elected. This is not yet the end:
+the proposed cabinet and programme must survive the next roll call. ?]
+
+[? if not candidate_vote_passed: The second attempt has exhausted itself.
+The President now regains initiative for the simple-majority third attempt. ?]
+
+- @candidate_vote_continue: Continue from the roll call
+
+@candidate_vote_continue
+on-arrival: ministry_return_mode = "cabinet_program" if candidate_vote_passed = 1
+go-to: poland_ministries if candidate_vote_passed = 1; third_attempt if candidate_vote_passed = 0
+
+@cabinet_program
+title: One exposé, four coalition readings
+new-page: true
+
+= From a candidate to a cabinet
+
+The prime-minister-elect must present ministers and a programme. The same **[+
+coalition_democratic_seats +] deputies** now read the coalition agreement
+through different caucus mandates. A sentence on abortion can be a promise to
+New Left, a red line to PSL, an insufficient timetable to Razem and an
+invitation to discipline for KO.
+
+- @cabinet_signed_agreement
+- @cabinet_social_deadlines
+- @cabinet_minimum_text
+- @cabinet_rural_priority
+
+@cabinet_signed_agreement
+title: Read the signed coalition agreement and nothing more
+subtitle: Historical discipline. No deputy is surprised from the rostrum.
+on-arrival: cabinet_program = "Signed coalition agreement"; cabinet_ko_loss = 0; cabinet_p2050_loss = 0; cabinet_psl_loss = 0; cabinet_left_loss = 0; news_headline = "The cabinet programme stays inside the negotiated text"
+go-to: cabinet_confidence_roll
+
+@cabinet_social_deadlines
+title: Announce abortion, housing and labour deadlines
+subtitle: Twelve PSL deputies and two centrists withhold confidence.
+on-arrival: {!
+Q.cabinet_program = "Front-loaded social and equality deadlines";
+Q.cabinet_ko_loss = 0;
+Q.cabinet_p2050_loss = 2;
+Q.cabinet_psl_loss = Math.min(12, Q.candidate_psl_votes);
+Q.cabinet_left_loss = 0;
+Q.psl_coalition_dissent += 12;
+Q.party_unity += 5;
+Q.feminist_trust += 5;
+Q.labor_credibility += 4;
+Q.news_headline = "The exposé turns coalition aspirations into dates";
+!}
+go-to: cabinet_confidence_roll
+
+@cabinet_minimum_text
+title: Reduce the programme to institutional repair
+subtitle: Seven Razem deputies withhold confidence; PSL relaxes.
+on-arrival: {!
+Q.cabinet_program = "Institutional minimum";
+Q.cabinet_ko_loss = 0;
+Q.cabinet_p2050_loss = 0;
+Q.cabinet_psl_loss = 0;
+Q.cabinet_left_loss = Math.min(7, Q.candidate_left_votes);
+Q.psl_coalition_dissent -= 5;
+Q.razem_dissent += 15;
+Q.labor_credibility -= 5;
+Q.news_headline = "Razem refuses a cabinet programme without a social floor";
+!}
+go-to: cabinet_confidence_roll
+
+@cabinet_rural_priority
+title: Make local government, defence and agriculture the opening
+subtitle: Secure PSL; five progressive Left deputies abstain.
+on-arrival: {!
+Q.cabinet_program = "Rural and institutional opening";
+Q.cabinet_ko_loss = 0;
+Q.cabinet_p2050_loss = 0;
+Q.cabinet_psl_loss = 0;
+Q.cabinet_left_loss = Math.min(5, Q.candidate_left_votes);
+Q.psl_coalition_dissent -= 8;
+Q.psl_relation += 5;
+Q.progressives_dissent += 8;
+Q.spring_dissent += 5;
+Q.news_headline = "PSL hears its programme first";
+!}
+go-to: cabinet_confidence_roll
+
+@cabinet_confidence_roll
+title: The cabinet confidence vote
+new-page: true
+on-arrival: {!
+const democraticSeats =
+    Q.ko_seats + Q.p2050_seats + Q.psl_seats + Q.left_seats;
+const requestedCabinetLosses =
+    Q.cabinet_ko_loss + Q.cabinet_p2050_loss +
+    Q.cabinet_psl_loss + Q.cabinet_left_loss;
+const cabinetLosses = Math.max(
+    0,
+    Math.min(Q.democratic_votes, requestedCabinetLosses)
+);
+const rightSeats = Math.max(0, Q.pis_seats + Q.konf_seats);
+const rightAbsent = Math.max(
+    0,
+    Math.min(
+        rightSeats,
+        Math.round(Number(Q.candidate_right_absent) || 0)
+    )
+);
+Q.confidence_stage = 3;
+Q.confidence_mode =
+    "Article 154 Sejm cabinet vote — absolute majority of deputies present";
+Q.confidence_candidate = Q.democratic_candidate + " cabinet";
+Q.confidence_yes = Math.max(0, Q.democratic_votes - cabinetLosses);
+Q.confidence_no = Math.max(0, rightSeats - rightAbsent);
+Q.confidence_abstain =
+    Math.max(0, democraticSeats - Q.democratic_votes) +
+    cabinetLosses + Math.max(0, Q.other_seats);
+Q.confidence_present =
+    Q.confidence_yes + Q.confidence_no + Q.confidence_abstain;
+Q.confidence_threshold = Math.floor(Q.confidence_present / 2) + 1;
+Q.cabinet_confidence_passed =
+    Q.confidence_present >= Q.sejm_quorum_floor &&
+    Q.confidence_yes > Q.confidence_no + Q.confidence_abstain ? 1 : 0;
+if (Q.cabinet_confidence_passed) {
+    Q.news_headline =
+        Q.democratic_candidate + "'s cabinet wins confidence";
+} else {
+    Q.news_headline =
+        Q.democratic_candidate + "'s cabinet fails at the last vote";
+}
+!}
+
+= Confidence in the whole cabinet
+
+<div class="ledger-section ledger-section-first"><div class="ledger-title">Roll
+call</div>
+<div class="ledger-row"><span>Programme</span><b>[+ cabinet_program +]</b></div>
+<div class="ledger-row"><span>Yes</span><b>[+ confidence_yes +]</b></div>
+<div class="ledger-row"><span>No</span><b>[+ confidence_no +]</b></div>
+<div class="ledger-row"><span>Abstain</span><b>[+ confidence_abstain +]</b></div>
+<div class="ledger-row"><span>Required</span><b>[+ confidence_threshold +]</b></div></div>
+
+[? if cabinet_confidence_passed: The cabinet is appointed. On the historical
+route, Donald Tusk's two decisive roll calls are both **248–201**. ?]
+
+[? if not cabinet_confidence_passed: Electing a prime minister was not enough.
+The cabinet has failed, and the President's third attempt is now decisive. ?]
+
+- @cabinet_vote_continue: Continue from the roll call
+
+@cabinet_vote_continue
+go-to: cabinet_success if cabinet_confidence_passed = 1; third_attempt if cabinet_confidence_passed = 0
+
+@cabinet_success
+title: The democratic cabinet takes office
+new-page: true
+on-arrival: {!
+Q.formation_complete = 1;
+Q.caretaker_government = 0;
+Q.government_has_confidence = 1;
+Q.prime_minister = Q.democratic_candidate;
+Q.government_name = Q.democratic_candidate + " democratic coalition";
+Q.coalition_status = "KO · Poland 2050 · PSL · negotiated Left support";
+Q.coalition_seats = Q.confidence_yes;
+Q.left_in_government = Q.left_cabinet_committed ? 1 : 0;
+if (Q.left_in_government) {
+    Q.position = "Coalition government";
+    Q.budget = 6;
+    Q.budget_authority = "Governing coalition — negotiated fiscal capacity";
+    Q.ending_name = "The Left enters government";
+    if (Q.formation_continuous) {
+        Q.formation_outcome_score = 48;
+        Q.ending_score =
+            (Number.isFinite(Number(Q.ending_score))
+                ? Number(Q.ending_score)
+                : 0) + 8;
+    } else {
+        Q.ending_score = 48;
+    }
+} else {
+    Q.position = "Confidence-and-supply opposition";
+    Q.budget = 0;
+    Q.budget_authority = "Opposition — no state spending authority";
+    Q.ending_name = "Support without office";
+    if (Q.formation_continuous) {
+        Q.formation_outcome_score = 32;
+        Q.ending_score =
+            (Number.isFinite(Number(Q.ending_score))
+                ? Number(Q.ending_score)
+                : 0) + 3;
+    } else {
+        Q.ending_score = 32;
+    }
+}
+!}
+
+= Office is a constitutional fact
+
+**[+ prime_minister +]** now leads the cabinet. The Left's constitutional
+position follows the agreement actually made, not the colour of the deputies
+who voted yes.
+
+[? if left_in_government = 1: Lewica has ministers and collective
+responsibility. The government budget and coalition-management game is now
+available. ?]
+
+[? if left_in_government = 0: Lewica supplied confidence without taking
+ministries. It can bargain over bills, but it does not control the state budget
+and receives no governing-spend actions. ?]
+
+- @government_entry_gate: Continue
+
+@government_entry_gate
+title: Determine the Left's constitutional position
+go-to: poland_ministries if left_in_government = 1 and ministries_finalized = 0; governing_agreement if left_in_government = 1 and ministries_finalized = 1; campaign_return if left_in_government = 0 and formation_continuous = 1; opposition_assessment if left_in_government = 0 and formation_continuous = 0
+
+@third_attempt
+title: The President's last attempt
+new-page: true
+
+= Article 155 — simple majority, final chance
+
+If the Sejm-led attempt fails, the President appoints another prime minister
+and cabinet. The chamber then votes by **more yes than no**, with quorum.
+Abstentions no longer raise the majority threshold. If this cabinet also
+fails, the President must shorten the Sejm's term.
+
+The Palace, PSL and the exhausted democratic clubs each offer a way to use that
+different arithmetic.
+
+- @third_reassemble
+- @third_presidential_compromise
+- @third_morawiecki_toleration
+- @third_refuse_rescue
+
+@third_reassemble
+title: Reassemble the democratic bloc around Tusk and a smaller programme
+subtitle: Lewica enters the cabinet; up to seven nervous deputies abstain.
+on-arrival: {!
+const democraticSeats =
+    Q.ko_seats + Q.p2050_seats + Q.psl_seats + Q.left_seats;
+const rightSeats = Q.pis_seats + Q.konf_seats;
+const democraticAbstentions = Math.min(7, democraticSeats);
+const rightAbsences = Math.min(
+    Math.max(0, Math.round(Number(Q.candidate_right_absent) || 0)),
+    rightSeats
+);
+Q.third_candidate = "Donald Tusk";
+Q.third_yes = democraticSeats - democraticAbstentions;
+Q.third_no = rightSeats - rightAbsences;
+Q.third_abstain = democraticAbstentions + Math.max(0, Q.other_seats);
+Q.third_left_cabinet = 1;
+Q.left_cabinet_committed = 1;
+Q.left_cabinet_model = "Whole Left coalition delegation";
+Q.ministries_finalized = 0;
+Q.ministry_return_mode = "governing_agreement";
+Q.news_headline =
+    "The democratic parties try once more under simple-majority rules";
+!}
+go-to: third_confidence_roll
+
+@third_presidential_compromise
+title: Court the Palace for a Kosiniak-Kamysz compromise
+subtitle: A broad cabinet containing Lewica, with up to twelve abstentions.
+choose-if: presidential_channel_open = 1 or president_relation >= 28
+unavailable-subtitle: The Palace will not broker this without an established constitutional channel.
+on-arrival: {!
+const democraticSeats =
+    Q.ko_seats + Q.p2050_seats + Q.psl_seats + Q.left_seats;
+const democraticAbstentions = Math.min(12, democraticSeats);
+Q.third_candidate = "Władysław Kosiniak-Kamysz";
+Q.third_yes = democraticSeats - democraticAbstentions;
+Q.third_no = Q.pis_seats + Q.konf_seats;
+Q.third_abstain = democraticAbstentions + Math.max(0, Q.other_seats);
+Q.third_left_cabinet = 1;
+Q.left_cabinet_committed = 1;
+Q.left_cabinet_model = "New Left ministers · Razem external support";
+Q.ministries_finalized = 0;
+Q.ministry_return_mode = "governing_agreement";
+Q.president_relation += 10;
+Q.psl_relation += 8;
+Q.ko_relation -= 5;
+Q.news_headline = "The Palace accepts a broad Kosiniak-Kamysz cabinet";
+!}
+go-to: third_confidence_roll
+
+@third_morawiecki_toleration
+title: Let PSL tolerate a Morawiecki minority
+subtitle: PiS and most PSL deputies vote yes; Lewica and much of the centre abstain.
+on-arrival: {!
+const pslSupport = Math.min(22, Math.max(0, Q.psl_seats));
+Q.third_candidate = "Mateusz Morawiecki";
+Q.third_yes = Math.max(0, Q.pis_seats) + pslSupport;
+Q.third_no =
+    Math.max(0, Q.ko_seats) + Math.max(0, Q.left_seats) +
+    Math.min(7, Math.max(0, Q.p2050_seats));
+Q.third_abstain = Math.max(
+    0,
+    Q.sejm_total - Q.third_yes - Q.third_no
+);
+Q.third_left_cabinet = 0;
+Q.party_unity -= 8;
+Q.psl_relation -= 12;
+Q.far_right_agenda += 4;
+Q.news_headline = "Simple-majority arithmetic rescues a Morawiecki minority";
+!}
+go-to: third_confidence_roll
+
+@third_refuse_rescue
+title: Vote the third cabinet down and accept an election
+subtitle: Keep the certified blocs intact and exhaust the formation sequence.
+on-arrival: {!
+const pisAbsences = Math.min(
+    Math.max(0, Math.round(Number(Q.first_pis_absent) || 0)),
+    Math.max(0, Q.pis_seats)
+);
+Q.third_candidate = "Mateusz Morawiecki";
+Q.third_yes = Math.max(0, Q.pis_seats - pisAbsences);
+Q.third_no = Math.max(
+    0,
+    Q.ko_seats + Q.p2050_seats + Q.psl_seats +
+        Q.left_seats + Q.konf_seats
+);
+Q.third_abstain = Math.max(0, Q.other_seats);
+Q.third_left_cabinet = 0;
+Q.early_election_risk = 100;
+Q.news_headline = "The Sejm heads toward a mandatory early election";
+!}
+go-to: third_confidence_roll
+
+@third_confidence_roll
+title: The final formation vote
+new-page: true
+on-arrival: {!
+const boundedThird = function(value) {
+    const numeric = Number.isFinite(Number(value)) ? Number(value) : 0;
+    return Math.max(0, Math.round(numeric));
+};
+Q.confidence_stage = 4;
+Q.confidence_mode =
+    "Article 155 third attempt — simple majority of votes cast";
+Q.confidence_candidate = Q.third_candidate;
+Q.confidence_yes = boundedThird(Q.third_yes);
+Q.confidence_no = boundedThird(Q.third_no);
+Q.confidence_abstain = boundedThird(Q.third_abstain);
+const thirdOverflow = Math.max(
+    0,
+    Q.confidence_yes + Q.confidence_no + Q.confidence_abstain -
+        Q.sejm_total
+);
+if (thirdOverflow > 0) {
+    Q.confidence_abstain = Math.max(
+        0,
+        Q.confidence_abstain - thirdOverflow
+    );
+}
+Q.confidence_present =
+    Q.confidence_yes + Q.confidence_no + Q.confidence_abstain;
+Q.confidence_threshold = Q.confidence_no + 1;
+Q.third_confidence_passed =
+    Q.confidence_present >= Q.sejm_quorum_floor &&
+    Q.confidence_yes > Q.confidence_no ? 1 : 0;
+if (Q.third_confidence_passed) {
+    Q.news_headline =
+        Q.third_candidate + " survives the final formation vote";
+} else {
+    Q.news_headline =
+        "The final cabinet fails and an early election becomes mandatory";
+}
+!}
+
+= The last roll call
+
+<div class="ledger-section ledger-section-first"><div class="ledger-title">Roll
+call</div>
+<div class="ledger-row"><span>Candidate</span><b>[+ confidence_candidate +]</b></div>
+<div class="ledger-row"><span>Yes</span><b>[+ confidence_yes +]</b></div>
+<div class="ledger-row"><span>No</span><b>[+ confidence_no +]</b></div>
+<div class="ledger-row"><span>Abstain</span><b>[+ confidence_abstain +]</b></div>
+<div class="ledger-row"><span>Required</span><b>[+ confidence_threshold +]</b></div></div>
+
+- @third_vote_continue: Continue from the roll call
+
+@third_vote_continue
+go-to: third_success if third_confidence_passed = 1; early_election if third_confidence_passed = 0
+
+@third_success
+title: A cabinet at the edge of the constitution
+new-page: true
+on-arrival: {!
+Q.formation_complete = 1;
+Q.caretaker_government = 0;
+Q.government_has_confidence = 1;
+Q.prime_minister = Q.third_candidate;
+Q.government_name = Q.third_candidate + " third-attempt cabinet";
+Q.coalition_seats = Q.third_yes;
+Q.left_in_government = Q.third_left_cabinet ? 1 : 0;
+if (Q.left_in_government) {
+    Q.position = "Coalition government";
+    Q.coalition_status = "Third-attempt democratic coalition";
+    Q.budget = 5;
+    Q.budget_authority = "Governing coalition — negotiated fiscal capacity";
+    Q.ending_name = "A government on the third attempt";
+    if (Q.formation_continuous) {
+        Q.formation_outcome_score = 38;
+        Q.ending_score =
+            (Number.isFinite(Number(Q.ending_score))
+                ? Number(Q.ending_score)
+                : 0) + 5;
+    } else {
+        Q.ending_score = 38;
+    }
+} else {
+    Q.position = "Parliamentary opposition";
+    Q.coalition_status = "PiS minority tolerated by PSL";
+    Q.budget = 0;
+    Q.budget_authority = "Opposition — no state spending authority";
+    Q.ending_name = "Morawiecki survives by abstention";
+    if (Q.formation_continuous) {
+        Q.formation_outcome_score = 18;
+        Q.ending_score =
+            (Number.isFinite(Number(Q.ending_score))
+                ? Number(Q.ending_score)
+                : 0) - 5;
+    } else {
+        Q.ending_score = 18;
+    }
+}
+!}
+
+The simple-majority rule has done what the absolute-majority stage could not.
+[+ prime_minister +] has a cabinet, but its authority is exactly as broad as
+the agreement behind those votes.
+
+- @government_entry_gate: Continue from the formation vote
+
+@early_election
+title: The Sejm is shortened
+new-page: true
+on-arrival: {!
+Q.left_in_government = 0;
+Q.formation_complete = 1;
+Q.government_has_confidence = 0;
+Q.caretaker_government = 1;
+Q.coalition_status = "No cabinet won confidence";
+Q.position = "Election campaign";
+Q.budget = 0;
+Q.budget_authority = "Opposition — no state spending authority";
+Q.ending_name = "A second election";
+if (Q.formation_continuous) {
+    Q.formation_outcome_score = 10;
+    Q.ending_score =
+        (Number.isFinite(Number(Q.ending_score)) ? Number(Q.ending_score) : 0) -
+        10;
+} else {
+    Q.ending_score = 10;
+}
+Q.public_trust -= 6;
+Q.early_election_risk = 100;
+!}
+
+= No fourth attempt
+
+The constitutional sequence is exhausted. The President must shorten the term
+of the Sejm and order an election. This is not a discretionary threat and not a
+presidential cabinet system: there is simply no government with parliamentary
+confidence.
+
+- @formation_exit: Enter the campaign
+
+@governing_agreement
+title: Write rules for an impossible coalition
+new-page: true
+view-if: left_in_government = 1
+
+= January 2024 — four parties, more than four parties
+
+The cabinet contains KO's liberal core and local-government wing, Hołownia's
+movement, PSL's agrarian machine, New Left's barons and younger progressive
+women—and perhaps Razem ministers. A coalition document between party logos is
+not enough. Each mini-party needs a way to lose a dispute without treating it
+as grounds to leave.
+
+PSL insists that every annual budget is a new confidence test. The Left knows
+that accepting this principle gives a **[+ psl_seats +]-seat partner**
+permanent leverage. It also knows that **[+ coalition_democratic_seats -
+psl_seats +] is not 231**.
+
+- @agreement_dispute_protocol
+- @agreement_bilateral
+- @agreement_majority_claim
+
+@agreement_dispute_protocol
+title: Create a written coalition and caucus dispute protocol
+subtitle: Cost: 1 party resource. Slow bargaining, fewer surprise ultimatums.
+view-if: left_in_government = 1
+choose-if: left_in_government = 1 and resources >= 1
+unavailable-subtitle: Requires government participation and one party resource.
+on-arrival: resources -= 1; coalition_dispute_protocol = 1; psl_coalition_dissent -= 6; p2050_coalition_dissent -= 4; left_coalition_dissent -= 3; government_coalition_dissent -= 5; government_delivery += 2; coalition_management = "Written dispute protocol"
+go-to: campaign_return if formation_continuous = 1; move_to_budget if formation_continuous = 0
+
+@agreement_bilateral
+title: Manage every partner through bilateral bargains
+subtitle: Free now. The prime minister becomes the only common institution.
+view-if: left_in_government = 1
+on-arrival: coalition_dispute_protocol = 0; psl_coalition_dissent += 3; p2050_coalition_dissent += 2; ko_coalition_dissent -= 2; barons_dissent -= 3; government_delivery += 1; coalition_management = "Prime-ministerial bilateralism"
+go-to: campaign_return if formation_continuous = 1; move_to_budget if formation_continuous = 0
+
+@agreement_majority_claim
+title: Declare that the democratic majority constitutes one election mandate
+subtitle: A clean public line. PSL and Razem both reject its implication.
+view-if: left_in_government = 1
+on-arrival: coalition_dispute_protocol = 0; psl_coalition_dissent += 11; razem_dissent += 9; party_unity -= 3; public_trust += 2; media_capacity += 2; coalition_management = "Majority discipline"
+go-to: campaign_return if formation_continuous = 1; move_to_budget if formation_continuous = 0
+
+@move_to_budget
+title: The first full governing year
+view-if: left_in_government = 1
+on-arrival: year = 2024; month = 12; month_name = "December"; date_label = "December 2024"; next_budget_label = "December 2024"; budget_cycle_year = 2025; news_headline = "The coalition reaches its first full annual budget"
+go-to: annual_budget if left_in_government = 1; opposition_assessment if left_in_government = 0
+
+@annual_budget
+title: The 2025 state budget
+new-page: true
+view-if: left_in_government = 1
+
+= December 2024 — every promise gets a number
+
+This is the coalition's annual survival test. The Left has **[+ budget +]
+governing-capacity points** available because it holds cabinet responsibility.
+These are not party campaign resources and they do not exist in opposition.
+
+The package must first survive four Left caucuses, then KO, Poland 2050 and
+PSL, then an ordinary Sejm vote. For final passage, abstentions do not count
+against the bill; the budget needs more yes than no with quorum. Defeat is a
+political crisis, not an automatic no-confidence vote.
+
+- @budget_social_investment
+- @budget_rural_care
+- @budget_fiscal_brake
+- @budget_fragmented
+
+@budget_social_investment
+title: Public pay, housing construction and labour inspection
+subtitle: Spend 4 governing capacity. Razem's strongest package; PSL demands rural balance.
+view-if: left_in_government = 1
+choose-if: left_in_government = 1 and budget >= 4
+unavailable-subtitle: Requires cabinet participation and four governing-capacity points.
+on-arrival: budget -= 4; annual_budget_package = "Public pay, housing and labour inspection"; annual_budget_package_code = 1; government_delivery += 7; labor_credibility += 7; household_security += 5; psl_coalition_dissent += 7; ko_coalition_dissent += 4; news_headline = "Lewica writes a social-investment budget"
+go-to: budget_internal_roll
+
+@budget_rural_care
+title: Care services, local transport and rural clinics
+subtitle: Spend 3 governing capacity. A Left–PSL bridge with fewer urban trophies.
+view-if: left_in_government = 1
+choose-if: left_in_government = 1 and budget >= 3
+unavailable-subtitle: Requires cabinet participation and three governing-capacity points.
+on-arrival: budget -= 3; annual_budget_package = "Care services, local transport and rural clinics"; annual_budget_package_code = 2; government_delivery += 6; rural_support += 6; public_sector_support += 4; psl_coalition_dissent -= 4; progressives_dissent += 3; news_headline = "The budget links care policy to the rural state"
+go-to: budget_internal_roll
+
+@budget_fiscal_brake
+title: Accept KO's deficit brake and protect only core services
+subtitle: Spend 1 governing capacity. Barons accept; Razem prepares a veto.
+view-if: left_in_government = 1
+choose-if: left_in_government = 1 and budget >= 1
+unavailable-subtitle: Requires cabinet participation and one governing-capacity point.
+on-arrival: budget -= 1; annual_budget_package = "Deficit brake with protected core services"; annual_budget_package_code = 3; government_delivery += 2; ko_coalition_dissent -= 6; psl_coalition_dissent -= 2; razem_dissent += 17; labor_credibility -= 7; news_headline = "Fiscal restraint opens a Left caucus revolt"
+go-to: budget_internal_roll
+
+@budget_fragmented
+title: Let each Left caucus file its own budget amendments
+subtitle: No governing-capacity cost. No common mandate either.
+view-if: left_in_government = 1
+on-arrival: annual_budget_package = "Four separate Left amendment packages"; annual_budget_package_code = 4; government_delivery -= 4; party_unity -= 9; public_trust -= 4; annual_budget_left_votes = 15; budget_breaches += 1; news_headline = "The coalition receives four incompatible Left budgets"
+go-to: budget_internal_roll
+
+@budget_internal_roll
+title: The Left's internal budget congress
+new-page: true
+view-if: left_in_government = 1
+on-arrival: {!
+let baronsBudget = 50;
+let newGenerationBudget = 50;
+let springBudget = 50;
+let razemBudget = 50;
+if (Q.annual_budget_package_code == 1) {
+    baronsBudget = 64;
+    newGenerationBudget = 82;
+    springBudget = 85;
+    razemBudget = 92;
+}
+if (Q.annual_budget_package_code == 2) {
+    baronsBudget = 76;
+    newGenerationBudget = 78;
+    springBudget = 75;
+    razemBudget = 68;
+}
+if (Q.annual_budget_package_code == 3) {
+    baronsBudget = 84;
+    newGenerationBudget = 52;
+    springBudget = 44;
+    razemBudget = 18;
+}
+if (Q.annual_budget_package_code == 4) {
+    baronsBudget = 55;
+    newGenerationBudget = 50;
+    springBudget = 54;
+    razemBudget = 45;
+}
+Q.budget_barons_backing = baronsBudget;
+Q.budget_new_generation_backing = newGenerationBudget;
+Q.budget_spring_backing = springBudget;
+Q.budget_razem_backing = razemBudget;
+Q.annual_budget_internal_backing = Math.round(
+    (
+        baronsBudget * Q.left_barons_seats +
+        newGenerationBudget * Q.left_new_generation_seats +
+        springBudget * Q.left_spring_seats +
+        razemBudget * Q.razem_seats
+    ) / Q.left_seats
+);
+Q.annual_budget_internal_vetoes = [
+    baronsBudget,
+    newGenerationBudget,
+    springBudget,
+    razemBudget
+].filter(function(value) {
+    return value < 35;
+}).length;
+!}
+
+= Four caucuses, one line
+
+<div class="ledger-section ledger-section-first"><div class="ledger-title">Left
+ratification</div>
+<div class="ledger-row"><span>Barons · 6 seats</span><b>[+ budget_barons_backing +]%</b></div>
+<div class="ledger-row"><span>Younger progressive wing · 8</span><b>[+ budget_new_generation_backing +]%</b></div>
+<div class="ledger-row"><span>Spring network · 5</span><b>[+ budget_spring_backing +]%</b></div>
+<div class="ledger-row"><span>Razem · 7</span><b>[+ budget_razem_backing +]%</b></div>
+<div class="ledger-row"><span>Weighted mandate</span><b>[+ annual_budget_internal_backing +]%</b></div>
+<div class="ledger-row"><span>Caucus vetoes below 35%</span><b>[+ annual_budget_internal_vetoes +]</b></div></div>
+
+An internal veto does not erase a minister's legal power. It tells the player
+how many deputies will refuse to treat the cabinet text as their own.
+
+- @budget_ratify_clean
+- @budget_emergency_conference
+- @budget_allow_rebels
+
+@budget_ratify_clean
+title: Ratify the common budget line
+subtitle: Available with at least 55% weighted backing and no more than one caucus veto.
+view-if: left_in_government = 1
+choose-if: left_in_government = 1 and annual_budget_internal_backing >= 55 and annual_budget_internal_vetoes <= 1
+unavailable-subtitle: The proposal lacks a usable internal mandate.
+on-arrival: annual_budget_left_votes = 26 if annual_budget_package_code = 1 or annual_budget_package_code = 2; annual_budget_left_votes = 19 if annual_budget_package_code = 3; annual_budget_left_votes = 20 if annual_budget_package_code = 4; annual_budget_left_no = 0; party_unity += 3; left_coalition_dissent -= 3
+go-to: budget_coalition_council
+
+@budget_emergency_conference
+title: Buy a night for an emergency programme conference
+subtitle: Cost: 1 party resource. Recover four Left votes; the vetoing caucus publishes reservations.
+view-if: left_in_government = 1
+choose-if: left_in_government = 1 and resources >= 1
+unavailable-subtitle: Requires cabinet participation and one party resource.
+on-arrival: resources -= 1; annual_budget_left_votes = 24 if annual_budget_package_code != 3; annual_budget_left_votes = 23 if annual_budget_package_code = 3; annual_budget_left_no = 0; annual_budget_internal_backing += 8; party_unity += 1; left_coalition_dissent += 2; news_headline = "An all-night Left congress prevents a full budget split"
+go-to: budget_coalition_council
+
+@budget_allow_rebels
+title: Let each caucus vote its mandate
+subtitle: Free. The cabinet keeps its bill but loses Left votes in public.
+view-if: left_in_government = 1
+on-arrival: annual_budget_left_votes = 22 if annual_budget_package_code = 1; annual_budget_left_votes = 21 if annual_budget_package_code = 2; annual_budget_left_votes = 19 if annual_budget_package_code = 3; annual_budget_left_votes = 15 if annual_budget_package_code = 4; annual_budget_left_no = 26 - annual_budget_left_votes; party_unity -= 4; left_coalition_dissent += 7; news_headline = "Left caucus rebels reserve their no votes"
+go-to: budget_coalition_council
+
+@budget_coalition_council
+title: PSL puts the budget beside the exit
+new-page: true
+view-if: left_in_government = 1
+
+= The coalition stage
+
+KO's 157 seats contain fiscal hawks, local-government advocates, conservatives
+and a liberal-left wing. Poland 2050's 33 contain Hołownia loyalists and
+independent centrists. PSL's 32 arrive with a prepared statement threatening
+to leave unless rural investment and cultural autonomy are protected.
+
+The threat is credible because the government has 216 seats without PSL. It is
+also tactical because abstention can still let a budget pass by ordinary
+majority.
+
+- @budget_psl_guarantee
+- @budget_split_difference
+- @budget_dare_psl
+- @budget_ko_rewrite
+
+@budget_psl_guarantee
+title: Fund the rural guarantee and bind all 32 PSL deputies
+subtitle: Spend 1 governing capacity. The clean majority; Razem calls it permanent ransom.
+view-if: left_in_government = 1
+choose-if: left_in_government = 1 and budget >= 1
+unavailable-subtitle: Requires cabinet participation and one remaining governing-capacity point.
+on-arrival: budget -= 1; annual_budget_ko_votes = 157; annual_budget_p2050_votes = 33; annual_budget_psl_votes = 32; annual_budget_psl_no = 0; annual_budget_psl_abstain = 0; psl_coalition_dissent -= 9; razem_dissent += 4; government_delivery += 3; coalition_budget_bargain = "Full rural guarantee"
+go-to: budget_sejm_roll
+
+@budget_split_difference
+title: Give PSL local delivery but no new cultural veto
+subtitle: Twenty-four PSL yes and eight abstentions.
+view-if: left_in_government = 1
+on-arrival: annual_budget_ko_votes = 157; annual_budget_p2050_votes = 33; annual_budget_psl_votes = 24; annual_budget_psl_no = 0; annual_budget_psl_abstain = 8; psl_coalition_dissent += 3; psl_relation -= 2; government_delivery += 2; coalition_budget_bargain = "Local delivery compromise"
+go-to: budget_sejm_roll
+
+@budget_dare_psl
+title: Dare PSL to vote with PiS and Konfederacja
+subtitle: If PSL dissent is high, all 32 vote no; otherwise they abstain.
+view-if: left_in_government = 1
+on-arrival: {!
+Q.annual_budget_ko_votes = 157;
+Q.annual_budget_p2050_votes = 33;
+if (Q.psl_coalition_dissent >= 25) {
+    Q.annual_budget_psl_votes = 0;
+    Q.annual_budget_psl_no = 32;
+    Q.annual_budget_psl_abstain = 0;
+    Q.coalition_break_threat = 1;
+} else {
+    Q.annual_budget_psl_votes = 0;
+    Q.annual_budget_psl_no = 0;
+    Q.annual_budget_psl_abstain = 32;
+}
+Q.psl_coalition_dissent += 12;
+Q.psl_relation -= 12;
+Q.party_unity += 4;
+Q.coalition_budget_bargain = "PSL challenged in the chamber";
+Q.news_headline = "PSL is forced to choose between abstention and rupture";
+!}
+go-to: budget_sejm_roll
+
+@budget_ko_rewrite
+title: Accept KO's fiscal rewrite at the coalition council
+subtitle: The centre closes ranks; Razem's seven deputies vote no.
+view-if: left_in_government = 1
+on-arrival: {!
+Q.annual_budget_ko_votes = 157;
+Q.annual_budget_p2050_votes = 33;
+Q.annual_budget_psl_votes = 30;
+Q.annual_budget_psl_no = 0;
+Q.annual_budget_psl_abstain = 2;
+const koRewriteDefectors = Math.min(7, Q.annual_budget_left_votes);
+Q.annual_budget_left_no += koRewriteDefectors;
+Q.annual_budget_left_votes =
+    Math.max(0, Q.annual_budget_left_votes - koRewriteDefectors);
+Q.ko_coalition_dissent -= 7;
+Q.psl_coalition_dissent -= 4;
+Q.razem_dissent += 18;
+Q.labor_credibility -= 4;
+Q.coalition_budget_bargain = "KO fiscal rewrite";
+!}
+go-to: budget_sejm_roll
+
+@budget_sejm_roll
+title: The annual budget vote
+new-page: true
+view-if: left_in_government = 1
+on-arrival: {!
+Q.annual_budget_yes =
+    Q.annual_budget_ko_votes + Q.annual_budget_p2050_votes +
+    Q.annual_budget_psl_votes + Q.annual_budget_left_votes;
+Q.annual_budget_no =
+    212 + Q.annual_budget_psl_no + Q.annual_budget_left_no;
+Q.annual_budget_abstain =
+    Math.max(0, 157 - Q.annual_budget_ko_votes) +
+    Math.max(0, 33 - Q.annual_budget_p2050_votes) +
+    Math.max(
+        0,
+        32 - Q.annual_budget_psl_votes - Q.annual_budget_psl_no
+    ) +
+    Math.max(
+        0,
+        26 - Q.annual_budget_left_votes - Q.annual_budget_left_no
+    );
+Q.annual_budget_present =
+    Q.annual_budget_yes + Q.annual_budget_no + Q.annual_budget_abstain;
+Q.annual_budget_threshold = Q.annual_budget_no + 1;
+Q.annual_budget_passed =
+    Q.annual_budget_present >= Q.sejm_quorum_floor &&
+    Q.annual_budget_yes > Q.annual_budget_no ? 1 : 0;
+Q.annual_budget_done = 1;
+if (Q.annual_budget_passed) {
+    Q.news_headline = "The coalition passes its annual budget";
+} else {
+    Q.news_headline = "The annual budget is defeated";
+}
+!}
+
+= Sejm roll call — the 2025 budget
+
+<div class="ledger-section ledger-section-first"><div class="ledger-title">Roll
+call</div>
+<div class="ledger-row"><span>Package</span><b>[+ annual_budget_package +]</b></div>
+<div class="ledger-row"><span>Yes</span><b>[+ annual_budget_yes +]</b></div>
+<div class="ledger-row"><span>No</span><b>[+ annual_budget_no +]</b></div>
+<div class="ledger-row"><span>Abstain</span><b>[+ annual_budget_abstain +]</b></div>
+<div class="ledger-row"><span>Required</span><b>[+ annual_budget_threshold +]</b></div></div>
+
+[? if annual_budget_passed: The budget passes. This secures state financing; it
+does not settle whether PSL still considers itself a coalition party. ?]
+
+[? if not annual_budget_passed: The budget fails. The cabinet has not
+automatically lost confidence, and it still has a constitutional window to
+submit a budget, but every partner now prices a rescue. ?]
+
+- @budget_vote_continue: Continue from the roll call
+
+@budget_vote_continue
+view-if: left_in_government = 1
+go-to: budget_passed if annual_budget_passed = 1; budget_crisis if annual_budget_passed = 0
+
+@budget_passed
+title: A budget and an ultimatum
+new-page: true
+view-if: left_in_government = 1
+on-arrival: government_delivery += 5; public_trust += 3; budget_cycle_year = 2026; next_budget_label = "December 2025"; ending_score += 18; coalition_break_threat = 1; date_label = "January 2025"; year = 2025; month = 1; month_name = "January"
+
+= The vote does not end the year
+
+PSL ministers approve the budget, then their parliamentary club demands a new
+coalition annex on agriculture, religious schooling and conscience votes.
+They threaten to leave if the annex is not signed. That rhythm—vote, threaten,
+renegotiate—is not irrational. It is how a smaller, right-leaning partner
+prevents 157-seat KO from treating it as an appendage.
+
+- @coalition_break: Answer the PSL ultimatum
+
+@budget_crisis
+title: A defeated budget is not yet a fallen cabinet
+new-page: true
+view-if: left_in_government = 1
+on-arrival: government_delivery -= 8; public_trust -= 6; fiscal_stress += 12; coalition_break_threat = 1; psl_coalition_dissent += 8; ending_score -= 10
+
+= The constitutional and political clocks diverge
+
+The Sejm has rejected the bill. The cabinet may negotiate another text; the
+President's power to shorten the term concerns failure to receive a budget
+within the constitutional timetable, not this single defeat. Politically,
+however, PSL calls the vote proof that the coalition agreement is exhausted.
+
+- @budget_rescue
+- @article160_open
+- @constructive_motion
+
+@budget_rescue
+title: Reopen the budget and pay for a coalition rescue
+subtitle: Spend 2 governing capacity. The revised bill passes 244–212.
+view-if: left_in_government = 1
+choose-if: left_in_government = 1 and budget >= 2
+unavailable-subtitle: Requires two remaining governing-capacity points.
+on-arrival: budget -= 2; annual_budget_passed = 1; annual_budget_yes = 244; annual_budget_no = 212; annual_budget_abstain = 4; government_delivery += 2; psl_coalition_dissent -= 5; coalition_break_threat = 1; news_headline = "A revised budget survives inside the constitutional window"
+go-to: coalition_break
+
+@coalition_break
+title: PSL keeps a hand on the door
+new-page: true
+view-if: left_in_government = 1
+
+= Coalition rupture as bargaining technology
+
+The 32-seat PSL club votes on whether its ministers should resign. Its core
+wants delivery, regional brokers want proof of autonomy and two conservatives
+would prefer a right-wing partnership. Poland 2050 warns that a PSL rupture
+could also rupture Third Way.
+
+The cabinet has four lawful choices. It can concede, continue as a minority,
+ask the Sejm for confidence under Article 160, or let opponents try the much
+harder constructive vote under Article 158.
+
+- @coalition_repair
+- @coalition_minority
+- @article160_open
+- @constructive_motion
+
+@coalition_repair
+title: Sign the annex and keep PSL in cabinet
+subtitle: Spend 2 governing capacity. Stability now, a larger conservative veto later.
+view-if: left_in_government = 1
+choose-if: left_in_government = 1 and budget >= 2
+unavailable-subtitle: Requires two remaining governing-capacity points.
+on-arrival: budget -= 2; coalition_break_threat = 0; coalition_broken = 0; psl_coalition_dissent -= 15; psl_relation += 8; progressive_credibility -= 5; feminist_trust -= 5; razem_dissent += 7; coalition_status = "Four-party coalition with PSL annex"; ending_name = "The coalition survives its first budget"; ending_score += 15; news_headline = "PSL stays after winning a new coalition annex"
+go-to: campaign_return if formation_continuous = 1; assessment if formation_continuous = 0
+
+@coalition_minority
+title: Accept PSL's resignation and govern with 216 seats
+subtitle: A legal minority cabinet; every bill now needs abstentions or issue partners.
+view-if: left_in_government = 1
+on-arrival: coalition_broken = 1; coalition_break_threat = 0; psl_coalition_dissent = 100; coalition_seats = 216; coalition_status = "KO · Poland 2050 · Left minority cabinet"; psl_relation -= 18; government_delivery -= 5; ending_name = "A 216-seat minority"; ending_score += 3; news_headline = "PSL leaves and the cabinet refuses to resign"
+go-to: article160_open
+
+@article160_open
+title: The prime minister asks for confidence
+new-page: true
+view-if: left_in_government = 1
+
+= Article 160 — confidence by simple majority
+
+The prime minister can request a confidence vote. More yes than no is enough
+with quorum, so a 216-seat cabinet can survive if PSL abstains while PiS and
+Konfederacja cast 212 votes against. If PSL joins the no lobby, arithmetic
+reverses.
+
+- @confidence_rural_deal
+- @confidence_minority_discipline
+- @confidence_left_redline
+
+@confidence_rural_deal
+title: Restore PSL with one last rural guarantee
+subtitle: Spend 1 governing capacity. All 248 coalition deputies vote yes.
+view-if: left_in_government = 1
+choose-if: left_in_government = 1 and budget >= 1
+unavailable-subtitle: Requires one remaining governing-capacity point.
+on-arrival: budget -= 1; article160_psl_yes = 32; article160_psl_no = 0; article160_psl_abstain = 0; article160_left_yes = 26; article160_left_no = 0; coalition_broken = 0; coalition_seats = 248; psl_coalition_dissent -= 10; confidence_strategy = "Rural guarantee"
+go-to: article160_roll
+
+@confidence_minority_discipline
+title: Hold 216 and ask PSL only to abstain
+subtitle: A narrow but valid 216–212 confidence vote.
+view-if: left_in_government = 1
+on-arrival: article160_psl_yes = 0; article160_psl_no = 0; article160_psl_abstain = 32; article160_left_yes = 26; article160_left_no = 0; coalition_broken = 1; coalition_seats = 216; confidence_strategy = "Minority confidence with PSL abstention"
+go-to: article160_roll
+
+@confidence_left_redline
+title: Make equality and labour law the confidence question
+subtitle: PSL's 32 vote no. The Left is unified and the cabinet is likely to fall.
+view-if: left_in_government = 1
+on-arrival: article160_psl_yes = 0; article160_psl_no = 32; article160_psl_abstain = 0; article160_left_yes = 26; article160_left_no = 0; coalition_broken = 1; coalition_seats = 216; party_unity += 6; progressive_credibility += 5; labor_credibility += 5; confidence_strategy = "Left programme confidence"
+go-to: article160_roll
+
+@article160_roll
+title: Confidence in the sitting cabinet
+new-page: true
+view-if: left_in_government = 1
+on-arrival: {!
+Q.confidence_stage = 5;
+Q.confidence_mode = "Article 160 prime-ministerial confidence — simple majority";
+Q.confidence_candidate = Q.prime_minister;
+Q.confidence_yes =
+    157 + 33 + Q.article160_left_yes + Q.article160_psl_yes;
+Q.confidence_no =
+    212 + Q.article160_left_no + Q.article160_psl_no;
+Q.confidence_abstain = Q.article160_psl_abstain;
+Q.confidence_present =
+    Q.confidence_yes + Q.confidence_no + Q.confidence_abstain;
+Q.confidence_threshold = Q.confidence_no + 1;
+Q.article160_passed =
+    Q.confidence_present >= Q.sejm_quorum_floor &&
+    Q.confidence_yes > Q.confidence_no ? 1 : 0;
+if (Q.article160_passed) {
+    Q.government_has_confidence = 1;
+    Q.news_headline = "The cabinet survives an Article 160 vote";
+} else {
+    Q.government_has_confidence = 0;
+    Q.news_headline = "The prime minister loses an Article 160 vote";
+}
+!}
+
+= The cabinet tests itself
+
+<div class="ledger-section ledger-section-first"><div class="ledger-title">Roll
+call</div>
+<div class="ledger-row"><span>Strategy</span><b>[+ confidence_strategy +]</b></div>
+<div class="ledger-row"><span>Yes</span><b>[+ confidence_yes +]</b></div>
+<div class="ledger-row"><span>No</span><b>[+ confidence_no +]</b></div>
+<div class="ledger-row"><span>Abstain</span><b>[+ confidence_abstain +]</b></div>
+<div class="ledger-row"><span>Required</span><b>[+ confidence_threshold +]</b></div></div>
+
+- @article160_continue: Continue from the roll call
+
+@article160_continue
+view-if: left_in_government = 1
+go-to: article160_survives if article160_passed = 1; article160_falls if article160_passed = 0
+
+@article160_survives
+title: A majority, or merely more yes than no
+new-page: true
+view-if: left_in_government = 1
+on-arrival: ending_name = "The cabinet survives confidence"; ending_score += 12
+
+The cabinet remains in office. If PSL abstained, 216 deputies have defeated 212
+no votes without pretending that 216 is an absolute majority. Every ordinary
+bill will have to reproduce that restraint.
+
+- @constructive_motion: Let the opposition try to name a replacement
+- @resolution_exit: Record the confidence result
+
+@article160_falls
+title: The prime minister resigns
+new-page: true
+view-if: left_in_government = 1
+on-arrival: left_in_government = 0; caretaker_government = 1; position = "Caretaker cabinet and new formation talks"; budget = 0; budget_authority = "Caretaker — no new governing-spend actions"; coalition_status = "Cabinet lost confidence"; coalition_seats = 0; ending_name = "Confidence lost"; ending_score -= 12
+
+The loss is not a constructive vote: it removes confidence without installing a
+named successor. A new formation sequence begins. Lewica's ministers remain
+caretakers for continuity, but the player no longer receives government budget
+actions.
+
+- @formation_exit: Record the fall
+
+@constructive_motion
+title: A constructive vote of no confidence
+new-page: true
+view-if: left_in_government = 1
+
+= Article 158 — 46 signatures, one named successor
+
+Opponents cannot merely vote the cabinet out. At least 46 deputies must sign a
+motion naming a replacement prime minister; the Sejm waits seven days; at least
+231 deputies must then vote yes. If it fails, another motion normally waits
+three months unless at least 115 deputies sign.
+
+PiS supplies the signatures. The struggle is over which candidate can turn
+separate party crises into 231 votes.
+
+- @constructive_defend
+- @constructive_psl_right
+- @constructive_trzaskowski
+- @constructive_kosiniak
+
+@constructive_defend
+title: Defend the cabinet against Beata Szydło
+subtitle: PiS and Konfederacja reach only 212. The motion fails.
+view-if: left_in_government = 1
+on-arrival: constructive_candidate = "Beata Szydło"; constructive_sponsors = 46; constructive_yes = 212; constructive_no = 216; constructive_abstain = 32; constructive_democratic = 0; news_headline = "The right cannot turn a PSL abstention into 231 votes"
+go-to: constructive_roll
+
+@constructive_psl_right
+title: Let PSL cross to a Szydło social-conservative cabinet
+subtitle: PiS + Konfederacja + PSL = 244. The government falls immediately.
+view-if: left_in_government = 1
+on-arrival: constructive_candidate = "Beata Szydło"; constructive_sponsors = 46; constructive_yes = 244; constructive_no = 216; constructive_abstain = 0; constructive_democratic = 0; psl_relation -= 25; psl_coalition_dissent = 100; far_right_agenda += 8; news_headline = "PSL gives Beata Szydło a constructive majority"
+go-to: constructive_roll
+
+@constructive_trzaskowski
+title: Replace Tusk with Rafał Trzaskowski inside the democratic majority
+subtitle: A KO rupture produces 241 yes; Lewica remains in a renegotiated cabinet.
+view-if: left_in_government = 1
+on-arrival: constructive_candidate = "Rafał Trzaskowski"; constructive_sponsors = 115; constructive_yes = 241; constructive_no = 212; constructive_abstain = 7; constructive_democratic = 1; ko_leader = "Rafał Trzaskowski"; ko_coalition_dissent += 18; progressives_dissent -= 5; news_headline = "KO resolves its leadership crisis through a constructive replacement"
+go-to: constructive_roll
+
+@constructive_kosiniak
+title: Reset the coalition around Kosiniak-Kamysz
+subtitle: All 248 democratic deputies install a more conservative compromise.
+view-if: left_in_government = 1
+on-arrival: constructive_candidate = "Władysław Kosiniak-Kamysz"; constructive_sponsors = 115; constructive_yes = 248; constructive_no = 212; constructive_abstain = 0; constructive_democratic = 1; psl_relation += 10; psl_coalition_dissent -= 15; progressive_credibility -= 5; feminist_trust -= 5; news_headline = "The coalition survives by changing prime minister"
+go-to: constructive_roll
+
+@constructive_roll
+title: The named replacement
+new-page: true
+view-if: left_in_government = 1
+on-arrival: {!
+Q.confidence_stage = 6;
+Q.confidence_mode =
+    "Article 158 constructive no confidence — statutory majority";
+Q.confidence_candidate = Q.constructive_candidate;
+Q.confidence_yes = Q.constructive_yes;
+Q.confidence_no = Q.constructive_no;
+Q.confidence_abstain = Q.constructive_abstain;
+Q.confidence_present =
+    Q.confidence_yes + Q.confidence_no + Q.confidence_abstain;
+Q.confidence_threshold = 231;
+Q.constructive_passed =
+    Q.constructive_sponsors >= 46 &&
+    Q.confidence_yes >= Q.sejm_statutory_majority ? 1 : 0;
+if (Q.constructive_passed) {
+    Q.prime_minister = Q.constructive_candidate;
+    Q.government_name = Q.constructive_candidate + " constructive cabinet";
+    Q.government_has_confidence = 1;
+    Q.constructive_vonc_cooldown = 0;
+    if (Q.constructive_democratic) {
+        Q.left_in_government = 1;
+        Q.position = "Coalition government";
+        Q.coalition_status = "Reconstituted democratic coalition";
+        Q.ending_name = "A constructive democratic replacement";
+        Q.ending_score += 8;
+    } else {
+        Q.left_in_government = 0;
+        Q.position = "Parliamentary opposition";
+        Q.coalition_status = "PiS · Konfederacja · PSL constructive majority";
+        Q.budget = 0;
+        Q.budget_authority = "Opposition — no state spending authority";
+        Q.ending_name = "The coalition crosses right";
+        Q.ending_score -= 18;
+    }
+    Q.news_headline =
+        Q.constructive_candidate + " replaces the prime minister immediately";
+} else {
+    Q.constructive_vonc_cooldown = 3;
+    Q.government_has_confidence = 1;
+    Q.ending_name = "The constructive motion fails";
+    Q.ending_score += 6;
+    Q.news_headline =
+        "The constructive motion fails and enters a three-month cooldown";
+}
+!}
+
+= Constructive roll call
+
+<div class="ledger-section ledger-section-first"><div class="ledger-title">Roll
+call</div>
+<div class="ledger-row"><span>Named successor</span><b>[+ confidence_candidate +]</b></div>
+<div class="ledger-row"><span>Sponsors</span><b>[+ constructive_sponsors +]</b></div>
+<div class="ledger-row"><span>Yes</span><b>[+ confidence_yes +]</b></div>
+<div class="ledger-row"><span>No</span><b>[+ confidence_no +]</b></div>
+<div class="ledger-row"><span>Abstain</span><b>[+ confidence_abstain +]</b></div>
+<div class="ledger-row"><span>Required</span><b>231</b></div></div>
+
+[? if constructive_passed: The named candidate becomes prime minister. No
+intervening vacuum and no separate destructive removal vote exist. ?]
+
+[? if not constructive_passed: The sitting cabinet remains. The ordinary
+three-month cooldown is now recorded. ?]
+
+- @resolution_exit: Record the result
+
+@formation_exit
+title: Return from the formation crisis
+go-to: campaign_return if formation_continuous = 1; opposition_assessment if formation_continuous = 0
+
+@resolution_exit
+title: Return from the government crisis
+go-to: campaign_return if formation_continuous = 1; assessment if formation_continuous = 0
+
+@campaign_return
+title: Return to the monthly campaign
+new-page: true
+view-if: formation_continuous = 1
+on-arrival: {!
+Q.formation_in_progress = 0;
+Q.formation_return_ready = 1;
+Q.formation_requested = 0;
+Q.formation_complete = 1;
+Q.election_2023_certified = 1;
+Q.post_formation_return_pending = 0;
+Q.prototype_complete = 0;
+Q.year = 2023;
+Q.month = 12;
+Q.month_name = "December";
+Q.date_label = "December 2023";
+if (!Q.left_in_government) {
+    Q.budget = 0;
+    Q.budget_authority = "Opposition — no state spending authority";
+}
+Q.news_headline =
+    Q.prime_minister + " leaves the formation crisis with " +
+    Q.coalition_seats + " declared supporting seats";
+!}
+go-to: poland_event_queue
+
+@opposition_assessment
+title: Opposition has leverage, not a treasury
+new-page: true
+on-arrival: left_in_government = 0; budget = 0; budget_authority = "Opposition — no state spending authority"; annual_budget_done = 0
+
+= The Left outside the cabinet
+
+Lewica may still be pivotal on statutes, presidential veto overrides,
+investigatory commissions and future confidence motions. It does not possess
+government fiscal capacity. The governing budget path is therefore closed
+rather than reskinned as opposition spending.
+
+- @assessment: Close the formation chapter
+
+@assessment
+title: Transfer-of-power assessment
+new-page: true
+on-arrival: {!
+if (Q.left_in_government) {
+    Q.ending_score += Math.round(Q.party_unity / 10);
+    Q.ending_score += Math.round(Q.public_trust / 10);
+    if (Q.annual_budget_passed) Q.ending_score += 10;
+} else {
+    Q.ending_score += Math.round(Q.party_unity / 12);
+}
+Q.prototype_complete = 1;
+!}
+
+= [+ ending_name +]
+
+<div class="ledger-section ledger-section-first"><div class="ledger-title">Final
+position</div>
+<div class="ledger-row"><span>Prime minister</span><b>[+ prime_minister +]</b></div>
+<div class="ledger-row"><span>Cabinet</span><b>[+ government_name +]</b></div>
+<div class="ledger-row"><span>Lewica</span><b>[+ position +]</b></div>
+<div class="ledger-row"><span>Left unity</span><b>[+ party_unity +]/100</b></div>
+<div class="ledger-row"><span>Coalition status</span><b>[+ coalition_status +]</b></div>
+<div class="ledger-row"><span>Last confidence procedure</span><b>[+ confidence_mode +]</b></div>
+<div class="ledger-row"><span>Score</span><b>[+ ending_score +]</b></div></div>
+
+[? if left_in_government = 1: Lewica retains cabinet responsibility. It has
+won access to policy at the price of being answerable for every compromise,
+every PSL ultimatum and the next annual budget. ?]
+
+[? if left_in_government = 0: Lewica ends outside the cabinet. Its resources
+remain party resources; no government budget currency is displayed or
+actionable. ?]
+
+This vertical slice treats parliamentary arithmetic as politics rather than a
+single “coalition stability” bar: nominations, cabinet confidence, budgets,
+prime-ministerial confidence and constructive replacement each obey their own
+rule.
+
+- @replay: Replay the 2023 formation chapter
+- @return_title: Return to the title
+
+@replay
+go-to: setup
+
+@return_title
+on-arrival: started = 0; formation_requested = 0
+go-to: root

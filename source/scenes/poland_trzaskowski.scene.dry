@@ -1,0 +1,376 @@
+title: War of the Powers
+
+@certification
+title: War of the Powers I — the oath
+new-page: true
+max-visits: 1
+on-arrival: {!
+Q.trz_certification_event_done = 1;
+Q.pres_2020_phase = "Certification contested";
+Q.trz_inauguration_status = "President-elect — oath contested";
+const margin = Number(Q.pres_runoff_margin) || 0;
+const restraint = Number(Q.constitutional_restraint) || 50;
+const courtTrust = Number(Q.judicial_legitimacy) || 36;
+const pisCapacity = Number(Q.pis_org_resources) || 9;
+Q.trz_obstruction_pressure = Math.max(
+    20,
+    Math.min(
+        88,
+        Math.round(
+            58 - margin * 2.4 +
+            Math.max(0, 50 - restraint) * 0.45 +
+            Math.max(0, 42 - courtTrust) * 0.30 +
+            pisCapacity * 0.65
+        )
+    )
+);
+Q.trz_cohabitation_temperature = 24;
+Q.news_headline =
+    "PiS contests the road from Trzaskowski's victory to the presidential oath";
+!}
+
+= August 2020 — The office is not yet his
+
+PiS accepts that votes were counted and attacks every institution that must
+turn the result into power. Loyal lawyers challenge the ballot, the Sejm
+Marshal delays the National Assembly and government media calls the result
+foreign and urban. The objective is simple: make the oath look optional.
+
+Obstruction pressure: **[+ trz_obstruction_pressure +]/100**.
+
+- @certification_legal
+- @certification_public
+- @certification_bargain
+
+@certification_legal
+title: Lock the count behind one constitutional front
+subtitle: Cost: 1 resource. Courts, Senate lawyers and election observers use one record.
+choose-if: resources >= 1
+unavailable-subtitle: A national legal operation requires one resource.
+on-arrival: resources -= 1; trz_certification_strategy = "Constitutional front"; trz_defence_score = 70; judicial_legitimacy += 7; constitutional_restraint += 6; ko_relation += 5; psl_relation += 3; public_trust += 3; rival_relation_pis_ko -= 5; news_headline = "The opposition builds one record around the certified count"
+go-to: certification_result
+
+@certification_public
+title: Put mayors, unions and voters around the National Assembly
+subtitle: Strong public defence; PiS and Konfederacja gain a siege narrative.
+on-arrival: trz_certification_strategy = "Civic mobilisation"; trz_defence_score = 64; turnout_readiness += 5; organiser_energy += 4; public_trust += 2; trz_right_backlash += 9; far_right_agenda += 4; konf_poll_momentum += 0.35; pis_poll_momentum += 0.15; rival_relation_pis_konf += 2; news_headline = "A civic cordon demands that the National Assembly meet"
+go-to: certification_result
+
+@certification_bargain
+title: Let the Palace negotiate the ceremony with PiS
+subtitle: Easier oath, but the first compromise is made before the first day in office.
+on-arrival: trz_certification_strategy = "Private transition bargain"; trz_defence_score = 57; president_relation += 5; ko_relation -= 3; pis_relation += 4; constitutional_restraint -= 3; trz_cohabitation_temperature -= 5; trz_right_fragmentation += 4; news_headline = "A private transition bargain secures a date and creates a debt"
+go-to: certification_result
+
+@certification_result
+title: The National Assembly
+new-page: true
+on-arrival: {!
+Q.trz_defence_score = Math.round(
+    (Number(Q.trz_defence_score) || 0) +
+    ((Number(Q.judicial_legitimacy) || 36) - 36) * 0.18 +
+    ((Number(Q.constitutional_restraint) || 50) - 50) * 0.16 -
+    (Number(Q.trz_obstruction_pressure) || 0) * 0.72
+);
+if (Q.trz_defence_score >= -7) {
+    Q.trz_inaugurated = 1;
+    Q.trz_blocked = 0;
+    Q.president_name = "Rafał Trzaskowski";
+    Q.pres_2020_phase = "Cohabitation";
+    Q.trz_inauguration_status =
+        Q.trz_defence_score >= 10
+            ? "Sworn in — certified mandate"
+            : "Sworn in — legitimacy disputed";
+    Q.trz_cohabitation_temperature +=
+        Q.trz_defence_score >= 10 ? 8 : 15;
+    Q.trz_right_fragmentation +=
+        Q.trz_defence_score >= 10 ? 4 : 8;
+    Q.trz_right_backlash +=
+        Q.trz_defence_score >= 10 ? 3 : 7;
+    Q.news_headline =
+        "Rafał Trzaskowski takes the oath before a hostile PiS majority";
+} else {
+    Q.trz_inaugurated = 0;
+    Q.trz_inauguration_status = "Oath delayed";
+    Q.pres_2020_phase = "Constitutional interregnum";
+    Q.trz_right_backlash += 8;
+    Q.news_headline =
+        "The Sejm Marshal prevents the oath and opens an interregnum";
+}
+!}
+
+Defence balance: **[+ trz_defence_score +]**.
+
+[? if trz_inaugurated: The joint sitting takes place. PiS deputies turn their
+backs during the oath; the new President immediately inherits a government
+that treats every signature as enemy action. ?]
+
+[? if not trz_inaugurated: The sitting is not convened. The certified winner
+has a mandate but no office, while the Sejm Marshal prepares to exercise the
+President's powers after Duda's term expires. ?]
+
+- @begin_cohabitation
+- @force_oath
+- @mobilised_oath
+- @accept_repeat
+
+@begin_cohabitation
+title: Enter cohabitation
+view-if: trz_inaugurated = 1
+go-to: poland_hub
+
+@force_oath
+title: Force a new sitting through the courts and Senate
+subtitle: Cost: 2 resources. The oath succeeds, but PiS never recognises the settlement.
+view-if: trz_inaugurated = 0
+choose-if: resources >= 2
+unavailable-subtitle: The exhausted opposition cannot finance the legal and parliamentary operation.
+on-arrival: resources -= 2; trz_inaugurated = 1; trz_blocked = 0; president_name = "Rafał Trzaskowski"; pres_2020_phase = "Cohabitation"; trz_inauguration_status = "Sworn in after constitutional standoff"; trz_cohabitation_temperature += 24; trz_right_fragmentation += 10; trz_right_backlash += 8; judicial_legitimacy += 5; ko_relation += 5; pis_relation -= 8; rival_relation_pis_ko -= 8; news_headline = "A second joint sitting ends the interregnum"
+go-to: poland_hub
+
+@mobilised_oath
+title: Break the delay with a permanent civic assembly
+subtitle: The oath succeeds amid protests; the radical right leaves with a founding myth.
+view-if: trz_inaugurated = 0
+on-arrival: trz_inaugurated = 1; trz_blocked = 0; president_name = "Rafał Trzaskowski"; pres_2020_phase = "Cohabitation"; trz_inauguration_status = "Sworn in during civic mobilisation"; trz_cohabitation_temperature += 28; trz_right_fragmentation += 7; trz_right_backlash += 15; turnout_readiness += 5; far_right_agenda += 7; konf_poll_momentum += 0.7; pis_poll_momentum += 0.25; minority_safety -= 3; news_headline = "Continuous demonstrations force the National Assembly to meet"
+go-to: poland_hub
+
+@accept_repeat
+title: Accept a repeat election to avoid a rupture
+subtitle: PiS succeeds in keeping the certified winner from office.
+view-if: trz_inaugurated = 0
+on-arrival: trz_blocked = 1; trz_inaugurated = 0; president_name = "Elżbieta Witek (acting)"; pres_2020_phase = "Presidency blocked"; trz_inauguration_status = "Blocked — repeat election conceded"; party_unity -= 10; public_trust -= 8; constitutional_restraint -= 12; judicial_legitimacy -= 8; pis_relation += 6; ko_relation -= 10; trz_right_backlash += 12; pis_poll_momentum += 0.8; news_headline = "The opposition concedes a repeat presidential election"
+go-to: poland_hub
+
+@tribunal_showdown
+title: War of the Powers II — the Tribunal
+new-page: true
+max-visits: 1
+on-arrival: abortion_event_done = 1; trz_cohabitation_temperature += 12; news_headline = "The abortion judgment opens a war between the Palace and PiS"
+
+= October 2020 — A judgment and a hostile President
+
+The disputed Constitutional Tribunal removes the fetal-impairment ground.
+Trzaskowski cannot veto a judgment. He can deny the panel political legitimacy,
+refer later statutes and promise his signature to a parliamentary repair.
+
+- @tribunal_palace_bill
+- @tribunal_movement
+- @tribunal_compromise
+
+@tribunal_palace_bill
+title: Write a restoration bill with the Palace and the democratic opposition
+subtitle: Trzaskowski promises to sign; PiS and Konfederacja mobilise against both institutions.
+on-arrival: abortion_strategy = "Palace restoration front"; trz_abortion_signature = 1; trz_abortion_veto_policy = "Will sign statutory abortion restoration"; president_relation += 8; ko_relation += 5; p2050_relation += 2; feminist_trust += 8; judicial_legitimacy += 5; trz_right_fragmentation += 7; trz_right_backlash += 10; far_right_agenda += 5; pis_poll_momentum += 0.2; konf_poll_momentum += 0.4; rival_relation_pis_ko -= 5; news_headline = "The Palace promises a signature on abortion-law restoration"
+go-to: poland_hub
+
+@tribunal_movement
+title: Keep the Palace out and resource the Women's Strike
+subtitle: Movement autonomy grows; the President gives no advance signature.
+on-arrival: abortion_strategy = "Autonomous movement support"; trz_abortion_signature = 0; trz_abortion_veto_policy = "No advance commitment"; feminist_trust += 12; movement_autonomy += 10; organiser_energy += 7; progressive_credibility += 5; president_relation -= 4; barons_dissent += 4; trz_right_backlash += 5; news_headline = "The Women's Strike refuses to become the President's movement"
+go-to: poland_hub
+
+@tribunal_compromise
+title: Ask Trzaskowski to guarantee the old compromise
+subtitle: A narrower promised signature calms PSL and angers the movement.
+on-arrival: abortion_strategy = "Presidential compromise"; trz_abortion_signature = 1; trz_abortion_veto_policy = "Will sign restoration of the 1993 compromise"; president_relation += 5; psl_relation += 6; barons_dissent -= 4; feminist_trust -= 10; progressives_dissent += 8; trz_right_fragmentation += 4; trz_right_backlash += 3; news_headline = "The Palace offers its signature to restore the old compromise"
+go-to: poland_hub
+
+@judicial_war
+title: War of the Powers III — veto government
+new-page: true
+max-visits: 1
+on-arrival: trz_judicial_war_done = 1; trz_cohabitation_temperature += 10; institutional_issue_salience += 12; news_headline = "PiS sends its judicial offensive to a hostile President"
+
+= February 2021 — Two centres of legality
+
+PiS packages court appointments, disciplinary rules and public-media changes
+as ordinary administration. The Palace calls them one attempt to govern around
+the Constitution. Each veto can stop a statute; none can repair the courts.
+
+- @judicial_veto_front
+- @judicial_europe
+- @judicial_trade
+
+@judicial_veto_front
+title: Maintain one opposition veto list
+subtitle: Clear constitutional line; repeated Palace defeats help the right campaign against obstruction.
+on-arrival: trz_palace_strategy = "Common veto front"; trz_vetoes += 2; president_relation += 8; ko_relation += 6; p2050_relation += 4; judicial_legitimacy += 8; constitutional_restraint += 6; trz_right_fragmentation += 8; trz_right_backlash += 9; far_right_agenda += 4; pis_poll_momentum += 0.25; konf_poll_momentum += 0.3; rival_relation_pis_ko -= 6; news_headline = "Two presidential vetoes stop the judicial package"
+go-to: poland_hub
+
+@judicial_europe
+title: Move the conflict to European courts and treaty law
+subtitle: Strong legal leverage, easy material for a sovereignty campaign.
+on-arrival: trz_palace_strategy = "European judicial escalation"; president_relation += 5; ko_relation += 4; judicial_legitimacy += 10; constitutional_restraint += 3; trz_right_fragmentation += 6; trz_right_backlash += 12; far_right_agenda += 6; konf_poll_momentum += 0.5; minority_safety -= 1; news_headline = "The Palace internationalises the judicial conflict"
+go-to: poland_hub
+
+@judicial_trade
+title: Trade one appointment law for a pandemic package
+subtitle: Delivers policy and fractures the democratic front.
+on-arrival: trz_palace_strategy = "Selective cohabitation bargain"; household_security += 5; health_capacity += 4; government_delivery += 4; pis_relation += 6; president_relation += 2; ko_relation -= 6; p2050_relation -= 3; judicial_legitimacy -= 5; constitutional_restraint -= 4; trz_right_fragmentation += 10; trz_right_backlash += 2; news_headline = "A Palace–government bargain splits the judicial package"
+go-to: poland_hub
+
+@palace_offensive
+title: War of the Powers IV — what the pen is for
+new-page: true
+max-visits: 1
+on-arrival: trz_palace_offensive_done = 1; news_headline = "The Palace asks the opposition what it wants a hostile presidency to build"
+
+= April 2021 — Beyond stopping PiS
+
+Vetoes have made Trzaskowski the government's most visible opponent. He now
+asks whether the Palace should remain a brake or sponsor legislation that can
+test the United Right's majority.
+
+- @palace_rights
+- @palace_institutions
+- @palace_social
+
+@palace_rights
+title: Sign a public abortion-and-marriage-equality compact
+subtitle: Both bills receive a no-veto pledge; the right receives its strongest mobilisation issue.
+on-arrival: trz_palace_strategy = "Equality compact"; trz_abortion_signature = 1; trz_marriage_signature = 1; trz_abortion_veto_policy = "Will sign legal abortion restoration"; trz_marriage_veto_policy = "Will sign marriage equality"; president_relation += 10; ko_relation += 5; progressive_credibility += 9; feminist_trust += 8; psl_relation -= 8; trz_right_fragmentation += 9; trz_right_backlash += 15; far_right_agenda += 8; pis_poll_momentum += 0.35; konf_poll_momentum += 0.7; rival_relation_pis_ko -= 6; rival_relation_ko_psl -= 4; news_headline = "Trzaskowski promises not to veto abortion reform or marriage equality"
+go-to: poland_hub
+
+@palace_institutions
+title: Keep the Palace focused on courts, media and clean elections
+subtitle: The broadest opposition line; no promise on marriage equality.
+on-arrival: trz_palace_strategy = "Institutional presidency"; trz_marriage_signature = 0; trz_marriage_veto_policy = "No advance commitment"; trz_vetoes += 1; president_relation += 6; ko_relation += 5; psl_relation += 4; p2050_relation += 4; judicial_legitimacy += 6; constitutional_restraint += 6; trz_right_fragmentation += 5; trz_right_backlash += 4; news_headline = "The Palace keeps its offensive on institutions"
+go-to: poland_hub
+
+@palace_social
+title: Pair abortion restoration with health, housing and local government
+subtitle: Trzaskowski promises one rights signature and competes on public services.
+on-arrival: trz_palace_strategy = "Social cohabitation"; trz_abortion_signature = 1; trz_marriage_signature = 0; trz_abortion_veto_policy = "Will sign abortion restoration"; trz_marriage_veto_policy = "No advance commitment"; president_relation += 7; household_security += 4; health_capacity += 3; local_network += 3; labor_credibility += 4; ko_relation += 2; trz_right_fragmentation += 7; trz_right_backlash += 7; pis_poll_momentum += 0.15; news_headline = "The Palace combines a rights pledge with a social programme"
+go-to: poland_hub
+
+@rights_vote
+title: War of the Powers V — test the majority
+new-page: true
+max-visits: 1
+on-arrival: trz_rights_vote_done = 1; opposition_reset_event_done = 1; news_headline = "The opposition decides which presidential promise to test in the Sejm"
+
+= June 2021 — A bill for the President's desk
+
+The United Right is divided but still governs. Only one confrontation can be
+organised before the merger congress. A promised presidential signature is not
+a parliamentary majority.
+
+- @rights_vote_abortion
+- @rights_vote_marriage
+- @rights_vote_institutions
+
+@rights_vote_abortion
+title: Put statutory abortion restoration to a vote
+subtitle: Available only if Trzaskowski has promised not to veto it.
+choose-if: trz_abortion_signature = 1
+unavailable-subtitle: The Palace has made no reliable signature commitment.
+on-arrival: {!
+Q.trz_rights_bill = "Abortion-law restoration";
+Q.trz_rights_bill_votes = Math.max(
+    180,
+    Math.min(
+        250,
+        Math.round(
+            186 +
+            (Number(Q.trz_right_fragmentation) || 0) * 1.08 +
+            Math.max(
+                0,
+                (Number(Q.government_coalition_dissent) || 16) - 16
+            ) * 0.55 +
+            Math.max(0, (Number(Q.psl_relation) || 24) - 24) * 0.22 +
+            Math.max(0, (Number(Q.ko_relation) || 44) - 44) * 0.16
+        )
+    )
+);
+if (Q.trz_rights_bill_votes >= 231) {
+    Q.trz_rights_bill_outcome = "Passed and signed";
+    Q.feminist_trust += 14;
+    Q.progressive_credibility += 10;
+    Q.judicial_legitimacy += 6;
+    Q.president_relation += 8;
+    Q.trz_right_backlash += 16;
+    Q.far_right_agenda += 8;
+    Q.pis_poll_momentum += 0.45;
+    Q.konf_poll_momentum += 0.75;
+    Q.news_headline =
+        "Trzaskowski signs the abortion-restoration law";
+} else {
+    Q.trz_rights_bill_outcome = "Defeated in the Sejm";
+    Q.public_trust -= 2;
+    Q.feminist_trust += 3;
+    Q.trz_right_backlash += 7;
+    Q.konf_poll_momentum += 0.3;
+    Q.news_headline =
+        "The abortion-restoration bill falls before reaching the President";
+}
+!}
+go-to: rights_result
+
+@rights_vote_marriage
+title: Put marriage equality to a vote
+subtitle: Available only with an explicit presidential no-veto pledge.
+choose-if: trz_marriage_signature = 1
+unavailable-subtitle: Trzaskowski has not promised to sign marriage equality.
+on-arrival: {!
+Q.trz_rights_bill = "Marriage equality";
+Q.trz_rights_bill_votes = Math.max(
+    170,
+    Math.min(
+        246,
+        Math.round(
+            180 +
+            (Number(Q.trz_right_fragmentation) || 0) * 1.16 +
+            Math.max(
+                0,
+                (Number(Q.government_coalition_dissent) || 16) - 16
+            ) * 0.60 +
+            Math.max(0, (Number(Q.ko_relation) || 44) - 44) * 0.20 +
+            Math.max(0, (Number(Q.psl_relation) || 24) - 24) * 0.12
+        )
+    )
+);
+if (Q.trz_rights_bill_votes >= 231) {
+    Q.trz_rights_bill_outcome = "Passed and signed";
+    Q.progressive_credibility += 14;
+    Q.minority_safety += 12;
+    Q.president_relation += 9;
+    Q.trz_right_backlash += 20;
+    Q.far_right_agenda += 10;
+    Q.pis_poll_momentum += 0.5;
+    Q.konf_poll_momentum += 0.9;
+    Q.news_headline = "Trzaskowski signs marriage equality into law";
+} else {
+    Q.trz_rights_bill_outcome = "Defeated in the Sejm";
+    Q.public_trust -= 3;
+    Q.progressive_credibility += 3;
+    Q.trz_right_backlash += 10;
+    Q.konf_poll_momentum += 0.45;
+    Q.news_headline =
+        "Marriage equality falls before reaching the President";
+}
+!}
+go-to: rights_result
+
+@rights_vote_institutions
+title: Send another judicial-repair law instead
+subtitle: A broader coalition and a safer presidential signature.
+on-arrival: trz_rights_bill = "Judicial repair"; trz_rights_bill_votes = 244; trz_rights_bill_outcome = "Passed and signed"; trz_vetoes += 1; judicial_legitimacy += 10; constitutional_restraint += 7; president_relation += 5; ko_relation += 4; psl_relation += 3; p2050_relation += 3; progressive_credibility -= 2; trz_right_backlash += 5; news_headline = "Trzaskowski signs a narrow judicial-repair law"
+go-to: rights_result
+
+@rights_result
+title: The signature test
+new-page: true
+
+**[+ trz_rights_bill +]** receives **[+ trz_rights_bill_votes +] votes**.
+Outcome: **[+ trz_rights_bill_outcome +]**.
+
+[? if trz_rights_bill_outcome = "Passed and signed": The promised signature is
+immediate. The cohabitation presidency has made law as well as stopped it; the
+right begins the next campaign around reversing the result. ?]
+
+[? if trz_rights_bill_outcome = "Defeated in the Sejm": Trzaskowski never gets
+the choice to sign or veto. The pledge remains real, but the arithmetic of a
+PiS Sejm remains more important than the occupant of the Palace. ?]
+
+- @poland_hub: Continue to the merger congress

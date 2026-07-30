@@ -1,0 +1,1675 @@
+title: Rival parties choose their month
+new-page: true
+on-arrival: {!
+const finiteAI = function(value, fallback) {
+    return Number.isFinite(Number(value)) ? Number(value) : fallback;
+};
+const clampAI = function(value, low, high) {
+    return Math.max(low, Math.min(high, finiteAI(value, low)));
+};
+const moveTowardAI = function(current, target, step) {
+    const start = finiteAI(current, target);
+    if (Math.abs(target - start) <= step) {
+        return target;
+    }
+    return start + (target > start ? step : -step);
+};
+const randomAI = function() {
+    return this.random.uint32() / 4294967296;
+}.bind(this);
+const normalizeWingFamilyAI = function(keys, defaults) {
+    let total = 0;
+    const values = [];
+    for (let index = 0; index < keys.length; index += 1) {
+        const fallback = defaults[index];
+        const value = Math.max(0.1, finiteAI(Q[keys[index]], fallback));
+        values.push(value);
+        total += value;
+    }
+    let assigned = 0;
+    for (let index = 0; index < keys.length; index += 1) {
+        const normalized = index == keys.length - 1
+            ? 100 - assigned
+            : Math.round(values[index] * 1000 / Math.max(0.1, total)) / 10;
+        Q[keys[index]] = normalized;
+        assigned += normalized;
+    }
+};
+const shiftWingAI = function(key, amount) {
+    Q[key] = Math.max(0.1, finiteAI(Q[key], 0.1) + amount);
+};
+const dominantWingAI = function(entries) {
+    let winner = entries[0];
+    for (const entry of entries) {
+        if (finiteAI(Q[entry[0]], 0) > finiteAI(Q[winner[0]], 0)) {
+            winner = entry;
+        }
+    }
+    return winner[1];
+};
+
+const rivalParties = ["pis", "ko", "psl", "konf", "p2050"];
+const electorateBlocs = [
+    "metropolitan_liberals",
+    "liberal_professionals",
+    "public_service_families",
+    "industrial_logistics",
+    "provincial_welfare",
+    "rural_localists",
+    "older_welfare_households",
+    "anti_establishment_youth"
+];
+const relationDefaults2019 = {
+    rival_relation_pis_ko: 8,
+    rival_relation_pis_psl: 24,
+    rival_relation_pis_konf: 34,
+    rival_relation_pis_p2050: 12,
+    rival_relation_ko_psl: 62,
+    rival_relation_ko_konf: 7,
+    rival_relation_ko_p2050: 54,
+    rival_relation_psl_konf: 22,
+    rival_relation_psl_p2050: 58,
+    rival_relation_konf_p2050: 10
+};
+const relationDefaults2023 = {
+    rival_relation_pis_ko: 5,
+    rival_relation_pis_psl: 26,
+    rival_relation_pis_konf: 31,
+    rival_relation_pis_p2050: 9,
+    rival_relation_ko_psl: 68,
+    rival_relation_ko_konf: 5,
+    rival_relation_ko_p2050: 73,
+    rival_relation_psl_konf: 19,
+    rival_relation_psl_p2050: 82,
+    rival_relation_konf_p2050: 7
+};
+const isFormationEra =
+    Q.scenario_mode == "formation_2023" || finiteAI(Q.year, 2019) >= 2023;
+const relationDefaults =
+    isFormationEra ? relationDefaults2023 : relationDefaults2019;
+
+const resourceDefaults = isFormationEra
+    ? {pis: 11, ko: 10, psl: 7, konf: 7, p2050: 8}
+    : {pis: 9, ko: 7, psl: 5, konf: 4, p2050: 0};
+const incomeDefaults = isFormationEra
+    ? {pis: 7, ko: 6, psl: 4, konf: 4, p2050: 5}
+    : {pis: 7, ko: 5, psl: 3, konf: 3, p2050: 4};
+const economicDefaults = {
+    pis: 31,
+    ko: 60,
+    psl: 49,
+    konf: 86,
+    p2050: 55
+};
+const culturalDefaults = {
+    pis: 86,
+    ko: 43,
+    psl: 68,
+    konf: 91,
+    p2050: 51
+};
+const rightScoreDefaults = isFormationEra
+    ? {left: 32, pis: 64, ko: 49, psl: 60, konf: 90, p2050: 52}
+    : {left: 35, pis: 61, ko: 50, psl: 59, konf: 89, p2050: 52};
+const wingDefaults = isFormationEra
+    ? {
+        pis: [54, 46],
+        ko: [48, 52],
+        psl: [42, 38, 20],
+        konf: [15, 52, 33],
+        p2050: [45, 30, 25]
+    }
+    : {
+        pis: [58, 42],
+        ko: [42, 58],
+        psl: [45, 35, 20],
+        konf: [18, 47, 35],
+        p2050: [40, 35, 25]
+    };
+
+normalizeWingFamilyAI(
+    ["pis_solidarist_share", "pis_market_hardliner_share"],
+    wingDefaults.pis
+);
+normalizeWingFamilyAI(
+    ["ko_social_liberal_share", "ko_classical_liberal_share"],
+    wingDefaults.ko
+);
+normalizeWingFamilyAI(
+    [
+        "psl_agrarian_pragmatist_share",
+        "psl_conservative_share",
+        "psl_coalition_manager_share"
+    ],
+    wingDefaults.psl
+);
+normalizeWingFamilyAI(
+    [
+        "konf_braunist_share",
+        "konf_mentzenite_share",
+        "konf_nationalist_share"
+    ],
+    wingDefaults.konf
+);
+normalizeWingFamilyAI(
+    [
+        "p2050_state_capacity_share",
+        "p2050_christian_dem_share",
+        "p2050_personalist_share"
+    ],
+    wingDefaults.p2050
+);
+for (const id of ["left", "pis", "ko", "psl", "konf", "p2050"]) {
+    const rightScoreKey = id + "_right_score";
+    Q[rightScoreKey] = Number.isFinite(Number(Q[rightScoreKey]))
+        ? clampAI(Q[rightScoreKey], 0, 100)
+        : rightScoreDefaults[id];
+}
+
+const initializingRivalAI = !Q.rival_ai_initialized;
+if (initializingRivalAI) {
+    Q.rival_ai_initialized = 1;
+    Q.rival_ai_era = isFormationEra ? "2023" : "2019";
+    Q.rival_income_last_year = finiteAI(Q.year, 2019);
+    Q.rival_ai_tick = 0;
+    Q.rival_actions_this_month = 0;
+    Q.rival_month_headline = "Rival parties have not acted yet";
+    Q.rival_coalition_signal = "Coalition channels are still being mapped";
+    Q.national_turnout_climate = isFormationEra ? 74 : 61;
+    Q.p2050_ai_active = Q.p2050_emerged ? 1 : 0;
+    Q.rival_strategy_log = [];
+}
+
+for (const id of rivalParties) {
+    Q[id + "_org_resources"] = initializingRivalAI
+        ? resourceDefaults[id]
+        : Math.max(
+            0,
+            finiteAI(Q[id + "_org_resources"], resourceDefaults[id])
+        );
+    Q[id + "_org_income"] = initializingRivalAI
+        ? incomeDefaults[id]
+        : Math.max(
+            0,
+            finiteAI(Q[id + "_org_income"], incomeDefaults[id])
+        );
+    Q[id + "_economic_position"] = clampAI(
+        Q[id + "_economic_position"],
+        0,
+        100
+    );
+    if (!Number.isFinite(Number(Q[id + "_economic_position"]))) {
+        Q[id + "_economic_position"] = economicDefaults[id];
+    }
+    Q[id + "_cultural_position"] = clampAI(
+        Q[id + "_cultural_position"],
+        0,
+        100
+    );
+    if (!Number.isFinite(Number(Q[id + "_cultural_position"]))) {
+        Q[id + "_cultural_position"] = culturalDefaults[id];
+    }
+    // clampAI uses its lower bound as fallback, so restore authored defaults
+    // on old saves where the qualities genuinely did not exist.
+    if (Q[id + "_position_initialized"] !== 1) {
+        Q[id + "_economic_position"] = economicDefaults[id];
+        Q[id + "_cultural_position"] = culturalDefaults[id];
+        Q[id + "_position_initialized"] = 1;
+    }
+    Q[id + "_ai_actions"] = Math.max(
+        0,
+        finiteAI(Q[id + "_ai_actions"], 0)
+    );
+    Q[id + "_ai_last_spend"] = 0;
+    Q[id + "_ai_acted"] = 0;
+    if (!Q[id + "_ai_strategy"]) {
+        Q[id + "_ai_strategy"] = "Holding its opening position";
+    }
+    if (!Q[id + "_ai_headline"]) {
+        Q[id + "_ai_headline"] = "No background action";
+    }
+}
+
+for (const key of Object.keys(relationDefaults)) {
+    Q[key] = clampAI(Q[key], 0, 100);
+    if (Q[key + "_initialized"] !== 1) {
+        Q[key] = relationDefaults[key];
+        Q[key + "_initialized"] = 1;
+    }
+}
+
+for (const bloc of electorateBlocs) {
+    for (const party of ["left", "pis", "ko", "psl", "konf", "p2050"]) {
+        const key = bloc + "_" + party + "_affinity";
+        Q[key] = finiteAI(Q[key], 0);
+    }
+}
+
+if (Q.p2050_emerged && !Q.p2050_ai_active) {
+    Q.p2050_ai_active = 1;
+    Q.p2050_org_resources = Math.max(Q.p2050_org_resources, 6);
+    Q.p2050_org_income = Math.max(Q.p2050_org_income, 4);
+    Q.p2050_economic_position = economicDefaults.p2050;
+    Q.p2050_cultural_position = culturalDefaults.p2050;
+    Q.p2050_ai_strategy = "Convert a presidential movement into a party";
+    Q.p2050_ai_headline =
+        "Hołownia opens local structures outside the old party map";
+    Q.rival_relation_ko_p2050 = Math.max(
+        Q.rival_relation_ko_p2050,
+        isFormationEra ? 73 : 50
+    );
+    Q.rival_relation_psl_p2050 = Math.max(
+        Q.rival_relation_psl_p2050,
+        isFormationEra ? 82 : 56
+    );
+}
+
+const incomeYear = finiteAI(Q.rival_income_last_year, Q.year);
+if (Q.year > incomeYear) {
+    const yearsElapsed = Math.min(10, Q.year - incomeYear);
+    for (const id of rivalParties) {
+        if (id != "p2050" || Q.p2050_emerged) {
+            Q[id + "_org_resources"] +=
+                Q[id + "_org_income"] * yearsElapsed;
+        }
+    }
+    Q.rival_income_last_year = Q.year;
+}
+
+const budgetText = String(Q.budget_strategy || "").toLowerCase();
+const covidText = String(Q.covid_policy || "").toLowerCase();
+const abortionText = String(Q.abortion_strategy || "").toLowerCase();
+const mediaText = String(Q.media_strategy || "").toLowerCase();
+let leftEconomicPosition =
+    52 -
+    (finiteAI(Q.labor_credibility, 46) - 46) * 0.38 -
+    (finiteAI(Q.household_security, 45) - 45) * 0.12 -
+    finiteAI(Q.budget_promises, 0) * 1.6 +
+    finiteAI(Q.budget_breaches, 0) * 2.2;
+if (
+    budgetText.includes("social") ||
+    budgetText.includes("welfare") ||
+    budgetText.includes("public")
+) {
+    leftEconomicPosition -= 8;
+}
+if (budgetText.includes("separate") || budgetText.includes("fragment")) {
+    leftEconomicPosition += 5;
+}
+let leftCulturalPosition =
+    59 -
+    (finiteAI(Q.progressive_credibility, 50) - 40) * 0.55 -
+    (finiteAI(Q.feminist_trust, 44) - 40) * 0.30;
+if (
+    abortionText.includes("autonomous") ||
+    abortionText.includes("party-led") ||
+    abortionText.includes("broad")
+) {
+    leftCulturalPosition -= 10;
+}
+if (abortionText.includes("compromise")) {
+    leftCulturalPosition += 22;
+}
+Q.left_economic_position = clampAI(leftEconomicPosition, 5, 90);
+Q.left_cultural_position = clampAI(leftCulturalPosition, 5, 95);
+
+const modeledInflation =
+    isFormationEra && finiteAI(Q.inflation, 2.6) < 5
+        ? 11.4
+        : finiteAI(Q.inflation, 2.6);
+const modeledGrowth =
+    isFormationEra && finiteAI(Q.economic_growth, 4.5) > 2
+        ? 0.2
+        : finiteAI(Q.economic_growth, 4.5);
+Q.economic_issue_salience = clampAI(
+    38 +
+        Math.max(0, modeledInflation - 2) * 2.2 +
+        Math.max(0, finiteAI(Q.unemployment, 5.1) - 5) * 2.5 +
+        Math.max(0, -modeledGrowth) * 3 +
+        finiteAI(Q.budget_promises, 0) * 2 +
+        (Q.covid_event_done ? 12 : 0),
+    0,
+    100
+);
+Q.cultural_issue_salience = clampAI(
+    24 +
+        Math.max(0, finiteAI(Q.far_right_agenda, 32) - 25) * 0.65 +
+        (Q.abortion_event_done ? 26 : 0) +
+        (abortionText != "" && abortionText != "unsettled" ? 8 : 0) +
+        (Q.trz_inaugurated
+            ? Math.min(18, finiteAI(Q.trz_right_backlash, 0) * 0.5)
+            : 0),
+    0,
+    100
+);
+Q.institutional_issue_salience = clampAI(
+    30 +
+        Math.max(0, 50 - finiteAI(Q.judicial_legitimacy, 36)) * 0.9 +
+        Math.max(0, 50 - finiteAI(Q.constitutional_restraint, 50)) * 0.5 +
+        (Q.postal_event_done ? 14 : 0) +
+        (Q.trz_inaugurated
+            ? 18 +
+                Math.min(
+                    12,
+                    finiteAI(Q.trz_cohabitation_temperature, 0) * 0.22
+                )
+            : 0),
+    0,
+    100
+);
+
+const leftEconomic = Q.left_economic_position;
+const leftCultural = Q.left_cultural_position;
+const vaccinationText =
+    String(Q.vaccination_strategy || "").toLowerCase();
+let covidPressureTarget = 0;
+if (Q.covid_event_done) {
+    covidPressureTarget =
+        12 +
+        finiteAI(Q.pandemic_deaths_pressure, 0) * 0.65 +
+        Math.max(0, 48 - finiteAI(Q.public_trust, 43)) * 0.55 +
+        Math.max(0, 45 - finiteAI(Q.health_capacity, 48)) * 0.35;
+    if (covidText.includes("opposition")) {
+        covidPressureTarget += 18;
+    } else if (covidText.includes("national unity")) {
+        covidPressureTarget += 3;
+    } else if (covidText.includes("constitutional")) {
+        covidPressureTarget += 1;
+    } else if (covidText.includes("social shield")) {
+        covidPressureTarget -= 5;
+    }
+    if (vaccinationText.includes("consent")) {
+        covidPressureTarget += 6;
+    } else if (vaccinationText.includes("public-health")) {
+        covidPressureTarget -= 4;
+    } else if (vaccinationText.includes("local access")) {
+        covidPressureTarget -= 2;
+    }
+}
+covidPressureTarget = clampAI(covidPressureTarget, 0, 100);
+const currentCovidPressure = clampAI(
+    Q.covid_anti_system_pressure,
+    0,
+    100
+);
+Q.covid_anti_system_pressure = currentCovidPressure < covidPressureTarget
+    ? moveTowardAI(currentCovidPressure, covidPressureTarget, 3.5)
+    : moveTowardAI(currentCovidPressure, covidPressureTarget, 0.8);
+
+const leftVoteSignal = finiteAI(
+    Q.left_vote_intent,
+    finiteAI(Q.left_poll, 12.6)
+);
+const konfVoteSignal = finiteAI(
+    Q.konf_vote_intent,
+    finiteAI(Q.konf_poll, 6.8)
+);
+Q.party_system_left_pull = clampAI(
+    (leftVoteSignal - 10) * 4 +
+        (finiteAI(Q.labor_credibility, 46) - 45) * 0.6 +
+        Math.max(0, finiteAI(Q.left_projected_seats, 49) - 40) * 0.25 +
+        Math.max(0, finiteAI(Q.party_unity, 58) - 50) * 0.20 +
+        (Q.social_floor_written ? 7 : 0) +
+        (Q.primary_social_slate ? 3 : 0),
+    0,
+    100
+);
+Q.party_system_konf_pull = clampAI(
+    (konfVoteSignal - 6) * 5 +
+        (finiteAI(Q.far_right_agenda, 32) - 30) * 0.8 +
+        Q.covid_anti_system_pressure * 0.6 +
+        Math.max(
+            0,
+            finiteAI(Q.far_right_street_capacity, 25) - 25
+        ) * 0.22 -
+        Math.max(0, finiteAI(Q.civic_patriotism, 10) - 10) * 0.14 +
+        Math.max(0, finiteAI(Q.konf_org_resources, 4) - 4) * 0.8 +
+        Math.max(
+            0,
+            finiteAI(Q.anti_establishment_youth_konf_affinity, 0)
+        ) * 1.2,
+    0,
+    100
+);
+const pendulumTarget = clampAI(
+    Q.party_system_konf_pull - Q.party_system_left_pull,
+    -100,
+    100
+);
+Q.party_system_pendulum = moveTowardAI(
+    clampAI(finiteAI(Q.party_system_pendulum, 0), -100, 100),
+    pendulumTarget,
+    4
+);
+Q.democratic_rightward_pressure = clampAI(
+    Math.max(0, Q.party_system_pendulum) +
+        Q.party_system_konf_pull * 0.35 +
+        Q.covid_anti_system_pressure * 0.15,
+    0,
+    100
+);
+if (Q.party_system_pendulum >= 24) {
+    Q.party_system_climate =
+        "Konfederacja is pulling the democratic camp to the right";
+} else if (Q.party_system_pendulum >= 8) {
+    Q.party_system_climate =
+        "The radical right is setting the terms of competition";
+} else if (Q.party_system_pendulum <= -24) {
+    Q.party_system_climate =
+        "A strong Left is pulling social policy toward solidarity";
+} else if (Q.party_system_pendulum <= -8) {
+    Q.party_system_climate =
+        "The centre is answering pressure from a stronger Left";
+} else {
+    Q.party_system_climate =
+        "Neither the Left nor Konfederacja controls the system's direction";
+}
+
+const economicHardship =
+    Math.max(0, modeledInflation - 3) +
+    Math.max(0, finiteAI(Q.unemployment, 5.1) - 5) * 1.4 +
+    Math.max(0, -modeledGrowth) * 2;
+const pisSolidaristDelta = clampAI(
+    -Q.party_system_pendulum * 0.016 +
+        economicHardship * 0.035 +
+        (Q.economic_issue_salience - Q.cultural_issue_salience) * 0.008,
+    -1.4,
+    1.4
+);
+shiftWingAI("pis_solidarist_share", pisSolidaristDelta);
+shiftWingAI("pis_market_hardliner_share", -pisSolidaristDelta);
+
+const koSocialDelta = clampAI(
+    -Q.party_system_pendulum * 0.018 +
+        (Q.cultural_issue_salience >= 55 && leftCultural <= 38 ? 0.25 : 0) -
+        (Q.party_system_konf_pull >= 45 ? 0.20 : 0),
+    -1.4,
+    1.4
+);
+shiftWingAI("ko_social_liberal_share", koSocialDelta);
+shiftWingAI("ko_classical_liberal_share", -koSocialDelta);
+
+const pslConservativeDelta = clampAI(
+    Q.party_system_pendulum * 0.030 +
+        (Q.cultural_issue_salience >= 55 ? 0.18 : 0) -
+        Math.max(0, finiteAI(Q.rural_support, 5) - 10) * 0.015,
+    -1.1,
+    1.1
+);
+const pslPragmatistDelta = clampAI(
+    -Q.party_system_pendulum * 0.008 +
+        Math.max(0, finiteAI(Q.rural_support, 5) - 8) * 0.020 +
+        (budgetText.includes("rural") || budgetText.includes("local")
+            ? 0.25
+            : 0),
+    -0.9,
+    0.9
+);
+const pslManagerDelta =
+    finiteAI(Q.psl_vote_intent, finiteAI(Q.psl_poll, 8.6)) < 6
+        ? 0.30
+        : -0.05;
+shiftWingAI("psl_conservative_share", pslConservativeDelta);
+shiftWingAI("psl_agrarian_pragmatist_share", pslPragmatistDelta);
+shiftWingAI("psl_coalition_manager_share", pslManagerDelta);
+
+if (Q.p2050_emerged) {
+    const p2050StateDelta = clampAI(
+        -Q.party_system_pendulum * 0.012 +
+            (Q.institutional_issue_salience >= 55 ? 0.15 : 0),
+        -1,
+        1
+    );
+    const p2050ChristianDelta = clampAI(
+        Q.party_system_pendulum * 0.012 +
+            (Q.cultural_issue_salience >= 55 ? 0.12 : 0),
+        -1,
+        1
+    );
+    const p2050PersonalistDelta =
+        finiteAI(Q.p2050_vote_intent, finiteAI(Q.p2050_poll, 0)) < 6
+            ? 0.25
+            : -0.05;
+    shiftWingAI("p2050_state_capacity_share", p2050StateDelta);
+    shiftWingAI("p2050_christian_dem_share", p2050ChristianDelta);
+    shiftWingAI("p2050_personalist_share", p2050PersonalistDelta);
+}
+
+const konfMentzenDelta = clampAI(
+    Q.covid_anti_system_pressure * 0.007 +
+        Math.max(0, modeledInflation - 4) * 0.035 +
+        (Q.economic_issue_salience - Q.cultural_issue_salience) * 0.006,
+    -0.5,
+    1.1
+);
+const konfBraunDelta = clampAI(
+    Q.covid_anti_system_pressure * 0.0035 +
+        Math.max(0, Q.cultural_issue_salience - 55) * 0.006 -
+        (Q.institutional_issue_salience >= 65 ? 0.08 : 0),
+    -0.4,
+    0.7
+);
+const konfNationalistDelta = clampAI(
+    Math.max(0, Q.cultural_issue_salience - 48) * 0.007 -
+        konfMentzenDelta * 0.30,
+    -0.4,
+    0.8
+);
+shiftWingAI("konf_mentzenite_share", konfMentzenDelta);
+shiftWingAI("konf_braunist_share", konfBraunDelta);
+shiftWingAI("konf_nationalist_share", konfNationalistDelta);
+if (Q.border_2021_event_done && !Q.konf_border_wing_applied) {
+    shiftWingAI("konf_nationalist_share", 4);
+    shiftWingAI("konf_braunist_share", 1);
+    shiftWingAI("konf_mentzenite_share", -2);
+    Q.konf_border_wing_applied = 1;
+}
+const latestMarchYear = finiteAI(Q.last_independence_march_year, 2018);
+if (latestMarchYear > finiteAI(Q.konf_last_march_wing_year, 2018)) {
+    const marchText =
+        String(Q.independence_march_strategy || "").toLowerCase();
+    shiftWingAI("konf_nationalist_share", 1.8);
+    if (
+        marchText.includes("counter") ||
+        marchText.includes("confront") ||
+        marchText.includes("ban")
+    ) {
+        shiftWingAI("konf_braunist_share", 1.5);
+    } else if (
+        marchText.includes("police") ||
+        marchText.includes("legal")
+    ) {
+        shiftWingAI("konf_mentzenite_share", 0.6);
+    } else if (marchText.includes("ignore")) {
+        shiftWingAI("konf_nationalist_share", 1.5);
+        shiftWingAI("konf_braunist_share", 0.3);
+    } else if (
+        marchText.includes("civic") ||
+        marchText.includes("solidarity") ||
+        marchText.includes("tradition")
+    ) {
+        shiftWingAI("konf_nationalist_share", -0.8);
+    }
+    Q.konf_last_march_wing_year = latestMarchYear;
+}
+if (Q.ukraine_invasion_event_done && !Q.konf_ukraine_wing_applied) {
+    shiftWingAI("konf_braunist_share", -3);
+    shiftWingAI("konf_nationalist_share", 2);
+    shiftWingAI("konf_mentzenite_share", 1);
+    Q.konf_ukraine_wing_applied = 1;
+}
+
+normalizeWingFamilyAI(
+    ["pis_solidarist_share", "pis_market_hardliner_share"],
+    wingDefaults.pis
+);
+normalizeWingFamilyAI(
+    ["ko_social_liberal_share", "ko_classical_liberal_share"],
+    wingDefaults.ko
+);
+normalizeWingFamilyAI(
+    [
+        "psl_agrarian_pragmatist_share",
+        "psl_conservative_share",
+        "psl_coalition_manager_share"
+    ],
+    wingDefaults.psl
+);
+normalizeWingFamilyAI(
+    [
+        "konf_braunist_share",
+        "konf_mentzenite_share",
+        "konf_nationalist_share"
+    ],
+    wingDefaults.konf
+);
+normalizeWingFamilyAI(
+    [
+        "p2050_state_capacity_share",
+        "p2050_christian_dem_share",
+        "p2050_personalist_share"
+    ],
+    wingDefaults.p2050
+);
+
+const previousRightScores = {};
+for (const id of ["left", "pis", "ko", "psl", "konf", "p2050"]) {
+    previousRightScores[id] = Q[id + "_right_score"];
+}
+const leftRightTarget = clampAI(
+    rightScoreDefaults.left +
+        (finiteAI(Q.barons_strength, 28) - 28) * 0.22 -
+        (finiteAI(Q.razem_strength, 20) - 20) * 0.28 -
+        (finiteAI(Q.progressives_strength, 18) - 18) * 0.18 -
+        (finiteAI(Q.labor_credibility, 46) - 46) * 0.20 +
+        finiteAI(Q.budget_breaches, 0) * 1.1 +
+        (abortionText.includes("compromise") ? 7 : 0),
+    8,
+    70
+);
+const pisRightTarget = clampAI(
+    50 +
+        Q.pis_market_hardliner_share * 0.26 +
+        Math.max(0, Q.cultural_issue_salience - 40) * 0.03 +
+        Math.max(0, Q.party_system_pendulum) * 0.05,
+    38,
+    92
+);
+const koRightTarget = clampAI(
+    67 -
+        Q.ko_social_liberal_share * 0.40 +
+        Q.party_system_pendulum * 0.06,
+    25,
+    76
+);
+const pslRightTarget = clampAI(
+    51 +
+        Q.psl_conservative_share * 0.35 -
+        Q.psl_agrarian_pragmatist_share * 0.08 +
+        Q.party_system_pendulum * 0.07,
+    40,
+    88
+);
+const konfRightTarget = clampAI(
+    82 +
+        Q.konf_braunist_share * 0.10 +
+        Q.konf_mentzenite_share * 0.08 +
+        Q.konf_nationalist_share * 0.08,
+    78,
+    99
+);
+const p2050RightTarget = clampAI(
+    51 +
+        Q.p2050_christian_dem_share * 0.22 -
+        Q.p2050_state_capacity_share * 0.18 +
+        Q.party_system_pendulum * 0.06,
+    30,
+    76
+);
+Q.left_right_score = moveTowardAI(
+    Q.left_right_score,
+    leftRightTarget,
+    1.2
+);
+Q.pis_right_score = moveTowardAI(
+    Q.pis_right_score,
+    pisRightTarget,
+    1.5
+);
+Q.ko_right_score = moveTowardAI(
+    Q.ko_right_score,
+    koRightTarget,
+    1.4
+);
+Q.psl_right_score = moveTowardAI(
+    Q.psl_right_score,
+    pslRightTarget,
+    1.3
+);
+Q.konf_right_score = moveTowardAI(
+    Q.konf_right_score,
+    konfRightTarget,
+    1.2
+);
+if (Q.p2050_emerged) {
+    Q.p2050_right_score = moveTowardAI(
+        Q.p2050_right_score,
+        p2050RightTarget,
+        1.3
+    );
+}
+
+const setDriftAI = function(id) {
+    const change =
+        finiteAI(Q[id + "_right_score"], rightScoreDefaults[id]) -
+        finiteAI(previousRightScores[id], rightScoreDefaults[id]);
+    Q[id + "_ideology_drift"] = change >= 0.15
+        ? "Moving right"
+        : (change <= -0.15 ? "Moving left" : "Holding course");
+};
+for (const id of ["left", "pis", "ko", "psl", "konf"]) {
+    setDriftAI(id);
+}
+Q.p2050_ideology_drift =
+    Q.p2050_emerged ? (
+        Q.p2050_right_score - previousRightScores.p2050 >= 0.15
+            ? "Moving right"
+            : (
+                Q.p2050_right_score - previousRightScores.p2050 <= -0.15
+                    ? "Moving left"
+                    : "Holding course"
+            )
+    ) : "Movement not yet formed";
+Q.pis_dominant_wing = dominantWingAI([
+    ["pis_solidarist_share", "Social solidarists"],
+    ["pis_market_hardliner_share", "Market hardliners"]
+]);
+Q.ko_dominant_wing = dominantWingAI([
+    ["ko_social_liberal_share", "Social liberals"],
+    ["ko_classical_liberal_share", "Classical liberals"]
+]);
+Q.psl_dominant_wing = dominantWingAI([
+    ["psl_agrarian_pragmatist_share", "Agrarian pragmatists"],
+    ["psl_conservative_share", "Parliamentary conservatives"],
+    ["psl_coalition_manager_share", "Coalition managers"]
+]);
+Q.konf_dominant_wing = dominantWingAI([
+    ["konf_braunist_share", "Braunists"],
+    ["konf_mentzenite_share", "Mentzenites and Korwinists"],
+    ["konf_nationalist_share", "National Movement"]
+]);
+Q.p2050_dominant_wing = Q.p2050_emerged
+    ? dominantWingAI([
+        ["p2050_state_capacity_share", "State-capacity reformers"],
+        ["p2050_christian_dem_share", "Christian democrats"],
+        ["p2050_personalist_share", "Hołownia personalists"]
+    ])
+    : "Movement not yet formed";
+
+const pisEconomicTarget = clampAI(
+    20 +
+        Q.pis_market_hardliner_share * 0.30 +
+        Q.party_system_pendulum * 0.04 -
+        (Q.economic_issue_salience >= 55 ? 3 : 0),
+    18,
+    50
+);
+const pisCulturalTarget = clampAI(
+    79 +
+        Q.pis_right_score * 0.11 +
+        Q.party_system_pendulum * 0.03 +
+        (Q.cultural_issue_salience >= 55 ? 2 : 0),
+    72,
+    98
+);
+const koEconomicTarget = clampAI(
+    77 -
+        Q.ko_social_liberal_share * 0.40 +
+        Q.party_system_pendulum * 0.05,
+    40,
+    72
+);
+const koCulturalTarget = clampAI(
+    57 -
+        Q.ko_social_liberal_share * 0.34 +
+        Q.party_system_pendulum * 0.05,
+    20,
+    64
+);
+const pslEconomicTarget = clampAI(
+    56 -
+        Q.psl_agrarian_pragmatist_share * 0.16 +
+        Q.psl_conservative_share * 0.03 +
+        Q.party_system_pendulum * 0.04,
+    32,
+    64
+);
+const pslCulturalTarget = clampAI(
+    52 +
+        Q.psl_conservative_share * 0.45 +
+        Q.party_system_pendulum * 0.05,
+    48,
+    92
+);
+const konfEconomicTarget = clampAI(
+    (
+        Q.konf_braunist_share * 72 +
+        Q.konf_mentzenite_share * 96 +
+        Q.konf_nationalist_share * 76
+    ) / 100,
+    65,
+    99
+);
+const konfCulturalTarget = clampAI(
+    (
+        Q.konf_braunist_share * 99 +
+        Q.konf_mentzenite_share * 82 +
+        Q.konf_nationalist_share * 96
+    ) / 100,
+    75,
+    100
+);
+const p2050EconomicTarget = clampAI(
+    61 -
+        Q.p2050_state_capacity_share * 0.18 +
+        Q.p2050_christian_dem_share * 0.04 +
+        Q.party_system_pendulum * 0.04,
+    38,
+    68
+);
+const p2050CulturalTarget = clampAI(
+    58 -
+        Q.p2050_state_capacity_share * 0.20 +
+        Q.p2050_christian_dem_share * 0.03 +
+        Q.party_system_pendulum * 0.05,
+    30,
+    72
+);
+Q.pis_economic_position = moveTowardAI(
+    Q.pis_economic_position,
+    pisEconomicTarget,
+    2.2
+);
+Q.pis_cultural_position = moveTowardAI(
+    Q.pis_cultural_position,
+    pisCulturalTarget,
+    2.4
+);
+Q.ko_economic_position = moveTowardAI(
+    Q.ko_economic_position,
+    koEconomicTarget,
+    1.8
+);
+Q.ko_cultural_position = moveTowardAI(
+    Q.ko_cultural_position,
+    koCulturalTarget,
+    2.1
+);
+Q.psl_economic_position = moveTowardAI(
+    Q.psl_economic_position,
+    pslEconomicTarget,
+    1.6
+);
+Q.psl_cultural_position = moveTowardAI(
+    Q.psl_cultural_position,
+    pslCulturalTarget,
+    2
+);
+Q.konf_economic_position = moveTowardAI(
+    Q.konf_economic_position,
+    konfEconomicTarget,
+    2.2
+);
+Q.konf_cultural_position = moveTowardAI(
+    Q.konf_cultural_position,
+    konfCulturalTarget,
+    2.4
+);
+if (Q.p2050_emerged) {
+    Q.p2050_economic_position = moveTowardAI(
+        Q.p2050_economic_position,
+        p2050EconomicTarget,
+        1.6
+    );
+    Q.p2050_cultural_position = moveTowardAI(
+        Q.p2050_cultural_position,
+        p2050CulturalTarget,
+        1.8
+    );
+}
+
+const relationOrder = ["pis", "ko", "psl", "konf", "p2050"];
+const relationKeyAI = function(first, second) {
+    const firstIndex = relationOrder.indexOf(first);
+    const secondIndex = relationOrder.indexOf(second);
+    return firstIndex < secondIndex
+        ? "rival_relation_" + first + "_" + second
+        : "rival_relation_" + second + "_" + first;
+};
+const adjustRelationAI = function(first, second, amount) {
+    const key = relationKeyAI(first, second);
+    Q[key] = clampAI(finiteAI(Q[key], 30) + amount, 0, 100);
+};
+const shiftBlocAI = function(bloc, party, amount) {
+    const key = bloc + "_" + party + "_affinity";
+    Q[key] = clampAI(finiteAI(Q[key], 0) + amount, -20, 20);
+};
+const addMomentumAI = function(party, amount) {
+    const key = party + "_poll_momentum";
+    Q[key] = finiteAI(Q[key], 0) + amount;
+};
+const headlines = [];
+const takeActionAI = function(id, key, cost, headline, applyAction) {
+    if (Q[id + "_org_resources"] < cost) {
+        Q[id + "_ai_strategy"] = "Conserve an exhausted organisation";
+        Q[id + "_ai_headline"] =
+            "The party has a message but no spare monthly capacity";
+        return false;
+    }
+    Q[id + "_org_resources"] -= cost;
+    Q[id + "_ai_last_spend"] = cost;
+    Q[id + "_ai_acted"] = 1;
+    Q[id + "_ai_actions"] += 1;
+    Q.rival_actions_this_month += 1;
+    Q[id + "_ai_strategy"] = key;
+    Q[id + "_ai_headline"] = headline;
+    applyAction();
+    headlines.push(headline);
+    return true;
+};
+
+Q.rival_actions_this_month = 0;
+for (const id of rivalParties) {
+    Q[id + "_ai_last_spend"] = 0;
+    Q[id + "_ai_acted"] = 0;
+}
+
+const actChance = function(id) {
+    const resources = Q[id + "_org_resources"];
+    return clampAI(0.43 + Math.min(12, resources) * 0.028, 0.43, 0.78);
+};
+
+if (randomAI() <= actChance("pis")) {
+    if (
+        Q.pis_solidarist_share >= Q.pis_market_hardliner_share &&
+        (
+            Q.economic_issue_salience >=
+                Q.cultural_issue_salience - 4 ||
+            Q.party_system_left_pull >= Q.party_system_konf_pull
+        )
+    ) {
+        takeActionAI(
+            "pis",
+            "Reclaim welfare ownership",
+            2,
+            "PiS answers the Left with a targeted household promise",
+            function() {
+                addMomentumAI("pis", 0.22);
+                shiftBlocAI("public_service_families", "pis", 0.8);
+                shiftBlocAI("industrial_logistics", "pis", 1.1);
+                shiftBlocAI("provincial_welfare", "pis", 1.2);
+                shiftBlocAI("older_welfare_households", "pis", 1);
+                Q.pis_economic_position = Math.max(
+                    18,
+                    Q.pis_economic_position - 1.5
+                );
+                adjustRelationAI("pis", "psl", 0.5);
+            }
+        );
+    } else if (
+        Q.pis_market_hardliner_share > Q.pis_solidarist_share &&
+        (
+            Q.party_system_pendulum >= 8 ||
+            Q.party_system_konf_pull >= 35
+        )
+    ) {
+        takeActionAI(
+            "pis",
+            "Meet the tax revolt on the right",
+            1,
+            "PiS market hardliners answer Konfederacja with deregulation",
+            function() {
+                addMomentumAI("pis", 0.16);
+                shiftBlocAI("liberal_professionals", "pis", 0.5);
+                shiftBlocAI("anti_establishment_youth", "pis", 0.6);
+                shiftBlocAI("provincial_welfare", "pis", -0.4);
+                Q.pis_economic_position = Math.min(
+                    55,
+                    Q.pis_economic_position + 1.5
+                );
+                adjustRelationAI("pis", "konf", -1.2);
+                adjustRelationAI("pis", "psl", -0.3);
+            }
+        );
+    } else if (
+        Q.cultural_issue_salience >
+        Q.economic_issue_salience + 5 ||
+        leftCultural <= 28
+    ) {
+        takeActionAI(
+            "pis",
+            "Own the conservative backlash",
+            1,
+            "PiS turns a cultural dispute into a loyalty test",
+            function() {
+                addMomentumAI("pis", 0.16);
+                shiftBlocAI("provincial_welfare", "pis", 1.2);
+                shiftBlocAI("rural_localists", "pis", 0.8);
+                shiftBlocAI("older_welfare_households", "pis", 0.5);
+                Q.far_right_agenda += 1.2;
+                Q.minority_safety -= 0.6;
+                adjustRelationAI("pis", "konf", -1);
+                adjustRelationAI("pis", "psl", -0.5);
+            }
+        );
+    } else if (Q.economic_issue_salience >= 48 || leftEconomic <= 36) {
+        takeActionAI(
+            "pis",
+            "Reclaim welfare ownership",
+            2,
+            "PiS answers the Left with a targeted household promise",
+            function() {
+                addMomentumAI("pis", 0.22);
+                shiftBlocAI("public_service_families", "pis", 0.8);
+                shiftBlocAI("industrial_logistics", "pis", 1.1);
+                shiftBlocAI("provincial_welfare", "pis", 1.2);
+                shiftBlocAI("older_welfare_households", "pis", 1);
+                Q.pis_economic_position = Math.max(
+                    18,
+                    Q.pis_economic_position - 1.5
+                );
+                adjustRelationAI("pis", "psl", 0.5);
+            }
+        );
+    } else {
+        takeActionAI(
+            "pis",
+            "Display state capacity",
+            2,
+            "The governing machine fills the month with local delivery",
+            function() {
+                addMomentumAI("pis", 0.18);
+                shiftBlocAI("rural_localists", "pis", 1);
+                shiftBlocAI("older_welfare_households", "pis", 0.8);
+                shiftBlocAI("public_service_families", "pis", 0.5);
+            }
+        );
+    }
+} else {
+    Q.pis_ai_strategy = "Bank governing capacity";
+    Q.pis_ai_headline = "PiS leaves the state machine on standby";
+}
+
+if (randomAI() <= actChance("ko")) {
+    if (
+        Q.ko_social_liberal_share >= Q.ko_classical_liberal_share &&
+        (
+            Q.cultural_issue_salience >= 45 ||
+            Q.party_system_left_pull > Q.party_system_konf_pull
+        )
+    ) {
+        takeActionAI(
+            "ko",
+            "Compete for the equality electorate",
+            1,
+            "KO moves its social-liberal wing to the front of the cameras",
+            function() {
+                addMomentumAI("ko", 0.17);
+                shiftBlocAI("metropolitan_liberals", "ko", 1.2);
+                shiftBlocAI("liberal_professionals", "ko", 0.8);
+                shiftBlocAI("anti_establishment_youth", "ko", 0.4);
+                Q.ko_cultural_position = Math.max(
+                    20,
+                    Q.ko_cultural_position - 1.5
+                );
+                adjustRelationAI("ko", "psl", -0.7);
+            }
+        );
+    } else if (
+        Q.ko_classical_liberal_share > Q.ko_social_liberal_share &&
+        (
+            Q.party_system_pendulum >= 8 ||
+            Q.party_system_konf_pull >= 35
+        )
+    ) {
+        takeActionAI(
+            "ko",
+            "Harden the fiscal and security centre",
+            1,
+            "KO answers the radical-right surge from a stricter centre",
+            function() {
+                addMomentumAI("ko", 0.17);
+                shiftBlocAI("liberal_professionals", "ko", 1);
+                shiftBlocAI("provincial_welfare", "ko", 0.7);
+                shiftBlocAI("rural_localists", "ko", 0.4);
+                Q.ko_economic_position = Math.min(
+                    76,
+                    Q.ko_economic_position + 1.1
+                );
+                Q.ko_cultural_position = Math.min(
+                    68,
+                    Q.ko_cultural_position + 0.8
+                );
+                adjustRelationAI("ko", "psl", 0.8);
+                if (Q.p2050_emerged) {
+                    adjustRelationAI("ko", "p2050", 0.5);
+                }
+            }
+        );
+    } else if (Q.institutional_issue_salience >= Q.economic_issue_salience) {
+        takeActionAI(
+            "ko",
+            "Assemble the democratic opposition",
+            2,
+            "KO coordinates a national constitutional offensive",
+            function() {
+                addMomentumAI("ko", 0.23);
+                shiftBlocAI("metropolitan_liberals", "ko", 0.8);
+                shiftBlocAI("liberal_professionals", "ko", 1.2);
+                shiftBlocAI("public_service_families", "ko", 0.6);
+                adjustRelationAI("ko", "psl", 1);
+                if (Q.p2050_emerged) {
+                    adjustRelationAI("ko", "p2050", 1);
+                }
+                adjustRelationAI("pis", "ko", -1);
+            }
+        );
+    } else if (Q.cultural_issue_salience >= 50 && leftCultural <= 38) {
+        takeActionAI(
+            "ko",
+            "Compete for the equality electorate",
+            1,
+            "KO moves its liberal wing to the front of the cameras",
+            function() {
+                addMomentumAI("ko", 0.17);
+                shiftBlocAI("metropolitan_liberals", "ko", 1.2);
+                shiftBlocAI("liberal_professionals", "ko", 0.8);
+                shiftBlocAI("anti_establishment_youth", "ko", 0.4);
+                Q.ko_cultural_position = Math.max(
+                    20,
+                    Q.ko_cultural_position - 1.5
+                );
+                adjustRelationAI("ko", "psl", -0.7);
+            }
+        );
+    } else {
+        takeActionAI(
+            "ko",
+            "Promise competent economic normality",
+            1,
+            "KO sells administrative competence to insecure centrists",
+            function() {
+                addMomentumAI("ko", 0.18);
+                shiftBlocAI("liberal_professionals", "ko", 1);
+                shiftBlocAI("public_service_families", "ko", 0.6);
+                shiftBlocAI("provincial_welfare", "ko", 0.4);
+            }
+        );
+    }
+} else {
+    Q.ko_ai_strategy = "Wait for the government mistake";
+    Q.ko_ai_headline = "KO keeps its resources for a larger confrontation";
+}
+
+if (randomAI() <= actChance("psl")) {
+    if (
+        finiteAI(Q.rural_support, 5) >= 12 ||
+        budgetText.includes("rural") ||
+        budgetText.includes("local")
+    ) {
+        takeActionAI(
+            "psl",
+            "Defend the rural franchise",
+            1,
+            "PSL answers Left localism with its county organisations",
+            function() {
+                addMomentumAI("psl", 0.16);
+                shiftBlocAI("rural_localists", "psl", 1.6);
+                shiftBlocAI("provincial_welfare", "psl", 0.7);
+                shiftBlocAI("older_welfare_households", "psl", 0.4);
+                adjustRelationAI("ko", "psl", 0.4);
+            }
+        );
+    } else if (Q.cultural_issue_salience >= 48 && leftCultural <= 36) {
+        takeActionAI(
+            "psl",
+            "Assert conservative autonomy",
+            1,
+            "PSL threatens to withhold support on a cultural vote",
+            function() {
+                addMomentumAI("psl", 0.12);
+                shiftBlocAI("rural_localists", "psl", 1);
+                shiftBlocAI("older_welfare_households", "psl", 0.5);
+                Q.psl_cultural_position = Math.min(
+                    90,
+                    Q.psl_cultural_position + 1.3
+                );
+                adjustRelationAI("ko", "psl", -1);
+                adjustRelationAI("pis", "psl", 0.8);
+            }
+        );
+    } else {
+        takeActionAI(
+            "psl",
+            "Make local government indispensable",
+            1,
+            "PSL mayors turn a national argument into local grants",
+            function() {
+                addMomentumAI("psl", 0.14);
+                shiftBlocAI("rural_localists", "psl", 1.2);
+                shiftBlocAI("provincial_welfare", "psl", 0.8);
+                adjustRelationAI("ko", "psl", 0.5);
+                if (Q.p2050_emerged) {
+                    adjustRelationAI("psl", "p2050", 0.6);
+                }
+            }
+        );
+    }
+} else {
+    Q.psl_ai_strategy = "Preserve the coalition threat";
+    Q.psl_ai_headline = "PSL says little and lets larger parties court it";
+}
+
+if (randomAI() <= actChance("konf")) {
+    if (Q.konf_dominant_wing == "Braunists") {
+        takeActionAI(
+            "konf",
+            "Stage a Braunite anti-system rupture",
+            1,
+            "The Braunist wing turns distrust into the month's loudest provocation",
+            function() {
+                addMomentumAI("konf", 0.18);
+                shiftBlocAI("anti_establishment_youth", "konf", 1.8);
+                shiftBlocAI("provincial_welfare", "konf", 0.5);
+                Q.far_right_agenda += 2.1;
+                Q.minority_safety -= 1;
+                Q.covid_anti_system_pressure +=
+                    Q.covid_event_done ? 0.8 : 0;
+                adjustRelationAI("pis", "konf", -1.2);
+                adjustRelationAI("ko", "konf", -0.8);
+                adjustRelationAI("psl", "konf", -0.8);
+                if (Q.p2050_emerged) {
+                    adjustRelationAI("konf", "p2050", -0.8);
+                }
+            }
+        );
+    } else if (
+        Q.konf_dominant_wing == "Mentzenites and Korwinists"
+    ) {
+        takeActionAI(
+            "konf",
+            "Convert economic pain into a tax revolt",
+            1,
+            "Konfederacja blames taxes and regulation for household pressure",
+            function() {
+                addMomentumAI("konf", 0.2);
+                shiftBlocAI("liberal_professionals", "konf", 0.6);
+                shiftBlocAI("industrial_logistics", "konf", 0.5);
+                shiftBlocAI("anti_establishment_youth", "konf", 1.4);
+                Q.konf_economic_position = Math.min(
+                    100,
+                    Q.konf_economic_position + 1.2
+                );
+            }
+        );
+    } else {
+        takeActionAI(
+            "konf",
+            "Radicalise the border and national agenda",
+            1,
+            "The National Movement turns borders and sovereignty into a campaign",
+            function() {
+                addMomentumAI("konf", 0.21);
+                shiftBlocAI("anti_establishment_youth", "konf", 1.4);
+                shiftBlocAI("provincial_welfare", "konf", 0.8);
+                shiftBlocAI("rural_localists", "konf", 0.6);
+                Q.far_right_agenda += 1.8;
+                Q.minority_safety -= 0.8;
+                adjustRelationAI("pis", "konf", -0.6);
+                adjustRelationAI("psl", "konf", -0.4);
+            }
+        );
+    }
+} else {
+    Q.konf_ai_strategy = "Accumulate online attention";
+    Q.konf_ai_headline =
+        "Konfederacja lets its factions compete without national spending";
+}
+
+if (Q.p2050_emerged) {
+    if (randomAI() <= actChance("p2050")) {
+        if (Q.institutional_issue_salience >= 48) {
+            takeActionAI(
+                "p2050",
+                "Offer institutional competence without old-party baggage",
+                2,
+                "Poland 2050 recruits experts around a clean-institutions pitch",
+                function() {
+                    addMomentumAI("p2050", 0.22);
+                    shiftBlocAI("liberal_professionals", "p2050", 1.1);
+                    shiftBlocAI("public_service_families", "p2050", 0.7);
+                    shiftBlocAI("anti_establishment_youth", "p2050", 0.8);
+                    adjustRelationAI("ko", "p2050", 0.4);
+                }
+            );
+        } else if (finiteAI(Q.rural_support, 5) >= 12) {
+            takeActionAI(
+                "p2050",
+                "Challenge PSL with green localism",
+                1,
+                "Poland 2050 carries a green local programme into county towns",
+                function() {
+                    addMomentumAI("p2050", 0.17);
+                    shiftBlocAI("rural_localists", "p2050", 0.7);
+                    shiftBlocAI("provincial_welfare", "p2050", 0.8);
+                    shiftBlocAI("liberal_professionals", "p2050", 0.5);
+                    adjustRelationAI("psl", "p2050", -0.7);
+                }
+            );
+        } else {
+            takeActionAI(
+                "p2050",
+                "Attack the old-party duopoly",
+                1,
+                "Hołownia presents Poland 2050 as the competent outsider",
+                function() {
+                    addMomentumAI("p2050", 0.2);
+                    shiftBlocAI("liberal_professionals", "p2050", 0.8);
+                    shiftBlocAI("anti_establishment_youth", "p2050", 1.2);
+                    shiftBlocAI("metropolitan_liberals", "p2050", 0.4);
+                    adjustRelationAI("ko", "p2050", -0.5);
+                    adjustRelationAI("psl", "p2050", 0.4);
+                }
+            );
+        }
+    } else {
+        Q.p2050_ai_strategy = "Turn movement volunteers into permanent branches";
+        Q.p2050_ai_headline =
+            "Poland 2050 organises quietly beyond the television studio";
+    }
+} else {
+    Q.p2050_ai_strategy = "Movement not yet formed";
+    Q.p2050_ai_headline = "No Poland 2050 organisation exists";
+    Q.p2050_ai_last_spend = 0;
+    Q.p2050_ai_acted = 0;
+}
+
+const voteSignalAI = function(id) {
+    return finiteAI(
+        Q[id + "_vote_intent"],
+        finiteAI(Q[id + "_poll"], 0)
+    );
+};
+const passiveRelationTargetAI = function(first, second) {
+    const key = relationKeyAI(first, second);
+    const defaultRelation = finiteAI(relationDefaults[key], 30);
+    const rightCompatibility =
+        100 - Math.abs(
+            finiteAI(Q[first + "_right_score"], 50) -
+            finiteAI(Q[second + "_right_score"], 50)
+        );
+    const economicCompatibility =
+        100 - Math.abs(
+            finiteAI(Q[first + "_economic_position"], 50) -
+            finiteAI(Q[second + "_economic_position"], 50)
+        );
+    const culturalCompatibility =
+        100 - Math.abs(
+            finiteAI(Q[first + "_cultural_position"], 50) -
+            finiteAI(Q[second + "_cultural_position"], 50)
+        );
+    const electoralCompetition = Math.max(
+        0,
+        12 - Math.abs(voteSignalAI(first) - voteSignalAI(second))
+    ) * 0.22;
+    let target =
+        defaultRelation +
+        (rightCompatibility - 55) * 0.08 +
+        (economicCompatibility - 55) * 0.04 +
+        (culturalCompatibility - 55) * 0.04 -
+        electoralCompetition;
+
+    if (key == "rival_relation_pis_ko") {
+        target -=
+            10 +
+            Math.max(0, Q.institutional_issue_salience - 45) * 0.08;
+    } else if (key == "rival_relation_pis_psl") {
+        target +=
+            Q.pis_solidarist_share * 0.05 +
+            Q.psl_conservative_share * 0.07;
+    } else if (key == "rival_relation_pis_konf") {
+        target +=
+            Q.konf_nationalist_share * 0.11 +
+            Q.konf_mentzenite_share * 0.025 -
+            Q.konf_braunist_share * 0.16 -
+            electoralCompetition * 0.6;
+    } else if (key == "rival_relation_pis_p2050") {
+        target -= 4;
+    } else if (key == "rival_relation_ko_psl") {
+        target +=
+            Q.ko_classical_liberal_share * 0.04 +
+            Q.psl_coalition_manager_share * 0.08 +
+            Math.max(0, Q.party_system_pendulum) * 0.03;
+    } else if (key == "rival_relation_ko_konf") {
+        target -= 13 + Q.konf_braunist_share * 0.08;
+    } else if (key == "rival_relation_ko_p2050") {
+        target +=
+            Q.p2050_state_capacity_share * 0.05 -
+            electoralCompetition * 0.5;
+    } else if (key == "rival_relation_psl_konf") {
+        target +=
+            Q.psl_conservative_share * 0.06 -
+            Q.konf_braunist_share * 0.13 -
+            electoralCompetition * 0.4;
+    } else if (key == "rival_relation_psl_p2050") {
+        target +=
+            Q.psl_coalition_manager_share * 0.08 +
+            (finiteAI(Q.third_way_cohesion, 50) - 50) * 0.12;
+    } else if (key == "rival_relation_konf_p2050") {
+        target -= 10 + Q.konf_braunist_share * 0.08;
+    }
+    return clampAI(target, 0, 100);
+};
+for (const pair of [
+    ["pis", "ko"],
+    ["pis", "psl"],
+    ["pis", "konf"],
+    ["pis", "p2050"],
+    ["ko", "psl"],
+    ["ko", "konf"],
+    ["ko", "p2050"],
+    ["psl", "konf"],
+    ["psl", "p2050"],
+    ["konf", "p2050"]
+]) {
+    if (
+        (pair[0] == "p2050" || pair[1] == "p2050") &&
+        !Q.p2050_emerged
+    ) {
+        continue;
+    }
+    const key = relationKeyAI(pair[0], pair[1]);
+    Q[key] = moveTowardAI(
+        clampAI(Q[key], 0, 100),
+        passiveRelationTargetAI(pair[0], pair[1]),
+        0.4
+    );
+}
+
+const directRelationAI = {
+    pis: finiteAI(Q.pis_relation, 8),
+    ko: finiteAI(Q.ko_relation, 44),
+    psl: finiteAI(Q.psl_relation, 24),
+    konf: finiteAI(Q.konf_relation, 2),
+    p2050: finiteAI(Q.p2050_relation, 0)
+};
+const socialWingAI = {
+    pis: Q.pis_solidarist_share,
+    ko: Q.ko_social_liberal_share,
+    psl:
+        Q.psl_agrarian_pragmatist_share +
+        Q.psl_coalition_manager_share * 0.30,
+    konf: Math.max(
+        5,
+        30 -
+            Q.konf_mentzenite_share * 0.25 -
+            Q.konf_braunist_share * 0.10
+    ),
+    p2050:
+        Q.p2050_state_capacity_share +
+        Q.p2050_personalist_share * 0.15
+};
+const rightsWingAI = {
+    pis: Math.max(4, 100 - Q.pis_cultural_position),
+    ko: Q.ko_social_liberal_share,
+    psl:
+        100 -
+        Q.psl_conservative_share -
+        Q.psl_agrarian_pragmatist_share * 0.20,
+    konf: Math.max(
+        2,
+        30 -
+            Q.konf_braunist_share * 0.40 -
+            Q.konf_nationalist_share * 0.30
+    ),
+    p2050:
+        Q.p2050_state_capacity_share +
+        Q.p2050_personalist_share * 0.20
+};
+const orderWingAI = {
+    pis: (Q.pis_cultural_position + Q.pis_market_hardliner_share) / 2,
+    ko:
+        Q.ko_classical_liberal_share * 0.65 +
+        finiteAI(Q.institutional_issue_salience, 40) * 0.35,
+    psl:
+        Q.psl_conservative_share +
+        Q.psl_agrarian_pragmatist_share * 0.35,
+    konf:
+        Q.konf_nationalist_share +
+        Q.konf_braunist_share * 0.75,
+    p2050:
+        Q.p2050_christian_dem_share +
+        Q.p2050_personalist_share * 0.25
+};
+const marketWingAI = {
+    pis: Q.pis_market_hardliner_share,
+    ko: Q.ko_classical_liberal_share,
+    psl:
+        Q.psl_coalition_manager_share +
+        Q.psl_conservative_share * 0.40,
+    konf: Q.konf_mentzenite_share,
+    p2050:
+        Q.p2050_personalist_share +
+        Q.p2050_christian_dem_share * 0.50
+};
+for (const id of rivalParties) {
+    if (id == "p2050" && !Q.p2050_emerged) {
+        Q.p2050_accept_social = 0;
+        Q.p2050_accept_rights = 0;
+        Q.p2050_accept_order = 0;
+        Q.p2050_accept_market = 0;
+        Q.p2050_coalition_openness = 0;
+        continue;
+    }
+    const economicFit = clampAI(
+        100 - Math.abs(Q[id + "_economic_position"] - leftEconomic),
+        0,
+        100
+    );
+    const culturalFit = clampAI(
+        100 - Math.abs(Q[id + "_cultural_position"] - leftCultural),
+        0,
+        100
+    );
+    const strategicFit = clampAI(
+        100 - Math.abs(Q[id + "_right_score"] - Q.left_right_score),
+        0,
+        100
+    );
+    Q[id + "_accept_social"] = clampAI(
+        directRelationAI[id] * 0.42 +
+            economicFit * 0.30 +
+            socialWingAI[id] * 0.28,
+        0,
+        100
+    );
+    Q[id + "_accept_rights"] = clampAI(
+        directRelationAI[id] * 0.44 +
+            culturalFit * 0.30 +
+            rightsWingAI[id] * 0.26,
+        0,
+        100
+    );
+    Q[id + "_accept_order"] = clampAI(
+        directRelationAI[id] * 0.38 +
+            strategicFit * 0.22 +
+            orderWingAI[id] * 0.40,
+        0,
+        100
+    );
+    Q[id + "_accept_market"] = clampAI(
+        directRelationAI[id] * 0.40 +
+            economicFit * 0.25 +
+            marketWingAI[id] * 0.35,
+        0,
+        100
+    );
+    let openness =
+        directRelationAI[id] * 0.46 +
+        strategicFit * 0.22 +
+        Q[id + "_accept_social"] * 0.16 +
+        Q[id + "_accept_rights"] * 0.16;
+    if (id == "psl") {
+        openness += Q.psl_coalition_manager_share * 0.10;
+    }
+    if (id == "konf") {
+        openness -= Q.konf_braunist_share * 0.22;
+    }
+    Q[id + "_coalition_openness"] = clampAI(openness, 0, 100);
+}
+
+Q.pis_ideology =
+    Q.pis_dominant_wing == "Social solidarists"
+        ? "National-conservative · social-solidarist wing ascendant"
+        : "National-conservative · market-hardliner wing ascendant";
+Q.ko_ideology =
+    Q.ko_dominant_wing == "Social liberals"
+        ? "Broad-tent liberal · social-liberal wing ascendant"
+        : "Broad-tent liberal · classical-liberal wing ascendant";
+Q.psl_ideology =
+    "Agrarian centre · " + Q.psl_dominant_wing.toLowerCase();
+Q.konf_ideology =
+    "Radical-right federation · " + Q.konf_dominant_wing;
+Q.p2050_ideology = Q.p2050_emerged
+    ? "Centrist movement · " + Q.p2050_dominant_wing.toLowerCase()
+    : "Movement not yet formed";
+
+Q.national_turnout_climate = clampAI(
+    Q.national_turnout_climate +
+        Q.rival_actions_this_month * 0.12 +
+        (Q.cultural_issue_salience >= 65 ? 0.2 : 0),
+    35,
+    90
+);
+Q.rival_ai_tick += 1;
+Q.party_ai_last_updated = Q.date_label;
+Q.rival_month_headline = headlines.length
+    ? headlines.join(" · ")
+    : "Rival parties conserve their organisational pools";
+
+if (
+    Q.rival_relation_ko_psl >= 60 &&
+    (
+        !Q.p2050_emerged ||
+        Q.rival_relation_ko_p2050 >= 55
+    )
+) {
+    Q.rival_coalition_signal =
+        "The democratic opposition can still coordinate";
+} else if (
+    Q.rival_relation_pis_psl >= 45 ||
+    Q.rival_relation_pis_konf >= 50
+) {
+    Q.rival_coalition_signal =
+        "PiS has a live channel to a party on its right";
+} else {
+    Q.rival_coalition_signal =
+        "Every coalition channel is tactical and conditional";
+}
+
+// Compatibility mirrors for the separate election worksheet. The canonical
+// simulation state remains the uncapped organisational pools and the hidden
+// rival_relation_* matrix above.
+for (const id of rivalParties) {
+    Q[id + "_ai_resources"] = Q[id + "_org_resources"];
+    Q[id + "_ai_income"] = Q[id + "_org_income"];
+    Q[id + "_social_position"] = Q[id + "_cultural_position"];
+}
+Q.left_social_position = Q.left_cultural_position;
+for (const pair of [
+    ["pis", "ko"],
+    ["pis", "psl"],
+    ["pis", "konf"],
+    ["pis", "p2050"],
+    ["ko", "psl"],
+    ["ko", "konf"],
+    ["ko", "p2050"],
+    ["psl", "konf"],
+    ["psl", "p2050"],
+    ["konf", "p2050"]
+]) {
+    Q["relation_" + pair[0] + "_" + pair[1]] =
+        Q["rival_relation_" + pair[0] + "_" + pair[1]];
+}
+
+if (!Array.isArray(Q.rival_strategy_log)) {
+    Q.rival_strategy_log = [];
+}
+Q.rival_strategy_log.push(
+    Q.date_label + " — " + Q.rival_month_headline
+);
+while (Q.rival_strategy_log.length > 18) {
+    Q.rival_strategy_log.shift();
+}
+!}
+go-to: poland_polling

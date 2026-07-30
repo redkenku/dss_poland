@@ -16,7 +16,7 @@
     // Add your custom code here.
   };
 
-  var TITLE = "Social Democracy: An Alternate History" + '_' + "Autumn Chen";
+  var TITLE = "Polish Red Autumn" + '_' + "redkenku";
 
   // the url is a link to game.json
   // test url: https://aucchen.github.io/social_democracy_mods/v0.1.json
@@ -197,32 +197,47 @@ window.disableGrayMode = function() {
 
   window.updateSidebar = function() {
       $('#qualities').empty();
-      var scene = dendryUI.game.scenes[window.statusTab];
-      dendryUI.dendryEngine._runActions(scene.onArrival);
+      var baseStatus = dendryUI.game.scenes.status;
+      var scene = dendryUI.game.scenes[window.statusTab] || baseStatus;
+      if (baseStatus.onArrival) {
+          dendryUI.dendryEngine._runActions(baseStatus.onArrival);
+      }
+      if (scene !== baseStatus && scene.onArrival) {
+          dendryUI.dendryEngine._runActions(scene.onArrival);
+      }
       var displayContent = dendryUI.dendryEngine._makeDisplayContent(scene.content, true);
       $('#qualities').append(dendryUI.contentToHTML.convert(displayContent));
   };
 
   window.updateSidebarRight = function() {
     $('#qualities_right').empty();
-    var scene = dendryUI.game.scenes[window.statusTabRight];
-    dendryUI.dendryEngine._runActions(scene.onArrival);
+    var baseStatus = dendryUI.game.scenes.status;
+    var scene = dendryUI.game.scenes[window.statusTabRight] || baseStatus;
+    if (baseStatus.onArrival) {
+      dendryUI.dendryEngine._runActions(baseStatus.onArrival);
+    }
+    if (scene !== baseStatus && scene.onArrival) {
+      dendryUI.dendryEngine._runActions(scene.onArrival);
+    }
     var displayContent = dendryUI.dendryEngine._makeDisplayContent(scene.content, true);
     $('#qualities_right').append(dendryUI.contentToHTML.convert(displayContent));
 };
 
   window.changeTab = function(newTab, tabId, isRight) {
-      if (tabId == 'poll_tab' && (dendryUI.dendryEngine.state.qualities.historical_mode || dendryUI.dendryEngine.state.qualities.rubicon)) {
-          if (dendryUI.dendryEngine.state.qualities.historical_mode && !dendryUI.dendryEngine.state.qualities.rubicon) window.alert('Polls are not available in historical mode.');
-          if (dendryUI.dendryEngine.state.qualities.rubicon) window.alert('Polls are not available after crossing the rubicon.');
-          return;
-      }
       var tabButton = document.getElementById(tabId);
-      var tabButtons = document.getElementsByClassName('tab_button');
-      for (i = 0; i < tabButtons.length; i++) {
-        tabButtons[i].className = tabButtons[i].className.replace(' active', '');
+      var sidebar = document.getElementById(
+        isRight ? 'stats_sidebar_right' : 'stats_sidebar'
+      );
+      if (!tabButton || !sidebar) {
+        return;
       }
-      tabButton.className += ' active';
+      var tabButtons = sidebar.querySelectorAll('.tab_button');
+      for (var i = 0; i < tabButtons.length; i++) {
+        tabButtons[i].classList.remove('active');
+        tabButtons[i].setAttribute('aria-selected', 'false');
+      }
+      tabButton.classList.add('active');
+      tabButton.setAttribute('aria-selected', 'true');
       if (isRight) {
         window.statusTabRight = newTab;
         window.updateSidebarRight();
@@ -339,7 +354,7 @@ window.disableGrayMode = function() {
     if (window.dendryUI.gray_mode) {
         document.body.classList.add('gray-mode');
     }
-    window.pinnedCardsDescription = "Advisor cards - actions are only usable once per 6 months.";
+    window.pinnedCardsDescription = "Leadership bureau";
     window.statusTab = "status";
     window.updateSidebar();
     window.statusTabRight = "status_right";

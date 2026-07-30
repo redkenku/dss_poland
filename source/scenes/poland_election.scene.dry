@@ -1,0 +1,204 @@
+title: Elections
+
+@presidential_2020
+title: Presidential election
+new-page: true
+go-to: poland_presidential_election.setup if pres_first_round_complete = 0; poland_presidential_election.runoff_setup if pres_first_round_complete = 1 and pres_first_round_majority = 0 and pres_runoff_complete = 0; poland_presidential_election.majority_confirmation if pres_first_round_majority = 1; poland_presidential_election.runoff_consequences if pres_runoff_complete = 1 and pres_first_round_majority = 0
+
+@results_2023
+title: 2023 Sejm election
+new-page: true
+on-arrival: {!
+Q.election_2023_seen = 1;
+Q.coalition_democratic_seats =
+    Q.ko_seats + Q.p2050_seats + Q.psl_seats + Q.left_seats;
+Q.coalition_center_seats =
+    Q.ko_seats + Q.p2050_seats + Q.psl_seats;
+Q.coalition_right_seats = Q.pis_seats + Q.konf_seats;
+Q.coalition_pis_psl_seats = Q.pis_seats + Q.psl_seats;
+Q.news_headline =
+    "The election produces " + Q.coalition_democratic_seats +
+    " democratic seats";
+!}
+on-display: {!
+const data = [];
+const certifiedParties = [
+    ["pis", "PiS", "PiS", Q.pis_seats],
+    ["konf", "Konf.", "Konfederacja", Q.konf_seats],
+    ["psl", "PSL", "PSL", Q.psl_seats],
+    ["p2050", "PL2050", "Poland 2050", Q.p2050_seats],
+    ["ko", "KO", "KO", Q.ko_seats],
+    ["left", "Lewica", "Lewica", Q.left_seats],
+    ["other", "Other", "Other", Q.other_seats]
+];
+for (const party of certifiedParties) {
+    if (party[3] > 0) {
+        data.push({
+            id: party[0],
+            legend: party[1],
+            name: party[2],
+            seats: party[3]
+        });
+    }
+}
+if (
+    typeof window !== "undefined" &&
+    typeof d3 !== "undefined" &&
+    document.getElementById("poland-sejm")
+) {
+    let width = 500;
+    let height = 500;
+    const content = document.getElementById("content");
+    if (content && content.offsetWidth < 450) {
+        width = Math.max(260, content.offsetWidth - 30);
+        height = width;
+        document.getElementById("poland-sejm").style.height =
+            Math.round(width / 2) + "px";
+    }
+    const parliament = d3.parliament();
+    parliament.width(width).height(height).innerRadiusCoef(0.4);
+    parliament.enter.fromCenter(true).smallToBig(true);
+    parliament.exit.toCenter(false).bigToSmall(true);
+    d3.select("#poland-sejm").datum(data).call(parliament);
+}
+!}
+
+= Election results
+
+{!<svg id="poland-sejm" class="poland-sejm-chart"></svg>!}
+
+<div class="election-table">
+<div class="election-table-head"><span>Committee</span><span>Vote</span><span>Seats</span><span>Status</span></div>
+<div class="election-table-row"><span class="party party-pis">PiS</span><span>[+ pis_vote_intent +]%</span><b>[+ pis_seats +]</b><span>certified</span></div>
+<div class="election-table-row"><span class="party party-ko">KO</span><span>[+ ko_vote_intent +]%</span><b>[+ ko_seats +]</b><span>certified</span></div>
+<div class="election-table-row"><span class="party party-p2050">Third Way</span><span>[+ p2050_vote_intent + psl_vote_intent +]%</span><b>[+ p2050_seats + psl_seats +]</b><span>joint list</span></div>
+<div class="election-table-row"><span class="party party-lewica">Lewica</span><span>[+ left_vote_intent +]%</span><b>[+ left_seats +]</b><span>certified</span></div>
+<div class="election-table-row"><span class="party party-konf">Konfederacja</span><span>[+ konf_vote_intent +]%</span><b>[+ konf_seats +]</b><span>certified</span></div>
+</div>
+
+- @summary_2023: Read the election summary
+
+@summary_2023
+title: Election summary
+new-page: true
+on-arrival: election_summary_seen = 1
+
+= The result
+
+PiS returns with **[+ pis_seats +] seats**. KO, Poland 2050, PSL and Lewica
+hold **[+ coalition_democratic_seats +] seats**. Third Way's **[+
+p2050_seats + psl_seats +] deputies** make its internal relations as important
+as the headline result.
+
+Lewica returns with **[+ left_seats +] seats**: **[+ nowa_lewica_seats +]**
+from Nowa Lewica and **[+ razem_seats +]** from Razem. Cabinet entry will
+therefore require both coalition arithmetic and an internal mandate.
+
+- @coalitions_2023: Examine governing arrangements
+
+@coalitions_2023
+title: Coalition arrangements
+new-page: true
+on-arrival: {!
+Q.election_coalition_seen = 1;
+Q.coalition_democratic_seats =
+    Q.ko_seats + Q.p2050_seats + Q.psl_seats + Q.left_seats;
+Q.coalition_right_seats = Q.pis_seats + Q.konf_seats;
+Q.coalition_center_seats =
+    Q.ko_seats + Q.p2050_seats + Q.psl_seats;
+Q.coalition_pis_psl_seats = Q.pis_seats + Q.psl_seats;
+if (!Number.isFinite(Number(Q.coalition_democratic_score))) {
+    Q.coalition_democratic_score = 67;
+}
+if (!Number.isFinite(Number(Q.coalition_right_score))) {
+    Q.coalition_right_score = 28;
+}
+if (!Number.isFinite(Number(Q.coalition_center_score))) {
+    Q.coalition_center_score = 61;
+}
+if (!Number.isFinite(Number(Q.coalition_pis_psl_score))) {
+    Q.coalition_pis_psl_score = 36;
+}
+!}
+
+= Possible governments
+
+<div class="coalition-option [? if coalition_democratic_seats >= 231: viable?]"><span>KO · PL2050 · PSL · Lewica</span><b>[+ coalition_democratic_seats +]</b><small>[? if coalition_democratic_seats >= 231: Majority · ?]compatibility [+ coalition_democratic_score +]/100</small></div>
+<div class="coalition-option [? if coalition_center_seats >= 231: viable?]"><span>KO · PL2050 · PSL</span><b>[+ coalition_center_seats +]</b><small>[? if coalition_center_seats >= 231: Majority · ?]compatibility [+ coalition_center_score +]/100</small></div>
+<div class="coalition-option [? if coalition_pis_psl_seats >= 231: viable?]"><span>PiS · PSL</span><b>[+ coalition_pis_psl_seats +]</b><small>[? if coalition_pis_psl_seats >= 231: Majority · ?]compatibility [+ coalition_pis_psl_score +]/100</small></div>
+<div class="coalition-option [? if coalition_right_seats >= 231: viable?]"><span>PiS · Konfederacja</span><b>[+ coalition_right_seats +]</b><small>[? if coalition_right_seats >= 231: Majority · ?]compatibility [+ coalition_right_score +]/100</small></div>
+
+The numbers identify possibilities, not agreements. The formation sequence
+will test relations, party resources and caucus defections.
+
+- @poland_government_formation.first_sitting: Begin government formation
+
+@campaign_projection
+title: July 2023 election readiness
+new-page: true
+call: poland_polling
+on-arrival: timeline_complete = 0; news_headline = "The campaign enters its final election summer"
+on-display: {!
+const data = [];
+const projectionParties = [
+    ["pis", "PiS", "PiS", Q.pis_projected_seats],
+    ["konf", "Konf.", "Konfederacja", Q.konf_projected_seats],
+    ["psl", "PSL", "PSL", Q.psl_projected_seats],
+    ["p2050", "PL2050", "Poland 2050", Q.p2050_projected_seats],
+    ["ko", "KO", "KO", Q.ko_projected_seats],
+    ["left", "Lewica", "Lewica", Q.left_projected_seats]
+];
+for (const party of projectionParties) {
+    if (party[3] > 0) {
+        data.push({
+            id: party[0],
+            legend: party[1],
+            name: party[2],
+            seats: party[3]
+        });
+    }
+}
+if (
+    typeof window !== "undefined" &&
+    typeof d3 !== "undefined" &&
+    document.getElementById("poland-projection")
+) {
+    let width = 500;
+    let height = 500;
+    const content = document.getElementById("content");
+    if (content && content.offsetWidth < 450) {
+        width = Math.max(260, content.offsetWidth - 30);
+        height = width;
+        document.getElementById("poland-projection").style.height =
+            Math.round(width / 2) + "px";
+    }
+    const parliament = d3.parliament();
+    parliament.width(width).height(height).innerRadiusCoef(0.4);
+    parliament.enter.fromCenter(true).smallToBig(true);
+    parliament.exit.toCenter(false).bigToSmall(true);
+    d3.select("#poland-projection").datum(data).call(parliament);
+}
+!}
+
+= Election readiness — July 2023
+
+This is a national d'Hondt indicator, not a claim that an election occurred.
+
+{!<svg id="poland-projection" class="poland-sejm-chart"></svg>!}
+
+<div class="election-table">
+<div class="election-table-head"><span>Party</span><span>Intent</span><span>Seats</span><span>AI pool</span></div>
+<div class="election-table-row"><span class="party party-pis">PiS</span><span>[+ pis_vote_intent +]%</span><b>[+ pis_projected_seats +]</b><span>[+ pis_org_resources +]</span></div>
+<div class="election-table-row"><span class="party party-ko">KO</span><span>[+ ko_vote_intent +]%</span><b>[+ ko_projected_seats +]</b><span>[+ ko_org_resources +]</span></div>
+<div class="election-table-row"><span class="party party-p2050">Poland 2050</span><span>[+ p2050_vote_intent +]%</span><b>[+ p2050_projected_seats +]</b><span>[+ p2050_org_resources +]</span></div>
+<div class="election-table-row"><span class="party party-lewica">Lewica</span><span>[+ left_vote_intent +]%</span><b>[+ left_projected_seats +]</b><span>[+ resources +]</span></div>
+<div class="election-table-row"><span class="party party-psl">PSL</span><span>[+ psl_vote_intent +]%</span><b>[+ psl_projected_seats +]</b><span>[+ psl_org_resources +]</span></div>
+<div class="election-table-row"><span class="party party-konf">Konfederacja</span><span>[+ konf_vote_intent +]%</span><b>[+ konf_projected_seats +]</b><span>[+ konf_org_resources +]</span></div>
+</div>
+
+<div class="coalition-option [? if coalition_democratic_seats >= 231: viable?]"><span>Democratic opposition</span><b>[+ coalition_democratic_seats +]</b><small>compatibility [+ coalition_democratic_score +]/100</small></div>
+<div class="coalition-option [? if coalition_right_seats >= 231: viable?]"><span>PiS · Konfederacja</span><b>[+ coalition_right_seats +]</b><small>compatibility [+ coalition_right_score +]/100</small></div>
+<div class="coalition-option [? if coalition_center_seats >= 231: viable?]"><span>Centrist opposition</span><b>[+ coalition_center_seats +]</b><small>compatibility [+ coalition_center_score +]/100</small></div>
+<div class="coalition-option [? if coalition_pis_psl_seats >= 231: viable?]"><span>PiS · PSL</span><b>[+ coalition_pis_psl_seats +]</b><small>compatibility [+ coalition_pis_psl_score +]/100</small></div>
+
+- @poland_hub: Continue into the election campaign

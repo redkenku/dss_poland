@@ -1,0 +1,340 @@
+# Media ecosystem and communications minigame
+
+Last researched: **29 July 2026**.
+
+Status: **research and design only**. The historical baseline is sourced;
+proposed mechanics and alternate events are not predictions or implemented
+code. Related chains are collected in
+[SCENARIO_LEDGER.md](SCENARIO_LEDGER.md#the-media-ecosystem) and dated events
+remain in [POLITICAL_TIMELINE.md](POLITICAL_TIMELINE.md).
+
+## Historical baseline
+
+Polish media should not be represented by a single “free versus controlled”
+slider. It is a fragmented attention market in which television still has
+large reach, online video and social platforms increasingly set the daily
+agenda, audiences sort themselves by political identity, and the formal
+independence of an outlet does not make its reporting politically neutral.
+
+Three developments define the starting position:
+
+1. **Public media became an electoral actor.** ODIHR found that TVP provided
+   PiS with a clear advantage in the 2023 parliamentary campaign and was
+   openly hostile towards KO. The post-election government's rapid replacement
+   of public-media management then created its own dispute over legality,
+   procedure and funding rather than simply restoring a neutral status quo.
+   ([ODIHR 2023 election report](https://odihr.osce.org/sites/default/files/f/documents/3/d/553978.pdf);
+   [ODIHR 2025 presidential-election report](https://www.osce.org/files/f/documents/2/b/599685_0.pdf))
+2. **The conservative audience and workforce migrated.** The 2025 ODIHR report
+   recorded that roughly eighty former TVP journalists had moved to Republika
+   and wPolsce24. Reuters Institute described Republika as one of Poland's four
+   largest television channels in 2025; Nielsen measured its share across TV
+   and online video rising from 3.24% in 2024 to 5.23% in 2025.
+   ([Reuters Institute, Poland 2026](https://reutersinstitute.politics.ox.ac.uk/digital-news-report/2026/poland);
+   [Nielsen All Screens Video Landscape](https://www.nielsen.com/pl/news-center/2026/nielsens-all-screens-video-landscape-report-reveals-shift-in-polish-media-rankings-and-deeper-audience-engagement/))
+3. **Creator-led political media became a first-class institution.** Krzysztof
+   Stanowski launched Kanał Zero in February 2024, ran for president in 2025
+   and won 243,479 votes (1.24%), then extended the brand into a news site and
+   television service. This is not equivalent to founding a conventional
+   party newspaper: the product is personality, confrontation, entertainment,
+   interviews and the claim of independence from every party.
+   ([Reuters Institute, Poland 2025](https://reutersinstitute.politics.ox.ac.uk/digital-news-report/2025/poland);
+   [ODIHR 2025 report](https://www.osce.org/files/f/documents/2/b/599685_0.pdf))
+
+The statement that Lewica lacks a comparable media ecosystem is a **scenario
+design inference**, not a claim that there are no left-wing journalists,
+outlets, creators or sympathetic audiences. It means that the playable Left
+begins without a large, loyal and cross-format network capable of:
+
+- reaching beyond already convinced voters every day;
+- moving an issue from specialist reporting into the national agenda;
+- producing rapid video, live interviews and local stories at the same time;
+- protecting a politician through a hostile news cycle without suppressing
+  legitimate criticism;
+- developing recognisable presenters, reporters and expert voices;
+- surviving a party subsidy loss, advertiser retreat or platform change.
+
+That deficit should be painful and expensive to repair. It should not be solved
+by pressing “create left-wing TV.”
+
+## Reach is not support
+
+Each outlet or creator has a record rather than a party colour:
+
+| Field | Meaning |
+| --- | --- |
+| `audience_by_segment` | Who actually encounters it: age, education, town size, region, class position and political consideration set. |
+| `attention_power` | Ability to make other journalists and politicians discuss a story. |
+| `trust_by_segment` | Whether an audience believes the outlet, not whether it watches for entertainment or outrage. |
+| `access` | Willingness to invite the Left, take its questions or use its experts. |
+| `editorial_distance` | Independence from the government, opposition parties, owners, donors and star presenters. |
+| `format_strength` | Live television, long interview, short video, investigation, local news, radio, newsletter or policy analysis. |
+| `talent` | Reporters, producers, editors, presenters, lawyers, researchers and technical staff. |
+| `financial_resilience` | Mix of advertising, subscription, donations, public funds, wealthy owners and party money. |
+| `distribution_resilience` | Terrestrial carriage, cable, website, applications, social platforms, search and mailing lists. |
+| `legal_exposure` | Defamation cases, regulator decisions, licensing, source protection and ownership disputes. |
+| `relationship` | Current institutional relationship with the player, which may vary by newsroom, programme and host. |
+
+A hostile outlet can have high access because conflict attracts viewers. A
+friendly activist account can have high trust and almost no reach outside the
+Left. Republika viewers are not automatically PiS voters, Kanał Zero viewers
+are not automatically Stanowski voters, and appearing on TVN is not equivalent
+to gaining a KO endorsement.
+
+## The media map
+
+The exact brands and personalities change, but the scenario needs stable actor
+types:
+
+| Actor | Strategic value | Characteristic danger |
+| --- | --- | --- |
+| Public television and radio | Universal-service capacity, regional network, live state communication and large inherited recognition. | Government capture, legally disputed appointments, unstable funding and another purge after power changes. |
+| Commercial television | National reach, professional newsrooms, debates and agenda power. | Owner priorities, compressed formats and a tendency to centre the KO–PiS conflict. |
+| Republika and adjacent conservative outlets | Loyal audience, activist energy, transferred talent and rapid opposition framing. | Normalisation of false or dehumanising claims, access boycotts, advertiser controversy and a self-reinforcing grievance economy. |
+| Kanał Zero and personality-led video | Young and politically mixed attention, long interviews, spectacle and agenda-setting clips. | The host controls the frame; entertainment incentives reward conflict, ambiguity and humiliation more than policy delivery. |
+| Newspapers, weeklies and digital newsrooms | Investigations, elite agenda and policy detail. | Smaller mass reach, paywalls, weak finances and dependence on stories being amplified elsewhere. |
+| Local and regional media | Trust, constituency problems and a route around Warsaw polarisation. | Consolidation, municipal advertising pressure, newsroom closures and very uneven quality. |
+| Radio and podcasts | Habitual reach, commuting audience, intimacy and long-form explanation. | Fragmented measurement and limited visual virality. |
+| Social platforms and search | Cheap initial distribution and fast mobilisation. | Algorithm shifts, harassment, manipulation, context collapse and dependence on foreign firms. |
+| Civil-society, union and movement channels | Trusted messengers on work, abortion, housing, health and minority rights. | They are not party property; attempted capture destroys the credibility the player needs. |
+| Party-owned channels | Guaranteed message discipline and volunteer conversion. | Low external trust, subsidy dependence and propaganda incentives. |
+
+No player should be able to purchase editorial obedience from an independent
+outlet. Investments can buy staff, training, production, advertising, events or
+a genuinely disclosed party channel. Relationships buy a fair hearing, not a
+guaranteed headline.
+
+## The monthly communications loop
+
+Each political month gives the player fewer communications actions than there
+are active crises:
+
+1. **Listen.** Commission polling, social listening, local reports or movement
+   consultation. Cheap monitoring is fast and noisy; high-quality research
+   takes time.
+2. **Choose an agenda.** Select at most two subjects to push. Additional
+   messages dilute spokesperson preparation and reduce repetition.
+3. **Choose a messenger and format.** A union organiser, doctor, minister,
+   affected citizen, expert, mayor and party leader have different credibility.
+4. **Prepare.** Fact-check, rehearse hostile questions, collect a local example,
+   make a short clip and plan the follow-through.
+5. **Place or publish.** Seek an interview, briefing, investigation, rally,
+   podcast, local visit, newsletter or owned-media release.
+6. **Respond.** Correct an error, defend a target of harassment, withdraw a
+   false claim, publish documents, or refuse to feed an outrage cycle.
+7. **Evaluate.** Measure awareness, comprehension, trust, volunteer conversion
+   and policy movement separately from views.
+
+Breaking events can interrupt the loop. A prepared press room responds within
+hours; an unprepared coalition loses the first frame and pays more to reverse
+it.
+
+## The story contest
+
+Every major story has five independent outcomes:
+
+- **salience** — how many people notice it;
+- **frame** — what question people think the story is about;
+- **ownership** — which actor is credited with raising or solving it;
+- **credibility** — which messenger is believed;
+- **conversion** — whether attention changes participation, consideration,
+  turnout or coalition behaviour.
+
+For example, a Left minister can obtain huge salience on Republika while the
+dominant frame is “coalition chaos.” A movement doctor with smaller reach can
+gain enough credibility to change PSL deputies' votes. A viral clip can raise
+name recognition while making the candidate less acceptable to every possible
+coalition partner.
+
+The first report is not permanent. Documents, a good hostile interview,
+independent verification and visible policy delivery can change a frame.
+Deletion, denial and attacks on reporters may preserve core supporters while
+making recovery with persuadable voters harder.
+
+## Building a Left ecosystem
+
+The player has four distinct layers to build:
+
+### 1. Party capacity
+
+A press office, research desk, broadcast studio, clipping service, trained
+spokespeople, local press officers and a secure rapid-response channel. This is
+openly partisan infrastructure. It improves speed and consistency but has a
+credibility ceiling.
+
+### 2. Movement and labour relationships
+
+Long-term cooperation with unions, tenants, feminists, LGBT+ groups, disability
+campaigners, climate groups and local associations. These actors retain their
+own editorial voice and can publicly oppose the government. Respecting that
+autonomy makes their eventual support valuable.
+
+### 3. Independent media supply
+
+Training, transparent subscriptions, cultural grants with arm's-length
+governance, local-media support, access to public data and strong source
+protection can improve pluralism without creating a party newspaper. A hidden
+subsidy or patronage appointment turns the investment into a scandal.
+
+### 4. Recognisable creators
+
+Policy explainers, entertainers, podcasters and local correspondents need years
+to build an audience. They may later criticise the Left, endorse another party
+or refuse campaign coordination. That independence is the reason their
+endorsement can reach beyond party loyalists.
+
+An ecosystem recovery therefore consumes money, senior attention and scarce
+talent over several budgets. Its early returns are better crisis handling and
+local coverage, not an immediate polling bonus.
+
+## Investment ladder
+
+| Stage | Investment | Likely return | Failure mode |
+| --- | --- | --- | --- |
+| **0 — Reactive office** | One central press team and leader accounts. | Basic statements and campaign logistics. | Every ministry freelances; stories are answered after the frame has settled. |
+| **1 — Professional network** | Research, monitoring, media training and local coordinators. | Fewer avoidable errors; credible regional spokespeople. | Barons turn jobs into factional patronage. |
+| **2 — Format capacity** | Studio, video team, podcast, newsletter and field production. | Regular content and reusable explainers. | Expensive party content circulates only among existing supporters. |
+| **3 — Social infrastructure** | Durable relationships with movements, unions, experts and civic media. | Trusted third-party messengers and candidate pipeline. | Party capture produces public resignations and loss of movement autonomy. |
+| **4 — Plural ecosystem** | Independent subscription outlets, local reporting, cultural production and creator network. | Agenda power beyond election periods and resilience after leaving office. | Undisclosed finance, editorial interference or overexpansion destroys trust. |
+
+The annual budget can fund staff and institutions, but credibility cannot be
+bought in December and delivered in January.
+
+## Republika: opposition broadcaster, not a support counter
+
+Republika's rise should be an event chain with several causes:
+
+- migration of recognisable TVP staff and audiences after December 2023;
+- conservative demand for a permanent opposition broadcaster;
+- donations, subscriptions, advertising and distribution agreements;
+- exclusive access to right-wing politicians;
+- controversies that repel advertisers but strengthen the persecution frame;
+- professionalisation sufficient to compete for ordinary news viewers.
+
+In January 2024 several large advertisers withdrew after offensive remarks
+aired by the station. That can be modelled as a genuine commercial and ethical
+crisis without assuming the station disappears: audience donations, sympathetic
+businesses and political grievance can offset a boycott.
+([Associated Press](https://apnews.com/article/1df312136f8972999161a2199993022f))
+
+The Left has four recurring choices:
+
+- **full boycott** — denies normal access and pleases activists, but leaves
+  accusations unanswered and may make exclusion part of Republika's brand;
+- **conditional access** — appear with prepared spokespeople while refusing
+  programmes or hosts that cross specified standards;
+- **open engagement** — maximise reach and normalisation, accepting hostile
+  clips and factional criticism;
+- **regulatory retaliation** — potentially unlawful or self-defeating unless
+  based on neutral, reviewable rules applied to every broadcaster.
+
+Regulator decisions, state advertising and press access must use general rules.
+Punishing a hostile line gives the right a durable victim narrative and creates
+tools a future government can use against the Left.
+
+## Stanowski and the personality-media challenge
+
+Stanowski should be a recurring independent actor, not assigned to the right,
+centre or anti-system camp once and for all. His power comes from:
+
+- the ability to invite a politician into a long, apparently informal format;
+- strong personal control over topic, pacing, editing and follow-up clips;
+- an audience that includes people avoiding traditional political news;
+- entertainment value in exposing an evasive answer or campaign absurdity;
+- enough political ambiguity to interview, ridicule or validate actors from
+  several camps;
+- demonstrated capacity to turn media recognition into an electoral candidacy.
+
+An invitation creates a preparation event. The player chooses a policy expert,
+combative factional figure, relatable outsider or senior leader; reveals full
+documents or keeps coalition negotiations private; accepts a long interview or
+demands a shorter format. A strong performance can reach new voters. A weak
+performance becomes a week of derivative clips across every rival outlet.
+
+The player must never receive a permanent “Stanowski endorsement” merely by
+being charming. The durable rewards are demonstrated competence, willingness
+to answer, a relationship that keeps invitations open, and access to an
+audience. His own presidential run should sharpen his independence and make
+party attempts to co-opt him more visible.
+
+## Public media is a governance problem
+
+The public-media track needs at least six separate variables:
+
+- legal security of boards and appointments;
+- editorial independence;
+- political balance and treatment of government/opposition;
+- stable funding;
+- regional and public-service capacity;
+- audience trust by political segment.
+
+Changing management can improve one and damage another. The government may
+gain friendlier coverage while losing legal security and half the audience.
+Waiting for a statute may preserve procedure while leaving an openly partisan
+news operation in place. A durable settlement requires transparent
+appointments, protected terms, reviewable standards, stable funding and a
+credible transition for staff—not merely a new list of presenters.
+
+Government communication and public broadcasting must also stay distinct. A
+minister has a right to explain policy and answer questions; the newsroom must
+retain the ability to challenge the minister and lead with a government
+failure.
+
+## Media, hate and personal safety
+
+The media system connects directly to the border and minority-safety systems.
+Do not turn racism into a generic “polarisation” penalty. Track:
+
+- frequency and prominence of dehumanising frames;
+- organised harassment capacity;
+- targeted threats against refugees, Ukrainians, Jews, Muslims, LGBT+ people,
+  women activists and racialised politicians;
+- newsroom and platform moderation;
+- police response, reporting confidence and prosecution quality;
+- elite rebuttal or repetition across parties.
+
+Repeating a false claim to condemn it can still increase its reach. Silence can
+abandon the target and let the false frame settle. Effective response combines
+a trusted messenger, verified facts, protection for the target, consequences
+for threats and a positive account of equal citizenship.
+
+## Resource and faction effects
+
+Media choices redistribute power inside the Left:
+
+- old organisational networks favour dependable party channels, local offices
+  and disciplined spokespeople;
+- younger progressive politicians often perform better in rapid social and
+  culture-war formats but face gendered harassment;
+- Wiosna-derived networks may prioritise creator, culture and equality media;
+- Razem may possess strong long-form and activist communication while rejecting
+  coalition message discipline;
+- ministers want delivery coverage; parliamentary rebels gain attention by
+  breaking the agreed line;
+- local leaders resent a Warsaw studio that consumes money without covering
+  municipal work.
+
+Spokesperson prominence should increase personal following and succession
+power. The party may solve its attention deficit by creating a leader it can no
+longer control.
+
+## Success and failure
+
+The minigame is won neither by controlling every outlet nor by eliminating
+hostile coverage. A successful Left can:
+
+- get its account into the first news cycle;
+- reach voters beyond its core through several independent messengers;
+- survive one hostile interview or internal leak without message collapse;
+- maintain a trusted local, labour and movement network while governing;
+- correct falsehoods without making censorship the story;
+- leave public media more independent than it found them;
+- sustain communications capacity after losing office.
+
+Failure can take several forms: an inward-facing propaganda bubble; dependence
+on one charismatic creator; public-media capture followed by a purge; a donor
+or patronage scandal; constant defensive reaction to Republika; movement
+estrangement; or high online reach with no electoral conversion.
+
+This is intentionally a long and costly game. The reward is not immunity from
+bad news. It is the ability to contest what bad news means.

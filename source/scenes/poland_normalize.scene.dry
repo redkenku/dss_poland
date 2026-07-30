@@ -1,0 +1,943 @@
+title: Normalise Polish scenario state
+on-arrival: {!
+if (Q.started) {
+    const clamp = function(value, low, high) {
+        if (!Number.isFinite(Number(value))) {
+            return low;
+        }
+        return Math.max(low, Math.min(high, value));
+    };
+    const clampIfPresent = function(quality, low, high) {
+        if (Number.isFinite(Number(Q[quality]))) {
+            Q[quality] = clamp(Number(Q[quality]), low, high);
+        }
+    };
+
+    if (!Array.isArray(Q.factions)) {
+        Q.factions = ["barons", "spring", "labor", "progressives", "razem"];
+    }
+
+    // Keep constitutional office, cabinet ownership and Lewica's role
+    // separate. Later events can replace a prime minister or move the Left
+    // outside cabinet without leaving the interface to infer who governs.
+    const governmentText = (
+        String(Q.prime_minister || "") + " " +
+        String(Q.government_name || "")
+    ).toLowerCase();
+    if (
+        governmentText.includes("morawiecki") ||
+        governmentText.includes("szydło") ||
+        governmentText.includes("szydlo") ||
+        governmentText.includes("czarnek") ||
+        governmentText.includes("pis")
+    ) {
+        Q.government_party = "pis";
+        Q.government_owner = "PiS and its governing partners";
+    } else if (
+        governmentText.includes("tusk") ||
+        governmentText.includes("trzaskowski") ||
+        governmentText.includes("nowacka") ||
+        governmentText.includes("sikorski") ||
+        governmentText.includes("kierwiński") ||
+        governmentText.includes("kierwinski") ||
+        governmentText.includes("democratic")
+    ) {
+        Q.government_party = "ko";
+        Q.government_owner = "KO-led democratic coalition";
+    } else if (
+        governmentText.includes("dziemianowicz") ||
+        governmentText.includes("biedroń") ||
+        governmentText.includes("biedron") ||
+        governmentText.includes("zandberg") ||
+        governmentText.includes("lewica")
+    ) {
+        Q.government_party = "lewica";
+        Q.government_owner = "Lewica-led coalition";
+    } else if (
+        governmentText.includes("kosiniak") ||
+        governmentText.includes("psl")
+    ) {
+        Q.government_party = "psl";
+        Q.government_owner = "PSL-led coalition";
+    } else if (
+        governmentText.includes("hołownia") ||
+        governmentText.includes("holownia") ||
+        governmentText.includes("poland 2050")
+    ) {
+        Q.government_party = "p2050";
+        Q.government_owner = "Poland 2050-led coalition";
+    } else {
+        Q.government_party = "other";
+        Q.government_owner = "Caretaker or cross-party cabinet";
+    }
+    if (Q.caretaker_government) {
+        Q.left_role = Q.left_in_government
+            ? "Caretaker cabinet — ministers remain, but new executive action is suspended"
+            : "Outside the caretaker cabinet — formation or election talks";
+    } else if (Q.left_in_government) {
+        Q.left_role =
+            "Government — Lewica holds ministries and shares cabinet responsibility";
+    } else if (
+        String(Q.position || "").toLowerCase().includes("confidence")
+    ) {
+        Q.left_role =
+            "Outside government — confidence-and-supply support only";
+    } else {
+        Q.left_role =
+            "Opposition — no ministers and no state-budget authority";
+    }
+
+    // A compact crisis score opens pragmatic bargaining without making a PiS
+    // cabinet generally friendly. The displayed forecast below is the same
+    // arithmetic used by the negotiation cards.
+    const finitePolitical = function(value, fallback) {
+        return Number.isFinite(Number(value)) ? Number(value) : fallback;
+    };
+    const economicCrisis =
+        Math.max(0, finitePolitical(Q.inflation, 2.6) - 4) * 2.2 +
+        Math.max(0, -finitePolitical(Q.economic_growth, 2)) * 6 +
+        Math.max(0, finitePolitical(Q.unemployment, 5) - 7) * 2;
+    const securityCrisis =
+        finitePolitical(Q.war_escalation_risk, 0) * 0.34 +
+        Math.max(
+            0,
+            finitePolitical(Q.national_security_salience, 48) - 55
+        ) * 0.22 +
+        Math.max(
+            0,
+            finitePolitical(Q.border_security_salience, 44) - 60
+        ) * 0.18;
+    const serviceCrisis =
+        finitePolitical(Q.pandemic_deaths_pressure, 0) * 0.45 +
+        Math.max(0, 45 - finitePolitical(Q.health_capacity, 48)) * 0.34 +
+        Math.max(0, 42 - finitePolitical(Q.household_security, 45)) * 0.28;
+    Q.national_crisis_pressure = Math.round(
+        clamp(economicCrisis + securityCrisis + serviceCrisis, 0, 100)
+    );
+    const cohabitationPenalty =
+        Q.government_party == "pis" &&
+        Q.president_name == "Rafał Trzaskowski"
+            ? 8
+            : 0;
+    const hostilityBase =
+        Q.government_party == "pis" ? 76 :
+        (Q.government_party == "ko" ? 36 :
+        (Q.government_party == "psl" ? 43 :
+        (Q.government_party == "p2050" ? 40 : 50)));
+    Q.government_negotiation_hostility = Math.round(
+        clamp(
+            hostilityBase +
+                cohabitationPenalty -
+                finitePolitical(Q.negotiation_successes, 0) * 2,
+            10,
+            95
+        )
+    );
+    const governmentRelation =
+        Q.government_party == "pis"
+            ? finitePolitical(Q.pis_relation, 8)
+            : (Q.government_party == "ko"
+                ? finitePolitical(Q.ko_relation, 44)
+                : (Q.government_party == "psl"
+                    ? finitePolitical(Q.psl_relation, 24)
+                    : finitePolitical(Q.p2050_relation, 20)));
+    const palaceMediation =
+        Q.president_name == "Rafał Trzaskowski" ? 14 :
+        (finitePolitical(Q.president_relation, 18) >= 55 ? 5 : 0);
+    Q.negotiation_leverage = Math.round(
+        clamp(
+            finitePolitical(Q.public_trust, 43) * 0.14 +
+                finitePolitical(Q.labor_credibility, 46) * 0.10 +
+                finitePolitical(Q.local_network, 42) * 0.06 +
+                governmentRelation * 0.12 +
+                Q.national_crisis_pressure * 0.30 +
+                palaceMediation +
+                finitePolitical(Q.negotiation_capital, 0) -
+                Q.government_negotiation_hostility * 0.20,
+            0,
+            100
+        )
+    );
+    if (Q.government_party == "pis" && Q.national_crisis_pressure < 30) {
+        Q.negotiation_forecast =
+            "Hostile PiS government — a routine offer is likely to be used as theatre";
+    } else if (
+        Q.government_party == "pis" &&
+        Q.president_name == "Rafał Trzaskowski" &&
+        Q.national_crisis_pressure >= 30
+    ) {
+        Q.negotiation_forecast =
+            "Crisis opening — Trzaskowski can convene, but only a narrow material bargain can pass";
+    } else if (
+        Q.government_party == "pis" &&
+        Q.national_crisis_pressure >= 30
+    ) {
+        Q.negotiation_forecast =
+            "Crisis opening — PiS may trade delivery for votes and shared responsibility";
+    } else if (Q.government_party == "ko") {
+        Q.negotiation_forecast =
+            "Democratic cabinet — access is easier, but concessions still require votes";
+    } else {
+        Q.negotiation_forecast =
+            "Transactional opening — the cabinet will price every opposition vote";
+    }
+
+    Q.party_unity = clamp(Q.party_unity, 0, 100);
+    Q.left_poll = Math.round(clamp(Q.left_poll, 0, 40) * 10) / 10;
+    Q.resources = Number.isFinite(Number(Q.resources))
+        ? Math.max(0, Number(Q.resources))
+        : 0;
+    Q.member_dues = Number.isFinite(Number(Q.member_dues))
+        ? Math.max(1, Math.min(5, Math.round(Number(Q.member_dues))))
+        : 2;
+    Q.seat_subvention_seats = Number.isFinite(Number(Q.left_seats))
+        ? Math.max(0, Math.round(Number(Q.left_seats)))
+        : 0;
+    Q.seat_subvention = Q.seat_subvention_seats > 0
+        ? Math.max(1, Math.round(Q.seat_subvention_seats / 25))
+        : 0;
+    Q.party_income = Q.member_dues + Q.seat_subvention;
+    Q.last_dues_payout = Number.isFinite(Number(Q.last_dues_payout))
+        ? Math.max(0, Number(Q.last_dues_payout))
+        : 0;
+    Q.last_subvention_payout =
+        Number.isFinite(Number(Q.last_subvention_payout))
+            ? Math.max(0, Number(Q.last_subvention_payout))
+            : 0;
+    Q.last_annual_payout = Number.isFinite(Number(Q.last_annual_payout))
+        ? Math.max(0, Number(Q.last_annual_payout))
+        : 0;
+    Q.budget = Number.isFinite(Number(Q.budget))
+        ? Number(Q.budget)
+        : 0;
+    Q.fiscal_stress = Number.isFinite(Number(Q.fiscal_stress))
+        ? Math.max(0, Number(Q.fiscal_stress))
+        : 0;
+    Q.public_trust = clamp(Q.public_trust, 0, 100);
+    Q.government_delivery = clamp(Q.government_delivery, 0, 100);
+    Q.pis_poll = Math.round(clamp(Q.pis_poll, 0, 60) * 10) / 10;
+    Q.ko_poll = Math.round(clamp(Q.ko_poll, 0, 60) * 10) / 10;
+    Q.psl_poll = Math.round(clamp(Q.psl_poll, 0, 40) * 10) / 10;
+    Q.konf_poll = Math.round(clamp(Q.konf_poll, 0, 40) * 10) / 10;
+    Q.p2050_poll = Math.round(clamp(Q.p2050_poll, 0, 40) * 10) / 10;
+    Q.other_poll = Math.round(clamp(Q.other_poll, 0, 40) * 10) / 10;
+    const pollNumbers = [
+        "left_vote_intent",
+        "pis_vote_intent",
+        "ko_vote_intent",
+        "psl_vote_intent",
+        "konf_vote_intent",
+        "p2050_vote_intent",
+        "other_vote_intent"
+    ];
+    for (const quality of pollNumbers) {
+        // Intentions remain full-precision simulation state. Only the published
+        // poll is rounded; rounding every party here can destroy the exact
+        // 100-point conservation established by the electorate model.
+        Q[quality] = clamp(Q[quality], 0, 100);
+    }
+    const pollStateNumbers = [
+        "left_poll_momentum",
+        "pis_poll_momentum",
+        "ko_poll_momentum",
+        "psl_poll_momentum",
+        "konf_poll_momentum",
+        "p2050_poll_momentum",
+        "other_poll_momentum",
+        "poll_calibration_left",
+        "poll_calibration_pis",
+        "poll_calibration_ko",
+        "poll_calibration_psl",
+        "poll_calibration_konf",
+        "poll_calibration_p2050",
+        "poll_calibration_other"
+    ];
+    for (const quality of pollStateNumbers) {
+        Q[quality] = Number.isFinite(Number(Q[quality]))
+            ? Number(Q[quality])
+            : 0;
+    }
+    const projectedSeats = [
+        "left_projected_seats",
+        "pis_projected_seats",
+        "ko_projected_seats",
+        "psl_projected_seats",
+        "konf_projected_seats",
+        "p2050_projected_seats",
+        "other_projected_seats"
+    ];
+    for (const quality of projectedSeats) {
+        Q[quality] = Math.round(clamp(Q[quality], 0, 460));
+    }
+    Q.poll_sample_size = Math.round(clamp(Q.poll_sample_size, 100, 100000));
+    Q.poll_margin_error = clamp(Q.poll_margin_error, 0, 20);
+    Q.poll_danger_months = Math.round(clamp(Q.poll_danger_months, 0, 120));
+    if (!Array.isArray(Q.voter_groups)) {
+        Q.voter_groups = [
+            "metropolitan_liberals",
+            "liberal_professionals",
+            "public_service_families",
+            "industrial_logistics",
+            "provincial_welfare",
+            "rural_localists",
+            "older_welfare_households",
+            "anti_establishment_youth"
+        ];
+    }
+    for (const group of Q.voter_groups) {
+        Q[group + "_size"] = clamp(Q[group + "_size"], 0, 100);
+        Q[group + "_turnout"] = clamp(Q[group + "_turnout"], 0, 100);
+        Q[group + "_margin"] = clamp(Q[group + "_margin"], 0, 100);
+        for (const party of [
+            "left", "pis", "ko", "psl", "konf", "p2050", "other"
+        ]) {
+            Q[group + "_" + party] =
+                clamp(Q[group + "_" + party], 0, 100);
+            if (party != "other") {
+                const affinityKey =
+                    group + "_" + party + "_affinity";
+                Q[affinityKey] = Number.isFinite(
+                    Number(Q[affinityKey])
+                )
+                    ? clamp(Q[affinityKey], -20, 20)
+                    : 0;
+            }
+        }
+        Q[group + "_left"] = clamp(Q[group + "_left"], 0, 100);
+    }
+
+    for (const party of [
+        "left", "pis", "ko", "psl", "konf", "p2050"
+    ]) {
+        if (Number.isFinite(Number(Q[party + "_economic_position"]))) {
+            Q[party + "_economic_position"] =
+                clamp(Q[party + "_economic_position"], 0, 100);
+        }
+        if (Number.isFinite(Number(Q[party + "_cultural_position"]))) {
+            Q[party + "_cultural_position"] =
+                clamp(Q[party + "_cultural_position"], 0, 100);
+        }
+        if (Number.isFinite(Number(Q[party + "_social_position"]))) {
+            Q[party + "_social_position"] =
+                clamp(Q[party + "_social_position"], 0, 100);
+        }
+    }
+
+    // Rival ideology is hidden simulation state. Old saves may not contain
+    // these qualities, so only repair values which are already present; the
+    // rival AI owns first-time migration and authored defaults.
+    for (const quality of [
+        "party_system_left_pull",
+        "party_system_konf_pull",
+        "covid_anti_system_pressure",
+        "democratic_rightward_pressure",
+        "left_right_score",
+        "pis_right_score",
+        "ko_right_score",
+        "psl_right_score",
+        "konf_right_score",
+        "p2050_right_score",
+        "pis_solidarist_share",
+        "pis_market_hardliner_share",
+        "ko_social_liberal_share",
+        "ko_classical_liberal_share",
+        "psl_agrarian_pragmatist_share",
+        "psl_conservative_share",
+        "psl_coalition_manager_share",
+        "konf_braunist_share",
+        "konf_mentzenite_share",
+        "konf_nationalist_share",
+        "p2050_state_capacity_share",
+        "p2050_christian_dem_share",
+        "p2050_personalist_share"
+    ]) {
+        clampIfPresent(quality, 0, 100);
+    }
+    clampIfPresent("party_system_pendulum", -100, 100);
+    for (const party of ["pis", "ko", "psl", "konf", "p2050"]) {
+        for (const acceptance of [
+            "accept_social",
+            "accept_rights",
+            "accept_order",
+            "accept_market",
+            "coalition_openness"
+        ]) {
+            clampIfPresent(
+                party + "_" + acceptance,
+                0,
+                100
+            );
+        }
+        clampIfPresent(party + "_right_score_previous", 0, 100);
+        clampIfPresent(party + "_wing_model_initialized", 0, 1);
+    }
+    clampIfPresent("rival_wings_initialized", 0, 1);
+    if (Number.isFinite(Number(Q.rival_wings_version))) {
+        Q.rival_wings_version = Math.max(
+            0,
+            Math.round(Number(Q.rival_wings_version))
+        );
+    }
+
+    const konfShares = [
+        "konf_braunist_share",
+        "konf_mentzenite_share",
+        "konf_nationalist_share"
+    ];
+    if (konfShares.every(function(quality) {
+        return Number.isFinite(Number(Q[quality]));
+    })) {
+        let konfShareTotal = konfShares.reduce(function(total, quality) {
+            return total + clamp(Number(Q[quality]), 0, 100);
+        }, 0);
+        if (konfShareTotal <= 0) {
+            // A wholly corrupt trio has no evolved ratio to preserve.
+            Q.konf_braunist_share = 18;
+            Q.konf_mentzenite_share = 47;
+            Q.konf_nationalist_share = 35;
+            konfShareTotal = 100;
+        } else {
+            Q.konf_braunist_share =
+                Q.konf_braunist_share / konfShareTotal * 100;
+            Q.konf_mentzenite_share =
+                Q.konf_mentzenite_share / konfShareTotal * 100;
+            Q.konf_nationalist_share =
+                100 -
+                Q.konf_braunist_share -
+                Q.konf_mentzenite_share;
+        }
+    }
+
+    for (const party of ["pis", "ko", "psl", "konf", "p2050"]) {
+        // The rival organisational pools are deliberately uncapped.
+        Q[party + "_org_resources"] =
+            Number.isFinite(Number(Q[party + "_org_resources"]))
+                ? Math.max(0, Number(Q[party + "_org_resources"]))
+                : 0;
+        Q[party + "_org_income"] =
+            Number.isFinite(Number(Q[party + "_org_income"]))
+                ? Math.max(0, Number(Q[party + "_org_income"]))
+                : 0;
+        Q[party + "_ai_actions"] =
+            Number.isFinite(Number(Q[party + "_ai_actions"]))
+                ? Math.max(0, Number(Q[party + "_ai_actions"]))
+                : 0;
+        Q[party + "_ai_last_spend"] =
+            Number.isFinite(Number(Q[party + "_ai_last_spend"]))
+                ? Math.max(0, Number(Q[party + "_ai_last_spend"]))
+                : 0;
+        Q[party + "_ai_acted"] =
+            Number.isFinite(Number(Q[party + "_ai_acted"]))
+                ? clamp(Q[party + "_ai_acted"], 0, 1)
+                : 0;
+        // Preserve compatibility with the election prototype's earlier names.
+        Q[party + "_ai_resources"] =
+            Math.max(0, Number(Q[party + "_ai_resources"]) || 0);
+        Q[party + "_ai_income"] =
+            Math.max(0, Number(Q[party + "_ai_income"]) || 0);
+        Q[party + "_ai_activity"] =
+            clamp(Q[party + "_ai_activity"], 0, 100);
+    }
+    for (const pair of [
+        "pis_ko",
+        "pis_psl",
+        "pis_konf",
+        "pis_p2050",
+        "ko_psl",
+        "ko_konf",
+        "ko_p2050",
+        "psl_konf",
+        "psl_p2050",
+        "konf_p2050"
+    ]) {
+        const canonicalKey = "rival_relation_" + pair;
+        const compatibilityKey = "relation_" + pair;
+        const relationValue = Number.isFinite(Number(Q[canonicalKey]))
+            ? Number(Q[canonicalKey])
+            : (
+                Number.isFinite(Number(Q[compatibilityKey]))
+                    ? Number(Q[compatibilityKey])
+                    : 0
+            );
+        Q[canonicalKey] = clamp(relationValue, 0, 100);
+        Q[compatibilityKey] = Q[canonicalKey];
+    }
+    for (const quality of [
+        "national_turnout_climate",
+        "economic_issue_salience",
+        "cultural_issue_salience",
+        "institutional_issue_salience"
+    ]) {
+        if (Number.isFinite(Number(Q[quality]))) {
+            Q[quality] = clamp(Q[quality], 0, 100);
+        }
+    }
+    Q.rival_ai_tick = Number.isFinite(Number(Q.rival_ai_tick))
+        ? Math.max(0, Number(Q.rival_ai_tick))
+        : 0;
+    Q.rival_actions_this_month =
+        Number.isFinite(Number(Q.rival_actions_this_month))
+            ? Math.max(0, Number(Q.rival_actions_this_month))
+            : 0;
+    Q.rival_income_last_year =
+        Number.isFinite(Number(Q.rival_income_last_year))
+            ? Number(Q.rival_income_last_year)
+            : Number(Q.year) || 2019;
+    if (!Array.isArray(Q.rival_strategy_log)) {
+        Q.rival_strategy_log = [];
+    }
+    for (const score of [
+        "coalition_democratic_score",
+        "coalition_right_score",
+        "coalition_center_score",
+        "coalition_pis_psl_score"
+    ]) {
+        Q[score] = clamp(Q[score], 0, 100);
+    }
+    for (const seats of [
+        "coalition_democratic_seats",
+        "coalition_right_seats",
+        "coalition_center_seats",
+        "coalition_pis_psl_seats"
+    ]) {
+        Q[seats] = Math.round(clamp(Q[seats], 0, 460));
+    }
+
+    Q.media_capacity = clamp(Q.media_capacity, 0, 100);
+    Q.local_network = clamp(Q.local_network, 0, 100);
+    Q.labor_credibility = clamp(Q.labor_credibility, 0, 100);
+    Q.progressive_credibility = clamp(Q.progressive_credibility, 0, 100);
+    Q.feminist_trust = clamp(Q.feminist_trust, 0, 100);
+    Q.razem_cooperation = clamp(Q.razem_cooperation, 0, 100);
+
+    Q.ko_relation = clamp(Q.ko_relation, 0, 100);
+    Q.psl_relation = clamp(Q.psl_relation, 0, 100);
+    Q.p2050_relation = clamp(Q.p2050_relation, 0, 100);
+    Q.pis_relation = clamp(Q.pis_relation, 0, 100);
+    Q.konf_relation = clamp(Q.konf_relation, 0, 100);
+    Q.president_relation = clamp(Q.president_relation, 0, 100);
+
+    Q.judicial_legitimacy = clamp(Q.judicial_legitimacy, 0, 100);
+    Q.constitutional_restraint = clamp(Q.constitutional_restraint, 0, 100);
+    for (const judicialQuality of [
+        "tribunal_composition_legality",
+        "tribunal_domestic_recognition",
+        "krs_independence",
+        "krs_democratic_accountability",
+        "supreme_court_chamber_recognition",
+        "prosecution_independence",
+        "prosecution_command_clarity",
+        "european_judgment_compliance",
+        "government_procedural_restraint",
+        "court_backlog",
+        "court_user_trust",
+        "judicial_vacancies",
+        "president_judiciary_cooperation",
+        "legal_dualism",
+        "judicial_repair_mandate"
+    ]) {
+        Q[judicialQuality] = clamp(Q[judicialQuality], 0, 100);
+    }
+    Q.household_security = clamp(Q.household_security, 0, 100);
+    Q.health_capacity = clamp(Q.health_capacity, 0, 100);
+    Q.police_trust = clamp(Q.police_trust, 0, 100);
+    Q.military_trust = clamp(Q.military_trust, 0, 100);
+    Q.border_security_confidence =
+        clamp(Q.border_security_confidence, 0, 100);
+    Q.minority_safety = clamp(Q.minority_safety, 0, 100);
+    Q.far_right_agenda = clamp(Q.far_right_agenda, 0, 100);
+    Q.republika_capacity = clamp(Q.republika_capacity, 0, 100);
+    Q.kanal_zero_capacity = clamp(Q.kanal_zero_capacity, 0, 100);
+    Q.border_rights_standard = clamp(Q.border_rights_standard, 0, 100);
+    Q.refugee_empathy = clamp(Q.refugee_empathy, 0, 100);
+    Q.anti_ukrainian_pressure =
+        clamp(Q.anti_ukrainian_pressure, 0, 100);
+    Q.movement_autonomy = clamp(Q.movement_autonomy, 0, 100);
+    Q.organiser_energy = clamp(Q.organiser_energy, 0, 100);
+    Q.pandemic_deaths_pressure =
+        clamp(Q.pandemic_deaths_pressure, 0, 100);
+
+    // Public-opinion migration. These defaults are used only when an old save
+    // predates the issue model; authored event and card shifts are never
+    // replaced once a track exists.
+    const publicOpinionDefaults = {
+        abortion_rights: [49, 42, 58],
+        refugee_solidarity: [
+            Number.isFinite(Number(Q.refugee_empathy))
+                ? Number(Q.refugee_empathy)
+                : 38,
+            Q.border_2021_event_done ? 68 : 34,
+            Q.border_2021_event_done ? 72 : 58
+        ],
+        border_security: [
+            Number.isFinite(Number(Q.border_security_confidence))
+                ? Math.max(55, Number(Q.border_security_confidence))
+                : 70,
+            Q.border_2021_event_done ? 76 : 44,
+            Q.border_2021_event_done ? 60 : 36
+        ],
+        vaccination: [
+            Q.vaccine_event_done ? 68 : 76,
+            Q.vaccine_event_done ? 62 : 24,
+            Q.vaccine_event_done ? 54 : 27
+        ],
+        social_spending: [72, 67, 38],
+        lgbt_equality: [48, 52, 62],
+        secular_state: [52, 43, 58],
+        rule_of_law: [
+            Number.isFinite(Number(Q.judicial_repair_mandate))
+                ? Math.max(45, Number(Q.judicial_repair_mandate))
+                : 58,
+            56,
+            52
+        ],
+        national_security: [
+            Number.isFinite(Number(Q.military_trust))
+                ? Math.max(60, Number(Q.military_trust))
+                : 74,
+            Q.ukraine_invasion_event_done ? 78 : 48,
+            Q.ukraine_invasion_event_done ? 46 : 34
+        ]
+    };
+    const publicOpinionIssues = Object.keys(publicOpinionDefaults);
+    if (!Array.isArray(Q.public_opinion_issues)) {
+        Q.public_opinion_issues = publicOpinionIssues.slice();
+    } else {
+        for (const issue of publicOpinionIssues) {
+            if (!Q.public_opinion_issues.includes(issue)) {
+                Q.public_opinion_issues.push(issue);
+            }
+        }
+    }
+    for (const issue of publicOpinionIssues) {
+        const defaults = publicOpinionDefaults[issue];
+        for (const measure of [
+            ["support", defaults[0]],
+            ["salience", defaults[1]],
+            ["backlash", defaults[2]]
+        ]) {
+            const quality = issue + "_" + measure[0];
+            if (!Number.isFinite(Number(Q[quality]))) {
+                Q[quality] = measure[1];
+            }
+            Q[quality] = clamp(Q[quality], 0, 100);
+        }
+    }
+    Q.public_opinion_version = Math.max(
+        1,
+        Math.round(Number(Q.public_opinion_version) || 1)
+    );
+    let publicPanicTotal = 0;
+    let publicConsensusTotal = 0;
+    let hottestPublicIssue = publicOpinionIssues[0];
+    let hottestPublicIssueScore = -1;
+    const publicIssueLabels = {
+        abortion_rights: "Abortion rights",
+        refugee_solidarity: "Refugees and asylum solidarity",
+        border_security: "Eastern-border security",
+        vaccination: "Vaccination and public health",
+        social_spending: "Social spending and public services",
+        lgbt_equality: "LGBT equality",
+        secular_state: "Secular state and schools",
+        rule_of_law: "Rule-of-law repair",
+        national_security: "Defence and allied security"
+    };
+    for (const issue of publicOpinionIssues) {
+        const support = Number(Q[issue + "_support"]);
+        const salience = Number(Q[issue + "_salience"]);
+        const backlash = Number(Q[issue + "_backlash"]);
+        const heat = salience * 0.65 + backlash * 0.35;
+        publicPanicTotal += heat;
+        publicConsensusTotal +=
+            Math.abs(support - 50) * 2 * (1 - backlash / 200);
+        if (heat > hottestPublicIssueScore) {
+            hottestPublicIssueScore = heat;
+            hottestPublicIssue = issue;
+        }
+    }
+    Q.public_panic_index = Math.round(
+        publicPanicTotal / publicOpinionIssues.length
+    );
+    Q.public_consensus_index = Math.round(
+        publicConsensusTotal / publicOpinionIssues.length
+    );
+    Q.public_opinion_hottest_issue =
+        publicIssueLabels[hottestPublicIssue];
+    Q.public_opinion_last_delta = Number.isFinite(
+        Number(Q.public_opinion_last_delta)
+    )
+        ? Number(Q.public_opinion_last_delta)
+        : 0;
+    Q.public_opinion_bridge_pressure = Number.isFinite(
+        Number(Q.public_opinion_bridge_pressure)
+    )
+        ? clamp(Q.public_opinion_bridge_pressure, 0, 100)
+        : 0;
+    if (
+        typeof Q.public_opinion_hottest_issue !== "string" ||
+        !Q.public_opinion_hottest_issue.length
+    ) {
+        Q.public_opinion_hottest_issue =
+            "Social spending and public services";
+    }
+    if (
+        typeof Q.public_opinion_last_issue !== "string" ||
+        !Q.public_opinion_last_issue.length
+    ) {
+        Q.public_opinion_last_issue = "None";
+    }
+    if (
+        typeof Q.public_opinion_last_reception !== "string" ||
+        !Q.public_opinion_last_reception.length
+    ) {
+        Q.public_opinion_last_reception = "No recent test";
+    }
+    if (
+        typeof Q.public_opinion_last_action !== "string" ||
+        !Q.public_opinion_last_action.length
+    ) {
+        Q.public_opinion_last_action = "No public-opinion test yet";
+    }
+    if (
+        typeof Q.public_opinion_last_updated !== "string" ||
+        !Q.public_opinion_last_updated.length
+    ) {
+        Q.public_opinion_last_updated =
+            (Q.date_label || "Current month") + " model";
+    }
+    if (
+        !["breakthrough", "favourable", "contested", "backlash", "reversal"]
+            .includes(Q.card_public_response)
+    ) {
+        Q.card_public_response = "contested";
+    }
+    Q.card_public_response_score = Number.isFinite(
+        Number(Q.card_public_response_score)
+    )
+        ? clamp(Q.card_public_response_score, -3, 3)
+        : 0;
+    const publicBridgeSources = {
+        feminist_trust: 44,
+        refugee_empathy: 58,
+        border_confidence: 48,
+        border_rights: 45,
+        far_right_agenda: 32,
+        minority_safety: 56,
+        household_security: 45,
+        health_capacity: 48,
+        pandemic_pressure: 0,
+        anti_ukrainian: 8,
+        judicial_legitimacy: 36,
+        repair_mandate: 38,
+        military_trust: 66,
+        police_trust: 45
+    };
+    const publicBridgeCurrent = {
+        feminist_trust: Q.feminist_trust,
+        refugee_empathy: Q.refugee_empathy,
+        border_confidence: Q.border_security_confidence,
+        border_rights: Q.border_rights_standard,
+        far_right_agenda: Q.far_right_agenda,
+        minority_safety: Q.minority_safety,
+        household_security: Q.household_security,
+        health_capacity: Q.health_capacity,
+        pandemic_pressure: Q.pandemic_deaths_pressure,
+        anti_ukrainian: Q.anti_ukrainian_pressure,
+        judicial_legitimacy: Q.judicial_legitimacy,
+        repair_mandate: Q.judicial_repair_mandate,
+        military_trust: Q.military_trust,
+        police_trust: Q.police_trust
+    };
+    if (!Number(Q.public_bridge_initialized)) {
+        // Begin observing an old save at its current state. This prevents a
+        // migration from replaying years of historical changes as one shock.
+        for (const bridge of Object.keys(publicBridgeSources)) {
+            const current = Number(publicBridgeCurrent[bridge]);
+            Q["public_bridge_" + bridge] = Number.isFinite(current)
+                ? current
+                : publicBridgeSources[bridge];
+        }
+        Q.public_bridge_initialized = 1;
+    } else {
+        for (const bridge of Object.keys(publicBridgeSources)) {
+            const quality = "public_bridge_" + bridge;
+            if (!Number.isFinite(Number(Q[quality]))) {
+                const current = Number(publicBridgeCurrent[bridge]);
+                Q[quality] = Number.isFinite(current)
+                    ? current
+                    : publicBridgeSources[bridge];
+            }
+            Q[quality] = clamp(Q[quality], 0, 100);
+        }
+    }
+
+    Q.workers_support = clamp(Q.workers_support, 0, 100);
+    Q.public_sector_support = clamp(Q.public_sector_support, 0, 100);
+    Q.young_support = clamp(Q.young_support, 0, 100);
+    Q.women_support = clamp(Q.women_support, 0, 100);
+    Q.urban_progressive_support =
+        clamp(Q.urban_progressive_support, 0, 100);
+    Q.rural_support = clamp(Q.rural_support, 0, 100);
+    Q.pensioner_support = clamp(Q.pensioner_support, 0, 100);
+    Q.turnout_readiness = clamp(Q.turnout_readiness, 0, 100);
+
+    Q.economic_growth = clamp(Q.economic_growth, -20, 20);
+    Q.inflation = clamp(Q.inflation, -5, 40);
+    Q.unemployment = clamp(Q.unemployment, 0, 40);
+    Q.public_debt = clamp(Q.public_debt, 0, 150);
+    Q.budget_balance = clamp(Q.budget_balance, -30, 20);
+
+    Q.presidential_result = clamp(Q.presidential_result, 0, 100);
+    Q.budget_promises = Math.max(0, Q.budget_promises);
+    Q.budget_breaches = Math.max(0, Q.budget_breaches);
+    Q.roundtable_cooldown = Math.max(0, Q.roundtable_cooldown);
+    Q.hostile_interview_cooldown =
+        Math.max(0, Q.hostile_interview_cooldown);
+    Q.razem_guarantee_cooldown =
+        Math.max(0, Q.razem_guarantee_cooldown);
+    Q.advisor_action_timer = Math.max(0, Q.advisor_action_timer || 0);
+    Q.leadership_reshuffle_timer =
+        Math.max(0, Q.leadership_reshuffle_timer || 0);
+    Q.poland_fundraising_timer =
+        Math.max(0, Q.poland_fundraising_timer || 0);
+    Q.poland_campaigning_timer =
+        Math.max(0, Q.poland_campaigning_timer || 0);
+    Q.poland_rally_timer =
+        Math.max(0, Q.poland_rally_timer || 0);
+    Q.poland_crisis_compact_timer =
+        Math.max(0, Q.poland_crisis_compact_timer || 0);
+    Q.poland_oversight_bargain_timer =
+        Math.max(0, Q.poland_oversight_bargain_timer || 0);
+    Q.poland_palace_mediation_timer =
+        Math.max(0, Q.poland_palace_mediation_timer || 0);
+    Q.emergency_fundraising_timer =
+        Math.max(0, Q.emergency_fundraising_timer || 0);
+    Q.negotiation_capital = Number.isFinite(Number(Q.negotiation_capital))
+        ? clamp(Q.negotiation_capital, -20, 30)
+        : 0;
+    Q.negotiation_attempts =
+        Math.max(0, Math.round(Number(Q.negotiation_attempts) || 0));
+    Q.negotiation_successes =
+        Math.max(0, Math.round(Number(Q.negotiation_successes) || 0));
+    Q.negotiation_last_score = Number.isFinite(
+        Number(Q.negotiation_last_score)
+    ) ? clamp(Q.negotiation_last_score, 0, 100) : 0;
+    Q.negotiation_last_threshold = Number.isFinite(
+        Number(Q.negotiation_last_threshold)
+    ) ? clamp(Q.negotiation_last_threshold, 0, 100) : 0;
+    Q.pis_cohabitation_stress = Number.isFinite(
+        Number(Q.pis_cohabitation_stress)
+    ) ? clamp(Q.pis_cohabitation_stress, 0, 100) : 0;
+    Q.pis_cohabitation_rally = Number.isFinite(
+        Number(Q.pis_cohabitation_rally)
+    ) ? clamp(Q.pis_cohabitation_rally, 0, 100) : 0;
+    Q.pis_cohabitation_last_shift = Number.isFinite(
+        Number(Q.pis_cohabitation_last_shift)
+    ) ? clamp(Q.pis_cohabitation_last_shift, -20, 20) : 0;
+    const advisorRoster = [
+        "czarzasty",
+        "biedron",
+        "zandberg",
+        "dziemianowicz_bak",
+        "zukowska",
+        "kotula",
+        "biejat",
+        "wieczorek",
+        "gawkowski",
+        "nowicka",
+        "zawisza",
+        "matysiak"
+    ];
+    Q.n_advisors = advisorRoster.reduce(function(total, advisor) {
+        return total +
+            (Number(Q[advisor + "_advisor"]) === 1 ? 1 : 0);
+    }, 0);
+    const advisorCaucuses = {
+        barons: ["czarzasty", "wieczorek"],
+        spring: ["biedron"],
+        labor: ["dziemianowicz_bak"],
+        progressives: ["zukowska", "kotula", "gawkowski", "nowicka"],
+        razem: ["zandberg", "biejat", "zawisza", "matysiak"]
+    };
+    for (const faction of Q.factions) {
+        const caucusRoster = advisorCaucuses[faction] || [];
+        Q[faction + "_advisor_count"] =
+            caucusRoster.reduce(function(total, advisor) {
+                return total +
+                    (Number(Q[advisor + "_advisor"]) === 1 ? 1 : 0);
+            }, 0);
+    }
+
+    let totalFactionStrength = 0;
+    for (const faction of Q.factions) {
+        Q[faction + "_dissent"] =
+            clamp(Q[faction + "_dissent"], 0, 100);
+        Q[faction + "_strength"] =
+            clamp(Q[faction + "_strength"], 0, 100);
+        totalFactionStrength += Q[faction + "_strength"];
+    }
+    if (totalFactionStrength <= 0) {
+        const equalStrength = 100 / Q.factions.length;
+        for (const faction of Q.factions) {
+            Q[faction + "_strength"] = equalStrength;
+        }
+        totalFactionStrength = 100;
+    } else {
+        for (const faction of Q.factions) {
+            Q[faction + "_strength"] =
+                Q[faction + "_strength"] * 100 / totalFactionStrength;
+        }
+    }
+
+    let weightedDissent = 0;
+    let activeVetoes = 0;
+    for (const faction of Q.factions) {
+        const strength = Q[faction + "_strength"];
+        const dissent = Q[faction + "_dissent"];
+        weightedDissent += strength * dissent;
+        if (strength >= 12 && dissent >= 60) {
+            activeVetoes += 1;
+        }
+    }
+    Q.internal_dissent = Math.round(weightedDissent / 100);
+    Q.faction_vetoes = activeVetoes;
+
+    const chamberNumbers = [
+        "senate_total",
+        "senate_pis_seats",
+        "senate_ko_seats",
+        "senate_psl_seats",
+        "senate_left_seats",
+        "senate_independent_seats",
+        "senate_opposition_seats",
+        "senate_working_votes",
+        "senate_amendment_credit",
+        "confidence_present",
+        "confidence_threshold",
+        "confidence_yes",
+        "confidence_no",
+        "confidence_abstain",
+        "morawiecki_votes",
+        "democratic_votes",
+        "morawiecki_left_defectors",
+        "morawiecki_psl_defectors",
+        "coalition_seats"
+    ];
+    for (const quality of chamberNumbers) {
+        Q[quality] = Number.isFinite(Number(Q[quality]))
+            ? Math.max(0, Number(Q[quality]))
+            : 0;
+    }
+    Q.senate_cohesion = clamp(Q.senate_cohesion, 0, 100);
+    Q.senate_left_leverage = clamp(Q.senate_left_leverage, 0, 100);
+    Q.third_way_cohesion = clamp(Q.third_way_cohesion, 0, 100);
+    Q.government_coalition_dissent =
+        clamp(Q.government_coalition_dissent, 0, 100);
+    Q.ko_coalition_dissent = clamp(Q.ko_coalition_dissent, 0, 100);
+    Q.psl_coalition_dissent = clamp(Q.psl_coalition_dissent, 0, 100);
+    Q.p2050_coalition_dissent =
+        clamp(Q.p2050_coalition_dissent, 0, 100);
+    Q.left_coalition_dissent =
+        clamp(Q.left_coalition_dissent, 0, 100);
+}
+!}

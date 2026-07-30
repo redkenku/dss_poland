@@ -1,0 +1,356 @@
+title: The Senate
+subtitle: A majority of one can amend, delay and expose. It cannot govern from the upper chamber.
+new-page: true
+call: poland_senate.refresh
+
+= The Senate ledger
+
+The opposition pact controls **[+ senate_opposition_seats +] of 100 seats**, but
+only **[+ senate_working_votes +] votes** can presently be relied upon. Its
+cohesion is **[+ senate_cohesion +]/100**. The two
+<span class="party party-lewica">**Left**</span> senators hold
+**[+ senate_left_leverage +]/100 leverage** inside the pact.
+
+An ordinary statute can be accepted, amended or rejected. The Sejm may overturn
+the Senate's position with the constitutionally required majority. A budget
+statute is different: the Senate has a shorter timetable and may propose
+amendments, but it cannot reject the budget outright.
+
+- @ordinary_bill: Open the ordinary-bill docket
+- @budget_bill: Open the pending budget docket
+- @return_hub: Return to the leadership table
+
+@refresh
+call: poland_normalize
+on-arrival: {!
+const senateDefaults = {
+    senate_total: 100,
+    senate_pis_seats: 48,
+    senate_ko_seats: 43,
+    senate_psl_seats: 3,
+    senate_left_seats: 2,
+    senate_independent_seats: 4,
+    senate_cohesion: 52,
+    senate_left_leverage: 18,
+    senate_amendment_credit: 0
+};
+for (const key of Object.keys(senateDefaults)) {
+    if (!Number.isFinite(Number(Q[key]))) {
+        Q[key] = senateDefaults[key];
+    }
+}
+if (!Q.senate_marshal) Q.senate_marshal = "Tomasz Grodzki";
+if (!Q.senate_last_vote) Q.senate_last_vote = "No common vote yet";
+if (!Q.senate_control) Q.senate_control = "Fragile opposition pact";
+if (!Number.isFinite(Number(Q.ko_relation))) Q.ko_relation = 40;
+if (!Number.isFinite(Number(Q.psl_relation))) Q.psl_relation = 25;
+
+Q.senate_opposition_seats =
+    Q.senate_ko_seats + Q.senate_psl_seats +
+    Q.senate_left_seats + Q.senate_independent_seats;
+Q.senate_majority_threshold = Math.floor(Q.senate_total / 2) + 1;
+
+let unreliableVotes = 0;
+if (Q.senate_cohesion < 65) unreliableVotes += 1;
+if (Q.senate_cohesion < 45) unreliableVotes += 1;
+if (Q.senate_cohesion < 30) unreliableVotes += 1;
+if (Q.ko_relation < 35) unreliableVotes += 1;
+if (Q.psl_relation < 20) unreliableVotes += 1;
+
+let recoveredVote = 0;
+if (unreliableVotes > 0 && Q.senate_left_leverage >= 35) {
+    recoveredVote = 1;
+}
+Q.senate_working_votes = Math.max(
+    0,
+    Math.min(
+        Q.senate_opposition_seats,
+        Q.senate_opposition_seats - unreliableVotes + recoveredVote
+    )
+);
+Q.senate_non_left_opposition =
+    Q.senate_opposition_seats - Q.senate_left_seats;
+Q.senate_left_is_pivotal =
+    Q.senate_non_left_opposition < Q.senate_majority_threshold &&
+    Q.senate_working_votes >= Q.senate_majority_threshold ? 1 : 0;
+
+if (Q.senate_working_votes >= Q.senate_majority_threshold) {
+    Q.senate_control = "Working opposition majority";
+} else if (Q.senate_working_votes == Q.senate_majority_threshold - 1) {
+    Q.senate_control = "Deadlocked chamber";
+} else {
+    Q.senate_control = "PiS procedural edge";
+}
+!}
+
+@ordinary_bill
+title: An ordinary bill reaches the Senate
+subtitle: Thirty-day review; amend, reject or accept before the Sejm answers.
+new-page: true
+call: poland_senate.refresh
+on-arrival: {!
+if (!Q.senate_pending_bill || Q.senate_pending_bill_type != "ordinary") {
+    Q.senate_pending_bill = "The government's current ordinary statute";
+}
+if (!Q.senate_bill_topic) {
+    Q.senate_bill_topic =
+        Q.year >= 2020
+            ? "emergency administration and parliamentary oversight"
+            : "institutional procedure and local-government safeguards";
+}
+Q.senate_pending_bill_type = "ordinary";
+if (!Number.isFinite(Number(Q.senate_docket_ready))) {
+    Q.senate_docket_ready = 1;
+}
+!}
+
+= Ordinary bill — [+ senate_pending_bill +]
+
+The docket concerns **[+ senate_bill_topic +]**. Marshal
+**[+ senate_marshal +]** can give the opposition time to build one position, but
+procedure cannot manufacture a majority. The pact currently has
+**[+ senate_working_votes +] reliable votes**; **[+ senate_majority_threshold +]**
+are required.
+
+[? if senate_left_is_pivotal: Without the two Left senators, the opposition
+cannot assemble a majority. That creates leverage, not ownership of the
+chamber. ?]
+
+[? if not senate_docket_ready: The full negotiating team is still committed to
+an earlier docket. A minority report remains available, so this card can always
+be resolved safely. ?]
+
+- @ordinary_left_amendment
+- @ordinary_common_amendment
+- @ordinary_rejection
+- @ordinary_fallback
+
+@ordinary_left_amendment
+title: Make a Left safeguard the price of the opposition majority
+subtitle: Spend 8 Senate leverage. A visible amendment, and a visible use of two pivotal votes.
+choose-if: senate_docket_ready = 1 and senate_working_votes >= senate_majority_threshold and senate_left_leverage >= 8
+unavailable-subtitle: Requires a ready docket, a working majority and at least 8 Senate leverage.
+on-arrival: senate_left_leverage -= 8; senate_amendment_credit += 2; senate_cohesion -= 2; labor_credibility += 2; progressive_credibility += 2; public_trust += 1; senate_last_vote = "The opposition adopted a Left-authored safeguard"; news_headline = "Two Left senators put their language into the bill"; senate_pending_bill_type = "none"
+
+The opposition adopts the safeguard because it needs every vote. PiS can still
+remove it in the Sejm, but must now vote against named protections rather than
+against an abstract Senate objection.
+
+- #poland_card_finish
+
+@ordinary_common_amendment
+title: Broker one common opposition amendment
+subtitle: Build cohesion and leverage by making the upper chamber look serious.
+choose-if: senate_docket_ready = 1 and senate_working_votes >= senate_majority_threshold
+unavailable-subtitle: The negotiating team is unavailable, or the pact cannot currently reach 51.
+on-arrival: senate_cohesion += 5; senate_left_leverage += 4; senate_amendment_credit += 1; ko_relation += 2; psl_relation += 2; constitutional_restraint += 2; public_trust += 1; senate_last_vote = "A common opposition amendment passed"; news_headline = "The Senate majority survives an ordinary bill"; senate_pending_bill_type = "none"
+
+KO supplies most votes, PSL narrows the language, independents insist on a clean
+record and the Left supplies a reason to amend rather than merely delay. The
+Sejm receives one defensible text.
+
+- #poland_card_finish
+
+@ordinary_rejection
+title: Reject the bill and force the Sejm to override
+subtitle: A sharp constitutional signal. The majority must be unusually cohesive.
+choose-if: senate_docket_ready = 1 and senate_working_votes >= senate_majority_threshold and senate_cohesion >= 55
+unavailable-subtitle: Requires a ready 51-vote bloc and at least 55 Senate cohesion.
+on-arrival: senate_cohesion -= 6; senate_left_leverage += 3; constitutional_restraint += 3; pis_relation -= 5; public_trust += 1; senate_last_vote = "The Senate rejected an ordinary statute"; news_headline = "The Senate forces PiS to vote twice"; senate_pending_bill_type = "none"
+
+The rejection does not veto the statute. It forces the governing majority to
+assemble again in public and accept sole ownership of the text. If that majority
+holds, the bill returns unchanged.
+
+- #poland_card_finish
+
+@ordinary_fallback
+title: Publish a minority note and let the Sejm own the statute
+subtitle: No cost and no majority required. The safe procedural fallback.
+on-arrival: senate_left_leverage += 1; senate_last_vote = "The Left filed a minority note on an ordinary statute"; news_headline = "The Senate docket closes without a common majority"; senate_pending_bill_type = "none"
+
+The Left records objections, proposed language and the final roll call. Nothing
+is invented, no unavailable resource is spent and the monthly action resolves
+normally even when the opposition pact is deadlocked.
+
+- #poland_card_finish
+
+@budget_bill
+title: A budget bill reaches the Senate
+subtitle: Twenty-day review; amendments are possible, outright rejection is not.
+new-page: true
+call: poland_senate.refresh
+on-arrival: {!
+if (!Number.isFinite(Number(Q.senate_budget_year)) ||
+    Number(Q.senate_budget_year) === 0) {
+    if (Q.budget_2020_done && !Q.senate_budget_2020_done) {
+        Q.senate_budget_year = 2020;
+    } else if (Q.budget_2019_done && !Q.senate_budget_2019_done) {
+        Q.senate_budget_year = 2019;
+    } else {
+        Q.senate_budget_year = 0;
+    }
+}
+Q.senate_pending_bill_type = "budget";
+!}
+go-to: budget_2019 if senate_budget_year = 2019; budget_2020 if senate_budget_year = 2020; budget_unscheduled
+
+@budget_unscheduled
+title: No budget stage is pending
+new-page: true
+
+The Senate clerk finds no unresolved budget bill. An ordinary docket can still
+be worked, but no fiscal vote should be fabricated from an old or incomplete
+save.
+
+- @return_hub: Return to the leadership table
+
+@budget_2019
+title: The 2020 budget reaches the Senate
+subtitle: The new opposition majority gets its first fiscal test.
+new-page: true
+call: poland_senate.refresh
+on-arrival: senate_budget_year = 2019; senate_pending_bill_type = "budget"; senate_pending_bill = "The 2020 state budget"
+
+= Senate stage — the first budget
+
+The Sejm has completed its vote. The Senate has twenty days to propose
+amendments to the **2020 state budget**. It cannot reject the budget. Whatever
+passes here returns to the PiS majority in the Sejm.
+
+The opposition pact has **[+ senate_working_votes +] reliable votes**. The Left's
+internal position received **[+ budget_2019_backing +]% backing** with
+**[+ budget_2019_vetoes +] internal vetoes**.
+
+- @budget_2019_common
+- @budget_2019_broker
+- @budget_2019_record
+
+@budget_2019_common
+title: Put the ratified Left shadow budget into the common amendment slate
+subtitle: Spend 10 Senate leverage. The Sejm can reject it, but not pretend no alternative was costed.
+view-if: budget_2019_ratified = 1
+choose-if: senate_working_votes >= senate_majority_threshold and senate_left_leverage >= 10
+unavailable-subtitle: Requires 51 reliable votes and 10 Senate leverage.
+on-arrival: senate_left_leverage -= 10; senate_cohesion += 4; senate_amendment_credit += 3; public_trust += 2; labor_credibility += 2; ko_relation += 2; senate_budget_2019_done = 1; senate_budget_2019_result = "Common costed amendments passed"; senate_last_vote = "The Senate amended the 2020 budget on a common Left-backed slate"; news_headline = "The first opposition Senate majority writes a social budget amendment"
+go-to: budget_2019_complete
+
+The package passes the Senate as amendments on hospitals, wages, housing and
+labour inspection. PiS retains the votes to remove them in the Sejm, but the
+opposition has produced one set of numbers and one roll call.
+
+@budget_2019_broker
+title: Broker one clinic-and-labour-inspection amendment
+subtitle: Cost: 1 resource. Can recover a single missing Senate vote.
+choose-if: resources >= 1 and senate_working_votes >= senate_majority_threshold - 1
+unavailable-subtitle: Requires one resource and at least 50 reliable senators.
+on-arrival: resources -= 1; senate_working_votes = 51 if senate_working_votes < 51; senate_left_leverage += 5; senate_cohesion += 2; senate_amendment_credit += 1; psl_relation += 3; ko_relation += 1; public_trust += 1; senate_budget_2019_done = 1; senate_budget_2019_result = "One narrow social amendment passed"; senate_last_vote = "The Senate adopted a narrow clinic-and-inspection amendment"; news_headline = "The Left brokers the Senate's narrowest budget majority"
+go-to: budget_2019_complete
+
+One independent senator is brought back to the table by language narrow enough
+for PSL and material enough for the Left. It is a smaller achievement than a
+shadow budget and a real test of whether the majority can count to fifty-one.
+
+@budget_2019_record
+title: File the separate positions and permit no fictitious common amendment
+subtitle: Always available. The Senate cannot reject the budget.
+on-arrival: senate_cohesion -= 2; senate_left_leverage -= 1 if senate_left_leverage > 0; senate_budget_2019_done = 1; senate_budget_2019_result = "No common Senate amendment"; senate_last_vote = "The 2020 budget left the Senate without a common opposition amendment"; news_headline = "The new Senate majority fails its first fiscal rehearsal"
+go-to: budget_2019_complete
+
+The budget returns to the Sejm without a common opposition amendment. The
+record remains accurate: internal disagreement was not converted into a power
+the Senate does not possess.
+
+@budget_2019_complete
+on-arrival: senate_pending_bill_type = "none"; senate_pending_bill = "No bill pending"; senate_budget_year = 0
+go-to: poland_hub
+
+@budget_2020
+title: The 2021 pandemic budget reaches the Senate
+subtitle: Health, local government and the Women's Strike meet a majority of one.
+new-page: true
+call: poland_senate.refresh
+on-arrival: senate_budget_year = 2020; senate_pending_bill_type = "budget"; senate_pending_bill = "The 2021 pandemic budget"
+
+= Senate stage — the pandemic budget
+
+The Senate may amend the **2021 pandemic budget**, but it may not reject it.
+Hospitals, household income, local finance and equality measures now compete
+inside a twenty-day timetable.
+
+Reliable opposition votes: **[+ senate_working_votes +]**. Senate cohesion:
+**[+ senate_cohesion +]/100**. Left leverage: **[+ senate_left_leverage +]/100**.
+
+- @budget_2020_social
+- @budget_2020_local
+- @budget_2020_equality
+- @budget_2020_selective
+- @budget_2020_record
+
+@budget_2020_social
+title: Carry the social-shield package into Senate amendments
+subtitle: Spend 10 Senate leverage on hospitals, sick pay, wages and housing.
+view-if: budget_package_code = 1
+choose-if: senate_working_votes >= senate_majority_threshold and senate_left_leverage >= 10
+unavailable-subtitle: Requires 51 reliable votes and 10 Senate leverage.
+on-arrival: senate_left_leverage -= 10; senate_cohesion += 3; senate_amendment_credit += 3; household_security += 2; health_capacity += 2; labor_credibility += 2; public_trust += 2; senate_budget_2020_done = 1; senate_budget_2020_result = "Social-shield amendments passed"; senate_last_vote = "The Senate amended the pandemic budget with the social shield"; news_headline = "The Senate gives the pandemic budget a social opposition"
+go-to: budget_2020_complete
+
+The Senate majority holds around a package that can be defended in hospitals,
+workplaces and rented homes. The Sejm may strip it out; the government must do
+so line by line.
+
+@budget_2020_local
+title: Build the Senate slate around local survival
+subtitle: PSL and independents can hold this majority together.
+view-if: budget_package_code = 2
+choose-if: senate_working_votes >= senate_majority_threshold
+unavailable-subtitle: The opposition pact cannot presently assemble 51 votes.
+on-arrival: senate_cohesion += 6; senate_left_leverage += 4; senate_amendment_credit += 2; psl_relation += 4; local_network += 2; health_capacity += 1; public_trust += 1; senate_budget_2020_done = 1; senate_budget_2020_result = "Local-survival amendments passed"; senate_last_vote = "The Senate amended the pandemic budget around local survival"; news_headline = "Counties and hospitals hold the Senate majority together"
+go-to: budget_2020_complete
+
+County hospitals, public transport and local-government liquidity create the
+widest upper-chamber agreement. The Left gains less programme ownership and
+more evidence that a material rural bargain can work.
+
+@budget_2020_equality
+title: Demand an equality-and-care amendment slate
+subtitle: PSL must be persuaded, or 30 Senate leverage must substitute for goodwill.
+view-if: budget_package_code = 3
+choose-if: senate_working_votes >= senate_majority_threshold and ((psl_relation >= 25 and psl_accept_rights >= 35) or senate_left_leverage >= 30)
+unavailable-subtitle: Requires 51 votes plus either a receptive PSL rights caucus or 30 Senate leverage.
+on-arrival: senate_left_leverage -= 12 if senate_left_leverage >= 30 and psl_relation < 25; senate_cohesion -= 4; senate_amendment_credit += 3; progressive_credibility += 3; feminist_trust += 3; psl_relation -= 3; public_trust += 1; senate_budget_2020_done = 1; senate_budget_2020_result = "Equality-and-care amendments passed"; senate_last_vote = "The Senate adopted equality-and-care pandemic amendments"; news_headline = "The Women's Strike reaches the Senate budget"
+go-to: budget_2020_complete
+
+Care funding and practical reproductive access survive a vote that the
+opposition pact would rather avoid. The victory consumes stored leverage and
+makes the next PSL threat more credible.
+
+@budget_2020_selective
+title: Consolidate the useful provisions into one technical amendment
+subtitle: A modest Senate intervention cannot turn a selective PiS deal into a common Left budget.
+view-if: budget_package_code = 4
+choose-if: senate_working_votes >= senate_majority_threshold
+unavailable-subtitle: Even the technical amendment requires 51 reliable votes.
+on-arrival: senate_cohesion += 1; senate_left_leverage += 2; senate_amendment_credit += 1; government_delivery += 1; budget_breaches += 1; public_trust -= 1; senate_budget_2020_done = 1; senate_budget_2020_result = "One technical amendment passed"; senate_last_vote = "The Senate consolidated selected pandemic provisions"; news_headline = "A Senate amendment cannot disguise a fragmented budget line"
+go-to: budget_2020_complete
+
+The chamber improves one provision without inventing a fiscal programme that
+the Left never ratified. Delivery rises slightly; the recorded breach remains.
+
+@budget_2020_record
+title: Return the budget without a common Senate amendment
+subtitle: Always available. A budget bill cannot be rejected here.
+on-arrival: senate_cohesion -= 3; senate_left_leverage -= 2 if senate_left_leverage >= 2; public_trust -= 1; senate_budget_2020_done = 1; senate_budget_2020_result = "No common Senate amendment"; senate_last_vote = "The pandemic budget left the Senate without a common amendment"; news_headline = "The Senate majority fractures over the pandemic budget"
+go-to: budget_2020_complete
+
+Separate speeches are entered into the record. The budget proceeds on its
+constitutional timetable, and the opposition majority loses some of the value
+created by winning the chamber.
+
+@budget_2020_complete
+on-arrival: senate_pending_bill_type = "none"; senate_pending_bill = "No bill pending"; senate_budget_year = 0
+go-to: poland_events.budget_consequence
+
+@return_hub
+go-to: poland_hub

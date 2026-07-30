@@ -1,0 +1,577 @@
+title: The month turns
+new-page: true
+on-arrival: {!
+if (Q.month_actions > 0) {
+    Q.leadership_actions_taken += 1;
+} else {
+    Q.neglected_months += 1;
+    Q.party_unity -= 3;
+    Q.public_trust -= 1;
+    Q.organiser_energy -= 3;
+    Q.barons_dissent += 1;
+    Q.spring_dissent += 1;
+    Q.labor_dissent += 1;
+    Q.progressives_dissent += 1;
+    Q.razem_dissent += 2;
+}
+
+const advisorRepresentation = {
+    barons: Number(Q.barons_advisor_count) || 0,
+    spring: Number(Q.spring_advisor_count) || 0,
+    labor: Number(Q.labor_advisor_count) || 0,
+    progressives: Number(Q.progressives_advisor_count) || 0,
+    razem: Number(Q.razem_advisor_count) || 0
+};
+const apparatusGlue = Math.max(
+    0.10,
+    1 - advisorRepresentation.barons * 0.30
+);
+for (const faction of Q.factions) {
+    const represented = advisorRepresentation[faction] || 0;
+    let structuralDrift = 0;
+    if (represented <= 0) {
+        structuralDrift = apparatusGlue;
+    } else if (represented == 2) {
+        structuralDrift = -0.25;
+    } else if (represented >= 3) {
+        structuralDrift = -0.50;
+    }
+    Q[faction + "_dissent"] += structuralDrift;
+    Q[faction + "_strength"] += represented * 0.50;
+}
+
+const monthlyTimers = [
+    "roundtable_cooldown",
+    "hostile_interview_cooldown",
+    "razem_guarantee_cooldown",
+    "advisor_action_timer",
+    "leadership_reshuffle_timer",
+    "poland_faction_congress_timer",
+    "poland_local_structures_timer",
+    "poland_programme_convention_timer",
+    "poland_opposition_coordination_timer",
+    "poland_rural_hinge_timer",
+    "poland_presidential_channel_timer",
+    "poland_rapid_response_timer",
+    "poland_hostile_interview_card_timer",
+    "poland_local_media_ecosystem_timer",
+    "poland_workers_public_services_timer",
+    "poland_housing_households_timer",
+    "poland_cost_programme_timer",
+    "poland_senate_docket_timer",
+    "poland_labor_inspection_timer",
+    "poland_housing_fund_timer",
+    "poland_equality_bill_timer",
+    "poland_health_compact_timer",
+    "poland_fundraising_timer",
+    "poland_campaigning_timer",
+    "poland_rally_timer",
+    "poland_crisis_compact_timer",
+    "poland_oversight_bargain_timer",
+    "poland_palace_mediation_timer",
+    "emergency_fundraising_timer",
+    "constructive_vonc_cooldown"
+];
+for (const timer of monthlyTimers) {
+    if (Q[timer] !== undefined) {
+        Q[timer] = Math.max(0, Q[timer] - 1);
+    }
+}
+
+Q.time += 1;
+Q.month += 1;
+if (Q.month > 12) {
+    Q.month = 1;
+    Q.year += 1;
+    if (Q.last_resource_restore_year < Q.year) {
+        const subsidySeats = Number.isFinite(Number(Q.left_seats))
+            ? Math.max(0, Math.round(Number(Q.left_seats)))
+            : 0;
+        Q.seat_subvention_seats = subsidySeats;
+        Q.seat_subvention = subsidySeats > 0
+            ? Math.max(1, Math.round(subsidySeats / 25))
+            : 0;
+        Q.member_dues = Number.isFinite(Number(Q.member_dues))
+            ? Math.max(1, Math.min(5, Math.round(Number(Q.member_dues))))
+            : 2;
+        Q.party_income = Q.member_dues + Q.seat_subvention;
+        let duesCollected = Q.member_dues;
+        if (Q.internal_dissent <= 20) {
+            duesCollected += 1;
+        } else if (Q.internal_dissent >= 55) {
+            duesCollected -= 1;
+        }
+        Q.last_dues_payout = Math.max(0, duesCollected);
+        Q.last_subvention_payout = Q.seat_subvention;
+        Q.last_annual_payout =
+            Q.last_dues_payout + Q.last_subvention_payout;
+        Q.last_annual_payout_label =
+            Q.year + ": " + Q.last_dues_payout + " dues + " +
+            Q.last_subvention_payout + " subvention";
+        Q.resources += Q.last_annual_payout;
+        Q.last_resource_restore_year = Q.year;
+    }
+    if (
+        Q.left_in_government &&
+        (!Number.isFinite(Number(Q.last_budget_restore_year)) ||
+            Number(Q.last_budget_restore_year) < Q.year)
+    ) {
+        const yearlyBudgetGrant = Math.max(
+            2,
+            Math.round(
+                4 +
+                (Number(Q.government_delivery) || 0) / 30 -
+                (Number(Q.fiscal_stress) || 0) / 35
+            )
+        );
+        Q.budget += yearlyBudgetGrant;
+        Q.last_budget_restore = yearlyBudgetGrant;
+        Q.last_budget_restore_year = Q.year;
+        Q.budget_authority =
+            "Coalition budget reserve — +" + yearlyBudgetGrant +
+            " capacity restored for " + Q.year;
+    } else if (!Q.left_in_government) {
+        Q.budget = 0;
+        Q.last_budget_restore = 0;
+        Q.budget_authority = "Opposition — no state spending authority";
+    }
+}
+
+Q.month_actions = 0;
+
+if (Q.hard_mode) {
+    Q.party_unity -= 2;
+    Q.public_trust -= 0.5;
+    Q.barons_dissent += 2;
+    Q.spring_dissent += 1;
+    Q.labor_dissent += 1;
+    Q.progressives_dissent += 1;
+    Q.razem_dissent += 2;
+    Q.far_right_agenda += 1;
+}
+
+let totalFactionStrength = 0;
+let weightedDissent = 0;
+let activeVetoes = 0;
+for (const faction of Q.factions) {
+    const strength = Math.max(0, Q[faction + "_strength"] || 0);
+    const dissent = Math.max(0, Q[faction + "_dissent"] || 0);
+    totalFactionStrength += strength;
+    weightedDissent += strength * dissent;
+    if (strength >= 12 && dissent >= 60) {
+        activeVetoes += 1;
+    }
+}
+Q.internal_dissent = totalFactionStrength > 0
+    ? Math.round(weightedDissent / totalFactionStrength)
+    : 100;
+Q.faction_vetoes = activeVetoes;
+
+if (Q.internal_dissent >= 35) {
+    Q.party_unity -= 1;
+}
+if (Q.internal_dissent >= 50) {
+    Q.party_unity -= 1;
+    Q.left_poll -= 0.1;
+}
+if (Q.faction_vetoes > 0) {
+    Q.party_unity -= Q.faction_vetoes;
+}
+
+if (Q.barons_strength >= 25 && Q.barons_dissent < 50) {
+    Q.local_network += 0.3;
+    Q.psl_relation += 0.1;
+}
+if (Q.spring_strength >= 23 && Q.spring_dissent < 50) {
+    Q.media_capacity += 0.3;
+}
+if (Q.labor_strength >= 20 && Q.labor_dissent < 50) {
+    Q.labor_credibility += 0.3;
+    Q.workers_support += 0.2;
+}
+if (Q.progressives_strength >= 23 && Q.progressives_dissent < 50) {
+    Q.progressive_credibility += 0.3;
+    Q.feminist_trust += 0.2;
+}
+if (Q.razem_strength >= 23 && Q.razem_dissent < 50) {
+    Q.labor_credibility += 0.2;
+    Q.razem_cooperation += 0.2;
+}
+
+if (Q.ko_relation < 35 || Q.psl_relation < 20) {
+    Q.senate_cohesion -= 1;
+} else if (Q.ko_relation >= 50 && Q.psl_relation >= 30) {
+    Q.senate_cohesion += 0.3;
+}
+
+if (Q.party_unity < 40) {
+    Q.left_poll -= 0.1;
+}
+if (Q.media_capacity < 18) {
+    Q.public_trust -= 0.5;
+}
+if (Q.razem_dissent >= 70) {
+    Q.razem_cooperation -= 2;
+}
+
+const names = [
+    "", "January", "February", "March", "April", "May", "June",
+    "July", "August", "September", "October", "November", "December"
+];
+Q.month_name = names[Q.month];
+Q.date_label = Q.month_name + " " + Q.year;
+
+// Trzaskowski versus a PiS cabinet is not a free opposition bonus. Sustained
+// confrontation resolves each month toward either elite fracture or a
+// defensive rally, and those outcomes move both cabinet discipline and blocs.
+if (
+    Q.president_name == "Rafał Trzaskowski" &&
+    Q.government_party == "pis" &&
+    Q.government_has_confidence &&
+    !Q.caretaker_government
+) {
+    const cohabitationPressure = Math.max(
+        0,
+        Math.min(
+            100,
+            (Number(Q.trz_cohabitation_temperature) || 0) +
+                (Number(Q.trz_vetoes) || 0) * 3
+        )
+    );
+    const fractureForce =
+        (Number(Q.trz_right_fragmentation) || 0) +
+        (Number(Q.national_crisis_pressure) || 0) * 0.38 +
+        Math.max(0, 45 - (Number(Q.public_trust) || 0)) * 0.18;
+    const rallyForce =
+        (Number(Q.trz_right_backlash) || 0) +
+        (Number(Q.far_right_agenda) || 0) * 0.28 +
+        Math.max(0, 35 - (Number(Q.president_relation) || 0)) * 0.24;
+    const monthlyCohabitationShift = Math.max(
+        1,
+        Math.min(
+            5,
+            Math.round(1 + cohabitationPressure / 32)
+        )
+    );
+    if (fractureForce > rallyForce + 4) {
+        Q.pis_cohabitation_stress += monthlyCohabitationShift;
+        Q.pis_cohabitation_rally = Math.max(
+            0,
+            (Number(Q.pis_cohabitation_rally) || 0) - 1
+        );
+        Q.government_coalition_dissent +=
+            monthlyCohabitationShift * 0.8;
+        Q.trz_right_fragmentation += 1;
+        Q.pis_poll_momentum -= 0.08 * monthlyCohabitationShift;
+        Q.provincial_welfare_pis_affinity -=
+            0.18 * monthlyCohabitationShift;
+        Q.older_welfare_households_pis_affinity -=
+            0.16 * monthlyCohabitationShift;
+        Q.pis_cohabitation_last_shift = monthlyCohabitationShift;
+        Q.pis_cohabitation_state =
+            Q.pis_cohabitation_stress >= 60
+                ? "Severe internal stress — succession camps defy the government line"
+                : (Q.pis_cohabitation_stress >= 30
+                    ? "Internal stress — veto defeats are becoming a leadership fight"
+                    : "Contained strain — PiS factions blame one another for Palace defeats");
+    } else {
+        Q.pis_cohabitation_rally += monthlyCohabitationShift;
+        Q.pis_cohabitation_stress = Math.max(
+            0,
+            (Number(Q.pis_cohabitation_stress) || 0) - 1
+        );
+        Q.government_coalition_dissent -=
+            monthlyCohabitationShift * 0.45;
+        Q.trz_right_backlash += 1;
+        Q.pis_poll_momentum += 0.07 * monthlyCohabitationShift;
+        Q.provincial_welfare_pis_affinity +=
+            0.14 * monthlyCohabitationShift;
+        Q.older_welfare_households_pis_affinity +=
+            0.16 * monthlyCohabitationShift;
+        Q.far_right_agenda += 0.25 * monthlyCohabitationShift;
+        Q.pis_cohabitation_last_shift = -monthlyCohabitationShift;
+        Q.pis_cohabitation_state =
+            Q.pis_cohabitation_rally >= 60
+                ? "Rally around the flag — PiS has turned cohabitation into regime defence"
+                : (Q.pis_cohabitation_rally >= 30
+                    ? "Defensive rally — hostile-Palace rhetoric is restoring discipline"
+                    : "Early rally — PiS is testing an obstruction narrative");
+    }
+} else if (
+    Q.president_name != "Rafał Trzaskowski" ||
+    Q.government_party != "pis"
+) {
+    Q.pis_cohabitation_last_shift = 0;
+    if (
+        (Number(Q.pis_cohabitation_stress) || 0) <= 0 &&
+        (Number(Q.pis_cohabitation_rally) || 0) <= 0
+    ) {
+        Q.pis_cohabitation_state = "No hostile cohabitation";
+    } else {
+        Q.pis_cohabitation_state =
+            "Cohabitation legacy — prior stress and mobilisation remain";
+    }
+}
+
+// Public attention cools slowly between shocks. Support itself does not reset:
+// event and card persuasion remains part of the campaign's history. Backlash
+// only drifts very gently toward the pressure implied by salience and division.
+const publicOpinionIssues = Array.isArray(Q.public_opinion_issues)
+    ? Q.public_opinion_issues
+    : [
+        "abortion_rights",
+        "refugee_solidarity",
+        "border_security",
+        "vaccination",
+        "social_spending",
+        "lgbt_equality",
+        "secular_state",
+        "rule_of_law",
+        "national_security"
+    ];
+const publicIssueLabels = {
+    abortion_rights: "Abortion rights",
+    refugee_solidarity: "Refugees and asylum solidarity",
+    border_security: "Eastern-border security",
+    vaccination: "Vaccination and public health",
+    social_spending: "Social spending and public services",
+    lgbt_equality: "LGBT equality",
+    secular_state: "Secular state and schools",
+    rule_of_law: "Rule-of-law repair",
+    national_security: "Defence and allied security"
+};
+const clampPublic = function(value) {
+    return Math.max(0, Math.min(100, Number(value) || 0));
+};
+const bridgeDelta = function(name, current) {
+    const quality = "public_bridge_" + name;
+    const previous = Number(Q[quality]);
+    const now = Number(current);
+    const safeNow = Number.isFinite(now) ? now : 0;
+    const safePrevious = Number.isFinite(previous) ? previous : safeNow;
+    Q[quality] = safeNow;
+    return Math.max(-12, Math.min(12, safeNow - safePrevious));
+};
+const shiftPublicIssue = function(
+    issue,
+    supportShift,
+    salienceShift,
+    backlashShift
+) {
+    Q[issue + "_support"] = clampPublic(
+        Number(Q[issue + "_support"]) + supportShift
+    );
+    Q[issue + "_salience"] = clampPublic(
+        Number(Q[issue + "_salience"]) + salienceShift
+    );
+    Q[issue + "_backlash"] = clampPublic(
+        Number(Q[issue + "_backlash"]) + backlashShift
+    );
+};
+
+// Bridge authored substantive trackers into public opinion. Only the change
+// since the previous month is translated, so a high standing value cannot
+// produce the same bonus forever and a one-off event shift is preserved.
+const feministDelta = bridgeDelta("feminist_trust", Q.feminist_trust);
+const refugeeDelta = bridgeDelta("refugee_empathy", Q.refugee_empathy);
+const borderDelta = bridgeDelta(
+    "border_confidence",
+    Q.border_security_confidence
+);
+const borderRightsDelta = bridgeDelta(
+    "border_rights",
+    Q.border_rights_standard
+);
+const farRightDelta = bridgeDelta("far_right_agenda", Q.far_right_agenda);
+const minorityDelta = bridgeDelta("minority_safety", Q.minority_safety);
+const householdDelta = bridgeDelta(
+    "household_security",
+    Q.household_security
+);
+const healthDelta = bridgeDelta("health_capacity", Q.health_capacity);
+const pandemicDelta = bridgeDelta(
+    "pandemic_pressure",
+    Q.pandemic_deaths_pressure
+);
+const antiUkrainianDelta = bridgeDelta(
+    "anti_ukrainian",
+    Q.anti_ukrainian_pressure
+);
+const judicialDelta = bridgeDelta(
+    "judicial_legitimacy",
+    Q.judicial_legitimacy
+);
+const repairDelta = bridgeDelta(
+    "repair_mandate",
+    Q.judicial_repair_mandate
+);
+const militaryDelta = bridgeDelta("military_trust", Q.military_trust);
+const policeDelta = bridgeDelta("police_trust", Q.police_trust);
+
+shiftPublicIssue(
+    "abortion_rights",
+    feministDelta * 0.24,
+    Math.abs(feministDelta) * 0.16 + Math.max(0, farRightDelta) * 0.16,
+    Math.max(0, -feministDelta) * 0.20 +
+        Math.max(0, farRightDelta) * 0.20
+);
+shiftPublicIssue(
+    "refugee_solidarity",
+    refugeeDelta * 0.34 +
+        borderRightsDelta * 0.16 -
+        antiUkrainianDelta * 0.30,
+    Math.abs(refugeeDelta) * 0.18 +
+        Math.abs(antiUkrainianDelta) * 0.28 +
+        Math.max(0, farRightDelta) * 0.18,
+    Math.max(0, -refugeeDelta) * 0.24 +
+        Math.abs(antiUkrainianDelta) * 0.22 +
+        Math.max(0, farRightDelta) * 0.20
+);
+shiftPublicIssue(
+    "border_security",
+    borderDelta * 0.28 + policeDelta * 0.08,
+    Math.abs(borderDelta) * 0.18 +
+        Math.max(0, farRightDelta) * 0.18,
+    Math.max(0, -borderDelta) * 0.18 +
+        Math.max(0, farRightDelta) * 0.18
+);
+shiftPublicIssue(
+    "vaccination",
+    healthDelta * 0.18 + pandemicDelta * 0.12,
+    Math.abs(healthDelta) * 0.10 + pandemicDelta * 0.34,
+    Math.abs(pandemicDelta) * 0.14 +
+        Math.max(0, farRightDelta) * 0.08
+);
+shiftPublicIssue(
+    "social_spending",
+    householdDelta * 0.12 +
+        (householdDelta < 0 ? -householdDelta * 0.08 : 0) +
+        healthDelta * 0.08,
+    -householdDelta * 0.24 - healthDelta * 0.10,
+    Math.max(0, -householdDelta) * 0.14
+);
+shiftPublicIssue(
+    "lgbt_equality",
+    feministDelta * 0.16 + minorityDelta * 0.22,
+    Math.abs(minorityDelta) * 0.14 +
+        Math.max(0, farRightDelta) * 0.22,
+    Math.max(0, -minorityDelta) * 0.24 +
+        Math.max(0, farRightDelta) * 0.24
+);
+shiftPublicIssue(
+    "secular_state",
+    feministDelta * 0.08 + judicialDelta * 0.06,
+    Math.abs(feministDelta) * 0.08 +
+        Math.max(0, farRightDelta) * 0.18,
+    Math.max(0, farRightDelta) * 0.22
+);
+shiftPublicIssue(
+    "rule_of_law",
+    judicialDelta * 0.22 + repairDelta * 0.26,
+    Math.abs(judicialDelta) * 0.16 +
+        Math.abs(repairDelta) * 0.18,
+    Math.max(0, -judicialDelta) * 0.18 +
+        Math.max(0, farRightDelta) * 0.10
+);
+shiftPublicIssue(
+    "national_security",
+    militaryDelta * 0.30 + borderDelta * 0.08,
+    Math.abs(militaryDelta) * 0.14 +
+        Math.abs(borderDelta) * 0.08,
+    Math.max(0, -militaryDelta) * 0.18
+);
+Q.public_opinion_bridge_pressure = Math.round(
+    (
+        Math.abs(feministDelta) +
+        Math.abs(refugeeDelta) +
+        Math.abs(borderDelta) +
+        Math.abs(borderRightsDelta) +
+        Math.abs(farRightDelta) +
+        Math.abs(minorityDelta) +
+        Math.abs(householdDelta) +
+        Math.abs(healthDelta) +
+        Math.abs(pandemicDelta) +
+        Math.abs(antiUkrainianDelta) +
+        Math.abs(judicialDelta) +
+        Math.abs(repairDelta) +
+        Math.abs(militaryDelta) +
+        Math.abs(policeDelta)
+    ) / 14
+);
+let publicPanicTotal = 0;
+let publicConsensusTotal = 0;
+let hottestPublicIssue = publicOpinionIssues[0];
+let hottestPublicIssueScore = -1;
+for (const issue of publicOpinionIssues) {
+    const supportKey = issue + "_support";
+    const salienceKey = issue + "_salience";
+    const backlashKey = issue + "_backlash";
+    const support = Math.max(0, Math.min(100, Number(Q[supportKey]) || 0));
+    let salience = Math.max(
+        0,
+        Math.min(100, Number(Q[salienceKey]) || 0)
+    );
+    let backlash = Math.max(
+        0,
+        Math.min(100, Number(Q[backlashKey]) || 0)
+    );
+    const salienceDecay = Q.hard_mode ? 0.20 : 0.45;
+    salience = Math.max(0, salience - salienceDecay);
+    const backlashTarget = Math.min(
+        100,
+        24 + Math.abs(support - 50) * 0.45 + salience * 0.24
+    );
+    backlash += (backlashTarget - backlash) * 0.015;
+    Q[supportKey] = support;
+    Q[salienceKey] = salience;
+    Q[backlashKey] = backlash;
+    const heat = salience * 0.65 + backlash * 0.35;
+    publicPanicTotal += heat;
+    publicConsensusTotal +=
+        Math.abs(support - 50) * 2 * (1 - backlash / 200);
+    if (heat > hottestPublicIssueScore) {
+        hottestPublicIssueScore = heat;
+        hottestPublicIssue = issue;
+    }
+}
+Q.public_panic_index = Math.round(
+    publicPanicTotal / publicOpinionIssues.length
+);
+Q.public_consensus_index = Math.round(
+    publicConsensusTotal / publicOpinionIssues.length
+);
+Q.public_opinion_hottest_issue =
+    publicIssueLabels[hottestPublicIssue] || hottestPublicIssue;
+Q.public_opinion_last_updated = Q.date_label + " monthly model";
+
+if (Q.year == 2020 && Q.month >= 1) {
+    Q.ko_leader = "Borys Budka";
+    Q.next_budget_label = "December 2020";
+}
+if (
+    Q.scenario_mode != "formation_2023" &&
+    (
+        (Q.year == 2021 && Q.month >= 7) ||
+        Q.year >= 2022
+    )
+) {
+    Q.ko_leader = "Donald Tusk";
+}
+if (Q.year == 2020 && Q.month >= 7 && Q.p2050_emerged) {
+    Q.p2050_leader = "Szymon Hołownia";
+}
+if (Q.year == 2021) {
+    Q.next_budget_label = "December 2021";
+}
+if (Q.year == 2022) {
+    Q.next_budget_label = "December 2022";
+}
+if (Q.year >= 2023) {
+    Q.next_budget_label = "December " + Q.year;
+}
+!}
+go-to: poland_party_ai
+
+= [+ date_label +]
+
+The leadership clears its calendar. Politics does not.

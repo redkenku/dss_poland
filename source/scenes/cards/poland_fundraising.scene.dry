@@ -1,0 +1,88 @@
+title: Dues and the Empty Treasury
+subtitle: Set annual membership dues—or make one emergency appeal.
+new-page: true
+is-card: true
+tags: poland_party_card
+view-if: month_actions < max_month_actions and poland_fundraising_timer <= 0 and (month <= 2 or month >= 10 or resources <= party_income + 3 or early_election_risk >= 40)
+on-arrival: month_actions += 1; poland_fundraising_timer = 12
+card-image: img/poland/deck_party.svg
+
+= Dues and the Empty Treasury
+
+State subvention follows the seats won at the last election. Everything else
+must come from members, officeholders and sympathisers. The annual payout is
+currently **[+ member_dues +] from dues** and **[+ seat_subvention +] from
+subvention**.
+
+- @maintain
+- @lower
+- @raise
+- @emergency
+
+@maintain
+title: Keep dues where they are
+subtitle: Annual party income remains [+ party_income +].
+on-arrival: public_trust += 1 if internal_dissent <= 20; organiser_energy += 1 if internal_dissent <= 20; news_headline = "The treasurer leaves annual dues unchanged"
+
+The treasurer gets no miracle. A settled organisation can still use the
+collection drive to update its member roll.
+
+- #poland_card_finish
+
+@lower
+title: Lower membership dues
+subtitle: Cost: 1 resource now. Annual income falls by one; every caucus gets some relief.
+choose-if: member_dues > 1 and resources >= 1
+unavailable-subtitle: Dues are already at their floor, or the party cannot finance the transition.
+on-arrival: {!
+Q.resources -= 1;
+Q.member_dues -= 1;
+Q.party_income = Q.member_dues + Q.seat_subvention;
+for (const faction of Q.factions) {
+    Q[faction + "_dissent"] -= 4;
+}
+Q.organiser_energy += 3;
+Q.workers_support += 1;
+Q.young_support += 1;
+Q.news_headline = "Lewica lowers the price of membership";
+!}
+
+The immediate accounting is awkward, but local organisers stop explaining why
+membership costs more precisely when household bills are rising.
+
+- #poland_card_finish
+
+@raise
+title: Raise membership dues
+subtitle: +1 resource now and +1 annual income. Higher levels burden the party's least affluent base.
+choose-if: member_dues < 5
+unavailable-subtitle: The treasurer refuses to push dues above the political ceiling.
+on-arrival: {!
+Q.member_dues += 1;
+Q.party_income = Q.member_dues + Q.seat_subvention;
+Q.resources += 1;
+Q.organiser_energy -= 2 + Math.max(0, Q.member_dues - 3);
+Q.workers_support -= 1 + Math.max(0, Q.member_dues - 3);
+Q.young_support -= 1;
+Q.public_trust -= Math.max(0, Q.member_dues - 3);
+Q.razem_dissent += 2;
+Q.barons_dissent -= 1;
+Q.news_headline = "Members are asked to finance a more expensive party";
+!}
+
+The treasury improves immediately. So does the list of members who quietly
+decide that political commitment has become another monthly bill.
+
+- #poland_card_finish
+
+@emergency
+title: Launch an emergency small-donor appeal
+subtitle: +2 resources. The nationwide appeal cannot be repeated for sixteen months.
+choose-if: emergency_fundraising_timer <= 0 and (resources <= 3 or early_election_risk >= 50 or pres_2020_active = 1 or (year = 2025 and month <= 6))
+unavailable-subtitle: The donor list is exhausted, or there is no immediate campaign emergency to justify another national appeal.
+on-arrival: emergency_fundraising_timer = 16; resources += 2; organiser_energy -= 4; public_trust -= 1; turnout_readiness += 1; news_headline = "A small-donor appeal covers the immediate shortfall"
+
+Thousands of modest transfers arrive. So do unsubscribes, complaints and the
+knowledge that the word “emergency” cannot be used every quarter.
+
+- #poland_card_finish
