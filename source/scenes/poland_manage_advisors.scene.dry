@@ -2,7 +2,7 @@ title: Reshuffle leadership bureau
 subtitle: Rebuild the three-seat slate. A changed bureau locks for six months.
 is-pinned-card: true
 view-if: started = 1 and leadership_reshuffle_timer <= 0
-card-image: img/poland/reshuffle.svg
+card-image: img/poland/cards/reshuffle.webp
 new-page: true
 on-arrival: {!
 const advisorKeys = [
@@ -39,13 +39,21 @@ if (!Q.advisor_reshuffle_active) {
 The bureau has **[+ n_advisors +] / 3** filled seats. You may change several
 seats before confirming the final slate.
 
-| Caucus | Strength | Dissent |
-| --- | ---: | ---: |
-| Old SLD / barons | [+ barons_strength : strength +] | [+ barons_dissent : dissent +] |
-| Wiosna / Spring | [+ spring_strength : strength +] | [+ spring_dissent : dissent +] |
-| Labour current | [+ labor_strength : strength +] | [+ labor_dissent : dissent +] |
-| Younger progressive SLD | [+ progressives_strength : strength +] | [+ progressives_dissent : dissent +] |
-| Razem | [+ razem_strength : strength +] | [+ razem_dissent : dissent +] |
+Only active caucuses can appoint or retain a bureau representative.
+
+[? if barons_active: **[+ barons_name +]** — [+ barons_strength : strength +]
+strength, [+ barons_dissent : dissent +] dissent.  ?]
+[? if spring_active: **[+ spring_name +]** — [+ spring_strength : strength +]
+strength, [+ spring_dissent : dissent +] dissent.  ?]
+[? if labor_active: **[+ labor_name +]** — [+ labor_strength : strength +]
+strength, [+ labor_dissent : dissent +] dissent.  ?]
+[? if progressives_active: **[+ progressives_name +]** — [+
+progressives_strength : strength +] strength, [+ progressives_dissent : dissent
++] dissent.  ?]
+[? if razem_active: **Razem** — [+ razem_strength : strength +] strength, [+
+razem_dissent : dissent +] dissent.  ?]
+[? if pps_active: **PPS** — [+ pps_strength : strength +] strength, [+
+pps_dissent : dissent +] dissent; no standing bureau nominee.  ?]
 
 - @remove: Remove advisers
 - @add: Appoint advisers
@@ -63,9 +71,9 @@ subtitle: Open a caucus, then withdraw one of its active representatives.
 - @poland_manage_advisors: Back to the slate
 
 @remove_barons
-title: Old SLD / barons
+title: Organisational establishment
 subtitle: Party apparatus, regional machinery and the old organisational elite.
-view-if: czarzasty_advisor = 1 or wieczorek_advisor = 1
+view-if: barons_active = 1 and (czarzasty_advisor = 1 or wieczorek_advisor = 1)
 
 - @remove_czarzasty
 - @remove_wieczorek
@@ -74,7 +82,7 @@ view-if: czarzasty_advisor = 1 or wieczorek_advisor = 1
 @remove_spring
 title: Wiosna / Spring
 subtitle: The Wiosna organisation and its distinct political brand.
-view-if: biedron_advisor = 1
+view-if: spring_active = 1 and biedron_advisor = 1
 
 - @remove_biedron
 - @remove: Back to the caucuses
@@ -82,7 +90,7 @@ view-if: biedron_advisor = 1
 @remove_labor
 title: Labour current
 subtitle: Public services, workplace organisation and trade-union politics.
-view-if: dziemianowicz_bak_advisor = 1
+view-if: labor_active = 1 and dziemianowicz_bak_advisor = 1
 
 - @remove_adb
 - @remove: Back to the caucuses
@@ -90,8 +98,9 @@ view-if: dziemianowicz_bak_advisor = 1
 @remove_progressives
 title: Younger progressive SLD
 subtitle: The women-led secular current and its parliamentary organisers.
-view-if: zukowska_advisor = 1 or kotula_advisor = 1 or gawkowski_advisor = 1 or nowicka_advisor = 1
+view-if: progressives_active = 1 and (zukowska_advisor = 1 or kotula_advisor = 1 or gawkowski_advisor = 1 or nowicka_advisor = 1 or (spring_active = 0 and biedron_advisor = 1))
 
+- @remove_biedron_progressive
 - @remove_zukowska
 - @remove_kotula
 - @remove_gawkowski
@@ -101,7 +110,7 @@ view-if: zukowska_advisor = 1 or kotula_advisor = 1 or gawkowski_advisor = 1 or 
 @remove_razem
 title: Razem
 subtitle: Razem's autonomous organisation, programme and parliamentary network.
-view-if: zandberg_advisor = 1 or biejat_advisor = 1 or zawisza_advisor = 1 or matysiak_advisor = 1
+view-if: razem_active = 1 and (zandberg_advisor = 1 or biejat_advisor = 1 or zawisza_advisor = 1 or matysiak_advisor = 1)
 
 - @remove_zandberg
 - @remove_biejat
@@ -121,10 +130,19 @@ go-to: poland_manage_advisors
 @remove_biedron
 title: Remove Robert Biedroń
 subtitle: Wiosna loses its most visible standing representative.
-view-if: biedron_advisor = 1
+view-if: spring_active = 1 and biedron_advisor = 1
 choose-if: leadership_reshuffle_timer <= 0 and n_advisors > 0
 unavailable-subtitle: The bureau cannot be changed now.
 on-arrival: biedron_advisor = 0; n_advisors -= 1; advisor_reshuffle_removed_biedron = 1; removed_advisor = "Robert Biedroń"; spring_strength -= 2; spring_dissent += 4
+go-to: poland_manage_advisors
+
+@remove_biedron_progressive
+title: Remove Robert Biedroń
+subtitle: The merged Wiosna network loses its progressive-current representative.
+view-if: spring_active = 0 and progressives_active = 1 and biedron_advisor = 1
+choose-if: leadership_reshuffle_timer <= 0 and n_advisors > 0
+unavailable-subtitle: The bureau cannot be changed now.
+on-arrival: biedron_advisor = 0; n_advisors -= 1; advisor_reshuffle_removed_biedron = 1; removed_advisor = "Robert Biedroń"; progressives_strength -= 2; progressives_dissent += 4
 go-to: poland_manage_advisors
 
 @remove_zandberg
@@ -160,7 +178,19 @@ subtitle: Feminist networks lose a direct route into the bureau.
 view-if: kotula_advisor = 1
 choose-if: leadership_reshuffle_timer <= 0 and n_advisors > 0
 unavailable-subtitle: The bureau cannot be changed now.
-on-arrival: kotula_advisor = 0; n_advisors -= 1; advisor_reshuffle_removed_kotula = 1; removed_advisor = "Katarzyna Kotula"; spring_strength -= 1; progressives_strength -= 1; feminist_trust -= 2
+on-arrival: {!
+Q.kotula_advisor = 0;
+Q.n_advisors -= 1;
+Q.advisor_reshuffle_removed_kotula = 1;
+Q.removed_advisor = "Katarzyna Kotula";
+if (Q.spring_active) {
+    Q.spring_strength -= 1;
+    Q.progressives_strength -= 1;
+} else {
+    Q.progressives_strength -= 2;
+}
+Q.feminist_trust -= 2;
+!}
 go-to: poland_manage_advisors
 
 @remove_biejat
@@ -231,9 +261,9 @@ unavailable-subtitle: All three bureau seats are filled.
 - @poland_manage_advisors: Back to the slate
 
 @add_barons
-title: Old SLD / barons
+title: Organisational establishment
 subtitle: Party apparatus, regional machinery and the old organisational elite.
-view-if: n_advisors < 3
+view-if: barons_active = 1 and n_advisors < 3
 
 - @add_czarzasty
 - @add_wieczorek
@@ -242,7 +272,7 @@ view-if: n_advisors < 3
 @add_spring
 title: Wiosna / Spring
 subtitle: The Wiosna organisation and its distinct political brand.
-view-if: n_advisors < 3
+view-if: spring_active = 1 and n_advisors < 3
 
 - @add_biedron
 - @add: Back to the caucuses
@@ -250,7 +280,7 @@ view-if: n_advisors < 3
 @add_labor
 title: Labour current
 subtitle: Public services, workplace organisation and trade-union politics.
-view-if: n_advisors < 3
+view-if: labor_active = 1 and n_advisors < 3
 
 - @add_adb
 - @add: Back to the caucuses
@@ -258,8 +288,9 @@ view-if: n_advisors < 3
 @add_progressives
 title: Younger progressive SLD
 subtitle: The women-led secular current and its parliamentary organisers.
-view-if: n_advisors < 3
+view-if: progressives_active = 1 and n_advisors < 3
 
+- @add_biedron_progressive
 - @add_zukowska
 - @add_kotula
 - @add_gawkowski
@@ -269,7 +300,7 @@ view-if: n_advisors < 3
 @add_razem
 title: Razem
 subtitle: Razem's autonomous organisation, programme and parliamentary network.
-view-if: n_advisors < 3
+view-if: razem_active = 1 and n_advisors < 3
 
 - @add_zandberg
 - @add_biejat
@@ -280,7 +311,7 @@ view-if: n_advisors < 3
 @add_czarzasty
 title: Appoint Włodzimierz Czarzasty
 subtitle: Apparatus discipline, political money and control of the agenda.
-view-if: czarzasty_advisor = 0 and not advisor_reshuffle_removed_czarzasty and n_advisors < 3
+view-if: barons_active = 1 and czarzasty_advisor = 0 and not advisor_reshuffle_removed_czarzasty and n_advisors < 3
 choose-if: n_advisors < 3
 on-arrival: czarzasty_advisor = 1; n_advisors += 1; barons_strength += 2; barons_dissent -= 2; news_headline = "Czarzasty takes a standing bureau seat"
 go-to: poland_manage_advisors
@@ -288,15 +319,23 @@ go-to: poland_manage_advisors
 @add_biedron
 title: Appoint Robert Biedroń
 subtitle: Wiosna networks, equality politics and liberal-media access.
-view-if: biedron_advisor = 0 and not advisor_reshuffle_removed_biedron and n_advisors < 3
+view-if: spring_active = 1 and biedron_advisor = 0 and not advisor_reshuffle_removed_biedron and n_advisors < 3
 choose-if: n_advisors < 3
 on-arrival: biedron_advisor = 1; n_advisors += 1; spring_strength += 2; spring_dissent -= 2; news_headline = "Biedroń takes a standing bureau seat"
+go-to: poland_manage_advisors
+
+@add_biedron_progressive
+title: Appoint Robert Biedroń
+subtitle: The merged Wiosna network represents the progressive current.
+view-if: spring_active = 0 and progressives_active = 1 and biedron_advisor = 0 and not advisor_reshuffle_removed_biedron and n_advisors < 3
+choose-if: n_advisors < 3
+on-arrival: biedron_advisor = 1; n_advisors += 1; progressives_strength += 2; progressives_dissent -= 2; news_headline = "Biedroń represents the merged progressive current"
 go-to: poland_manage_advisors
 
 @add_zandberg
 title: Appoint Adrian Zandberg
 subtitle: Razem organisers, costed policy and enforceable red lines.
-view-if: zandberg_advisor = 0 and not advisor_reshuffle_removed_zandberg and n_advisors < 3
+view-if: razem_active = 1 and zandberg_advisor = 0 and not advisor_reshuffle_removed_zandberg and n_advisors < 3
 choose-if: n_advisors < 3
 on-arrival: zandberg_advisor = 1; n_advisors += 1; razem_strength += 2; razem_dissent -= 3; razem_cooperation += 2; news_headline = "Zandberg takes a standing bureau seat"
 go-to: poland_manage_advisors
@@ -304,7 +343,7 @@ go-to: poland_manage_advisors
 @add_adb
 title: Appoint Agnieszka Dziemianowicz-Bąk
 subtitle: Public services, labour policy and a younger-Left bridge.
-view-if: dziemianowicz_bak_advisor = 0 and not advisor_reshuffle_removed_dziemianowicz_bak and n_advisors < 3
+view-if: labor_active = 1 and dziemianowicz_bak_advisor = 0 and not advisor_reshuffle_removed_dziemianowicz_bak and n_advisors < 3
 choose-if: n_advisors < 3
 on-arrival: dziemianowicz_bak_advisor = 1; n_advisors += 1; labor_strength += 1; progressives_strength += 1; labor_dissent -= 2; news_headline = "Dziemianowicz-Bąk joins the bureau"
 go-to: poland_manage_advisors
@@ -312,7 +351,7 @@ go-to: poland_manage_advisors
 @add_zukowska
 title: Appoint Anna-Maria Żukowska
 subtitle: Younger-SLD visibility, club discipline and rapid rebuttal.
-view-if: zukowska_advisor = 0 and not advisor_reshuffle_removed_zukowska and n_advisors < 3
+view-if: progressives_active = 1 and zukowska_advisor = 0 and not advisor_reshuffle_removed_zukowska and n_advisors < 3
 choose-if: n_advisors < 3
 on-arrival: zukowska_advisor = 1; n_advisors += 1; progressives_strength += 2; progressives_dissent -= 2; news_headline = "Żukowska joins the bureau"
 go-to: poland_manage_advisors
@@ -320,15 +359,26 @@ go-to: poland_manage_advisors
 @add_kotula
 title: Appoint Katarzyna Kotula
 subtitle: Feminist networks and the Wiosna-progressive bridge.
-view-if: kotula_advisor = 0 and not advisor_reshuffle_removed_kotula and n_advisors < 3
+view-if: progressives_active = 1 and kotula_advisor = 0 and not advisor_reshuffle_removed_kotula and n_advisors < 3
 choose-if: n_advisors < 3
-on-arrival: kotula_advisor = 1; n_advisors += 1; spring_strength += 1; progressives_strength += 1; feminist_trust += 2; news_headline = "Kotula joins the bureau"
+on-arrival: {!
+Q.kotula_advisor = 1;
+Q.n_advisors += 1;
+if (Q.spring_active) {
+    Q.spring_strength += 1;
+    Q.progressives_strength += 1;
+} else {
+    Q.progressives_strength += 2;
+}
+Q.feminist_trust += 2;
+Q.news_headline = "Kotula joins the bureau";
+!}
 go-to: poland_manage_advisors
 
 @add_biejat
 title: Appoint Magdalena Biejat
 subtitle: Housing casework, local organisation and institutional oversight.
-view-if: biejat_advisor = 0 and not advisor_reshuffle_removed_biejat and n_advisors < 3
+view-if: razem_active = 1 and biejat_advisor = 0 and not advisor_reshuffle_removed_biejat and n_advisors < 3
 choose-if: n_advisors < 3
 on-arrival: biejat_advisor = 1; n_advisors += 1; razem_strength += 1; labor_strength += 1; razem_dissent -= 2; news_headline = "Biejat joins the bureau"
 go-to: poland_manage_advisors
@@ -336,7 +386,7 @@ go-to: poland_manage_advisors
 @add_wieczorek
 title: Appoint Dariusz Wieczorek
 subtitle: Regional machinery, old-guard reassurance and political treasury.
-view-if: wieczorek_advisor = 0 and not advisor_reshuffle_removed_wieczorek and n_advisors < 3
+view-if: barons_active = 1 and wieczorek_advisor = 0 and not advisor_reshuffle_removed_wieczorek and n_advisors < 3
 choose-if: n_advisors < 3
 on-arrival: wieczorek_advisor = 1; n_advisors += 1; barons_strength += 2; barons_dissent -= 2; news_headline = "Wieczorek joins the bureau"
 go-to: poland_manage_advisors
@@ -344,7 +394,7 @@ go-to: poland_manage_advisors
 @add_gawkowski
 title: Appoint Krzysztof Gawkowski
 subtitle: Parliamentary coordination, digital policy and cabinet traffic.
-view-if: gawkowski_advisor = 0 and not advisor_reshuffle_removed_gawkowski and n_advisors < 3
+view-if: progressives_active = 1 and gawkowski_advisor = 0 and not advisor_reshuffle_removed_gawkowski and n_advisors < 3
 choose-if: n_advisors < 3
 on-arrival: gawkowski_advisor = 1; n_advisors += 1; barons_strength += 1; progressives_strength += 1; party_unity += 1; news_headline = "Gawkowski joins the bureau"
 go-to: poland_manage_advisors
@@ -352,7 +402,7 @@ go-to: poland_manage_advisors
 @add_nowicka
 title: Appoint Wanda Nowicka
 subtitle: Reproductive rights, parliamentary craft and movement trust.
-view-if: nowicka_advisor = 0 and not advisor_reshuffle_removed_nowicka and n_advisors < 3
+view-if: progressives_active = 1 and nowicka_advisor = 0 and not advisor_reshuffle_removed_nowicka and n_advisors < 3
 choose-if: n_advisors < 3
 on-arrival: nowicka_advisor = 1; n_advisors += 1; progressives_strength += 2; feminist_trust += 2; news_headline = "Nowicka joins the bureau"
 go-to: poland_manage_advisors
@@ -360,7 +410,7 @@ go-to: poland_manage_advisors
 @add_zawisza
 title: Appoint Marcelina Zawisza
 subtitle: Health, care work and Razem's parliamentary programme.
-view-if: zawisza_advisor = 0 and not advisor_reshuffle_removed_zawisza and n_advisors < 3
+view-if: razem_active = 1 and zawisza_advisor = 0 and not advisor_reshuffle_removed_zawisza and n_advisors < 3
 choose-if: n_advisors < 3
 on-arrival: zawisza_advisor = 1; n_advisors += 1; razem_strength += 1; labor_strength += 1; razem_dissent -= 2; news_headline = "Zawisza joins the bureau"
 go-to: poland_manage_advisors
@@ -368,7 +418,7 @@ go-to: poland_manage_advisors
 @add_matysiak
 title: Appoint Paulina Matysiak
 subtitle: Rail, smaller cities and an uneasy cross-party materialism.
-view-if: matysiak_advisor = 0 and not advisor_reshuffle_removed_matysiak and n_advisors < 3
+view-if: razem_active = 1 and matysiak_advisor = 0 and not advisor_reshuffle_removed_matysiak and n_advisors < 3
 choose-if: n_advisors < 3
 on-arrival: matysiak_advisor = 1; n_advisors += 1; razem_strength += 1; labor_strength += 1; local_network += 1; news_headline = "Matysiak joins the bureau"
 go-to: poland_manage_advisors

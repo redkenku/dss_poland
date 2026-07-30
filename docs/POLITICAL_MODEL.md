@@ -193,6 +193,16 @@ The faction map should change. A ministry can create a new caucus; an election
 loss can dissolve one; a charismatic candidate can convert followers into an
 organisation only after spending time and resources.
 
+The playable implementation keeps this map as live state rather than flavour
+text. A caucus has active and coalition-membership flags, current strength,
+dissent, MPs, an independent-party identity and a relationship with the parent
+Left. Mergers transfer its full organisational strength to successors.
+Departures transfer mandates immediately, remove its advisors and stop it
+voting in internal ratification. The independent organisation then receives a
+poll share, must clear its own Sejm threshold and participates in the same
+460-seat allocation as the established parties. Equivalent electoral records
+are used for the Poland 2050, PiS and Konfederacja successor chains.
+
 ## The annual budget is the season finale
 
 Every political year should end with the state budget or, before the Left

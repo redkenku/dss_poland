@@ -8,6 +8,15 @@ const finitePolling = function(value, fallback) {
 const clampPolling = function(value, low, high) {
     return Math.max(low, Math.min(high, finitePolling(value, low)));
 };
+const pollMonthKey =
+    finitePolling(Q.year, 2019) * 100 + finitePolling(Q.month, 1);
+const shouldRefreshPolling =
+    finitePolling(Q.poll_state_month_key, -1) != pollMonthKey;
+
+// Several dated-event and election-readiness routes can revisit this scene in
+// one calendar month. The electorate, sample, momentum decay and danger clock
+// are monthly state, so only the first visit may rebuild them.
+if (shouldRefreshPolling) {
 const partyIds = [
     "left", "pis", "ko", "psl", "konf", "p2050", "other"
 ];
@@ -736,7 +745,10 @@ if (Q.far_right_split) {
     corrected.konf -= corrected.korona;
 }
 
+const thirdWayJoint =
+    !!Q.p2050_emerged && !!Q.third_way_active && !Q.third_way_split;
 const activeElectionParty = function(id) {
+    if (id == "third_way") return thirdWayJoint;
     if (partyIds.includes(id)) return activeParty(id);
     if (id == "centrum") return !!Q.unia_centrum_formed;
     if (id == "rozwoj") return !!Q.pis_split;
@@ -752,6 +764,11 @@ for (const id of electionPartyIds) {
     Q[id + "_vote_intent"] =
         corrected[id] * 100 / Math.max(1, correctedTotal);
 }
+Q.third_way_joint_list = thirdWayJoint ? 1 : 0;
+Q.third_way_vote_intent = thirdWayJoint
+    ? Q.psl_vote_intent + Q.p2050_vote_intent
+    : 0;
+Q.third_way_threshold = thirdWayJoint ? 8 : 0;
 
 // The published poll is a seeded sample, not omniscience. Noise is applied to
 // every active party and then conserved back to exactly 100 after rounding.
@@ -807,16 +824,28 @@ const thresholds = {
     pps: 5,
     centrum: 5,
     rozwoj: 5,
-    korona: 5
+    korona: 5,
+    third_way: 8
 };
-const seatPartyIds = namedPartyIds.concat(dynamicPartyIds);
+const seatPartyIds = (
+    thirdWayJoint
+        ? namedPartyIds.filter(function(id) {
+            return id != "psl" && id != "p2050";
+        }).concat(["third_way"])
+        : namedPartyIds
+).concat(dynamicPartyIds);
+const committeeVoteIntent = function(id) {
+    return id == "third_way"
+        ? Q.third_way_vote_intent
+        : Q[id + "_vote_intent"];
+};
 const seatParties = seatPartyIds.filter(function(id) {
     return activeElectionParty(id) &&
-        Q[id + "_vote_intent"] >= thresholds[id];
+        committeeVoteIntent(id) >= thresholds[id];
 });
 if (!seatParties.length) {
     const fallback = seatPartyIds.filter(activeElectionParty).sort(function(a, b) {
-        return Q[b + "_vote_intent"] - Q[a + "_vote_intent"];
+        return committeeVoteIntent(b) - committeeVoteIntent(a);
     })[0];
     seatParties.push(fallback);
 }
@@ -835,14 +864,15 @@ const seatProjection = {
     pps: 0,
     centrum: 0,
     rozwoj: 0,
-    korona: 0
+    korona: 0,
+    third_way: 0
 };
 for (let seat = 0; seat < 460; seat += 1) {
     let winner = seatParties[0];
     let bestQuotient = -1;
     for (const id of seatParties) {
         const quotient =
-            Q[id + "_vote_intent"] /
+            committeeVoteIntent(id) /
             (seatProjection[id] + 1);
         if (quotient > bestQuotient) {
             bestQuotient = quotient;
@@ -850,6 +880,18 @@ for (let seat = 0; seat < 460; seat += 1) {
         }
     }
     seatProjection[winner] += 1;
+}
+if (thirdWayJoint) {
+    const jointSeats = seatProjection.third_way;
+    const jointVote = Math.max(
+        0.01,
+        Q.psl_vote_intent + Q.p2050_vote_intent
+    );
+    const pslExact = jointSeats * Q.psl_vote_intent / jointVote;
+    seatProjection.psl = Math.floor(pslExact);
+    seatProjection.p2050 = jointSeats - seatProjection.psl;
+} else {
+    seatProjection.third_way = 0;
 }
 for (const id of Object.keys(seatProjection)) {
     Q[id + "_projected_seats"] = seatProjection[id];
@@ -867,9 +909,24 @@ Q.left_splinter_projected_seats =
     Q.pps_projected_seats;
 Q.left_family_projected_seats =
     Q.left_projected_seats + Q.left_splinter_projected_seats;
+Q.left_splinter_support_projected_seats =
+    (Q.barons_party_relation >= 45
+        ? Q.sld_breakaway_projected_seats : 0) +
+    (Q.spring_party_relation >= 45
+        ? Q.spring_breakaway_projected_seats : 0) +
+    (Q.labor_party_relation >= 45
+        ? Q.labor_left_projected_seats : 0) +
+    (Q.progressives_party_relation >= 45
+        ? Q.young_left_projected_seats : 0) +
+    (Q.razem_party_relation >= 45
+        ? Q.razem_projected_seats : 0) +
+    (Q.pps_party_relation >= 45
+        ? Q.pps_projected_seats : 0);
+Q.left_committed_projected_seats =
+    Q.left_projected_seats + Q.left_splinter_support_projected_seats;
 Q.coalition_democratic_seats =
     Q.ko_projected_seats + Q.psl_projected_seats +
-    Q.left_family_projected_seats +
+    Q.left_committed_projected_seats +
     (Q.p2050_emerged ? Q.p2050_projected_seats : 0) +
     Q.centrum_projected_seats;
 Q.coalition_right_seats =
@@ -1019,6 +1076,8 @@ if (Q.left_vote_intent < 5) {
 } else {
     Q.poll_danger_months = 0;
 }
+Q.poll_state_month_key = pollMonthKey;
+}
 Q.polling_has_dated_route =
     (
         Q.year == 2019 && Q.month == 11 && !Q.candidate_event_done
@@ -1089,4 +1148,4 @@ Q.polling_has_dated_route =
         Q.year == 2026
     ) ? 1 : 0;
 !}
-go-to: poland_ending.collapse if poll_danger_months >= 2; poland_ending.fracture if poll_danger_months < 2 and party_unity <= 12; poland_caucus_dynamics.router if poll_danger_months < 2 and party_unity > 12 and caucus_crisis_pending = 1; poland_events.candidate if poll_danger_months < 2 and party_unity > 12 and year = 2019 and month = 11 and candidate_event_done = 0; poland_events.budget_2019 if poll_danger_months < 2 and party_unity > 12 and year = 2019 and month = 12 and budget_2019_done = 0; poland_events.media if poll_danger_months < 2 and party_unity > 12 and year = 2020 and month = 1 and media_event_done = 0; poland_monthly_briefing if poll_danger_months < 2 and party_unity > 12 and year = 2020 and month = 2; poland_events.covid if poll_danger_months < 2 and party_unity > 12 and year = 2020 and month = 3 and covid_event_done = 0; poland_events.postal if poll_danger_months < 2 and party_unity > 12 and year = 2020 and month = 4 and postal_event_done = 0; poland_events.shield if poll_danger_months < 2 and party_unity > 12 and year = 2020 and month = 5 and shield_event_done = 0; poland_events.campaign if poll_danger_months < 2 and party_unity > 12 and year = 2020 and month = 6 and election_event_done = 0; poland_events.reckoning if poll_danger_months < 2 and party_unity > 12 and year = 2020 and month = 7 and reckoning_event_done = 0; poland_trzaskowski.certification if poll_danger_months < 2 and party_unity > 12 and year = 2020 and month = 8 and trzaskowski_won = 1 and trz_certification_event_done = 0; poland_events.merger if poll_danger_months < 2 and party_unity > 12 and year = 2020 and month = 9 and merger_event_done = 0; poland_trzaskowski.tribunal_showdown if poll_danger_months < 2 and party_unity > 12 and year = 2020 and month = 10 and abortion_event_done = 0 and trz_inaugurated = 1; poland_events.abortion if poll_danger_months < 2 and party_unity > 12 and year = 2020 and month = 10 and abortion_event_done = 0 and trz_inaugurated = 0; poland_events.strike if poll_danger_months < 2 and party_unity > 12 and year = 2020 and month = 11 and strike_event_done = 0; poland_events.budget_2020 if poll_danger_months < 2 and party_unity > 12 and year = 2020 and month = 12 and budget_2020_done = 0; poland_events.vaccine if poll_danger_months < 2 and party_unity > 12 and year = 2021 and month = 1 and vaccine_event_done = 0; poland_trzaskowski.judicial_war if poll_danger_months < 2 and party_unity > 12 and year = 2021 and month = 2 and trz_inaugurated = 1 and trz_judicial_war_done = 0; poland_events.rename if poll_danger_months < 2 and party_unity > 12 and year = 2021 and month = 3 and rename_event_done = 0; poland_trzaskowski.palace_offensive if poll_danger_months < 2 and party_unity > 12 and year = 2021 and month = 4 and trz_inaugurated = 1 and trz_palace_offensive_done = 0; poland_events.recovery_fund if poll_danger_months < 2 and party_unity > 12 and year = 2021 and month = 5 and recovery_fund_event_done = 0; poland_trzaskowski.rights_vote if poll_danger_months < 2 and party_unity > 12 and year = 2021 and month = 6 and opposition_reset_event_done = 0 and trz_inaugurated = 1; poland_events.opposition_reset if poll_danger_months < 2 and party_unity > 12 and year = 2021 and month = 6 and opposition_reset_event_done = 0 and trz_inaugurated = 0; poland_events.left_revolt if poll_danger_months < 2 and party_unity > 12 and year = 2021 and month = 7 and left_revolt_event_done = 0; poland_events_2021_2023.router if poll_danger_months < 2 and party_unity > 12 and ((year = 2021 and month >= 8) or year = 2022 or (year = 2023 and month <= 7)); poland_event_queue if poll_danger_months < 2 and party_unity > 12 and ((year = 2023 and month >= 8) or year = 2024 or year = 2025 or year = 2026); poland_monthly_briefing if poll_danger_months < 2 and party_unity > 12 and ((year = 2020 and month = 8 and (trzaskowski_won = 0 or trz_certification_event_done = 1)) or (year = 2021 and month = 2 and (trz_inaugurated = 0 or trz_judicial_war_done = 1)) or (year = 2021 and month = 4 and (trz_inaugurated = 0 or trz_palace_offensive_done = 1))); poland_hub if poll_danger_months < 2 and party_unity > 12 and polling_has_dated_route = 0
+go-to: poland_ending.collapse if poll_danger_months >= 2; poland_ending.fracture if poll_danger_months < 2 and party_unity <= 12; poland_caucus_dynamics.router if poll_danger_months < 2 and party_unity > 12 and caucus_crisis_pending = 1; poland_events.candidate if poll_danger_months < 2 and party_unity > 12 and year = 2019 and month = 11 and candidate_event_done = 0; poland_events.budget_2019 if poll_danger_months < 2 and party_unity > 12 and year = 2019 and month = 12 and budget_2019_done = 0; poland_events.media if poll_danger_months < 2 and party_unity > 12 and year = 2020 and month = 1 and media_event_done = 0; poland_monthly_briefing if poll_danger_months < 2 and party_unity > 12 and year = 2020 and month = 2; poland_events.covid if poll_danger_months < 2 and party_unity > 12 and year = 2020 and month = 3 and covid_event_done = 0; poland_events.postal if poll_danger_months < 2 and party_unity > 12 and year = 2020 and month = 4 and postal_event_done = 0; poland_events.shield if poll_danger_months < 2 and party_unity > 12 and year = 2020 and month = 5 and shield_event_done = 0; poland_events.campaign if poll_danger_months < 2 and party_unity > 12 and year = 2020 and month = 6 and election_event_done = 0; poland_events.reckoning if poll_danger_months < 2 and party_unity > 12 and year = 2020 and month = 7 and reckoning_event_done = 0; poland_trzaskowski.certification if poll_danger_months < 2 and party_unity > 12 and year = 2020 and month = 8 and trzaskowski_won = 1 and trz_certification_event_done = 0; poland_events.merger if poll_danger_months < 2 and party_unity > 12 and year = 2020 and month = 9 and merger_event_done = 0; poland_trzaskowski.tribunal_showdown if poll_danger_months < 2 and party_unity > 12 and year = 2020 and month = 10 and abortion_event_done = 0 and trz_inaugurated = 1; poland_events.abortion if poll_danger_months < 2 and party_unity > 12 and year = 2020 and month = 10 and abortion_event_done = 0 and trz_inaugurated = 0; poland_events.strike if poll_danger_months < 2 and party_unity > 12 and year = 2020 and month = 11 and strike_event_done = 0; poland_foreign_events.us_election_2020 if poll_danger_months < 2 and party_unity > 12 and year = 2020 and month = 11 and strike_event_done = 1 and us_election_2020_done = 0; poland_events.budget_2020 if poll_danger_months < 2 and party_unity > 12 and year = 2020 and month = 12 and budget_2020_done = 0; poland_events.vaccine if poll_danger_months < 2 and party_unity > 12 and year = 2021 and month = 1 and vaccine_event_done = 0; poland_trzaskowski.judicial_war if poll_danger_months < 2 and party_unity > 12 and year = 2021 and month = 2 and trz_inaugurated = 1 and trz_judicial_war_done = 0; poland_events.rename if poll_danger_months < 2 and party_unity > 12 and year = 2021 and month = 3 and rename_event_done = 0; poland_trzaskowski.palace_offensive if poll_danger_months < 2 and party_unity > 12 and year = 2021 and month = 4 and trz_inaugurated = 1 and trz_palace_offensive_done = 0; poland_events.recovery_fund if poll_danger_months < 2 and party_unity > 12 and year = 2021 and month = 5 and recovery_fund_event_done = 0; poland_trzaskowski.rights_vote if poll_danger_months < 2 and party_unity > 12 and year = 2021 and month = 6 and opposition_reset_event_done = 0 and trz_inaugurated = 1; poland_events.opposition_reset if poll_danger_months < 2 and party_unity > 12 and year = 2021 and month = 6 and opposition_reset_event_done = 0 and trz_inaugurated = 0; poland_events.left_revolt if poll_danger_months < 2 and party_unity > 12 and year = 2021 and month = 7 and left_revolt_event_done = 0; poland_events_2021_2023.router if poll_danger_months < 2 and party_unity > 12 and ((year = 2021 and month >= 8) or year = 2022 or (year = 2023 and month <= 7)); poland_event_queue if poll_danger_months < 2 and party_unity > 12 and ((year = 2023 and month >= 8) or year = 2024 or year = 2025 or year = 2026); poland_monthly_briefing if poll_danger_months < 2 and party_unity > 12 and ((year = 2020 and month = 8 and (trzaskowski_won = 0 or trz_certification_event_done = 1)) or (year = 2021 and month = 2 and (trz_inaugurated = 0 or trz_judicial_war_done = 1)) or (year = 2021 and month = 4 and (trz_inaugurated = 0 or trz_palace_offensive_done = 1))); poland_hub if poll_danger_months < 2 and party_unity > 12 and polling_has_dated_route = 0

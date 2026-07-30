@@ -6,8 +6,8 @@ call: poland_normalize
 on-arrival: {!
 Q.deckDescription =
     Q.left_in_government
-        ? "Party and government affairs"
-        : "Party affairs and opposition negotiations";
+        ? "Party, government and foreign affairs"
+        : "Party affairs, opposition negotiations and foreign affairs";
 Q.handDescription = "Cards in hand";
 if (Q.advisor_action_timer <= 0) {
     Q.pinnedCardsDescription =
@@ -26,6 +26,22 @@ if (Q.leadership_reshuffle_timer <= 0) {
     Q.pinnedCardsDescription += " Next reshuffle in " +
         Q.leadership_reshuffle_timer + " months.";
 }
+const hubHand =
+    (this.state.currentHands &&
+        this.state.currentHands["poland_hub"]) || [];
+const hubMonthKey = Number(Q.year) * 100 + Number(Q.month);
+Q.poland_hand_count = hubHand.length;
+Q.poland_hand_full = hubHand.length >= 3 ? 1 : 0;
+Q.poland_discard_used_this_month =
+    Number(Q.poland_discard_month_key) == hubMonthKey ? 1 : 0;
+Q.poland_discard_available =
+    hubHand.length > 0 &&
+    !Q.poland_discard_used_this_month &&
+    Number(Q.resources) >= 1
+        ? 1
+        : 0;
+Q.pinnedCardsDescription +=
+    " End month is always available; passing without an agenda action counts as neglect.";
 !}
 
 = [+ date_label +] — the leadership table
@@ -36,7 +52,7 @@ if (Q.leadership_reshuffle_timer <= 0) {
 **President:** [+ president_name +].  
 **Lewica:** [+ left_role +].
 
-<span class="party party-lewica"><b>Lewica</b></span> has **[+ resources +]
+<span class="party party-lewica"><b>[+ left_party_name +]</b></span> has **[+ resources +]
 party resources**. Annual income: **[+ party_income +]**.
 Membership dues provide **[+ member_dues +]**; the **[+
 seat_subvention +]** subvention follows **[+ seat_subvention_seats +]** seats
@@ -57,23 +73,42 @@ crisis pressure **[+ national_crisis_pressure +]/100** · cabinet hostility
 [+ pis_cohabitation_stress +] · defensive rally [+ pis_cohabitation_rally +]).
 ?]
 
-Draw up to three cards. Playing one turns the month; discarding one does not.
-Choice subtitles state the direct cost, test or main political exchange before
-you commit.
+**Foreign line:** [+ eu_campaign_stage +] · EU influence **[+
+eu_influence +]/100** · Washington: **[+ us_president +]** ([+
+us_administration +]) · external pressure **[+ foreign_pressure +]/100**.
+
+Draw up to three cards. Playing one turns the month. Discarding costs **1 party
+resource**, does not turn the month, and is available only once per calendar
+month. Choice subtitles state the direct cost, test or main political exchange
+before you commit.
+
+[? if poland_hand_count = 0: **Your hand is empty.** Draw from an available
+deck; the discard file has nothing to remove.?]
+[? if poland_hand_full = 1: **Your hand is full (3/3).** Play a held card,
+use this month's paid discard, or end the month before drawing again.?]
+[? if poland_hand_count > 0 and poland_discard_used_this_month = 1:
+**This month's discard has already been used.** It reopens after the calendar
+advances.?]
+[? if poland_hand_count > 0 and poland_discard_used_this_month = 0 and
+resources < 1: **The party cannot afford a discard.** Play a card or end the
+month.?]
 
 - @poland_party_deck
 - @poland_government_deck
 - @poland_negotiation_deck
+- @poland_foreign_deck
 - #poland_advisor
 - @poland_manage_advisors
 - @poland_discard_card
+- @end_month
+- @dossier
 
 @end_month
 title: End month
 subtitle: Pass without playing an agenda card. Neglect carries a political cost.
 is-pinned-card: true
 view-if: started = 1
-card-image: img/poland/end_month.svg
+card-image: img/poland/cards/end-month.webp
 go-to: poland_advance
 
 @dossier
@@ -82,5 +117,5 @@ subtitle: Rules, factions and institutions.
 is-pinned-card: true
 is-special: true
 view-if: started = 1
-card-image: img/poland/dossier.svg
+card-image: img/poland/cards/polish-dossier.webp
 go-to: library

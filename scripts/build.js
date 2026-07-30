@@ -35,5 +35,28 @@ if (!fs.existsSync(compiledGame)) {
   process.exit(1);
 }
 
+// Dendry expands tag lookups by object iteration, so compiler insertion order
+// can otherwise change a seeded card draw between identical builds. Canonical
+// JSON key order makes the compiled game and its replay order reproducible.
+function canonicalize(value) {
+  if (Array.isArray(value)) {
+    return value.map(canonicalize);
+  }
+  if (value && typeof value === 'object') {
+    return Object.keys(value).sort().reduce(function(sorted, key) {
+      sorted[key] = canonicalize(value[key]);
+      return sorted;
+    }, {});
+  }
+  return value;
+}
+
+const compiledJson = JSON.parse(fs.readFileSync(compiledGame, 'utf8'));
+fs.writeFileSync(
+  compiledGame,
+  JSON.stringify(canonicalize(compiledJson), null, 2) + '\n'
+);
 fs.copyFileSync(compiledGame, browserGame);
-console.log('Copied out/game.json to out/html/game.json for the mod loader.');
+console.log(
+  'Canonicalized out/game.json and copied it to out/html/game.json.'
+);

@@ -13,7 +13,7 @@ on-arrival: annual_budget_year = 2023; annual_budget_result = "Negotiations open
 go-to: annual_budget
 
 @budget_2024
-title: The first full coalition budget
+title: The 2025 state budget
 subtitle: Flood reconstruction, defence and social delivery compete
 new-page: true
 tags: poland_event
@@ -21,19 +21,19 @@ priority: 5
 order: 90
 max-visits: 1
 view-if: continuous_campaign = 1 and year = 2024 and month = 12 and annual_budget_done_2024 = 0
-on-arrival: annual_budget_year = 2024; annual_budget_result = "Negotiations open"; news_headline = "PSL, KO and the Left price another year together"
+on-arrival: annual_budget_year = 2024; annual_budget_result = "Negotiations open"; news_headline = "The government submits its next annual budget"
 go-to: annual_budget
 
 @budget_2025
 title: The post-presidential budget
-subtitle: A hostile Palace and a fractured centre test the majority
+subtitle: The Palace, the economy and a fractured chamber test the government
 new-page: true
 tags: poland_event
 priority: 5
 order: 90
 max-visits: 1
 view-if: continuous_campaign = 1 and year = 2025 and month = 12 and annual_budget_done_2025 = 0
-on-arrival: annual_budget_year = 2025; annual_budget_result = "Negotiations open"; news_headline = "The coalition writes a budget after presidential defeat and Marshal rotation"
+on-arrival: annual_budget_year = 2025; annual_budget_result = "Negotiations open"; news_headline = "The government submits a budget after the presidential election"
 go-to: annual_budget
 
 @budget_2026
@@ -51,54 +51,87 @@ go-to: annual_budget
 @annual_budget
 title: The annual budget council
 new-page: true
+call: poland_normalize
 on-arrival: {!
 Q.annual_budget_passed = 0;
 Q.annual_budget_internal_backing = 0;
 Q.annual_budget_internal_vetoes = 0;
 Q.annual_budget_margin = 0;
+Q.annual_budget_shortfall = 0;
+Q.annual_budget_threshold = 0;
+Q.annual_budget_present = 0;
 Q.annual_budget_strategy = "Unsettled";
+Q.annual_budget_posture = "Unsettled";
+Q.annual_budget_concession = "None";
+Q.annual_budget_concession_code = 0;
+Q.annual_budget_negotiation_success = 0;
+Q.annual_budget_left_yes = 0;
+Q.annual_budget_left_no = 0;
+Q.annual_budget_left_abstain = 0;
 Q.budget_confidence_triggered = 0;
 Q.budget_rescue_bonus = 0;
+Q.budget_rescue_attempted = 0;
+Q.annual_budget_left_cabinet_authority =
+    Q.left_in_government &&
+    Q.government_has_confidence &&
+    !Q.caretaker_government ? 1 : 0;
+Q.budget_submission_time = Number(Q.time) || 0;
+Q.budget_submission_year = Number(Q.year) || Q.annual_budget_year;
+Q.budget_submission_month = Number(Q.month) || 12;
+Q.budget_deadline_time = Q.budget_submission_time + 4;
+const budgetDeadlineIndex =
+    Q.budget_submission_year * 12 +
+    Math.max(0, Q.budget_submission_month - 1) + 4;
+Q.budget_deadline_year = Math.floor(budgetDeadlineIndex / 12);
+Q.budget_deadline_month = budgetDeadlineIndex % 12 + 1;
+const budgetMonthNames = [
+    "January", "February", "March", "April", "May", "June",
+    "July", "August", "September", "October", "November", "December"
+];
+Q.budget_deadline_label =
+    budgetMonthNames[Q.budget_deadline_month - 1] +
+    " " + Q.budget_deadline_year;
+Q.budget_deadline_active = 1;
 !}
 
 = December [+ annual_budget_year +] — the vote that binds
 
-[? if left_in_government: A budget is the coalition agreement with numbers
-attached. <span class="party party-ko">KO</span> wants fiscal room,
-<span class="party party-psl">PSL</span> wants rural protection, the centrist
-caucuses want visible ministries, and every Left mini-party wants proof that
-office purchased delivery. The President cannot use an ordinary veto to erase
-an adopted budget, but delay and constitutional conflict can still weaponise
-the process.?]
+[? if annual_budget_left_cabinet_authority: A budget is the coalition agreement
+with numbers attached. Every governing caucus wants proof that office
+purchased delivery, while every partner also wants room for its own electoral
+identity. The President cannot use an ordinary veto to erase an adopted
+budget, but delay and constitutional conflict can still weaponise the
+process.?]
 
-[? if not left_in_government: The Left is outside the cabinet and has no state
-budget capacity. Its normal position is opposition. Supporting or abstaining
-must therefore buy a public concession rather than imitate government.?]
+[? if not annual_budget_left_cabinet_authority: **[+ government_owner +]**
+owns this bill. Lewica has no state-budget capacity: it can oppose, negotiate a
+published concession, tolerate the bill for stability, or lend conditional
+support. Party resources pay for drafting, whips and monitoring—not state
+programmes. The government's text must still win an ordinary Sejm majority;
+it does not pass automatically because Lewica is outside cabinet.?]
+
+The constitutional budget clock recorded by this scenario expires in **[+
+budget_deadline_label +]**. A defeat today does not itself dismiss the cabinet
+or dissolve the Sejm.
 
 - @government_social_protocol
 - @government_rural_compact
 - @government_minimum
 - @government_dare
 - @opposition_shadow
-- @opposition_amendments
-- @opposition_favour
+- @opposition_bargain
+- @opposition_tolerate
 
 @government_social_protocol
 title: Bind housing, health, labour inspection and wages into one protocol
 subtitle: Cost: 3 budget capacity. Strongest Left settlement; hardest PSL–KO negotiation.
-view-if: left_in_government = 1
-choose-if: left_in_government = 1 and budget >= 3
+view-if: annual_budget_left_cabinet_authority = 1
+choose-if: annual_budget_left_cabinet_authority = 1 and budget >= 3
 unavailable-subtitle: The governing reserve cannot finance the protocol.
 on-arrival: {!
 Q.budget -= 3;
 Q.annual_budget_strategy = "Funded social protocol";
-Q.annual_budget_internal_backing = Math.max(
-    52,
-    82 - Math.round(Number(Q.internal_dissent) || 0) / 3
-);
-Q.annual_budget_internal_vetoes =
-    (Q.barons_dissent >= 70 ? 1 : 0) +
-    (Q.razem_dissent >= 70 ? 1 : 0);
+Q.annual_budget_package_code = 1;
 Q.labor_credibility += 6;
 Q.progressive_credibility += 3;
 Q.razem_cooperation += 5;
@@ -108,24 +141,18 @@ Q.ko_relation -= 2;
 Q.fiscal_stress += 6;
 Q.news_headline = "The Left turns its coalition promises into costed budget lines";
 !}
-go-to: budget_vote
+go-to: internal_ratification
 
 @government_rural_compact
 title: Exchange rural investment for care, housing and workplace enforcement
 subtitle: Cost: 2 budget capacity. Stabilises PSL; compromises the programme.
-view-if: left_in_government = 1
-choose-if: left_in_government = 1 and budget >= 2
+view-if: annual_budget_left_cabinet_authority = 1
+choose-if: annual_budget_left_cabinet_authority = 1 and budget >= 2
 unavailable-subtitle: The governing reserve cannot carry both sides of the bargain.
 on-arrival: {!
 Q.budget -= 2;
 Q.annual_budget_strategy = "Rural-social compact";
-Q.annual_budget_internal_backing = Math.max(
-    48,
-    76 - Math.round(Number(Q.internal_dissent) || 0) / 3
-);
-Q.annual_budget_internal_vetoes =
-    (Q.progressives_dissent >= 72 ? 1 : 0) +
-    (Q.razem_dissent >= 65 ? 1 : 0);
+Q.annual_budget_package_code = 2;
 Q.psl_relation += 8;
 Q.rural_support += 4;
 Q.household_security += 4;
@@ -135,25 +162,18 @@ Q.razem_dissent += 4;
 Q.fiscal_stress += 3;
 Q.news_headline = "A rural-social compact gives PSL a reason not to pull the pin";
 !}
-go-to: budget_vote
+go-to: internal_ratification
 
 @government_minimum
 title: Protect existing benefits and postpone the expensive promises
 subtitle: Cost: 1 budget capacity. Easier coalition arithmetic; severe movement cost.
-view-if: left_in_government = 1
-choose-if: left_in_government = 1 and budget >= 1
+view-if: annual_budget_left_cabinet_authority = 1
+choose-if: annual_budget_left_cabinet_authority = 1 and budget >= 1
 unavailable-subtitle: Even the minimum package lacks a reserve.
 on-arrival: {!
 Q.budget -= 1;
 Q.annual_budget_strategy = "Fiscal minimum";
-Q.annual_budget_internal_backing = Math.max(
-    38,
-    65 - Math.round(Number(Q.internal_dissent) || 0) / 2
-);
-Q.annual_budget_internal_vetoes =
-    (Q.labor_dissent >= 58 ? 1 : 0) +
-    (Q.progressives_dissent >= 58 ? 1 : 0) +
-    (Q.razem_dissent >= 48 ? 1 : 0);
+Q.annual_budget_package_code = 3;
 Q.ko_relation += 5;
 Q.psl_relation += 3;
 Q.fiscal_stress -= 3;
@@ -162,24 +182,15 @@ Q.razem_cooperation -= 7;
 Q.budget_breaches += 2;
 Q.news_headline = "The cabinet protects its floor and pushes the Left's deadlines away";
 !}
-go-to: budget_vote
+go-to: internal_ratification
 
 @government_dare
 title: Table the Left draft and dare partners to defeat the government
 subtitle: No budget cost. Converts policy dissent into a confidence crisis.
-view-if: left_in_government = 1
+view-if: annual_budget_left_cabinet_authority = 1
 on-arrival: {!
 Q.annual_budget_strategy = "Coalition dare";
-Q.annual_budget_internal_backing = Math.max(
-    35,
-    70 - Math.round(Number(Q.internal_dissent) || 0) / 2
-);
-Q.annual_budget_internal_vetoes =
-    (Q.barons_dissent >= 60 ? 1 : 0) +
-    (Q.spring_dissent >= 60 ? 1 : 0) +
-    (Q.labor_dissent >= 60 ? 1 : 0) +
-    (Q.progressives_dissent >= 60 ? 1 : 0) +
-    (Q.razem_dissent >= 55 ? 1 : 0);
+Q.annual_budget_package_code = 4;
 Q.party_unity += 2;
 Q.psl_relation -= 12;
 Q.ko_relation -= 8;
@@ -187,58 +198,537 @@ Q.government_coalition_dissent += 14;
 Q.coalition_break_threat = 1;
 Q.news_headline = "The Left turns the budget into a roll-call on coalition survival";
 !}
-go-to: budget_vote
+go-to: internal_ratification
 
-@opposition_shadow
-title: Vote no and publish a complete shadow budget
-subtitle: The normal opposition line.
-view-if: left_in_government = 0
-on-arrival: annual_budget_strategy = "Opposition shadow budget"; annual_budget_internal_backing = 78; party_unity += 2; labor_credibility += 3; public_trust += 1; ko_relation -= 2; pis_relation -= 2; news_headline = "The Left votes no and prices its alternative"
-go-to: opposition_result
-
-@opposition_amendments
-title: Trade abstention for wages, housing and court capacity
-subtitle: Cost: 1 party resource. A narrow issue bargain, not coalition support.
-view-if: left_in_government = 0
-choose-if: left_in_government = 0 and resources >= 1
-unavailable-subtitle: The opposition lacks the staff for line-by-line negotiation.
-on-arrival: resources -= 1; annual_budget_strategy = "Conditional abstention"; annual_budget_internal_backing = 56; government_delivery += 2; household_security += 2; court_backlog -= 2; ko_relation += 4; pis_relation += 2; razem_dissent += 4; public_trust += 1; news_headline = "Targeted amendments buy a Left abstention"
-go-to: opposition_result
-
-@opposition_favour
-title: Support the budget to open a channel with the government
-subtitle: A costly favour whose return is uncertain.
-view-if: left_in_government = 0
-on-arrival: annual_budget_strategy = "Confidence favour"; annual_budget_internal_backing = 42; party_unity -= 5; public_trust -= 2; barons_dissent -= 3; razem_dissent += 9; government_delivery += 4; ko_relation += 6; pis_relation += 6; news_headline = "The Left lends votes without entering the cabinet"
-go-to: opposition_result
-
-@opposition_result
-title: The opposition records its vote
+@internal_ratification
+title: Active Left caucuses count their deputies
 new-page: true
+view-if: annual_budget_left_cabinet_authority = 1
+call: poland_normalize
 on-arrival: {!
-Q.annual_budget_passed = 1;
-Q.annual_budget_margin = Math.max(
-    1,
-    Math.round(Number(Q.government_has_confidence) ? 12 : 2)
+const clampInternalBudget = function(value) {
+    return Math.max(0, Math.min(100, Math.round(value)));
+};
+const profiles = {
+    1: {
+        barons: 66, spring: 86, labor: 92,
+        progressives: 89, razem: 94, pps: 90
+    },
+    2: {
+        barons: 82, spring: 70, labor: 80,
+        progressives: 63, razem: 64, pps: 84
+    },
+    3: {
+        barons: 86, spring: 46, labor: 32,
+        progressives: 28, razem: 17, pps: 38
+    },
+    4: {
+        barons: 58, spring: 68, labor: 75,
+        progressives: 78, razem: 82, pps: 76
+    }
+};
+const profile =
+    profiles[Number(Q.annual_budget_package_code) || 4];
+let weightedBacking = 0;
+let activeStrength = 0;
+let vetoes = 0;
+for (const caucus of Q.factions) {
+    const support = clampInternalBudget(
+        profile[caucus] +
+            (Number(Q.party_unity) || 0) * 0.12 -
+            (Number(Q[caucus + "_dissent"]) || 0) * 0.42
+    );
+    const strength = Math.max(
+        0,
+        Number(Q[caucus + "_strength"]) || 0
+    );
+    Q["annual_budget_" + caucus + "_backing"] = support;
+    weightedBacking += support * strength;
+    activeStrength += strength;
+    if (support < 35 && strength >= 2) vetoes += 1;
+}
+Q.annual_budget_internal_backing = Math.round(
+    weightedBacking / Math.max(1, activeStrength)
 );
-Q.annual_budget_result =
-    Q.annual_budget_strategy + " — government budget carried";
-Q["annual_budget_done_" + Q.annual_budget_year] = 1;
-Q["annual_budget_passed_" + Q.annual_budget_year] = 1;
-Q.next_budget_label = "December " + (Number(Q.annual_budget_year) + 1);
+Q.annual_budget_internal_vetoes = vetoes;
 !}
 
-= Budget adopted
+= The active caucus roll call
 
-The government carries its own budget. The political result for the Left is
-**[+ annual_budget_strategy +]**; no state-budget resource was granted to an
-opposition party.
+The package receives **[+ annual_budget_internal_backing +]% weighted
+backing** from the caucuses that still belong to **[+ left_party_name +]**.
+There are **[+ annual_budget_internal_vetoes +] active red-line vetoes**.
+Merged and departed organisations cast no votes here; their independent MPs
+enter the Sejm arithmetic under their own party agreements.
+
+- @budget_vote: Count the chamber
+
+@opposition_shadow
+title: Reject the bill and publish a costed opposition programme
+subtitle: The normal opposition line: all Lewica deputies vote no.
+view-if: annual_budget_left_cabinet_authority = 0
+on-arrival: {!
+Q.annual_budget_strategy = "Costed opposition programme";
+Q.annual_budget_posture = "Oppose";
+Q.annual_budget_left_no = Math.max(
+    0,
+    Math.round(Number(Q.left_seats) || 0)
+);
+Q.party_unity += 3;
+Q.labor_credibility += 3;
+Q.media_capacity += 2;
+Q.ko_relation -= Q.government_party == "ko" ? 3 : 1;
+Q.pis_relation -= Q.government_party == "pis" ? 3 : 1;
+Q.news_headline =
+    "Lewica rejects the government's budget and prices its alternative";
+!}
+go-to: opposition_roll
+
+@opposition_bargain
+title: Open a public budget negotiation before deciding the vote
+subtitle: Choose one demand; the visible leverage test determines whether support changes.
+view-if: annual_budget_left_cabinet_authority = 0
+go-to: opposition_bargaining_table
+
+@opposition_tolerate
+title: Abstain without concessions to avoid a budget crisis
+subtitle: Stability now; the government keeps full ownership of the bill.
+view-if: annual_budget_left_cabinet_authority = 0
+on-arrival: {!
+Q.annual_budget_strategy = "Unconditional toleration";
+Q.annual_budget_posture = "Abstain";
+Q.annual_budget_left_abstain = Math.max(
+    0,
+    Math.round(Number(Q.left_seats) || 0)
+);
+Q.party_unity -= 4;
+Q.razem_dissent += 7;
+Q.barons_dissent -= 2;
+Q.public_trust += Q.caretaker_government ? 1 : -1;
+if (Q.government_party == "pis") Q.pis_relation += 3;
+else if (Q.government_party == "ko") Q.ko_relation += 3;
+else if (Q.government_party == "psl") Q.psl_relation += 3;
+else Q.p2050_relation += 3;
+Q.news_headline =
+    "Lewica abstains for stability and receives no policy concession";
+!}
+go-to: opposition_roll
+
+@opposition_bargaining_table
+title: The price of opposition votes
+new-page: true
+view-if: annual_budget_left_cabinet_authority = 0
+
+= A bounded negotiation, not a shadow cabinet
+
+Current leverage is **[+ negotiation_leverage +]/100**. Government hostility
+is **[+ government_negotiation_hostility +]/100**.
+
+Every option states its score and threshold. A party-resource cost represents
+drafting, negotiations and post-vote monitoring. No state programme begins
+unless the cabinet accepts the clause **and its budget actually passes**.
+
+- @opposition_social_floor
+- @opposition_oversight
+- @opposition_support_pact
+- @opposition_bargain_walk
+
+@opposition_social_floor
+title: Offer abstention for a wage, care and housing floor
+subtitle: Cost: 1 resource · score +10 · requires 58 under PiS, 46 otherwise.
+view-if: annual_budget_left_cabinet_authority = 0
+choose-if: annual_budget_left_cabinet_authority = 0 and resources >= 1
+unavailable-subtitle: A costed amendment and monitoring team require one party resource.
+on-arrival: {!
+Q.resources -= 1;
+Q.negotiation_attempts += 1;
+Q.negotiation_last_score =
+    Math.round((Number(Q.negotiation_leverage) || 0) + 10);
+Q.negotiation_last_threshold =
+    Q.government_party == "pis" ? 58 : 46;
+Q.annual_budget_negotiation_success =
+    Q.negotiation_last_score >= Q.negotiation_last_threshold ? 1 : 0;
+Q.negotiation_success = Q.annual_budget_negotiation_success;
+Q.annual_budget_strategy = Q.annual_budget_negotiation_success
+    ? "Social-floor abstention"
+    : "Social-floor offer refused";
+Q.annual_budget_concession = Q.annual_budget_negotiation_success
+    ? "Written wage, care and housing floor"
+    : "None — government refused the social floor";
+Q.annual_budget_concession_code =
+    Q.annual_budget_negotiation_success ? 1 : 0;
+Q.annual_budget_posture =
+    Q.annual_budget_negotiation_success ? "Abstain" : "Oppose";
+Q.annual_budget_left_abstain = Q.annual_budget_negotiation_success
+    ? Math.max(0, Math.round(Number(Q.left_seats) || 0)) : 0;
+Q.annual_budget_left_no = Q.annual_budget_negotiation_success
+    ? 0 : Math.max(0, Math.round(Number(Q.left_seats) || 0));
+Q.negotiation_last_result = Q.annual_budget_negotiation_success
+    ? "Government accepts a social floor for Lewica abstention"
+    : "Government rejects the social-floor offer";
+if (Q.annual_budget_negotiation_success) {
+    Q.negotiation_successes += 1;
+    Q.negotiation_capital += 2;
+    Q.razem_dissent += 3;
+    Q.public_trust += 1;
+} else {
+    Q.negotiation_capital -= 1;
+    Q.public_trust -= 1;
+}
+Q.news_headline = Q.negotiation_last_result;
+!}
+go-to: opposition_negotiation_result
+
+@opposition_oversight
+title: Offer abstention for audits, deadlines and a beneficiary register
+subtitle: Cost: 1 resource · score +14 · requires 54 under PiS, 42 otherwise.
+view-if: annual_budget_left_cabinet_authority = 0
+choose-if: annual_budget_left_cabinet_authority = 0 and resources >= 1
+unavailable-subtitle: Line-by-line scrutiny and monitoring require one party resource.
+on-arrival: {!
+Q.resources -= 1;
+Q.negotiation_attempts += 1;
+Q.negotiation_last_score =
+    Math.round((Number(Q.negotiation_leverage) || 0) + 14);
+Q.negotiation_last_threshold =
+    Q.government_party == "pis" ? 54 : 42;
+Q.annual_budget_negotiation_success =
+    Q.negotiation_last_score >= Q.negotiation_last_threshold ? 1 : 0;
+Q.negotiation_success = Q.annual_budget_negotiation_success;
+Q.annual_budget_strategy = Q.annual_budget_negotiation_success
+    ? "Oversight-for-abstention agreement"
+    : "Oversight offer refused";
+Q.annual_budget_concession = Q.annual_budget_negotiation_success
+    ? "Audit, deadline and beneficiary register"
+    : "None — government refused oversight";
+Q.annual_budget_concession_code =
+    Q.annual_budget_negotiation_success ? 2 : 0;
+Q.annual_budget_posture =
+    Q.annual_budget_negotiation_success ? "Abstain" : "Oppose";
+Q.annual_budget_left_abstain = Q.annual_budget_negotiation_success
+    ? Math.max(0, Math.round(Number(Q.left_seats) || 0)) : 0;
+Q.annual_budget_left_no = Q.annual_budget_negotiation_success
+    ? 0 : Math.max(0, Math.round(Number(Q.left_seats) || 0));
+Q.negotiation_last_result = Q.annual_budget_negotiation_success
+    ? "Government accepts enforceable oversight for Lewica abstention"
+    : "Government rejects the oversight offer";
+if (Q.annual_budget_negotiation_success) {
+    Q.negotiation_successes += 1;
+    Q.negotiation_capital += 2;
+    Q.public_trust += 2;
+    Q.barons_dissent -= 2;
+} else {
+    Q.negotiation_capital -= 1;
+    Q.media_capacity += 1;
+}
+Q.news_headline = Q.negotiation_last_result;
+!}
+go-to: opposition_negotiation_result
+
+@opposition_support_pact
+title: Offer yes votes for a signed social-and-oversight pact
+subtitle: Cost: 2 resources · score +18 · requires 68 under PiS, 54 otherwise.
+view-if: annual_budget_left_cabinet_authority = 0
+choose-if: annual_budget_left_cabinet_authority = 0 and resources >= 2
+unavailable-subtitle: A full public pact, whip operation and monitoring unit require two resources.
+on-arrival: {!
+Q.resources -= 2;
+Q.negotiation_attempts += 1;
+Q.negotiation_last_score =
+    Math.round((Number(Q.negotiation_leverage) || 0) + 18);
+Q.negotiation_last_threshold =
+    Q.government_party == "pis" ? 68 : 54;
+Q.annual_budget_negotiation_success =
+    Q.negotiation_last_score >= Q.negotiation_last_threshold ? 1 : 0;
+Q.negotiation_success = Q.annual_budget_negotiation_success;
+Q.annual_budget_strategy = Q.annual_budget_negotiation_success
+    ? "Conditional budget support pact"
+    : "Support pact refused";
+Q.annual_budget_concession = Q.annual_budget_negotiation_success
+    ? "Social floor plus implementation oversight"
+    : "None — government refused a support pact";
+Q.annual_budget_concession_code =
+    Q.annual_budget_negotiation_success ? 3 : 0;
+Q.annual_budget_posture =
+    Q.annual_budget_negotiation_success ? "Support" : "Oppose";
+Q.annual_budget_left_yes = Q.annual_budget_negotiation_success
+    ? Math.max(0, Math.round(Number(Q.left_seats) || 0)) : 0;
+Q.annual_budget_left_no = Q.annual_budget_negotiation_success
+    ? 0 : Math.max(0, Math.round(Number(Q.left_seats) || 0));
+Q.negotiation_last_result = Q.annual_budget_negotiation_success
+    ? "Government signs a social-and-oversight pact for Lewica votes"
+    : "Government refuses the conditional support pact";
+if (Q.annual_budget_negotiation_success) {
+    Q.negotiation_successes += 1;
+    Q.negotiation_capital += 4;
+    Q.party_unity -= 5;
+    Q.razem_dissent += 9;
+    Q.barons_dissent -= 3;
+    Q.public_trust += 1;
+} else {
+    Q.negotiation_capital -= 2;
+    Q.party_unity += 1;
+    Q.public_trust -= 1;
+}
+Q.news_headline = Q.negotiation_last_result;
+!}
+go-to: opposition_negotiation_result
+
+@opposition_bargain_walk
+title: End the talks and vote no
+subtitle: No deal, no resource cost and no ambiguity about responsibility.
+view-if: annual_budget_left_cabinet_authority = 0
+on-arrival: {!
+Q.annual_budget_strategy = "Negotiations refused — opposition vote";
+Q.annual_budget_posture = "Oppose";
+Q.annual_budget_concession = "None";
+Q.annual_budget_left_no = Math.max(
+    0,
+    Math.round(Number(Q.left_seats) || 0)
+);
+Q.party_unity += 2;
+Q.media_capacity += 1;
+Q.news_headline =
+    "Lewica ends budget talks and leaves responsibility with the cabinet";
+!}
+go-to: opposition_roll
+
+@opposition_negotiation_result
+title: The cabinet answers
+new-page: true
+view-if: annual_budget_left_cabinet_authority = 0
+
+**[+ negotiation_last_result +]**
+Score **[+ negotiation_last_score +]** · required **[+
+negotiation_last_threshold +]**.
+
+[? if annual_budget_negotiation_success: The agreement changes Lewica's vote,
+not its constitutional role. The cabinet still owns the bill, expenditure and
+implementation. The concession takes effect only if the Sejm adopts the
+budget.?]
+[? if not annual_budget_negotiation_success: The drafting resource is spent,
+the cabinet keeps its text and Lewica votes no.?]
+
+- @opposition_roll: Count the chamber
+
+@opposition_roll
+title: The government's budget reaches the Sejm
+new-page: true
+view-if: annual_budget_left_cabinet_authority = 0
+on-arrival: {!
+const oppositionSejmTotal = Math.max(
+    1,
+    Math.round(Number(Q.sejm_total) || 460)
+);
+const oppositionLeftSeats = Math.max(
+    0,
+    Math.min(
+        oppositionSejmTotal,
+        Math.round(Number(Q.left_seats) || 0)
+    )
+);
+let declaredGovernmentSeats = Math.round(
+    Number(Q.coalition_seats) || 0
+);
+if (declaredGovernmentSeats <= 0) {
+    if (Q.government_party == "pis") {
+        declaredGovernmentSeats =
+            Math.round(Number(Q.pis_seats) || 0);
+    } else if (Q.government_party == "ko") {
+        declaredGovernmentSeats =
+            Math.round(Number(Q.ko_seats) || 0) +
+            Math.round(Number(Q.p2050_seats) || 0) +
+            Math.round(Number(Q.psl_seats) || 0);
+    } else if (Q.government_party == "psl") {
+        declaredGovernmentSeats =
+            Math.round(Number(Q.psl_seats) || 0);
+    } else if (Q.government_party == "p2050") {
+        declaredGovernmentSeats =
+            Math.round(Number(Q.p2050_seats) || 0);
+    }
+}
+if (Q.left_in_government && !Q.annual_budget_left_cabinet_authority) {
+    declaredGovernmentSeats = Math.max(
+        0,
+        declaredGovernmentSeats - oppositionLeftSeats
+    );
+}
+declaredGovernmentSeats = Math.max(
+    0,
+    Math.min(
+        oppositionSejmTotal - oppositionLeftSeats,
+        declaredGovernmentSeats
+    )
+);
+const governmentStress =
+    (Number(Q.government_coalition_dissent) || 0) +
+    (Q.caretaker_government ? 12 : 0) +
+    (!Q.government_has_confidence ? 8 : 0);
+const governmentDefections = Math.min(
+    declaredGovernmentSeats,
+    Math.max(0, Math.round((governmentStress - 35) / 8))
+);
+Q.annual_budget_government_yes =
+    declaredGovernmentSeats - governmentDefections;
+Q.annual_budget_government_abstain = governmentDefections;
+const leftYes = Math.max(
+    0,
+    Math.min(
+        oppositionLeftSeats,
+        Math.round(Number(Q.annual_budget_left_yes) || 0)
+    )
+);
+const leftNo = Math.max(
+    0,
+    Math.min(
+        oppositionLeftSeats - leftYes,
+        Math.round(Number(Q.annual_budget_left_no) || 0)
+    )
+);
+const leftAbstain = Math.max(
+    0,
+    oppositionLeftSeats - leftYes - leftNo
+);
+Q.annual_budget_left_yes = leftYes;
+Q.annual_budget_left_no = leftNo;
+Q.annual_budget_left_abstain = leftAbstain;
+const otherOppositionNo = Math.max(
+    0,
+    oppositionSejmTotal -
+        declaredGovernmentSeats - oppositionLeftSeats
+);
+Q.annual_budget_yes =
+    Q.annual_budget_government_yes + leftYes;
+Q.annual_budget_no = otherOppositionNo + leftNo;
+Q.annual_budget_abstain =
+    Q.annual_budget_government_abstain + leftAbstain;
+Q.annual_budget_present =
+    Q.annual_budget_yes +
+    Q.annual_budget_no +
+    Q.annual_budget_abstain;
+Q.annual_budget_threshold = Q.annual_budget_no + 1;
+Q.annual_budget_passed =
+    Q.annual_budget_present >=
+        Math.max(1, Number(Q.sejm_quorum_floor) || 230) &&
+    Q.annual_budget_yes > Q.annual_budget_no ? 1 : 0;
+Q.annual_budget_margin =
+    Q.annual_budget_passed
+        ? Q.annual_budget_yes - Q.annual_budget_no
+        : 0;
+Q.annual_budget_shortfall = Q.annual_budget_passed
+    ? 0
+    : Math.max(0, Q.annual_budget_no + 1 - Q.annual_budget_yes);
+Q["annual_budget_done_" + Q.annual_budget_year] = 1;
+Q["annual_budget_passed_" + Q.annual_budget_year] =
+    Q.annual_budget_passed;
+Q.budget_deadline_active = Q.annual_budget_passed ? 0 : 1;
+!}
+
+= Ordinary-majority roll call
+
+<div class="ledger-section ledger-section-first"><div class="ledger-title">The
+government's bill</div>
+<div class="ledger-row"><span>Lewica posture</span><b>[+ annual_budget_posture +]</b></div>
+<div class="ledger-row"><span>Concession</span><b>[+ annual_budget_concession +]</b></div>
+<div class="ledger-row"><span>Yes</span><b>[+ annual_budget_yes +]</b></div>
+<div class="ledger-row"><span>No</span><b>[+ annual_budget_no +]</b></div>
+<div class="ledger-row"><span>Abstain</span><b>[+ annual_budget_abstain +]</b></div>
+<div class="ledger-row"><span>Required</span><b>[+ annual_budget_threshold +]</b></div></div>
+
+Abstentions count toward quorum but not against the bill. Passage requires
+more yes than no—not 231 yes votes.
+
+- @opposition_roll_continue: Record the result
+
+@opposition_roll_continue
+view-if: annual_budget_left_cabinet_authority = 0
+go-to: opposition_budget_passed if annual_budget_passed = 1; opposition_budget_failed if annual_budget_passed = 0
+
+@opposition_budget_passed
+title: The government carries its budget
+new-page: true
+view-if: annual_budget_left_cabinet_authority = 0 and annual_budget_passed = 1
+on-arrival: {!
+Q.budget_deadline_active = 0;
+Q.annual_budget_result =
+    Q.annual_budget_strategy + " — budget passed " +
+    Q.annual_budget_yes + " to " + Q.annual_budget_no;
+Q.next_budget_label =
+    "December " + (Number(Q.annual_budget_year) + 1);
+if (
+    Q.annual_budget_negotiation_success &&
+    Q.annual_budget_concession_code == 1
+) {
+    Q.household_security += 3;
+    Q.labor_credibility += 3;
+    Q.government_delivery += 2;
+    Q.fiscal_stress += 2;
+} else if (
+    Q.annual_budget_negotiation_success &&
+    Q.annual_budget_concession_code == 2
+) {
+    Q.government_procedural_restraint += 4;
+    Q.judicial_legitimacy += 2;
+    Q.government_delivery += 1;
+} else if (
+    Q.annual_budget_negotiation_success &&
+    Q.annual_budget_concession_code == 3
+) {
+    Q.household_security += 4;
+    Q.labor_credibility += 4;
+    Q.government_procedural_restraint += 3;
+    Q.government_delivery += 3;
+    Q.fiscal_stress += 3;
+}
+Q.news_headline = Q.annual_budget_negotiation_success
+    ? "The government's budget passes with its written Lewica concession"
+    : "The government carries its budget without a Lewica concession";
+!}
+
+The cabinet—not Lewica—now implements the budget. [? if
+annual_budget_negotiation_success: The published **[+
+annual_budget_concession +]** is part of that government text, so Lewica can
+audit whether the cabinet delivers it.?][? if not
+annual_budget_negotiation_success: Lewica secured no state programme through
+this vote. Its result is the political posture **[+ annual_budget_strategy
++]**.?]
+
+- @return_queue: Return to the remaining events
+
+@opposition_budget_failed
+title: The government loses its budget vote
+new-page: true
+view-if: annual_budget_left_cabinet_authority = 0 and annual_budget_passed = 0
+on-arrival: {!
+Q.budget_deadline_active = 1;
+Q.annual_budget_result =
+    Q.annual_budget_strategy + " — budget defeated by " +
+    Q.annual_budget_shortfall;
+Q.early_election_risk += Q.caretaker_government ? 18 : 10;
+Q.public_trust -= 2;
+Q.government_coalition_dissent += 6;
+Q.news_headline = Q.caretaker_government
+    ? "The caretaker cabinet cannot assemble a budget majority"
+    : "The government loses its budget but not an automatic confidence vote";
+!}
+
+The bill is **[+ annual_budget_shortfall +] vote(s)** short. The cabinet has
+not automatically fallen and no election has automatically begun. The
+recorded budget deadline remains **[+ budget_deadline_label +]**.
+
+[? if caretaker_government: A caretaker without a budget remains a formation
+and deadline problem. Lewica cannot convert the defeat into executive
+authority.?]
+[? if not caretaker_government: The government may revise the text, test
+confidence separately or seek a lawful election route. Lewica remains
+opposition throughout.?]
 
 - @return_queue: Return to the remaining events
 
 @budget_vote
 title: Caucus whips count the chamber
 new-page: true
+view-if: annual_budget_left_cabinet_authority = 1
 on-arrival: {!
 const sejmTotal = Math.max(1, Number(Q.sejm_total) || 460);
 const leftSeats = Math.max(0, Number(Q.left_seats) || 0);
@@ -266,12 +756,9 @@ const coalitionStress =
     Math.max(0, 40 - (Number(Q.psl_relation) || 0)) * 0.55 +
     (Q.third_way_split ? 5 : 0) +
     (Q.p2050_split ? 4 : 0);
-const randomDefections = Math.floor(
-    (this.random.uint32() / 4294967296) * 7
-);
 const partnerDefections = Math.max(
     0,
-    Math.round((coalitionStress - 34) / 5) + randomDefections
+    Math.round((coalitionStress - 34) / 5)
 );
 const strategyBonus =
     Q.annual_budget_strategy == "Rural-social compact" ? 7 :
@@ -293,15 +780,28 @@ Q.annual_budget_abstain = Math.max(
 );
 Q.annual_budget_no =
     sejmTotal - Q.annual_budget_yes - Q.annual_budget_abstain;
-Q.annual_budget_passed = Q.annual_budget_yes >= 231 ? 1 : 0;
-Q.annual_budget_margin = Q.annual_budget_yes - 230;
-Q.annual_budget_shortfall = Math.max(0, 231 - Q.annual_budget_yes);
+Q.annual_budget_present =
+    Q.annual_budget_yes +
+    Q.annual_budget_no +
+    Q.annual_budget_abstain;
+Q.annual_budget_threshold = Q.annual_budget_no + 1;
+Q.annual_budget_passed =
+    Q.annual_budget_present >=
+        Math.max(1, Number(Q.sejm_quorum_floor) || 230) &&
+    Q.annual_budget_yes > Q.annual_budget_no ? 1 : 0;
+Q.annual_budget_margin = Q.annual_budget_passed
+    ? Q.annual_budget_yes - Q.annual_budget_no
+    : 0;
+Q.annual_budget_shortfall = Q.annual_budget_passed
+    ? 0
+    : Math.max(0, Q.annual_budget_no + 1 - Q.annual_budget_yes);
 Q.annual_budget_result = Q.annual_budget_passed
-    ? "Passed by " + Q.annual_budget_margin
+    ? "Passed " + Q.annual_budget_yes + " to " + Q.annual_budget_no
     : "Failed " + Q.annual_budget_shortfall + " votes short";
 Q["annual_budget_done_" + Q.annual_budget_year] = 1;
 Q["annual_budget_passed_" + Q.annual_budget_year] =
     Q.annual_budget_passed;
+Q.budget_deadline_active = Q.annual_budget_passed ? 0 : 1;
 !}
 
 = Sejm roll call
@@ -309,19 +809,23 @@ Q["annual_budget_passed_" + Q.annual_budget_year] =
 **Yes [+ annual_budget_yes +] · No [+ annual_budget_no +] · Abstain
 [+ annual_budget_abstain +]**
 
-[? if annual_budget_passed: The budget carries by **[+
-annual_budget_margin +]** votes.?]
+[? if annual_budget_passed: The budget carries with **[+
+annual_budget_margin +] more yes than no**.?]
 [? if not annual_budget_passed: The bill falls **[+
 annual_budget_shortfall +]** votes short. A fiscal defeat is now a coalition
-and confidence crisis.?]
+crisis, not an automatic no-confidence vote.?]
+
+Required on this roll call: **[+ annual_budget_threshold +] yes**, because
+abstentions do not count against an ordinary bill.
 
 - @budget_passed
 - @budget_failed
 
 @budget_passed
 title: Ratify the result
-view-if: annual_budget_passed = 1
+view-if: annual_budget_left_cabinet_authority = 1 and annual_budget_passed = 1
 on-arrival: {!
+Q.budget_deadline_active = 0;
 Q.government_delivery += 4;
 Q.public_trust += 2;
 Q.government_coalition_dissent -= 3;
@@ -340,48 +844,65 @@ annual vote every faction knew it could not evade.
 
 @budget_failed
 title: Open the emergency coalition council
-view-if: annual_budget_passed = 0
-on-arrival: budget_confidence_triggered = 1; coalition_break_threat = 1; government_coalition_dissent += 12; public_trust -= 4; early_election_risk += 20; news_headline = "Budget defeat opens a confidence and early-election clock"
+view-if: annual_budget_left_cabinet_authority = 1 and annual_budget_passed = 0
+on-arrival: {!
+Q.budget_deadline_active = 1;
+Q.budget_confidence_triggered = 0;
+Q.coalition_break_threat = 1;
+Q.government_coalition_dissent += 12;
+Q.public_trust -= 4;
+Q.early_election_risk += 20;
+Q.news_headline =
+    "Budget defeat opens a revision clock without dismissing the cabinet";
+!}
 go-to: confidence_council
 
 @confidence_council
-title: Budget defeat — confidence council
+title: Budget defeat — emergency coalition council
 new-page: true
+view-if: annual_budget_left_cabinet_authority = 1
 
-= The four-month clock
+= Revision, confidence and election are different procedures
 
-The President can shorten the Sejm's term if a state budget is not presented
-within the constitutional deadline. Coalition partners also need to decide
-whether this cabinet, another prime minister, or an early election should own
-the rescue.
+The Sejm rejected one text. The cabinet remains in office and may submit a
+revision. A prime-ministerial confidence vote under Article 160 is optional
+and uses a simple majority. An early election requires a separate lawful
+route; announcing one does not create a caretaker government.
+
+The recorded Article 225 clock expires in **[+ budget_deadline_label +]**.
 
 - @confidence_psl_deal
 - @confidence_left_redline
-- @confidence_new_pm
+- @confidence_technical_revision
+- @confidence_article160
+- @confidence_resign
 - @confidence_snap
 
 @confidence_psl_deal
-title: Buy PSL back with a written rural guarantee
-subtitle: Cost: 2 budget capacity or 2 party resources.
-choose-if: budget >= 2 or resources >= 2
-unavailable-subtitle: Neither the state reserve nor the party machine can carry the deal.
+title: Reopen the text with a written rural guarantee
+subtitle: Cost: 2 governing-capacity points · moves 12 votes toward yes.
+view-if: annual_budget_left_cabinet_authority = 1
+choose-if: annual_budget_left_cabinet_authority = 1 and budget >= 2
+unavailable-subtitle: A state-budget guarantee requires two governing-capacity points; party resources cannot finance it.
 on-arrival: {!
-if (Q.budget >= 2) Q.budget -= 2;
-else Q.resources -= 2;
+Q.budget -= 2;
 Q.budget_rescue_bonus = 12;
+Q.budget_rescue_attempted = 1;
 Q.psl_relation += 12;
 Q.progressives_dissent += 5;
 Q.razem_dissent += 6;
 Q.annual_budget_strategy += " + PSL rescue";
 Q.news_headline = "A rural guarantee reopens the budget roll call";
 !}
-go-to: confidence_roll
+go-to: budget_rescue_roll
 
 @confidence_left_redline
 title: Rebuild the majority around the funded Left protocol
-subtitle: Risks office rather than surrendering the programme.
+subtitle: No capacity cost · moves five votes, but hardens KO and PSL opposition.
+view-if: annual_budget_left_cabinet_authority = 1
 on-arrival: {!
 Q.budget_rescue_bonus = 5;
+Q.budget_rescue_attempted = 1;
 Q.party_unity += 4;
 Q.labor_credibility += 4;
 Q.progressive_credibility += 3;
@@ -390,104 +911,307 @@ Q.psl_relation -= 6;
 Q.government_coalition_dissent += 4;
 Q.annual_budget_strategy += " + Left redline";
 Q.news_headline =
-    "The Left makes programme delivery the price of confidence";
+    "The Left makes programme delivery the price of a revised budget";
 !}
+go-to: budget_rescue_roll
+
+@confidence_technical_revision
+title: Remove disputed lines and preserve only the coalition minimum
+subtitle: Cost: 1 governing-capacity point · moves eight votes; the Left pays the programme cost.
+view-if: annual_budget_left_cabinet_authority = 1
+choose-if: annual_budget_left_cabinet_authority = 1 and budget >= 1
+unavailable-subtitle: Even a technical revision requires one governing-capacity point.
+on-arrival: {!
+Q.budget_rescue_bonus = 8;
+Q.budget_rescue_attempted = 1;
+Q.budget -= 1;
+Q.ko_relation += 4;
+Q.psl_relation += 3;
+Q.party_unity -= 4;
+Q.labor_credibility -= 4;
+Q.razem_dissent += 8;
+Q.annual_budget_strategy += " + technical revision";
+Q.news_headline =
+    "The cabinet strips the budget back to a coalition minimum";
+!}
+go-to: budget_rescue_roll
+
+@budget_rescue_roll
+title: The revised budget returns to the Sejm
+new-page: true
+view-if: annual_budget_left_cabinet_authority = 1
+on-arrival: {!
+const rescueTotal = Math.max(
+    1,
+    Math.round(Number(Q.sejm_total) || 460)
+);
+let rescueYes = Math.max(
+    0,
+    Math.min(rescueTotal, Math.round(Number(Q.annual_budget_yes) || 0))
+);
+let rescueNo = Math.max(
+    0,
+    Math.min(
+        rescueTotal - rescueYes,
+        Math.round(Number(Q.annual_budget_no) || 0)
+    )
+);
+let rescueAbstain = Math.max(
+    0,
+    rescueTotal - rescueYes - rescueNo
+);
+let votesMoved = Math.min(
+    rescueTotal - rescueYes,
+    Math.max(0, Math.round(Number(Q.budget_rescue_bonus) || 0))
+);
+const movedFromAbstain = Math.min(rescueAbstain, votesMoved);
+rescueAbstain -= movedFromAbstain;
+rescueYes += movedFromAbstain;
+votesMoved -= movedFromAbstain;
+const movedFromNo = Math.min(rescueNo, votesMoved);
+rescueNo -= movedFromNo;
+rescueYes += movedFromNo;
+Q.annual_budget_yes = rescueYes;
+Q.annual_budget_no = rescueNo;
+Q.annual_budget_abstain = rescueAbstain;
+Q.annual_budget_present = rescueYes + rescueNo + rescueAbstain;
+Q.annual_budget_threshold = rescueNo + 1;
+Q.annual_budget_passed =
+    Q.annual_budget_present >=
+        Math.max(1, Number(Q.sejm_quorum_floor) || 230) &&
+    rescueYes > rescueNo ? 1 : 0;
+Q.annual_budget_margin = Q.annual_budget_passed
+    ? rescueYes - rescueNo
+    : 0;
+Q.annual_budget_shortfall = Q.annual_budget_passed
+    ? 0
+    : Math.max(0, rescueNo + 1 - rescueYes);
+Q["annual_budget_passed_" + Q.annual_budget_year] =
+    Q.annual_budget_passed;
+Q.budget_deadline_active = Q.annual_budget_passed ? 0 : 1;
+Q.annual_budget_result = Q.annual_budget_passed
+    ? "Revised budget passed " + rescueYes + " to " + rescueNo
+    : "Revised budget failed " + Q.annual_budget_shortfall +
+        " votes short";
+!}
+
+= Second ordinary-majority roll call
+
+**Yes [+ annual_budget_yes +] · No [+ annual_budget_no +] · Abstain [+
+annual_budget_abstain +] · Required [+ annual_budget_threshold +]**
+
+The revised text moves exactly **[+ budget_rescue_bonus +] votes** where that
+many no or abstaining deputies are available. It still passes only with more
+yes than no.
+
+- @budget_rescue_continue: Record the revised vote
+
+@budget_rescue_continue
+view-if: annual_budget_left_cabinet_authority = 1
+go-to: budget_rescue_passed if annual_budget_passed = 1; budget_rescue_failed if annual_budget_passed = 0
+
+@budget_rescue_passed
+title: The revision lands inside the deadline
+new-page: true
+view-if: annual_budget_left_cabinet_authority = 1 and annual_budget_passed = 1
+on-arrival: {!
+Q.budget_deadline_active = 0;
+Q.government_delivery += 2;
+Q.public_trust += 1;
+Q.government_coalition_dissent -= 5;
+Q.early_election_risk =
+    Math.max(0, Number(Q.early_election_risk) - 15);
+Q.next_budget_label =
+    "December " + (Number(Q.annual_budget_year) + 1);
+Q.news_headline =
+    "A revised annual budget passes inside the constitutional window";
+!}
+
+The cabinet survives because it changed and repassed the budget—not because a
+confidence vote silently substituted for legislation.
+
+- @return_queue: Return to the remaining events
+
+@budget_rescue_failed
+title: The revised bill also fails
+new-page: true
+view-if: annual_budget_left_cabinet_authority = 1 and annual_budget_passed = 0
+on-arrival: {!
+Q.budget_deadline_active = 1;
+Q.government_coalition_dissent += 8;
+Q.public_trust -= 3;
+Q.early_election_risk += 15;
+Q.news_headline =
+    "A second budget defeat leaves confidence and formation as separate questions";
+!}
+
+The cabinet still has not automatically lost confidence. The deadline remains
+**[+ budget_deadline_label +]**, but another identical rescue cannot be farmed
+for votes.
+
+- @confidence_article160
+- @confidence_resign
+- @confidence_snap
+
+@confidence_article160
+title: Ask the Sejm for confidence under Article 160
+subtitle: A separate simple-majority vote; passing it does not enact the defeated budget.
+view-if: annual_budget_left_cabinet_authority = 1
+on-arrival: budget_confidence_triggered = 1; news_headline = "The prime minister separates cabinet confidence from the defeated budget"
 go-to: confidence_roll
 
-@confidence_new_pm
-title: Offer a new democratic prime minister before the Palace intervenes
-subtitle: The coalition survives only if its caucuses accept the replacement.
+@confidence_resign
+title: Resign and open a new government-formation sequence
+subtitle: Creates a caretaker cabinet, not an automatic election.
+view-if: annual_budget_left_cabinet_authority = 1
 on-arrival: {!
-Q.confidence_candidate = "Coalition replacement";
-Q.budget_rescue_bonus = 8;
-Q.ko_relation -= 4;
-Q.p2050_relation += 3;
-Q.psl_relation += 3;
-Q.party_unity -= 2;
-Q.government_coalition_dissent += 3;
-Q.annual_budget_strategy += " + replacement cabinet";
+Q.government_has_confidence = 0;
+Q.caretaker_government = 1;
+Q.left_in_government = 0;
+Q.formation_in_progress = 1;
+Q.budget = 0;
+Q.budget_authority =
+    "Caretaker — no new governing-spend actions";
+Q.position = "Caretaker cabinet and formation talks";
+Q.coalition_status = "Cabinet resigned after budget defeat";
+Q.coalition_seats = 0;
+Q.annual_budget_result =
+    "Budget failed — cabinet resigned into formation talks";
+Q.early_election_risk = Math.max(65, Q.early_election_risk);
 Q.news_headline =
-    "The coalition searches for a prime minister who can carry the budget";
+    "The prime minister resigns; the Sejm must attempt another cabinet";
 !}
-go-to: confidence_roll
+
+The Palace and Sejm now begin government formation. The budget deadline
+continues to matter, but no election has yet been requested or called.
+
+- @return_queue: Return to the remaining events
 
 @confidence_snap
-title: Accept a snap parliamentary election
-subtitle: Ends the budget negotiation and sends every caucus to the voters.
-on-arrival: coalition_broken = 1; government_has_confidence = 0; caretaker_government = 1; left_in_government = 0; budget = 0; position = "Snap-election campaign"; coalition_status = "Caretaker after budget defeat"; early_election_risk = 100; snap_election_requested = 1; annual_budget_result = "Failed — snap election accepted"; party_unity -= 4; news_headline = "The coalition chooses an early election over another bargain"
+title: Request cross-party talks on an early-election route
+subtitle: Records a request; it neither dissolves the Sejm nor creates a caretaker cabinet.
+view-if: annual_budget_left_cabinet_authority = 1
+on-arrival: {!
+Q.snap_election_requested = 1;
+Q.snap_election_request_time = Number(Q.time) || 0;
+Q.snap_election_request_year = Number(Q.year) || Q.annual_budget_year;
+Q.snap_election_request_month = Number(Q.month) || 12;
+Q.snap_election_reason =
+    "Budget defeat — self-dissolution or Article 225 talks";
+Q.position = "Government seeking a lawful early-election route";
+Q.coalition_status =
+    "Budget defeated; self-dissolution talks requested";
+Q.early_election_risk = Math.max(85, Q.early_election_risk);
+Q.annual_budget_result =
+    "Budget failed — early-election talks requested";
+Q.party_unity -= 4;
+Q.news_headline =
+    "The coalition requests election talks without pretending the Sejm has dissolved";
+!}
 
-= The chamber dissolves politically
+= A request, not a dissolution
 
-The constitutional route still requires the formal deadline, a Sejm
-self-dissolution vote, or another failed cabinet sequence. The campaign begins
-before lawyers finish choosing the mechanism.
+The cabinet remains in office with its existing confidence status. A Sejm
+self-dissolution requires its own two-thirds vote; alternatively, the
+President may act after the recorded budget deadline. Until one of those
+procedures succeeds, there is no snap-election campaign and no legal
+dissolution.
 
 - @return_queue: Return to the remaining events
 
 @confidence_roll
-title: The rescue vote
+title: Confidence in the sitting prime minister
 new-page: true
+view-if: annual_budget_left_cabinet_authority = 1
 on-arrival: {!
-const startingYes = Math.max(
-    0,
-    Number(Q.annual_budget_yes) || 0
+const confidenceTotal = Math.max(
+    1,
+    Math.round(Number(Q.sejm_total) || 460)
 );
-const unityBonus = Math.round(
-    ((Number(Q.party_unity) || 0) - 45) / 8
-);
-const relationBonus = Math.round(
-    (
-        (Number(Q.ko_relation) || 0) +
-        (Number(Q.psl_relation) || 0) +
-        (Number(Q.p2050_relation) || 0) -
-        105
-    ) / 18
-);
-const roll = Math.floor(
-    (this.random.uint32() / 4294967296) * 7
-) - 3;
-Q.confidence_yes = Math.max(
+let startingYes = Math.max(
     0,
     Math.min(
-        460,
-        startingYes +
-            (Number(Q.budget_rescue_bonus) || 0) +
-            unityBonus +
-            relationBonus +
-            roll
+        confidenceTotal,
+        Math.round(Number(Q.annual_budget_yes) || 0)
     )
 );
-Q.confidence_no = Math.max(0, 460 - Q.confidence_yes - 4);
-Q.confidence_abstain =
-    460 - Q.confidence_yes - Q.confidence_no;
-Q.confidence_threshold = 231;
-Q.confidence_present = 460;
-Q.confidence_mode = "Budget rescue and confidence";
-Q.confidence_candidate =
-    Q.confidence_candidate == "Coalition replacement"
-        ? "Coalition replacement"
-        : Q.prime_minister;
-Q.government_has_confidence = Q.confidence_yes >= 231 ? 1 : 0;
+let startingNo = Math.max(
+    0,
+    Math.min(
+        confidenceTotal - startingYes,
+        Math.round(Number(Q.annual_budget_no) || 0)
+    )
+);
+let startingAbstain = Math.max(
+    0,
+    confidenceTotal - startingYes - startingNo
+);
+let confidenceRecovery = Math.max(
+    0,
+    4 +
+    Math.round(((Number(Q.party_unity) || 0) - 50) / 10) +
+    Math.round(
+        (
+            (Number(Q.ko_relation) || 0) +
+            (Number(Q.psl_relation) || 0) +
+            (Number(Q.p2050_relation) || 0) - 120
+        ) / 30
+    )
+);
+confidenceRecovery = Math.min(
+    confidenceTotal - startingYes,
+    confidenceRecovery
+);
+const confidenceFromAbstain = Math.min(
+    startingAbstain,
+    confidenceRecovery
+);
+startingAbstain -= confidenceFromAbstain;
+startingYes += confidenceFromAbstain;
+confidenceRecovery -= confidenceFromAbstain;
+const confidenceFromNo = Math.min(startingNo, confidenceRecovery);
+startingNo -= confidenceFromNo;
+startingYes += confidenceFromNo;
+Q.confidence_yes = startingYes;
+Q.confidence_no = startingNo;
+Q.confidence_abstain = startingAbstain;
+Q.confidence_present =
+    Q.confidence_yes + Q.confidence_no + Q.confidence_abstain;
+Q.confidence_threshold = Q.confidence_no + 1;
+Q.confidence_mode =
+    "Article 160 prime-ministerial confidence — simple majority";
+Q.confidence_candidate = Q.prime_minister;
+Q.government_has_confidence =
+    Q.confidence_present >=
+        Math.max(1, Number(Q.sejm_quorum_floor) || 230) &&
+    Q.confidence_yes > Q.confidence_no ? 1 : 0;
 if (Q.government_has_confidence) {
-    Q.annual_budget_passed = 1;
-    Q["annual_budget_passed_" + Q.annual_budget_year] = 1;
-    Q.annual_budget_margin = Q.confidence_yes - 230;
     Q.annual_budget_result =
-        "Rescued with " + Q.confidence_yes + " confidence votes";
+        "Budget defeated; cabinet retained confidence " +
+        Q.confidence_yes + " to " + Q.confidence_no;
     Q.government_coalition_dissent -= 5;
     Q.early_election_risk = Math.max(0, Q.early_election_risk - 15);
+    Q.budget_deadline_active = 1;
+    Q.news_headline =
+        "The cabinet survives confidence but still lacks an enacted budget";
 } else {
     Q.coalition_broken = 1;
     Q.caretaker_government = 1;
     Q.left_in_government = 0;
+    Q.formation_in_progress = 1;
     Q.budget = 0;
+    Q.budget_authority =
+        "Caretaker — no new governing-spend actions";
     Q.position = "Caretaker cabinet and formation talks";
-    Q.coalition_status = "Budget rescue failed";
+    Q.coalition_status = "Prime minister lost Article 160 confidence";
+    Q.coalition_seats = 0;
     Q.early_election_risk = Math.max(75, Q.early_election_risk);
-    Q.snap_election_requested = 1;
     Q.annual_budget_result =
-        "Budget and confidence lost with " +
-        Q.confidence_yes + " votes";
+        "Budget defeated; cabinet lost confidence " +
+        Q.confidence_yes + " to " + Q.confidence_no;
+    Q.budget_deadline_active = 1;
+    Q.news_headline =
+        "The prime minister loses confidence and opens formation talks";
 }
 !}
 
@@ -496,11 +1220,12 @@ if (Q.government_has_confidence) {
 **Yes [+ confidence_yes +] · No [+ confidence_no +] · Abstain [+
 confidence_abstain +]**
 
-[? if government_has_confidence: The rescue carries. The cabinet survives,
-but the concessions are now part of every caucus's next manifesto.?]
-[? if not government_has_confidence: The rescue fails. The Palace receives
-another opportunity to designate a prime minister while the Sejm searches for
-231 votes—or an election.?]
+[? if government_has_confidence: More deputies vote yes than no. The cabinet
+survives, but the defeated budget remains defeated and the deadline remains
+active.?]
+[? if not government_has_confidence: More deputies vote no than yes. The
+cabinet becomes caretaker and a new formation sequence begins; that is not
+the same as calling an election.?]
 
 - @return_queue: Return to the remaining events
 

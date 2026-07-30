@@ -69,6 +69,12 @@ const monthlyTimers = [
     "poland_crisis_compact_timer",
     "poland_oversight_bargain_timer",
     "poland_palace_mediation_timer",
+    "poland_european_campaign_timer",
+    "poland_brussels_pressure_timer",
+    "poland_berlin_pressure_timer",
+    "poland_eastern_flank_timer",
+    "poland_white_house_pressure_timer",
+    "poland_european_right_timer",
     "emergency_fundraising_timer",
     "constructive_vonc_cooldown"
 ];
@@ -220,6 +226,70 @@ const names = [
 ];
 Q.month_name = names[Q.month];
 Q.date_label = Q.month_name + " " + Q.year;
+
+// Macroeconomic shocks persist, but they are not permanent constants. Move
+// the crisis variables gradually toward a year-specific baseline while
+// retaining the effect of fiscal stress, delivery and later authored shocks.
+// This mirrors the Weimar model's continuing feedback rather than freezing
+// the COVID/inflation peak for the rest of the campaign.
+if (Q.year >= 2021) {
+    const finiteMacro = function(value, fallback) {
+        return Number.isFinite(Number(value)) ? Number(value) : fallback;
+    };
+    const macroBaselines = {
+        2021: {growth: 6.9, inflation: 5.1, unemployment: 5.4},
+        2022: {growth: 5.3, inflation: 14.4, unemployment: 5.2},
+        2023: {growth: 0.2, inflation: 11.4, unemployment: 5.1},
+        2024: {growth: 3.0, inflation: 3.7, unemployment: 5.0},
+        2025: {growth: 3.4, inflation: 4.2, unemployment: 5.1},
+        2026: {growth: 3.1, inflation: 3.5, unemployment: 5.2}
+    };
+    const baseline =
+        macroBaselines[Math.max(2021, Math.min(2026, Q.year))];
+    const fiscalStress = Math.max(
+        0,
+        Math.min(100, finiteMacro(Q.fiscal_stress, 0))
+    );
+    const delivery = Math.max(
+        0,
+        Math.min(100, finiteMacro(Q.government_delivery, 0))
+    );
+    const warRisk = Math.max(
+        0,
+        Math.min(100, finiteMacro(Q.war_escalation_risk, 0))
+    );
+    const targetInflation =
+        baseline.inflation + fiscalStress * 0.018 + warRisk * 0.010;
+    const targetGrowth =
+        baseline.growth + delivery * 0.008 -
+        fiscalStress * 0.012 - warRisk * 0.006;
+    const targetUnemployment =
+        baseline.unemployment + fiscalStress * 0.006 -
+        delivery * 0.004;
+    const convergeMacro = function(current, target, rate) {
+        return Math.round(
+            (current + (target - current) * rate) * 100
+        ) / 100;
+    };
+    Q.inflation = convergeMacro(
+        finiteMacro(Q.inflation, baseline.inflation),
+        targetInflation,
+        Q.year >= 2024 ? 0.18 : 0.12
+    );
+    Q.economic_growth = convergeMacro(
+        finiteMacro(Q.economic_growth, baseline.growth),
+        targetGrowth,
+        0.16
+    );
+    Q.unemployment = convergeMacro(
+        finiteMacro(Q.unemployment, baseline.unemployment),
+        targetUnemployment,
+        0.12
+    );
+    Q.macro_baseline_year = Q.year;
+    Q.macro_baseline_label =
+        "Converging " + Q.year + " baseline with campaign shocks";
+}
 
 // Trzaskowski versus a PiS cabinet is not a free opposition bonus. Sustained
 // confrontation resolves each month toward either elite fracture or a

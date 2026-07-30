@@ -141,57 +141,207 @@ if (Q.started) {
     // Keep constitutional office, cabinet ownership and Lewica's role
     // separate. Later events can replace a prime minister or move the Left
     // outside cabinet without leaving the interface to infer who governs.
+    const primeMinisterText =
+        String(Q.prime_minister || "").toLowerCase();
     const governmentText = (
-        String(Q.prime_minister || "") + " " +
-        String(Q.government_name || "")
-    ).toLowerCase();
+        primeMinisterText + " " +
+        String(Q.government_name || "").toLowerCase()
+    );
     if (
-        governmentText.includes("morawiecki") ||
-        governmentText.includes("szydło") ||
-        governmentText.includes("szydlo") ||
-        governmentText.includes("czarnek") ||
-        governmentText.includes("pis")
+        primeMinisterText.includes("morawiecki") ||
+        primeMinisterText.includes("szydło") ||
+        primeMinisterText.includes("szydlo") ||
+        primeMinisterText.includes("czarnek") ||
+        (
+            !primeMinisterText &&
+            governmentText.includes("pis")
+        )
     ) {
         Q.government_party = "pis";
         Q.government_owner = "PiS and its governing partners";
     } else if (
-        governmentText.includes("tusk") ||
-        governmentText.includes("trzaskowski") ||
-        governmentText.includes("nowacka") ||
-        governmentText.includes("sikorski") ||
-        governmentText.includes("kierwiński") ||
-        governmentText.includes("kierwinski") ||
-        governmentText.includes("democratic")
-    ) {
-        Q.government_party = "ko";
-        Q.government_owner = "KO-led democratic coalition";
-    } else if (
-        governmentText.includes("dziemianowicz") ||
-        governmentText.includes("biejat") ||
-        governmentText.includes("czarzasty") ||
-        governmentText.includes("biedroń") ||
-        governmentText.includes("biedron") ||
-        governmentText.includes("zandberg") ||
-        governmentText.includes("lewica")
+        primeMinisterText.includes("dziemianowicz") ||
+        primeMinisterText.includes("biejat") ||
+        primeMinisterText.includes("czarzasty") ||
+        primeMinisterText.includes("biedroń") ||
+        primeMinisterText.includes("biedron") ||
+        primeMinisterText.includes("zandberg") ||
+        primeMinisterText.includes("lewica") ||
+        (
+            !primeMinisterText &&
+            governmentText.includes("lewica")
+        )
     ) {
         Q.government_party = "lewica";
         Q.government_owner = "Lewica-led coalition";
     } else if (
-        governmentText.includes("kosiniak") ||
-        governmentText.includes("psl")
+        primeMinisterText.includes("kosiniak") ||
+        (
+            !primeMinisterText &&
+            governmentText.includes("psl")
+        )
     ) {
         Q.government_party = "psl";
         Q.government_owner = "PSL-led coalition";
     } else if (
-        governmentText.includes("hołownia") ||
-        governmentText.includes("holownia") ||
-        governmentText.includes("poland 2050")
+        primeMinisterText.includes("hołownia") ||
+        primeMinisterText.includes("holownia") ||
+        (
+            !primeMinisterText &&
+            governmentText.includes("poland 2050")
+        )
     ) {
         Q.government_party = "p2050";
         Q.government_owner = "Poland 2050-led coalition";
+    } else if (
+        primeMinisterText.includes("tusk") ||
+        primeMinisterText.includes("trzaskowski") ||
+        primeMinisterText.includes("nowacka") ||
+        primeMinisterText.includes("sikorski") ||
+        primeMinisterText.includes("kierwiński") ||
+        primeMinisterText.includes("kierwinski") ||
+        governmentText.includes("ko-led") ||
+        (
+            !primeMinisterText &&
+            governmentText.includes("democratic")
+        )
+    ) {
+        Q.government_party = "ko";
+        Q.government_owner = "KO-led democratic coalition";
     } else {
-        Q.government_party = "other";
-        Q.government_owner = "Caretaker or cross-party cabinet";
+        Q.government_party =
+            typeof Q.government_party == "string" &&
+            Q.government_party.length
+                ? Q.government_party
+                : "other";
+        Q.government_owner =
+            Q.government_party == "lewica"
+                ? "Lewica-led coalition"
+                : (Q.government_party == "ko"
+                    ? "KO-led democratic coalition"
+                    : "Caretaker or cross-party cabinet");
+    }
+
+    // Constitutional offices are not extra party jobs. Alternative
+    // presidential outcomes must remove the winner from the Speakership,
+    // premiership and day-to-day party leadership rather than letting a
+    // historical appointment silently create two office-holders in one body.
+    const presidentKey =
+        String(Q.president_name || "").toLowerCase();
+    const speakerKey =
+        String(Q.sejm_speaker || "").toLowerCase();
+    if (
+        presidentKey &&
+        speakerKey &&
+        presidentKey == speakerKey
+    ) {
+        if (
+            presidentKey.includes("hołownia") ||
+            presidentKey.includes("holownia")
+        ) {
+            Q.sejm_speaker =
+                Q.advisor_reshuffle_removed_czarzasty ||
+                !Q.barons_active
+                    ? "Katarzyna Pełczyńska-Nałęcz"
+                    : "Włodzimierz Czarzasty";
+        } else if (presidentKey.includes("kosiniak")) {
+            Q.sejm_speaker = "Piotr Zgorzelski";
+        } else {
+            Q.sejm_speaker = "Coalition nominee";
+        }
+        Q.office_incompatibility_resolved = 1;
+    }
+    if (
+        presidentKey &&
+        primeMinisterText &&
+        presidentKey == primeMinisterText
+    ) {
+        const formerParty = Q.government_party;
+        if (formerParty == "psl") {
+            Q.prime_minister = "Donald Tusk";
+            Q.government_party = "ko";
+            Q.government_owner = "KO-led democratic coalition";
+        } else if (formerParty == "p2050") {
+            Q.prime_minister = "Katarzyna Pełczyńska-Nałęcz";
+            Q.government_party = "p2050";
+            Q.government_owner = "Poland 2050-led coalition";
+        } else {
+            Q.prime_minister = "Coalition nominee";
+        }
+        Q.government_name =
+            Q.prime_minister + " constitutional replacement cabinet";
+        Q.office_incompatibility_resolved = 1;
+    }
+    if (
+        presidentKey.includes("hołownia") ||
+        presidentKey.includes("holownia")
+    ) {
+        if (
+            String(Q.p2050_leader || "").includes("Hołownia")
+        ) {
+            Q.p2050_leader = "Katarzyna Pełczyńska-Nałęcz";
+        }
+    }
+    if (presidentKey.includes("kosiniak")) {
+        if (
+            String(Q.psl_leader || "").includes("Kosiniak")
+        ) {
+            Q.psl_leader = "Piotr Zgorzelski";
+        }
+    }
+
+    // A politician who has left the Left delegation—or taken the
+    // presidency—cannot remain available as a Lewica minister.
+    if (
+        Q.health_minister == "Marcelina Zawisza" &&
+        (
+            Q.razem_split ||
+            !Q.razem_in_left_club ||
+            !Q.razem_active
+        )
+    ) {
+        Q.health_minister_party = "KO";
+        Q.health_minister = "Coalition nominee";
+        Q.ministry_count = Math.max(
+            0,
+            (Number(Q.ministry_count) || 0) - 1
+        );
+    }
+    if (
+        Q.housing_minister == Q.president_name &&
+        Q.housing_minister_party == "Lewica"
+    ) {
+        Q.housing_minister_party = "KO";
+        Q.housing_minister = "Coalition nominee";
+        Q.ministry_count = Math.max(
+            0,
+            (Number(Q.ministry_count) || 0) - 1
+        );
+    }
+
+    // Budget defeat scenes predate the constitutional scheduler. Record the
+    // month in which they first request an election so the later event can
+    // enforce the four-month presidential budget clock.
+    if (Q.snap_election_requested) {
+        if (!Number.isFinite(Number(Q.snap_election_request_time))) {
+            Q.snap_election_request_time = Number(Q.time) || 0;
+            Q.snap_election_request_year = Number(Q.year) || 0;
+            Q.snap_election_request_month = Number(Q.month) || 0;
+        }
+        if (
+            !Number.isFinite(Number(Q.budget_submission_time)) &&
+            String(Q.annual_budget_result || "")
+                .toLowerCase()
+                .includes("failed")
+        ) {
+            Q.budget_submission_time = Number(Q.time) || 0;
+        }
+        if (
+            Number.isFinite(Number(Q.budget_submission_time))
+        ) {
+            Q.budget_deadline_time =
+                Number(Q.budget_submission_time) + 4;
+        }
     }
     if (Q.caretaker_government) {
         Q.left_role = Q.left_in_government
@@ -904,6 +1054,152 @@ if (Q.started) {
     Q.pensioner_support = clamp(Q.pensioner_support, 0, 100);
     Q.turnout_readiness = clamp(Q.turnout_readiness, 0, 100);
 
+    const foreignNumericDefaults = {
+        eu_campaign_progress: 0,
+        eu_campaign_complete: 0,
+        eu_brussels_mission: 0,
+        eu_social_mission: 0,
+        eu_eastern_mission: 0,
+        eu_triangle_mission: 0,
+        eu_influence: 28,
+        eu_institutional_trust: 26,
+        eu_left_network: 20,
+        eu_eastern_coalition: 24,
+        germany_relation: 38,
+        france_relation: 32,
+        foreign_pressure: 18,
+        foreign_cards_resolved: 0,
+        us_alliance_reliability: 48,
+        us_rule_of_law_pressure: 12,
+        us_ambassador_channel: 44,
+        us_defence_channel: 62,
+        us_congress_channel: 40,
+        left_atlanticist_dissent: 10,
+        us_election_2020_done: Q.year > 2020 ? 1 : 0,
+        us_2020_roll: 0,
+        us_2020_democratic_vote: Q.year > 2020 ? 51.3 : 0,
+        us_2020_republican_vote: Q.year > 2020 ? 48.7 : 0,
+        us_election_2024_done: Q.year > 2024 ? 1 : 0,
+        us_2024_roll: 0,
+        us_2024_democratic_vote: Q.year > 2024 ? 48.4 : 0,
+        us_2024_republican_vote: Q.year > 2024 ? 51.6 : 0
+    };
+    for (const quality of Object.keys(foreignNumericDefaults)) {
+        if (!Number.isFinite(Number(Q[quality]))) {
+            Q[quality] = foreignNumericDefaults[quality];
+        }
+    }
+    const foreignMissionFlags = [
+        "eu_campaign_complete",
+        "eu_brussels_mission",
+        "eu_social_mission",
+        "eu_eastern_mission",
+        "eu_triangle_mission",
+        "us_election_2020_done",
+        "us_election_2024_done"
+    ];
+    for (const flag of foreignMissionFlags) {
+        Q[flag] = Q[flag] ? 1 : 0;
+    }
+    Q.eu_campaign_progress = Math.max(
+        Number(Q.eu_campaign_progress) || 0,
+        Q.eu_brussels_mission +
+            Q.eu_social_mission +
+            Q.eu_eastern_mission +
+            Q.eu_triangle_mission
+    );
+    Q.eu_campaign_progress = Math.max(
+        0,
+        Math.min(4, Math.round(Q.eu_campaign_progress))
+    );
+    Q.eu_influence = clamp(Q.eu_influence, 0, 100);
+    Q.eu_institutional_trust =
+        clamp(Q.eu_institutional_trust, 0, 100);
+    Q.eu_left_network = clamp(Q.eu_left_network, 0, 100);
+    Q.eu_eastern_coalition = clamp(Q.eu_eastern_coalition, 0, 100);
+    Q.germany_relation = clamp(Q.germany_relation, 0, 100);
+    Q.france_relation = clamp(Q.france_relation, 0, 100);
+    Q.foreign_pressure = clamp(Q.foreign_pressure, 0, 100);
+    Q.foreign_cards_resolved = Math.max(
+        0,
+        Math.round(Q.foreign_cards_resolved)
+    );
+    Q.us_alliance_reliability =
+        clamp(Q.us_alliance_reliability, 0, 100);
+    Q.us_rule_of_law_pressure =
+        clamp(Q.us_rule_of_law_pressure, 0, 100);
+    Q.us_ambassador_channel = clamp(Q.us_ambassador_channel, 0, 100);
+    Q.us_defence_channel = clamp(Q.us_defence_channel, 0, 100);
+    Q.us_congress_channel = clamp(Q.us_congress_channel, 0, 100);
+    Q.left_atlanticist_dissent =
+        clamp(Q.left_atlanticist_dissent, 0, 100);
+    Q.us_2020_roll = clamp(Q.us_2020_roll, 0, 1);
+    Q.us_2024_roll = clamp(Q.us_2024_roll, 0, 1);
+    Q.us_2020_democratic_vote =
+        clamp(Q.us_2020_democratic_vote, 0, 100);
+    Q.us_2020_republican_vote =
+        clamp(Q.us_2020_republican_vote, 0, 100);
+    Q.us_2024_democratic_vote =
+        clamp(Q.us_2024_democratic_vote, 0, 100);
+    Q.us_2024_republican_vote =
+        clamp(Q.us_2024_republican_vote, 0, 100);
+    if (
+        typeof Q.us_election_2020_winner !== "string" ||
+        !Q.us_election_2020_winner.length
+    ) {
+        Q.us_election_2020_winner =
+            Q.year > 2020 ? "Joe Biden" : "Undecided";
+    }
+    if (
+        typeof Q.us_election_2024_winner !== "string" ||
+        !Q.us_election_2024_winner.length
+    ) {
+        Q.us_election_2024_winner =
+            Q.year > 2024 ? "Donald Trump" : "Undecided";
+    }
+    if (
+        typeof Q.us_2024_republican_candidate !== "string" ||
+        !Q.us_2024_republican_candidate.length
+    ) {
+        Q.us_2024_republican_candidate =
+            Q.us_election_2020_winner == "Donald Trump"
+                ? "Republican successor"
+                : "Donald Trump";
+    }
+    if (
+        typeof Q.us_president !== "string" ||
+        !Q.us_president.length
+    ) {
+        Q.us_president = Q.year > 2024
+            ? Q.us_election_2024_winner
+            : (Q.year > 2020 ? Q.us_election_2020_winner : "Donald Trump");
+    }
+    if (
+        typeof Q.us_administration !== "string" ||
+        !Q.us_administration.length
+    ) {
+        Q.us_administration =
+            Q.us_president == "Joe Biden" ||
+            Q.us_president == "Kamala Harris"
+                ? "Democratic"
+                : "America First";
+    }
+    if (Q.eu_campaign_complete) {
+        Q.eu_campaign_stage =
+            "Warsaw compact — social security, democratic law and eastern defence";
+    } else if (Q.eu_campaign_progress >= 3) {
+        Q.eu_campaign_stage =
+            "Compact available — three European missions completed";
+    } else if (Q.eu_campaign_progress == 2) {
+        Q.eu_campaign_stage =
+            "Coalition building — two European missions completed";
+    } else if (Q.eu_campaign_progress == 1) {
+        Q.eu_campaign_stage =
+            "First permanent European channel";
+    } else {
+        Q.eu_campaign_stage = "Opening contacts";
+    }
+
     Q.economic_growth = clamp(Q.economic_growth, -20, 20);
     Q.inflation = clamp(Q.inflation, -5, 40);
     Q.unemployment = clamp(Q.unemployment, 0, 40);
@@ -933,6 +1229,18 @@ if (Q.started) {
         Math.max(0, Q.poland_oversight_bargain_timer || 0);
     Q.poland_palace_mediation_timer =
         Math.max(0, Q.poland_palace_mediation_timer || 0);
+    Q.poland_european_campaign_timer =
+        Math.max(0, Q.poland_european_campaign_timer || 0);
+    Q.poland_brussels_pressure_timer =
+        Math.max(0, Q.poland_brussels_pressure_timer || 0);
+    Q.poland_berlin_pressure_timer =
+        Math.max(0, Q.poland_berlin_pressure_timer || 0);
+    Q.poland_eastern_flank_timer =
+        Math.max(0, Q.poland_eastern_flank_timer || 0);
+    Q.poland_white_house_pressure_timer =
+        Math.max(0, Q.poland_white_house_pressure_timer || 0);
+    Q.poland_european_right_timer =
+        Math.max(0, Q.poland_european_right_timer || 0);
     Q.emergency_fundraising_timer =
         Math.max(0, Q.emergency_fundraising_timer || 0);
     Q.negotiation_capital = Number.isFinite(Number(Q.negotiation_capital))
@@ -1002,7 +1310,7 @@ if (Q.started) {
             clamp(Q[faction + "_strength"], 0, 100);
         totalFactionStrength += Q[faction + "_strength"];
     }
-    if (totalFactionStrength <= 0) {
+    if (totalFactionStrength <= 0 && Q.factions.length > 0) {
         const equalStrength = 100 / Q.factions.length;
         for (const faction of Q.factions) {
             Q[faction + "_strength"] = equalStrength;
@@ -1025,7 +1333,8 @@ if (Q.started) {
             activeVetoes += 1;
         }
     }
-    Q.internal_dissent = Math.round(weightedDissent / 100);
+    Q.internal_dissent = Q.factions.length > 0 ?
+        Math.round(weightedDissent / 100) : 100;
     Q.faction_vetoes = activeVetoes;
     Q.caucus_crisis_pending = Q.factions.some(function(caucus) {
         return Q[caucus + "_dissent"] >= 72 &&
@@ -1071,6 +1380,27 @@ if (Q.started) {
         },
         0
     );
+    Q.left_committed_seats =
+        Math.max(0, Math.round(Number(Q.left_seats) || 0)) +
+        Q.left_splinter_support_votes;
+    const centrumCommitted =
+        Number(Q.centrum_relation) >= 45
+            ? Math.max(
+                0,
+                Math.round(Number(Q.centrum_seats) || 0)
+            )
+            : 0;
+    Q.coalition_democratic_seats =
+        Math.max(0, Math.round(Number(Q.ko_seats) || 0)) +
+        Math.max(0, Math.round(Number(Q.psl_seats) || 0)) +
+        Math.max(0, Math.round(Number(Q.p2050_seats) || 0)) +
+        centrumCommitted +
+        Q.left_committed_seats;
+    Q.coalition_right_seats =
+        Math.max(0, Math.round(Number(Q.pis_seats) || 0)) +
+        Math.max(0, Math.round(Number(Q.konf_seats) || 0)) +
+        Math.max(0, Math.round(Number(Q.rozwoj_seats) || 0)) +
+        Math.max(0, Math.round(Number(Q.korona_seats) || 0));
 
     const chamberNumbers = [
         "senate_total",

@@ -1354,6 +1354,149 @@ if (Q.p2050_emerged) {
     Q.p2050_ai_acted = 0;
 }
 
+// Parties created by campaign splits are political actors, not inert vote
+// containers. They use a deliberately lighter AI than the five national
+// organisations, but still build capacity, choose cooperation or competition,
+// and create their own polling momentum every month.
+const successorParties = [
+    {
+        id: "centrum",
+        active: !!Q.unia_centrum_formed,
+        parent: "p2050",
+        label: "Centrum"
+    },
+    {
+        id: "rozwoj",
+        active: !!Q.pis_split,
+        parent: "pis",
+        label: "Rozwój"
+    },
+    {
+        id: "korona",
+        active: !!Q.far_right_split,
+        parent: "konf",
+        label: "Korona"
+    },
+    {
+        id: "sld_breakaway",
+        active: !!Q.barons_party_formed,
+        parent: "left",
+        caucus: "barons",
+        label: Q.barons_party_name || "SLD breakaway"
+    },
+    {
+        id: "spring_breakaway",
+        active: !!Q.spring_party_formed,
+        parent: "left",
+        caucus: "spring",
+        label: Q.spring_party_name || "Spring breakaway"
+    },
+    {
+        id: "labor_left",
+        active: !!Q.labor_party_formed,
+        parent: "left",
+        caucus: "labor",
+        label: Q.labor_party_name || "Labour Left"
+    },
+    {
+        id: "young_left",
+        active: !!Q.progressives_party_formed,
+        parent: "left",
+        caucus: "progressives",
+        label: Q.progressives_party_name || "Young Left"
+    },
+    {
+        id: "razem",
+        active: !!Q.razem_party_formed,
+        parent: "left",
+        caucus: "razem",
+        label: Q.razem_party_name || "Razem"
+    },
+    {
+        id: "pps",
+        active: !!Q.pps_party_formed,
+        parent: "left",
+        caucus: "pps",
+        label: Q.pps_party_name || "PPS"
+    }
+];
+for (const successor of successorParties) {
+    const id = successor.id;
+    if (!successor.active) {
+        Q[id + "_ai_acted"] = 0;
+        Q[id + "_ai_strategy"] = "Organisation not active";
+        continue;
+    }
+    if (!Number.isFinite(Number(Q[id + "_org_resources"]))) {
+        Q[id + "_org_resources"] = 2;
+    }
+    if (!Number.isFinite(Number(Q[id + "_org_income"]))) {
+        Q[id + "_org_income"] = 1;
+    }
+    if (!Number.isFinite(Number(Q[id + "_income_last_year"]))) {
+        Q[id + "_income_last_year"] = Q.year;
+    }
+    if (Q.year > Q[id + "_income_last_year"]) {
+        Q[id + "_org_resources"] +=
+            Q[id + "_org_income"] *
+            Math.min(10, Q.year - Q[id + "_income_last_year"]);
+        Q[id + "_income_last_year"] = Q.year;
+    }
+    if (!Number.isFinite(Number(Q[id + "_ai_actions"]))) {
+        Q[id + "_ai_actions"] = 0;
+    }
+    Q[id + "_ai_acted"] = 0;
+    Q[id + "_ai_last_spend"] = 0;
+    const successorActs =
+        Q[id + "_org_resources"] >= 1 &&
+        randomAI() <= Math.min(
+            0.68,
+            0.38 + Q[id + "_org_resources"] * 0.04
+        );
+    if (!successorActs) {
+        Q[id + "_ai_strategy"] = "Build an independent organisation";
+        Q[id + "_ai_headline"] =
+            successor.label + " spends the month building local branches";
+        continue;
+    }
+    Q[id + "_org_resources"] -= 1;
+    Q[id + "_ai_last_spend"] = 1;
+    Q[id + "_ai_acted"] = 1;
+    Q[id + "_ai_actions"] += 1;
+    Q.rival_actions_this_month += 1;
+    let relation = 20;
+    if (successor.caucus) {
+        relation = finiteAI(
+            Q[successor.caucus + "_party_relation"],
+            20
+        );
+    } else if (id == "centrum") {
+        relation = finiteAI(Q.p2050_relation, 35);
+    } else if (id == "rozwoj") {
+        relation = finiteAI(Q.pis_relation, 25);
+    } else if (id == "korona") {
+        relation = finiteAI(Q.konf_relation, 15);
+    }
+    if (relation >= 45) {
+        Q[id + "_ai_strategy"] = "Coordinate without surrendering autonomy";
+        Q[id + "_poll_momentum"] =
+            finiteAI(Q[id + "_poll_momentum"], 0) + 0.08;
+        Q[successor.parent + "_poll_momentum"] =
+            finiteAI(Q[successor.parent + "_poll_momentum"], 0) + 0.03;
+        Q[id + "_ai_headline"] =
+            successor.label + " negotiates an electoral non-aggression pact";
+    } else {
+        Q[id + "_ai_strategy"] = "Differentiate from the parent party";
+        Q[id + "_poll_momentum"] =
+            finiteAI(Q[id + "_poll_momentum"], 0) + 0.16;
+        Q[successor.parent + "_poll_momentum"] =
+            finiteAI(Q[successor.parent + "_poll_momentum"], 0) - 0.05;
+        Q[id + "_ai_headline"] =
+            successor.label + " attacks its former party from outside";
+    }
+    headlines.push(Q[id + "_ai_headline"]);
+}
+
 const voteSignalAI = function(id) {
     return finiteAI(
         Q[id + "_vote_intent"],

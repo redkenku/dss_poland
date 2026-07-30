@@ -19,21 +19,23 @@ to provide activists for a campaign whose programme it cannot enforce.
 title: Nominate Robert Biedroń early
 subtitle: The recognisable and historical choice; Spring gains ownership.
 on-arrival: presidential_candidate = "Robert Biedroń"; presidential_candidate_base = 2.2; spring_dissent -= 10; spring_strength += 4; media_capacity += 3; razem_dissent += 5; barons_dissent += 2; progressive_credibility += 2; news_headline = "Biedroń becomes the Left's presidential candidate"
-go-to: poland_events_2021_2023.independence_2019
 
 Biedroń gives the alliance a modern, European and openly gay national figure.
 Razem asks whether it has joined somebody else's campaign; regional SLD
 officials ask who will control the lists after it.
 
+- @poland_events_2021_2023.independence_2019: Face the first Independence Day test
+
 @candidate_zandberg
 title: Give Adrian Zandberg the campaign
 subtitle: A material programme, at the price of SLD and Spring resistance.
 on-arrival: presidential_candidate = "Adrian Zandberg"; presidential_candidate_base = 3.2; razem_dissent -= 12; razem_strength += 4; labor_credibility += 5; spring_dissent += 8; barons_dissent += 6; party_unity -= 2; news_headline = "Zandberg turns the election into a programme fight"
-go-to: poland_events_2021_2023.independence_2019
 
 The campaign acquires a sharp position on housing, work and public services.
 Biedroń's network does not intend to disappear politely, and SLD barons have
 not forgotten who owns the legal vehicle.
+
+- @poland_events_2021_2023.independence_2019: Face the first Independence Day test
 
 @candidate_primary
 title: Hold an open primary
@@ -52,9 +54,8 @@ on-arrival: budget_2019_done = 1; next_budget_label = "December 2020"; budget = 
 
 PiS presents the budget for 2020. The Left cannot defeat it, but the vote will
 define whether the new club acts as one opposition, bargains for material
-changes or becomes a collection of amendments. Unless the player deliberately
-buys an issue deal, the Left's default parliamentary act is to oppose the
-government budget.
+changes or becomes a collection of amendments. Unless Lewica secures a specific
+concession, its default position is to oppose the government budget.
 
 - @budget_2019_shadow
 - @budget_2019_deal
@@ -116,6 +117,8 @@ let progressives2019 =
     commonBase2019 - Math.max(0, Q.progressives_dissent) * 0.65;
 let razem2019 =
     commonBase2019 - Math.max(0, Q.razem_dissent) * 0.65;
+let pps2019 =
+    commonBase2019 - Math.max(0, Q.pps_dissent) * 0.65;
 
 if (Q.budget_2019_package_code == 1) {
     barons2019 += 2;
@@ -123,6 +126,7 @@ if (Q.budget_2019_package_code == 1) {
     labor2019 += 12;
     progressives2019 += 7;
     razem2019 += 15;
+    pps2019 += 12;
 }
 if (Q.budget_2019_package_code == 2) {
     barons2019 += 12;
@@ -130,11 +134,13 @@ if (Q.budget_2019_package_code == 2) {
     labor2019 += 4;
     progressives2019 -= 10;
     razem2019 -= 16;
+    pps2019 += 2;
 }
 if (Q.budget_2019_package_code == 3) {
     barons2019 += 3;
     spring2019 += 3;
     progressives2019 += 2;
+    pps2019 += 2;
 }
 
 barons2019 = clampSupport2019(barons2019);
@@ -142,16 +148,24 @@ spring2019 = clampSupport2019(spring2019);
 labor2019 = clampSupport2019(labor2019);
 progressives2019 = clampSupport2019(progressives2019);
 razem2019 = clampSupport2019(razem2019);
+pps2019 = clampSupport2019(pps2019);
 
-const totalStrength2019 =
-    Q.barons_strength + Q.spring_strength + Q.labor_strength +
-    Q.progressives_strength + Q.razem_strength;
-const weighted2019 =
-    barons2019 * Q.barons_strength +
-    spring2019 * Q.spring_strength +
-    labor2019 * Q.labor_strength +
-    progressives2019 * Q.progressives_strength +
-    razem2019 * Q.razem_strength;
+const caucusVotes2019 = [
+    ["barons", barons2019],
+    ["spring", spring2019],
+    ["labor", labor2019],
+    ["progressives", progressives2019],
+    ["razem", razem2019],
+    ["pps", pps2019]
+].filter(function(entry) {
+    return Q[entry[0] + "_active"];
+});
+const totalStrength2019 = caucusVotes2019.reduce(function(total, entry) {
+    return total + Q[entry[0] + "_strength"];
+}, 0);
+const weighted2019 = caucusVotes2019.reduce(function(total, entry) {
+    return total + entry[1] * Q[entry[0] + "_strength"];
+}, 0);
 
 Q.budget_2019_backing =
     Math.max(
@@ -161,10 +175,8 @@ Q.budget_2019_backing =
             Math.round(weighted2019 / Math.max(1, totalStrength2019))
         )
     );
-Q.budget_2019_vetoes = [
-    barons2019, spring2019, labor2019, progressives2019, razem2019
-].filter(function(value) {
-    return value < 35;
+Q.budget_2019_vetoes = caucusVotes2019.filter(function(entry) {
+    return entry[1] < 35;
 }).length;
 Q.budget_2019_ratified =
     Q.budget_2019_package_code != 3 &&
@@ -220,7 +232,7 @@ on-arrival: media_event_done = 1; news_headline = "The Left discovers how little
 
 Public television serves the governing party. Commercial news centres the duel
 between PiS and KO. The Left has good individual guests but no daily operation
-capable of carrying a frame from a local story to national television.
+capable of turning local reporting into a consistent national message.
 
 - @media_newsroom
 - @media_subscription
@@ -636,28 +648,31 @@ subtitle: Cost: 2 resources. Durable capacity, little immediate polling.
 choose-if: resources >= 2
 unavailable-subtitle: Not enough resources.
 on-arrival: resources -= 2; feminist_trust += 10; movement_autonomy += 10; organiser_energy += 10; police_trust += 1; progressive_credibility += 3; news_headline = "Legal defence keeps organisers in public life"
-go-to: poland_events_2021_2023.independence_2020
 
 The network documents threats, provides lawyers and refuses party control of
 cases. It will remain useful when turnout falls.
+
+- @poland_events_2021_2023.independence_2020: Carry the decision into November
 
 @strike_programme
 title: Tie reproductive freedom to work, care and housing
 subtitle: Broader coalition; risks diluting the immediate demand.
 on-arrival: feminist_trust += 6; labor_credibility += 5; progressive_credibility += 5; razem_cooperation += 4; organiser_energy += 3; budget_promises += 2; news_headline = "The strike acquires a social programme"
-go-to: poland_events_2021_2023.independence_2020
 
 The agenda can survive beyond one court judgment. It also becomes harder for
 one demonstration—or one budget—to satisfy.
+
+- @poland_events_2021_2023.independence_2020: Carry the decision into November
 
 @strike_condemn
 title: Condemn church protests and demand institutional calm
 subtitle: Recovers conservative respect at a major movement cost.
 on-arrival: psl_relation += 5; president_relation += 4; barons_dissent -= 5; feminist_trust -= 12; progressive_credibility -= 6; progressives_dissent += 8; spring_dissent += 6; organiser_energy -= 5; news_headline = "The party distances itself from the strike's tactics"
-go-to: poland_events_2021_2023.independence_2020
 
 The statement draws a line against disruption and is immediately used as a
 line against the movement itself.
+
+- @poland_events_2021_2023.independence_2020: Carry the decision into November
 
 @budget_2020
 title: The pandemic budget
@@ -667,7 +682,7 @@ on-arrival: budget_2020_done = 1; budget = 0; budget_authority = "Opposition —
 = December 2020 — The pandemic budget
 
 Hospitals are strained, households have lost income, local governments are
-short of money and the abortion ruling has changed the political country. The
+short of money and the abortion ruling has changed the political landscape. The
 Left does not control public spending. It must decide what package justifies a
 common **no** vote, or deliberately trade that default opposition for named
 concessions. Then every caucus will ratify—or break—the line.
@@ -751,18 +766,21 @@ let labor = commonBase - Math.max(0, Q.labor_dissent) * 0.65;
 let progressives =
     commonBase - Math.max(0, Q.progressives_dissent) * 0.65;
 let razem = commonBase - Math.max(0, Q.razem_dissent) * 0.65;
+let pps = commonBase - Math.max(0, Q.pps_dissent) * 0.65;
 
 if (Q.budget_package_code == 1) {
     spring += 3;
     labor += 15;
     progressives += 7;
     razem += 12;
+    pps += 12;
 }
 if (Q.budget_package_code == 2) {
     barons += 12;
     labor += 7;
     progressives -= 5;
     razem += 2;
+    pps += 7;
 }
 if (Q.budget_package_code == 3) {
     barons -= 8;
@@ -770,6 +788,7 @@ if (Q.budget_package_code == 3) {
     labor += 4;
     progressives += 16;
     razem += 7;
+    pps += 5;
 }
 if (Q.budget_package_code == 4) {
     barons += 8;
@@ -777,6 +796,7 @@ if (Q.budget_package_code == 4) {
     labor += 5;
     progressives -= 12;
     razem -= 15;
+    pps -= 2;
 }
 if (Q.budget_package_code == 5) {
     barons += 7;
@@ -784,6 +804,7 @@ if (Q.budget_package_code == 5) {
     labor += 7;
     progressives += 9;
     razem += 5;
+    pps += 7;
 }
 
 barons = clampSupport(barons);
@@ -791,26 +812,32 @@ spring = clampSupport(spring);
 labor = clampSupport(labor);
 progressives = clampSupport(progressives);
 razem = clampSupport(razem);
+pps = clampSupport(pps);
 
-const totalStrength =
-    Q.barons_strength + Q.spring_strength + Q.labor_strength +
-    Q.progressives_strength + Q.razem_strength;
-const weighted =
-    barons * Q.barons_strength +
-    spring * Q.spring_strength +
-    labor * Q.labor_strength +
-    progressives * Q.progressives_strength +
-    razem * Q.razem_strength;
+const caucusVotes = [
+    ["barons", barons],
+    ["spring", spring],
+    ["labor", labor],
+    ["progressives", progressives],
+    ["razem", razem],
+    ["pps", pps]
+].filter(function(entry) {
+    return Q[entry[0] + "_active"];
+});
+const totalStrength = caucusVotes.reduce(function(total, entry) {
+    return total + Q[entry[0] + "_strength"];
+}, 0);
+const weighted = caucusVotes.reduce(function(total, entry) {
+    return total + entry[1] * Q[entry[0] + "_strength"];
+}, 0);
 
 Q.budget_backing =
     Math.max(
         0,
         Math.min(100, Math.round(weighted / Math.max(1, totalStrength)))
     );
-Q.budget_vetoes = [
-    barons, spring, labor, progressives, razem
-].filter(function(value) {
-    return value < 35;
+Q.budget_vetoes = caucusVotes.filter(function(entry) {
+    return entry[1] < 35;
 }).length;
 Q.budget_2020_ratified =
     Q.budget_package_code != 4 &&
@@ -881,6 +908,8 @@ on-arrival: vaccine_event_done = 1; news_headline = "Vaccination begins under co
 = January 2021 — Vaccination
 
 Supply is scarce and public trust is uneven.
+Lewica can campaign through trusted clinicians, expand access through local
+institutions, or focus on voluntary consent and oversight.
 
 - @vaccine_public
 - @vaccine_local
@@ -893,19 +922,28 @@ choose-if: resources >= 1
 unavailable-subtitle: Requires one resource.
 on-arrival: resources -= 1; vaccination_strategy = "Public-health mobilisation"; health_capacity += 5; public_trust += 4; public_sector_support += 3; covid_anti_system_pressure -= 4; konf_poll += 0.2; news_headline = "Clinicians and unions lead the vaccination campaign"
 
+**Result:** [+ news_headline +].
+
 - @poland_hub: Continue
+
 
 @vaccine_local
 title: Build access through councils, pharmacies and workplaces
 on-arrival: vaccination_strategy = "Local access"; health_capacity += 4; local_network += 3; psl_relation += 2; rural_support += 2; covid_anti_system_pressure -= 2; news_headline = "Local access becomes the vaccination argument"
 
+**Result:** [+ news_headline +].
+
 - @poland_hub: Continue
+
 
 @vaccine_liberty
 title: Concentrate on voluntary consent and oversight
 on-arrival: vaccination_strategy = "Consent and oversight"; constitutional_restraint += 3; health_capacity += 1; konf_relation += 2; public_trust -= 1; pandemic_deaths_pressure += 2; covid_anti_system_pressure += 6; konf_braunist_share += 2; konf_mentzenite_share += 2; konf_nationalist_share -= 4; news_headline = "The Left makes consent its vaccination line while Konfederacja recruits around it"
 
+**Result:** [+ news_headline +].
+
 - @poland_hub: Continue
+
 
 @rename
 title: SLD becomes Nowa Lewica
@@ -914,7 +952,9 @@ on-arrival: rename_event_done = 1; barons_name = "Nowa Lewica organisation"; lef
 
 = March 2021 — A new name
 
-The legal change is easy. Control of the new party is not.
+The legal name change is simple. The harder question is who controls the new
+party: the existing SLD executive, members, or the still-separate SLD and
+Wiosna structures.
 
 - @rename_dual
 - @rename_members
@@ -925,7 +965,10 @@ The legal change is easy. Control of the new party is not.
 title: Keep the SLD–Wiosna dual structure until congress
 on-arrival: left_project = "Nowa Lewica with protected SLD and Wiosna currents"; party_unity += 3; barons_dissent -= 3; spring_dissent -= 3; razem_dissent += 2; news_headline = "Dual structures carry Nowa Lewica to congress"
 
+**Result:** [+ news_headline +].
+
 - @poland_hub: Continue
+
 
 @rename_members
 title: Put the constitution to a membership ballot
@@ -934,20 +977,29 @@ choose-if: resources >= 1
 unavailable-subtitle: Requires one resource.
 on-arrival: resources -= 1; left_project = "Member-ratified Nowa Lewica"; party_unity += 5; progressives_dissent -= 4; labor_dissent -= 3; barons_dissent += 5; public_trust += 2; news_headline = "Members ratify the new party rules"
 
+**Result:** [+ news_headline +].
+
 - @poland_hub: Continue
+
 
 @rename_drive
 title: Relaunch the member roll under the new name
 subtitle: +1 resource now. Local organisers and younger volunteers carry the collection.
 on-arrival: resources += 1; left_project = "Membership-driven Nowa Lewica"; local_network += 2; organiser_energy -= 3; young_support += 1; party_unity += 1; barons_dissent += 2; news_headline = "A Nowa Lewica membership drive pays its first bills"
 
+**Result:** [+ news_headline +].
+
 - @poland_hub: Continue
+
 
 @rename_machine
 title: Transfer authority to the existing SLD executive
 on-arrival: left_project = "Centralised Nowa Lewica"; barons_strength += 3; barons_dissent -= 6; local_network += 2; spring_dissent += 6; progressives_dissent += 5; razem_dissent += 4; news_headline = "The old executive takes control of the new name"
 
+**Result:** [+ news_headline +].
+
 - @poland_hub: Continue
+
 
 @recovery_fund
 title: The EU recovery fund vote
@@ -956,8 +1008,9 @@ on-arrival: recovery_fund_event_done = 1; news_headline = "PiS needs opposition 
 
 = May 2021 — Recovery fund
 
-The money has broad support. The government lacks a secure majority for the
-ratification law.
+The EU recovery fund has broad support, but the government lacks a secure
+majority for the ratification law. Lewica can negotiate directly with PiS,
+seek a common opposition position, or abstain and leave the majority to others.
 
 - @recovery_deal
 - @recovery_opposition
@@ -972,6 +1025,7 @@ on-arrival: recovery_fund_strategy = "Negotiated PiS deal"; pis_relation += 10; 
 The law passes. The concessions are real; so is the charge that Lewica rescued
 the government.
 
+
 - @poland_hub: Continue
 
 @recovery_opposition
@@ -981,13 +1035,19 @@ choose-if: ko_relation >= 45 and p2050_relation >= 28 and ko_coalition_openness 
 unavailable-subtitle: At least one opposition partner prefers a separate strategy.
 on-arrival: recovery_fund_strategy = "Common opposition slate"; ko_relation += 7; p2050_relation += 6; relation_ko_p2050 += 4; rival_relation_ko_p2050 += 4; pis_relation -= 5; constitutional_restraint += 3; public_trust += 2; news_headline = "The opposition writes one recovery-fund control package"
 
+**Result:** [+ news_headline +].
+
 - @poland_hub: Continue
+
 
 @recovery_abstain
 title: Refuse a bilateral deal and abstain
 on-arrival: recovery_fund_strategy = "Abstention"; pis_relation -= 2; ko_relation -= 3; p2050_relation -= 2; razem_dissent -= 2; public_trust -= 2; government_coalition_dissent += 4; news_headline = "Lewica leaves the recovery-fund majority to others"
 
+**Result:** [+ news_headline +].
+
 - @poland_hub: Continue
+
 
 @recovery_palace
 title: Make Trzaskowski the guarantor of recovery-fund safeguards
@@ -1000,6 +1060,7 @@ on-arrival: recovery_fund_strategy = "Presidential safeguards"; president_relati
 PiS receives the ratification it needs but not control of the oversight story.
 Solidarna Polska attacks both Morawiecki and the Palace, widening the governing
 fracture before the June rights test.
+
 
 - @poland_hub: Continue
 
@@ -1021,7 +1082,10 @@ choose the contest it wants.
 title: Compete with both on wages, housing and services
 on-arrival: opposition_reset_strategy = "Social competition"; labor_credibility += 5; workers_support += 3; public_sector_support += 2; ko_relation -= 3; p2050_relation -= 3; left_economic_position -= 2; news_headline = "Lewica opens a social flank against both centrist parties"
 
+**Result:** [+ news_headline +].
+
 - @poland_hub: Continue
+
 
 @reset_democratic
 title: Rebuild the democratic-opposition table
@@ -1030,13 +1094,19 @@ choose-if: resources >= 1
 unavailable-subtitle: Requires one resource.
 on-arrival: opposition_reset_strategy = "Democratic opposition table"; resources -= 1; ko_relation += 5; p2050_relation += 5; relation_ko_p2050 += 4; rival_relation_ko_p2050 += 4; constitutional_restraint += 3; razem_dissent += 3; news_headline = "The opposition table returns with written limits"
 
+**Result:** [+ news_headline +].
+
 - @poland_hub: Continue
+
 
 @reset_local
 title: Leave Warsaw to the leaders and organise counties
 on-arrival: opposition_reset_strategy = "County organisation"; local_network += 5; rural_support += 3; psl_relation += 3; media_capacity -= 1; news_headline = "County organisation replaces another leaders' summit"
 
+**Result:** [+ news_headline +].
+
 - @poland_hub: Continue
+
 
 @left_revolt
 title: The merger revolt
@@ -1045,7 +1115,9 @@ on-arrival: left_revolt_event_done = 1; news_headline = "Nowa Lewica's merger di
 
 = July 2021 — The merger revolt
 
-Internal opponents challenge Czarzasty's control of the merger.
+Internal opponents challenge Czarzasty's control of the merger. The dispute
+will decide whether authority remains with the party executive or shifts
+toward a broader, member-led Left.
 
 - @revolt_suspend
 - @revolt_mediate
@@ -1054,7 +1126,10 @@ Internal opponents challenge Czarzasty's control of the merger.
 @revolt_suspend
 title: Suspend the internal opponents
 on-arrival: merger_resolution = "Executive suspensions"; barons_dissent -= 8; barons_strength += 3; party_unity -= 10; progressives_dissent += 10; labor_dissent += 6; public_trust -= 4; news_headline = "The executive suspends its internal opponents"
-go-to: poland_hub
+
+**Result:** [+ news_headline +].
+
+- @poland_hub: Continue
 
 @revolt_mediate
 title: Ask the five currents for a binding truce
@@ -1062,9 +1137,15 @@ subtitle: Cost: 1 resource.
 choose-if: resources >= 1 and faction_vetoes <= 1
 unavailable-subtitle: Requires one resource and no multi-caucus veto.
 on-arrival: merger_resolution = "Five-current truce"; resources -= 1; party_unity += 6; barons_dissent -= 3; spring_dissent -= 3; labor_dissent -= 3; progressives_dissent -= 3; razem_dissent -= 3; news_headline = "A binding truce postpones the purge"
-go-to: poland_hub
+
+**Result:** [+ news_headline +].
+
+- @poland_hub: Continue
 
 @revolt_ballot
 title: Put the merger leadership to a member ballot
 on-arrival: merger_resolution = "Membership ballot"; party_unity += 3; public_trust += 3; barons_dissent += 7; progressives_dissent -= 5; labor_dissent -= 3; organiser_energy += 2; news_headline = "Members decide who controls the merger"
-go-to: poland_hub
+
+**Result:** [+ news_headline +].
+
+- @poland_hub: Continue

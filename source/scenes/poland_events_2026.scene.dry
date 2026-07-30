@@ -2,25 +2,55 @@ title: Fragmentation before the next election
 
 @p2050_leadership_2026
 title: Poland 2050 chooses a successor
-subtitle: A rerun, a 350–309 result and a party divided almost in half
+subtitle: The winner follows the party's evolved wings rather than a fixed historical tally
 new-page: true
 tags: poland_event
 priority: 28
 order: 10
 max-visits: 1
-view-if: continuous_campaign = 1 and year = 2026 and month = 1
-on-arrival: p2050_leader = "Katarzyna Pełczyńska-Nałęcz"; p2050_coalition_dissent += 6; news_headline = "Poland 2050's troubled leadership ballot produces a narrow winner"
+view-if: continuous_campaign = 1 and year = 2026 and month = 1 and president_name != "Szymon Hołownia"
+on-arrival: {!
+const p2050LeadershipRoll =
+    Math.floor((this.random.uint32() / 4294967296) * 17) - 8;
+const pelczynskaScore =
+    (Number(Q.p2050_state_capacity_share) || 0) +
+    (Number(Q.p2050_relation) || 0) * 0.08 +
+    p2050LeadershipRoll;
+const hennigScore =
+    (Number(Q.p2050_christian_dem_share) || 0) +
+    (Number(Q.p2050_personalist_share) || 0) * 0.45 -
+    p2050LeadershipRoll;
+Q.p2050_leadership_pelczynska_score =
+    Math.max(1, Math.round(pelczynskaScore));
+Q.p2050_leadership_hennig_score =
+    Math.max(1, Math.round(hennigScore));
+Q.p2050_leader =
+    pelczynskaScore >= hennigScore
+        ? "Katarzyna Pełczyńska-Nałęcz"
+        : "Paulina Hennig-Kloska";
+Q.p2050_leadership_margin = Math.abs(
+    Q.p2050_leadership_pelczynska_score -
+    Q.p2050_leadership_hennig_score
+);
+Q.p2050_coalition_dissent += Math.max(
+    3,
+    13 - Math.min(10, Q.p2050_leadership_margin)
+);
+Q.news_headline =
+    Q.p2050_leader + " wins the Poland 2050 leadership";
+!}
 
 = January 2026 — A successor without a safe list
 
-The first online runoff is annulled. The rerun gives Pełczyńska-Nałęcz a narrow
-victory over Hennig-Kloska, leaving almost half the party organised around the
-loser while both camps fear the electoral threshold.
+The succession ballot gives **[+ p2050_leader +]** the leadership. Pełczyńska-
+Nałęcz scores **[+ p2050_leadership_pelczynska_score +]** and Hennig-Kloska
+**[+ p2050_leadership_hennig_score +]**, reflecting the evolved state-capacity,
+Christian-democratic and personalist wings plus an internal-ballot variance.
 
 Lewica is not a neutral observer. When Third Way ended it chose **[+
 third_way_response +]**; its substantive settlement with PSL became **[+
 psl_protocol_2025 +]**. Poland 2050's two camps read both decisions as evidence
-of whether they are partners, ballast or recruitment targets.
+of whether Lewica sees them as allies, a burden, or potential defectors.
 
 - @p2050_accept
 - @p2050_mediate
@@ -54,7 +84,7 @@ tags: poland_event
 priority: 34
 order: 10
 max-visits: 1
-view-if: continuous_campaign = 1 and year = 2026 and month = 2 and sejm_speaker = "Włodzimierz Czarzasty"
+view-if: continuous_campaign = 1 and year = 2026 and month = 2 and sejm_speaker = "Włodzimierz Czarzasty" and us_president = "Donald Trump"
 on-arrival: {!
 Q.ambassador_crisis = 1;
 Q.us_ambassador_channel = 10;
@@ -118,7 +148,7 @@ tags: poland_event
 priority: 34
 order: 11
 max-visits: 1
-view-if: continuous_campaign = 1 and year = 2026 and month = 2 and p2050_split = 0
+view-if: continuous_campaign = 1 and year = 2026 and month = 2 and p2050_split = 0 and (p2050_coalition_dissent >= 28 or p2050_relation <= 30)
 on-arrival: news_headline = "Fifteen MPs and three senators prepare a separate centrist club"
 
 = February 2026 — Arithmetic survives; trust does not
@@ -139,6 +169,16 @@ title: Recognise two clubs and write separate support agreements
 subtitle: The cabinet survives, but coalition dissent +5 and partner dissent +6.
 on-arrival: {!
 Q.p2050_split = 1;
+const centrumDefectors = Math.min(
+    15,
+    Math.max(0, Math.round(Number(Q.p2050_seats) || 0))
+);
+Q.p2050_seats = Math.max(
+    0,
+    (Number(Q.p2050_seats) || 0) - centrumDefectors
+);
+Q.centrum_seats =
+    Math.max(0, Number(Q.centrum_seats) || 0) + centrumDefectors;
 Q.p2050_coalition_dissent += 6;
 Q.government_coalition_dissent += 5;
 Q.coalition_status = Q.government_has_confidence
@@ -164,21 +204,44 @@ go-to: poland_event_queue
 title: Reallocate offices and let the split become permanent
 subtitle: Coalition dissent +3 and Poland 2050 relations −4; baron dissent −2.
 view-if: government_has_confidence = 1
-on-arrival: p2050_split = 1; government_coalition_dissent += 3; p2050_relation -= 4; barons_dissent -= 2; progressives_dissent += 2; public_trust -= 1; news_headline = "Cabinet arithmetic formalises the centrist rupture"
+on-arrival: {!
+Q.p2050_split = 1;
+const centrumDefectors = Math.min(
+    15,
+    Math.max(0, Math.round(Number(Q.p2050_seats) || 0))
+);
+Q.p2050_seats = Math.max(
+    0,
+    (Number(Q.p2050_seats) || 0) - centrumDefectors
+);
+Q.centrum_seats =
+    Math.max(0, Number(Q.centrum_seats) || 0) + centrumDefectors;
+Q.government_coalition_dissent += 3;
+Q.p2050_relation -= 4;
+Q.barons_dissent -= 2;
+Q.progressives_dissent += 2;
+Q.public_trust -= 1;
+Q.news_headline =
+    "Cabinet arithmetic transfers fifteen seats into a centrist splinter";
+!}
 go-to: poland_event_queue
 
 @p2050_name_2026
 title: Poland 2050 removes Hołownia's name
-subtitle: De-personalisation or an epitaph for the movement
+subtitle: The party must prove that it can survive its founder
 new-page: true
 tags: poland_event
 priority: 22
 order: 20
 max-visits: 1
-view-if: continuous_campaign = 1 and year = 2026 and month = 3
+view-if: continuous_campaign = 1 and year = 2026 and month = 3 and p2050_leader != "Szymon Hołownia"
 on-arrival: p2050_ideology = "Centrist institutionalism · post-founder survival"; news_headline = "Poland 2050 RP begins life after its founder's name"
 
 = March 2026 — A party after the personality
+
+Removing Hołownia's name confirms that Poland 2050 intends to continue as an
+independent party. Lewica can respect the transition or exploit the weak brand
+by opening talks about a common electoral list.
 
 - @name_respect
 - @name_lists
@@ -214,10 +277,15 @@ Q.left_atlanticist_dissent =
         ? Number(Q.left_atlanticist_dissent)
         : 12;
 Q.news_headline =
-    "KO's consolidated party gives its internal environments national offices";
+    "KO's consolidated party gives its internal factions national offices";
 !}
 
 = April 2026 — Who comes after Tusk?
+
+KO's enlarged leadership gives national office to politicians from its
+progressive, Atlanticist and organisational wings. Lewica can build a
+relationship with one of those potential successors or continue dealing only
+with Tusk.
 
 - @ko_nowacka
 - @ko_sikorski
@@ -296,31 +364,135 @@ on-arrival: media_relationship = "Boycott of the creator-right ecosystem"; progr
 go-to: poland_event_queue
 
 @partnership_passes_2026
-title: The closest-person compromise passes the Sejm
-subtitle: Left–PSL bargaining produces rights short of marriage
+title: The partnership compromise reaches a Sejm vote
+subtitle: Seats, PSL relations and the accumulated bargaining strategy determine passage
 new-page: true
 tags: poland_event
 priority: 25
 order: 11
 max-visits: 1
-view-if: continuous_campaign = 1 and year = 2026 and month = 5
-on-arrival: news_headline = "A registered cohabitation compromise reaches the President"
+view-if: continuous_campaign = 1 and year = 2026 and month = 5 and caretaker_government = 0
+on-arrival: {!
+let pslSupportShare =
+    0.08 + Math.max(0, Number(Q.psl_relation) || 0) / 125;
+Q.partnership_strategy =
+    "Open roll call without a prior social-rights bargain";
+if (
+    Q.psl_protocol_2025 ==
+    "Rural services and farm bargaining; no new social-policy veto"
+) {
+    pslSupportShare += 0.18;
+    Q.partnership_strategy =
+        "Rural-social protocol with no additional rights veto";
+}
+if (
+    Q.psl_protocol_2025 ==
+    "Published bill-by-bill support ledger"
+) {
+    pslSupportShare += 0.10;
+    Q.partnership_strategy =
+        "Published bill-by-bill partnership bargain";
+}
+if (
+    Q.psl_protocol_2025 ==
+    "No renegotiation beyond the 2023 agreement"
+) {
+    pslSupportShare -= 0.12;
+    Q.partnership_strategy =
+        "No renewed PSL bargain";
+}
+pslSupportShare = Math.max(
+    0.04,
+    Math.min(0.82, pslSupportShare)
+);
+const partnershipRoll =
+    Math.floor((this.random.uint32() / 4294967296) * 9) - 4;
+const leftVotes =
+    Math.max(0, Number(Q.left_seats) || 0) +
+    Math.max(0, Number(Q.left_splinter_support_votes) || 0);
+const koVotes = Math.round(
+    Math.max(0, Number(Q.ko_seats) || 0) * 0.82
+);
+const centreVotes = Math.round(
+    (
+        Math.max(0, Number(Q.p2050_seats) || 0) +
+        Math.max(0, Number(Q.centrum_seats) || 0)
+    ) * 0.62
+);
+const pslVotes = Math.round(
+    Math.max(0, Number(Q.psl_seats) || 0) * pslSupportShare
+);
+Q.partnership_sejm_yes = Math.max(
+    0,
+    Math.min(
+        460,
+        leftVotes + koVotes + centreVotes +
+        pslVotes + partnershipRoll
+    )
+);
+Q.partnership_sejm_no = Math.max(
+    0,
+    Math.min(
+        460 - Q.partnership_sejm_yes,
+        Math.round(
+            (Number(Q.pis_seats) || 0) +
+            (Number(Q.konf_seats) || 0) +
+            (Number(Q.korona_seats) || 0) +
+            Math.max(
+                0,
+                (Number(Q.psl_seats) || 0) - pslVotes
+            ) +
+            Math.max(
+                0,
+                (Number(Q.ko_seats) || 0) - koVotes
+            )
+        )
+    )
+);
+Q.partnership_sejm_abstain = Math.max(
+    0,
+    460 - Q.partnership_sejm_yes - Q.partnership_sejm_no
+);
+Q.partnership_sejm_passed =
+    Q.partnership_sejm_yes > Q.partnership_sejm_no ? 1 : 0;
+Q.news_headline = Q.partnership_sejm_passed
+    ? "The partnership compromise passes " +
+        Q.partnership_sejm_yes + "–" + Q.partnership_sejm_no
+    : "The partnership compromise fails " +
+        Q.partnership_sejm_yes + "–" + Q.partnership_sejm_no;
+!}
 
 = May 2026 — Increment or ceiling
+
+The strategy was **[+ partnership_strategy +]**. The roll call is **[+
+partnership_sejm_yes +] yes · [+ partnership_sejm_no +] no · [+
+partnership_sejm_abstain +] abstain**.
+
+[? if partnership_sejm_passed: The limited legal status now goes to the
+President. The Left can defend the gain, call it a floor, or work for a
+signature.?]
+[? if not partnership_sejm_passed: The bill remains in Parliament. Lewica can
+publish the dissenters, reopen a narrower bargain, or rebuild the equality
+coalition rather than pretending a law exists.?]
 
 - @partnership_claim
 - @partnership_pressure
 - @partnership_palace
+- @partnership_failed_rollcall
+- @partnership_failed_bargain
+- @partnership_failed_movement
 
 @partnership_claim
 title: Claim a durable partial right and prepare implementation
 subtitle: Minority safety +4, PSL relations +5 and delivery +3; progressive dissent +2.
-on-arrival: progressive_credibility += 3; minority_safety += 4; psl_relation += 5; government_delivery += 3; progressives_dissent += 2; news_headline = "The Left defends an incremental partnership settlement"
+view-if: partnership_sejm_passed = 1
+on-arrival: progressive_credibility += 3; minority_safety += 4; psl_relation += 5; government_delivery += 3 if left_in_government = 1; media_capacity += 2 if left_in_government = 0; progressives_dissent += 2; news_headline = "The Left defends an incremental partnership settlement"
 go-to: poland_event_queue
 
 @partnership_pressure
 title: Call it a floor and introduce marriage equality next
 subtitle: Progressive credibility +6; PSL relations −9 and coalition dissent +6.
+view-if: partnership_sejm_passed = 1
 on-arrival: progressive_credibility += 6; psl_relation -= 9; government_coalition_dissent += 6; president_relation -= 4; far_right_agenda += 4; news_headline = "The compromise becomes the first stage of a larger equality fight"
 go-to: poland_event_queue
 
@@ -329,7 +501,28 @@ title: Court the President before the veto decision
 subtitle: Requires a Palace channel.
 choose-if: president_relation >= 32 or presidential_channel_open = 1
 unavailable-subtitle: The Palace has no reason to negotiate.
+view-if: partnership_sejm_passed = 1
 on-arrival: president_relation += 7; psl_relation += 2; progressive_credibility -= 1; constitutional_restraint += 2; news_headline = "A private implementation protocol reaches the President"
+go-to: poland_event_queue
+
+@partnership_failed_rollcall
+title: Publish every dissenting vote and organise the constituencies
+view-if: partnership_sejm_passed = 0
+on-arrival: media_capacity += 3; local_network += 3; progressive_credibility += 3; psl_relation -= 6; public_trust += 1; news_headline = "The failed partnership vote follows dissenting deputies home"
+go-to: poland_event_queue
+
+@partnership_failed_bargain
+title: Reopen a narrower minimum-rights bargain with PSL
+view-if: partnership_sejm_passed = 0
+choose-if: psl_relation >= 28
+unavailable-subtitle: Relations are too weak for PSL to reopen the text.
+on-arrival: partnership_strategy = "Narrower minimum-rights renegotiation"; psl_relation += 5; progressives_dissent += 6; feminist_trust -= 2; government_coalition_dissent -= 2; news_headline = "A narrower partnership text returns to committee"
+go-to: poland_event_queue
+
+@partnership_failed_movement
+title: Withdraw the compromise and rebuild a marriage-equality coalition
+view-if: partnership_sejm_passed = 0
+on-arrival: partnership_strategy = "Movement rebuild for marriage equality"; progressive_credibility += 6; feminist_trust += 3; organiser_energy += 4; psl_relation -= 8; party_unity += 2; news_headline = "Lewica trades an immediate compromise for a broader equality campaign"
 go-to: poland_event_queue
 
 @tribunal_competence_2026
@@ -343,32 +536,37 @@ max-visits: 1
 view-if: continuous_campaign = 1 and year = 2026 and month = 6
 on-arrival: legal_dualism += 6; tribunal_domestic_recognition -= 4; president_judiciary_cooperation -= 4; news_headline = "Case K 2/26 creates another ruling one part of the state will not obey"
 
-= June 2026 — A judgment in one legal order
+= June 2026 — A ruling the government rejects
 
-The contested Tribunal strengthens the President's personal competence over
-Supreme Court appointments and leadership. The Justice Ministry rejects the
-bench, the applicant's standing and the legal effect.
+The contested Tribunal says the President has greater personal authority over
+Supreme Court appointments and leadership. The Justice Ministry says the
+panel was invalid, the applicant lacked standing and the ruling has no legal
+effect.
 
 - @competence_appear
 - @competence_ignore
 - @competence_legislate
 - @competence_bargain
+- @competence_opposition_brief
 
 @competence_appear
 title: Challenge the panel while appearing and publishing every argument
 subtitle: Procedural restraint +5 and court-user trust +2; legal dualism +1.
+view-if: left_in_government = 1
 on-arrival: government_procedural_restraint += 5; tribunal_domestic_recognition += 1; legal_dualism += 1; court_user_trust += 2; president_relation -= 2; news_headline = "The government contests jurisdiction without pretending the case does not exist"
 go-to: poland_event_queue
 
 @competence_ignore
 title: Treat the decision as a non-judgment and continue
 subtitle: Repair mandate +3; legal dualism +8 and procedural restraint −5.
+view-if: left_in_government = 1
 on-arrival: tribunal_domestic_recognition -= 7; legal_dualism += 8; government_procedural_restraint -= 5; judicial_repair_mandate += 3; president_relation -= 6; news_headline = "Two branches act under incompatible versions of the constitution"
 go-to: poland_event_queue
 
 @competence_legislate
 title: Return with a general appointments and reasons statute
 subtitle: Constitutional restraint +4; vacancies and backlog each +2.
+view-if: left_in_government = 1
 on-arrival: government_procedural_restraint += 5; constitutional_restraint += 4; judicial_vacancies += 2; court_backlog += 2; president_relation -= 2; news_headline = "A general law replaces the temptation to win one personnel case"
 go-to: poland_event_queue
 
@@ -377,7 +575,17 @@ title: Negotiate a temporary appointments protocol with the Palace
 subtitle: Requires a viable presidential relationship.
 choose-if: president_relation >= 35
 unavailable-subtitle: The President prefers the ruling to a compromise.
+view-if: left_in_government = 1
 on-arrival: president_relation += 7; president_judiciary_cooperation += 6; judicial_vacancies -= 3; legal_dualism -= 3; government_procedural_restraint += 2; progressives_dissent += 2; news_headline = "A temporary appointments protocol clears some benches"
+go-to: poland_event_queue
+
+@competence_opposition_brief
+title: File an opposition brief and demand a general appointments law
+subtitle: Lewica can litigate and legislate; it cannot instruct the Justice Ministry. Cost: 1 resource.
+view-if: left_in_government = 0
+choose-if: resources >= 1
+unavailable-subtitle: The constitutional litigation team cannot be financed.
+on-arrival: resources -= 1; constitutional_restraint += 4; judicial_repair_mandate += 2; court_user_trust += 2; media_capacity += 2; news_headline = "Lewica publishes an institutional alternative from opposition"
 go-to: poland_event_queue
 
 @partnership_veto_2026
@@ -388,14 +596,14 @@ tags: poland_event
 priority: 36
 order: 5
 max-visits: 1
-view-if: continuous_campaign = 1 and year = 2026 and month = 7
+view-if: continuous_campaign = 1 and year = 2026 and month = 7 and partnership_sejm_passed = 1
 on-arrival: {!
 if (Q.pres_2025_hostile_president) {
     Q.partnership_presidential_outcome = "Vetoed";
     Q.president_relation -= 5;
     Q.progressive_credibility -= 2;
     Q.news_headline =
-        Q.president_name + " vetoes the closest-person law";
+        Q.president_name + " vetoes the partnership law";
 } else {
     Q.partnership_presidential_outcome = "Signed";
     Q.president_relation += 4;
@@ -403,7 +611,7 @@ if (Q.pres_2025_hostile_president) {
     Q.government_delivery += 4;
     Q.progressive_credibility += 2;
     Q.news_headline =
-        Q.president_name + " signs the closest-person law";
+        Q.president_name + " signs the partnership law";
 }
 !}
 
@@ -411,11 +619,11 @@ if (Q.pres_2025_hostile_president) {
 
 [? if pres_2025_hostile_president: **[+ president_name +] vetoes the bill.**
 The coalition had already paid PSL for a narrower text, so the Palace—not a
-missing Sejm majority—owns this defeat.?]
+missing Sejm majority—is responsible for its defeat.?]
 [? if not pres_2025_hostile_president: **[+ president_name +] signs the
 bill.** In a Trzaskowski timeline this is a direct institutional consequence
-of the different presidency: a coalition compromise becomes law instead of a
-campaign prop.?]
+of the different presidency: a coalition compromise becomes law instead of
+another veto dispute.?]
 
 - @partnership_campaign
 - @partnership_narrow
@@ -441,7 +649,7 @@ go-to: poland_event_queue
 @partnership_administrative
 title: Expand contracts, hospital access and inheritance guidance administratively
 subtitle: Delivery and minority safety +3; legal dualism +1 and Palace relations −3.
-view-if: partnership_presidential_outcome = "Vetoed"
+view-if: partnership_presidential_outcome = "Vetoed" and left_in_government = 1 and government_party != "pis"
 on-arrival: government_delivery += 3; minority_safety += 3; constitutional_restraint -= 1; legal_dualism += 1; president_relation -= 3; news_headline = "Administrative workarounds deliver fragments of a vetoed statute"
 go-to: poland_event_queue
 
@@ -449,7 +657,7 @@ go-to: poland_event_queue
 title: Build a national implementation and legal-aid network
 subtitle: Delivery +4, minority safety +3 and public trust +2.
 view-if: partnership_presidential_outcome = "Signed"
-on-arrival: government_delivery += 4; minority_safety += 3; public_trust += 2; local_network += 2; news_headline = "A signed partnership law receives institutions capable of delivering it"
+on-arrival: government_delivery += 4 if left_in_government = 1; minority_safety += 3; public_trust += 2; local_network += 2; media_capacity += 2 if left_in_government = 0; news_headline = "A signed partnership law receives implementation scrutiny and legal support"
 go-to: poland_event_queue
 
 @partnership_signed_expand
@@ -478,6 +686,11 @@ view-if: continuous_campaign = 1 and year = 2026 and month = 7
 on-arrival: braun_martyrdom += 2; news_headline = "Five missed summonses turn Braun's immunity into another political stage"
 
 = July 2026 — Procedure without a martyr script
+
+Braun has ignored five summonses. Prosecutors now want Parliament to lift his
+immunity so that police can compel him to appear for questioning, not hold him
+in pre-trial detention. Lewica must defend ordinary procedure without turning
+the case into political theatre.
 
 - @braun_warrant
 - @braun_surrender
@@ -513,6 +726,11 @@ view-if: continuous_campaign = 1 and year = 2026 and month = 7 and p2050_split =
 on-arrival: unia_centrum_formed = 1; government_coalition_dissent += 3; news_headline = "Unia Centrum turns a parliamentary split into an electoral competitor"
 
 = July 2026 — Five governing parties and several thresholds
+
+The centrist splinter has converted its parliamentary club into a party that
+may contest the next election. Lewica can negotiate with it separately, offer
+a broader common list to both centrist parties, or make it prove that it has
+an electorate of its own.
 
 - @centrum_bilateral
 - @centrum_common
@@ -584,7 +802,7 @@ Q.news_headline =
     "Anti-Ukrainian hostility crosses from rhetoric into reported incidents";
 !}
 
-= July 2026 — Reporting is part of the result
+= July 2026 — More reports do not reveal the whole trend
 
 Higher reports can mean more violence, greater willingness to report, or both.
 A credible response needs victim trust, police classification, prosecution and
@@ -598,6 +816,7 @@ border_doctrine +]**.
 
 - @hate_reporting
 - @hate_prosecution
+- @hate_opposition_bill
 - @hate_joint_doctrine
 - @hate_denial
 
@@ -611,12 +830,12 @@ go-to: poland_event_queue
 
 @hate_prosecution
 title: Create specialist prosecutor and police teams
-subtitle: Cost: 1 budget capacity in government, otherwise 1 resource.
-choose-if: (left_in_government = 1 and budget >= 1) or (left_in_government = 0 and resources >= 1)
-unavailable-subtitle: Specialist capacity cannot be financed.
+subtitle: Executive action: 1 budget capacity.
+view-if: left_in_government = 1
+choose-if: left_in_government = 1 and budget >= 1
+unavailable-subtitle: Lewica must hold cabinet authority and fund specialist capacity.
 on-arrival: {!
-if (Q.left_in_government) Q.budget -= 1;
-else Q.resources -= 1;
+Q.budget -= 1;
 Q.minority_safety += 5;
 Q.border_response_2026 =
     "Specialist hate-crime police and prosecutor teams";
@@ -625,6 +844,15 @@ Q.police_trust += 2;
 Q.public_trust += 1;
 Q.news_headline = "Specialist teams turn reports into cases";
 !}
+go-to: poland_event_queue
+
+@hate_opposition_bill
+title: Table a specialist-team bill and publish vacancy data
+subtitle: Opposition action: 1 resource for legal drafting and oversight.
+view-if: left_in_government = 0
+choose-if: resources >= 1
+unavailable-subtitle: The parliamentary oversight team cannot be financed.
+on-arrival: resources -= 1; border_response_2026 = "Opposition specialist-team bill and vacancy audit"; prosecution_independence += 3; media_capacity += 3; minority_safety += 2; public_trust += 2; news_headline = "Lewica demands specialist teams without pretending to command police or prosecutors"
 go-to: poland_event_queue
 
 @hate_joint_doctrine
@@ -643,19 +871,43 @@ go-to: poland_event_queue
 
 @pis_rupture_2026
 title: The Morawiecki camp defies PiS discipline
-subtitle: More than thirty MPs may form a separate club, but the rupture is unresolved
+subtitle: The possible club follows PiS's evolved market wing and current seats
 new-page: true
 tags: poland_event
 priority: 28
 order: 13
 max-visits: 1
 view-if: continuous_campaign = 1 and year = 2026 and month = 7
-on-arrival: pis_morawiecki_camp = 38; pis_split_crisis = 1; news_headline = "Kaczyński's loyalty demand turns Rozwój Plus into a possible parliamentary break"
+on-arrival: {!
+const pisRuptureRoll =
+    Math.floor((this.random.uint32() / 4294967296) * 11) - 5;
+Q.pis_morawiecki_camp = Math.max(
+    8,
+    Math.min(
+        Math.max(8, Number(Q.pis_seats) || 0),
+        Math.round(
+            (Number(Q.pis_seats) || 0) *
+            (
+                0.10 +
+                (Number(Q.pis_market_hardliner_share) || 0) / 240
+            )
+        ) + pisRuptureRoll
+    )
+);
+Q.pis_split_crisis =
+    Q.pis_morawiecki_camp >= 24 ? 1 : 0;
+Q.news_headline = Q.pis_split_crisis
+    ? "Kaczyński's loyalty demand creates a " +
+        Q.pis_morawiecki_camp + "-MP rupture"
+    : "Morawiecki's " + Q.pis_morawiecki_camp +
+        " allies remain below the threshold for a new club";
+!}
 
 = July 2026 — The split is not complete at the cutoff
 
-Kaczyński says the rebels have left; Morawiecki says they have not. Party
-authorities still process individual cases. The next move can produce
+Kaczyński says the rebels have left; Morawiecki says they have not. **[+
+pis_morawiecki_camp +] MPs** currently follow the camp. Party authorities
+still process individual cases. The next move can produce
 reconciliation, a new club, a Szydło/Czarnek counter-mobilisation or a
 presidential mediation.
 
@@ -675,8 +927,8 @@ Q.pis_morawiecki_camp = morawieckiDefectors;
 Q.pis_split = 1;
 Q.pis_split_crisis = 0;
 Q.pis_seats = Math.max(0, Q.pis_seats - morawieckiDefectors);
-Q.other_seats =
-    Math.max(0, Number(Q.other_seats) || 0) + morawieckiDefectors;
+Q.rozwoj_seats =
+    Math.max(0, Number(Q.rozwoj_seats) || 0) + morawieckiDefectors;
 Q.pis_leader = "Jarosław Kaczyński";
 Q.pis_dominant_wing = "Kaczyński loyalists and Czarnek hardliners";
 Q.pis_relation += 2;
@@ -700,8 +952,8 @@ on-arrival: resources -= 1; pis_split_crisis = 1; coalition_opportunity_pis = 5;
 go-to: poland_event_queue
 
 @women_boards_2026
-title: Women on Boards
-subtitle: Representation, class and EU implementation
+title: Gender-balance rules for company boards
+subtitle: Representation, economic power and EU implementation
 new-page: true
 tags: poland_event
 priority: 20
@@ -710,7 +962,11 @@ max-visits: 1
 view-if: continuous_campaign = 1 and year = 2026 and month = 7
 on-arrival: feminist_trust += 2; news_headline = "Gender-balance requirements pass for major company leadership"
 
-= July 2026 — Elite power or too narrow a victory
+= July 2026 — A real gain, but a narrow one
+
+New rules require more balanced representation of women and men on the boards
+of large companies. Lewica can defend that redistribution of senior power or
+link it to pay transparency and representation for workers.
 
 - @boards_defend
 - @boards_expand
@@ -738,7 +994,7 @@ max-visits: 1
 view-if: continuous_campaign = 1 and year = 2026 and month = 9
 on-arrival: news_headline = "The final playable budget begins with incompatible coalition mandates"
 
-= September 2026 — Five red lines before one bill
+= September 2026 — Five priorities, one limited budget
 
 This event is a **plausible scenario**, not recorded history. Defence, health,
 local finance, EU fiscal pressure and KPO deadlines compete while every small
@@ -819,7 +1075,7 @@ max-visits: 1
 view-if: continuous_campaign = 1 and year = 2026 and month = 11
 on-arrival: last_independence_march_year = 2026; far_right_street_capacity += 4; news_headline = "A fragmented right turns Independence Day into a leadership primary"
 
-= November 2026 — The street elects no leader
+= November 2026 — The right competes for the march
 
 This is a **scenario event**. Competing columns can radicalise one another,
 fight over organisers, or make room for a civic alternative.
@@ -855,7 +1111,7 @@ on-arrival: independence_march_strategy = "Exploit right fragmentation"; indepen
 go-to: poland_event_queue
 
 @constructive_motion_2026
-title: Scenario horizon — a named successor
+title: Scenario horizon — a constructive no-confidence motion
 subtitle: The opposition tests a constructive no-confidence motion
 new-page: true
 tags: poland_event
@@ -1085,14 +1341,26 @@ go-to: poland_event_queue
 title: Alternative parliamentary election
 new-page: true
 on-arrival: {!
-const ids = ["pis", "ko", "p2050", "psl", "left", "konf", "other"];
+const ids = [
+    "pis", "ko", "p2050", "psl", "left", "konf", "other",
+    "sld_breakaway", "spring_breakaway", "labor_left", "young_left",
+    "razem", "pps", "centrum", "rozwoj", "korona"
+];
+const seatQuality = function(id) {
+    if (id == "razem") return "razem_party_seats";
+    if (id == "pps") return "pps_party_seats";
+    return id + "_seats";
+};
 const rawSeats = {};
 let total = 0;
 for (const id of ids) {
     const projected = Number(Q[id + "_projected_seats"]);
     rawSeats[id] = Number.isFinite(projected)
         ? Math.max(0, Math.round(projected))
-        : Math.max(0, Math.round(Number(Q[id + "_seats"]) || 0));
+        : Math.max(
+            0,
+            Math.round(Number(Q[seatQuality(id)]) || 0)
+        );
     total += rawSeats[id];
 }
 if (total <= 0) {
@@ -1107,18 +1375,26 @@ if (total <= 0) {
 }
 let used = 0;
 for (const id of ids) {
-    Q[id + "_seats"] = Math.floor(rawSeats[id] * 460 / total);
-    used += Q[id + "_seats"];
+    Q[seatQuality(id)] = Math.floor(rawSeats[id] * 460 / total);
+    used += Q[seatQuality(id)];
 }
 const ranked = ids.slice().sort(function(a, b) {
     return rawSeats[b] - rawSeats[a];
 });
 for (let i = 0; i < 460 - used; i += 1) {
-    Q[ranked[i % ranked.length] + "_seats"] += 1;
+    const winner = ranked[i % ranked.length];
+    Q[seatQuality(winner)] += 1;
 }
+Q.left_splinter_seats =
+    Q.sld_breakaway_seats + Q.spring_breakaway_seats +
+    Q.labor_left_seats + Q.young_left_seats +
+    Q.razem_party_seats + Q.pps_party_seats;
+Q.left_family_seats = Q.left_seats + Q.left_splinter_seats;
 Q.coalition_democratic_seats =
-    Q.ko_seats + Q.psl_seats + Q.p2050_seats + Q.left_seats;
-Q.coalition_right_seats = Q.pis_seats + Q.konf_seats;
+    Q.ko_seats + Q.psl_seats + Q.p2050_seats +
+    Q.centrum_seats + Q.left_family_seats;
+Q.coalition_right_seats =
+    Q.pis_seats + Q.konf_seats + Q.rozwoj_seats + Q.korona_seats;
 Q.seat_subvention_seats = Q.left_seats;
 Q.snap_election_complete = 1;
 Q.news_headline =
@@ -1131,10 +1407,19 @@ Q.news_headline =
 <div class="election-table-head"><span>Party</span><span></span><span>Seats</span><span></span></div>
 <div class="election-table-row"><span class="party party-pis">PiS / loyalist right</span><span></span><b>[+ pis_seats +]</b><span></span></div>
 <div class="election-table-row"><span class="party party-ko">KO</span><span></span><b>[+ ko_seats +]</b><span></span></div>
-<div class="election-table-row"><span class="party party-lewica">Lewica</span><span></span><b>[+ left_seats +]</b><span></span></div>
+<div class="election-table-row"><span class="party party-lewica">[+ left_party_name +]</span><span></span><b>[+ left_seats +]</b><span>main list</span></div>
+[? if sld_breakaway_seats > 0: <div class="election-table-row"><span class="party party-sld">[+ barons_party_name +]</span><span></span><b>[+ sld_breakaway_seats +]</b><span>breakaway</span></div>?]
+[? if spring_breakaway_seats > 0: <div class="election-table-row"><span class="party party-wiosna">[+ spring_party_name +]</span><span></span><b>[+ spring_breakaway_seats +]</b><span>breakaway</span></div>?]
+[? if labor_left_seats > 0: <div class="election-table-row"><span class="party party-left-labor">[+ labor_party_name +]</span><span></span><b>[+ labor_left_seats +]</b><span>breakaway</span></div>?]
+[? if young_left_seats > 0: <div class="election-table-row"><span class="party party-progressive">[+ progressives_party_name +]</span><span></span><b>[+ young_left_seats +]</b><span>breakaway</span></div>?]
+[? if razem_party_seats > 0: <div class="election-table-row"><span class="party party-razem">Razem</span><span></span><b>[+ razem_party_seats +]</b><span>independent</span></div>?]
+[? if pps_party_seats > 0: <div class="election-table-row"><span class="party party-pps">PPS</span><span></span><b>[+ pps_party_seats +]</b><span>independent</span></div>?]
 <div class="election-table-row"><span class="party party-psl">PSL</span><span></span><b>[+ psl_seats +]</b><span></span></div>
-<div class="election-table-row"><span class="party party-p2050">Centrist successors</span><span></span><b>[+ p2050_seats +]</b><span></span></div>
-<div class="election-table-row"><span><span class="party party-konf">Konfederacja</span> / <span class="party party-kkp">KKP</span></span><span></span><b>[+ konf_seats +]</b><span></span></div>
+<div class="election-table-row"><span class="party party-p2050">Poland 2050</span><span></span><b>[+ p2050_seats +]</b><span></span></div>
+[? if centrum_seats > 0: <div class="election-table-row"><span class="party party-centrum">Unia Centrum</span><span></span><b>[+ centrum_seats +]</b><span>PL2050 split</span></div>?]
+<div class="election-table-row"><span class="party party-konf">Konfederacja</span><span></span><b>[+ konf_seats +]</b><span></span></div>
+[? if korona_seats > 0: <div class="election-table-row"><span class="party party-korona">Korona</span><span></span><b>[+ korona_seats +]</b><span>Konf. split</span></div>?]
+[? if rozwoj_seats > 0: <div class="election-table-row"><span class="party party-rozwoj">Rozwój Plus</span><span></span><b>[+ rozwoj_seats +]</b><span>PiS split</span></div>?]
 </div>
 
 - @snap_palace_pick
@@ -1146,8 +1431,14 @@ on-arrival: {!
 const hostilePalace = Boolean(Q.pres_2025_hostile_president);
 const pisSeats = Math.max(0, Number(Q.pis_seats) || 0);
 const pslSeats = Math.max(0, Number(Q.psl_seats) || 0);
-const centristSeats = Math.max(0, Number(Q.p2050_seats) || 0);
-const konfSeats = Math.max(0, Number(Q.konf_seats) || 0);
+const centristSeats = Math.max(
+    0,
+    (Number(Q.p2050_seats) || 0) + (Number(Q.centrum_seats) || 0)
+);
+const konfSeats = Math.max(
+    0,
+    (Number(Q.konf_seats) || 0) + (Number(Q.korona_seats) || 0)
+);
 const morawieckiCamp = Math.max(
     0,
     Number(Q.pis_morawiecki_camp) || 0
@@ -1156,7 +1447,7 @@ if (Q.pis_split || morawieckiCamp >= 25) {
     Q.snap_pm_candidate = "Mateusz Morawiecki";
     Q.snap_pm_base =
         pisSeats +
-        (Q.pis_split ? morawieckiCamp : 0) +
+        (Q.pis_split ? (Number(Q.rozwoj_seats) || 0) : 0) +
         Math.round(centristSeats * 0.20) +
         Math.round(pslSeats * 0.15);
     Q.snap_nomination_reason =
@@ -1326,6 +1617,10 @@ view-if: government_has_confidence = 0
 new-page: true
 
 = A democratic candidate needs 231
+
+The President's nominee has failed. The Sejm now chooses its own candidate for
+prime minister, and Lewica's support will affect both the nominee and the
+coalition assembled around that person.
 
 - @snap_sejm_tusk
 - @snap_sejm_trzaskowski

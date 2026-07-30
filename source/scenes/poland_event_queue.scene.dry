@@ -2,6 +2,12 @@ title: Dated political events
 new-page: true
 call: poland_normalize
 on-arrival: {!
+Q.poland_event_previous_scene = this.state.prevSceneId || "None";
+const returningFromEvent =
+    Q.poland_event_phase == 1 &&
+    this.state.prevSceneId != "root" &&
+    this.state.prevSceneId != "poland_event_queue" &&
+    this.state.prevSceneId.indexOf("poland_event_queue.") != 0;
 Q.poland_event_phase = 1;
 const queueScene =
     this.game.scenes["poland_event_queue.events_choice"];
@@ -25,8 +31,38 @@ Q.poland_event_queue_tier_titles = activeTier.map(function(choice) {
     return choice.title;
 }).join(" · ");
 Q.poland_event_queue_date = Q.date_label;
+Q.poland_event_return_beat = returningFromEvent ? 1 : 0;
 !}
-go-to: events_choice if poland_event_queue_count > 0; complete if poland_event_queue_count = 0
+go-to: afterword if poland_event_return_beat = 1; events_choice if poland_event_queue_count > 0; complete if poland_event_queue_count = 0
+
+@afterword
+title: The decision lands
+new-page: true
+
+= The decision lands
+
+**[+ news_headline +]**
+
+[? if poland_event_queue_count = 0: The file closes. With no other dated
+decisions waiting, the leadership can return to the wider campaign.?]
+[? if poland_event_queue_count = 1: The immediate response is now part of the
+political record. One other dated decision is still waiting on the desk.?]
+[? if poland_event_queue_count > 1: The immediate response is now part of the
+political record. **[+ poland_event_queue_count +] dated decisions** are still
+waiting on the desk.?]
+
+- @afterword_desk
+- @afterword_complete
+
+@afterword_desk
+title: Return to the events desk
+view-if: poland_event_queue_count > 0
+go-to: events_choice
+
+@afterword_complete
+title: Return to the leadership table
+view-if: poland_event_queue_count = 0
+go-to: complete
 
 @events_choice
 title: Events on the desk

@@ -353,7 +353,7 @@ main hand: party/government/adviser actions ◄─────────┘
 
 This is the system that must be converted, not just the opening scene.
 
-The active Polish hand has three contextual live decks:
+The active Polish hand has four contextual live decks:
 
 - **Party Affairs** is always available and draws one of sixteen party cards.
 - **Government Affairs** requires government participation, Sejm confidence,
@@ -364,6 +364,11 @@ The active Polish hand has three contextual live decks:
   functioning cabinet. Its crisis compact, oversight bargain and
   presidential-mediation cards publish their score, threshold and likely
   effect before the player chooses.
+- **Foreign Affairs** remains available in and out of government. A
+  higher-frequency staged European campaign builds distinct institutional,
+  social, eastern and bilateral relationships; five lower-frequency pressure
+  cards recur on independent cooldowns. The 2020 and 2024 US election scenes
+  set the administration used by later Washington and security cards.
 
 Party opportunities also carry contextual `view-if` gates. Media-build cards
 wait for the media-system event, the presidential channel requires real Palace

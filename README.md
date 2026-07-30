@@ -61,23 +61,32 @@ mechanics without replaying the earlier campaign.
   together, the desk shows the most urgent tier, then reveals lower-priority
   files as it is cleared. Resolving one event cannot discard the rest, and the
   next leadership card is unavailable until every pending issue is addressed.
-- Three contextual decks feed one persistent three-card agenda: Party Affairs;
+- Four contextual decks feed one persistent three-card agenda: Party Affairs;
   Government Affairs while Lewica holds a relevant ministry in a functioning
-  cabinet; and Negotiate with Government while Lewica is outside cabinet.
+  cabinet; Negotiate with Government while Lewica is outside cabinet; and
+  Foreign Affairs throughout the campaign.
   PiS is normally hostile, but a costed crisis proposal—especially one mediated
   by a Trzaskowski presidency—can produce a narrow, public bargain. A pinned
   discard action removes one held opportunity without consuming time or
   changing political state.
+- Foreign Affairs adapts the inherited Weimar relationship ladder. Four
+  European missions can culminate in a Warsaw compact, while random Brussels,
+  Berlin, eastern-flank, Washington and radical-right pressure cards compete
+  for the same hand. Seeded 2020 and 2024 US elections have variable winners;
+  their administrations alter NATO reliability, Ukraine politics,
+  rule-of-law pressure, EU autonomy and the later ambassador crisis.
 - Party resources are uncapped organisational capacity and receive one annual
   dues-and-seat-subvention payout. State-budget capacity is a separate,
   government-only currency. Every playable December ends in a budget line or
   vote; governing defeats can trigger coalition rescue, confidence, a new
   prime minister or a constitutionally valid early-election route.
-- The Left remains a coalition of SLD barons, Wiosna, labour figures, younger
-  progressives and Razem. Strength and dissent affect primaries, coalition
-  commitments, budgets, confidence votes and the risk that Razem or another
-  mini-caucus breaks discipline. PSL and the centrist parties behave as
-  similarly divided coalition partners rather than fixed vote blocks.
+- The Left begins as a coalition of SLD barons, Wiosna, labour figures,
+  younger progressives, Razem and a tiny PPS current. Strength and dissent
+  affect primaries, coalition commitments, budgets and confidence votes.
+  Mergers redistribute live strength; sufficiently alienated caucuses can
+  leave, take MPs and advisors, form separately polled parties and contest
+  later elections. PSL and the centrist parties behave as similarly divided
+  coalition partners rather than fixed vote blocks.
 - Nine public-opinion fields separately track support, salience and backlash:
   abortion rights, refugee solidarity, border security, vaccination and
   public health, social spending, LGBT equality, secularism, rule-of-law
@@ -139,6 +148,7 @@ artifacts. `out/html/index.html`, `out/html/game.js`, and
 - [Modern Polish political simulation model](docs/POLITICAL_MODEL.md)
 - [Media ecosystem and communications minigame](docs/MEDIA_MODEL.md)
 - [First playable skeleton and conversion boundary](docs/PLAYABLE_SKELETON.md)
+- [Card image sources and licenses](docs/CARD_IMAGE_CREDITS.md)
 
 The engine guide explains the file format, scene graph, state model, cards,
 build output, debugging, and a safe conversion order. The political research

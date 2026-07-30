@@ -87,8 +87,9 @@ native persistent hand:
    four cards and appears only when Lewica holds a relevant ministry in a
    cabinet with confidence. **Negotiation with Government** appears only when
    Lewica is outside a functioning cabinet and offers crisis cooperation,
-   oversight bargains or presidential mediation. These are the only live
-   decks.
+   oversight bargains or presidential mediation. **Foreign Affairs** is the
+   fourth live deck: a staged European campaign appears beside five randomly
+   selected foreign-pressure cards.
 2. Hold at most three cards. Unplayed cards persist between months and can
    become invalid if their conditions stop being true. **Discard an
    opportunity** removes one held card without playing it: no monthly action,
@@ -105,9 +106,31 @@ native persistent hand:
    inspecting an unchanged slate does not. **End month** passes and applies
    neglect pressure.
 
-The twelve-advisor roster is chosen through the same five political caucuses
-used by the internal-party simulation. Active personalities and portraits are
-displayed directly:
+### European campaign and foreign pressure
+
+The European route follows the inherited Weimar foreign-policy pattern:
+repeatable diplomatic work creates several distinct relationships, elections
+and shocks abroad change the environment, and a larger settlement requires
+earlier preparation.
+
+- Brussels, European-left, eastern-flank and Warsaw–Berlin–Paris missions each
+  create a different asset. Three missions and sufficient influence unlock a
+  Warsaw compact joining social investment, democratic law, Ukrainian
+  sovereignty and eastern security.
+- Brussels conditionality, a German industrial slowdown, eastern-flank
+  demands, White House pressure and a European radical-right wave are separate
+  weighted cards. They can recur after cooldowns, so foreign affairs is not a
+  one-way influence bonus.
+- The November 2020 and November 2024 US elections use the campaign seed and
+  can return different winners. The 2024 Republican candidate changes if Trump
+  already won twice. The resulting administration changes alliance
+  reliability, rule-of-law pressure, domestic party relations and later
+  Ukraine and 2026 diplomatic events.
+
+The twelve-advisor roster is chosen through the advisor-bearing currents in
+the six-caucus starting registry. PPS begins as a very small current without a
+dedicated bureau personality. Active personalities and portraits are displayed
+directly:
 
 | Caucus | Advisors |
 | --- | --- |
@@ -116,8 +139,12 @@ displayed directly:
 | Labour current | Agnieszka Dziemianowicz-Bąk |
 | Younger progressive SLD | Anna-Maria Żukowska, Katarzyna Kotula, Krzysztof Gawkowski, Wanda Nowicka |
 | Razem | Adrian Zandberg, Magdalena Biejat, Marcelina Zawisza, Paulina Matysiak |
+| PPS | No dedicated advisor at scenario start |
 
-The starting bureau is Czarzasty, Biedroń and Zandberg.
+The starting bureau is Czarzasty, Biedroń and Zandberg. When Wiosna merges,
+Biedroń and Kotula represent the successor progressive current rather than
+continuing to modify a dissolved organisation. Advisors belonging to a caucus
+that leaves are removed from the shared bureau.
 
 Standard and deliberately harsher starting conditions are available.
 
@@ -161,7 +188,7 @@ The inherited currencies are now separated by political role.
 | August 2020 | Trzaskowski certification/oath crisis if he wins; otherwise post-election briefing |
 | September 2020 | SLD–Wiosna/Nowa Lewica architecture |
 | October 2020 | Constitutional Tribunal abortion ruling; conditional Palace–Tribunal showdown |
-| November 2020 | Women's Strike organisation and programme; pandemic-era Independence Day response |
+| November 2020 | Women's Strike organisation and programme; pandemic-era Independence Day response; variable US presidential election |
 | December 2020 | Opposition budget line, weighted caucus ratification and Senate amendments |
 | January 2021 | Vaccination strategy |
 | February 2021 | Conditional Trzaskowski judicial-veto war |
@@ -200,12 +227,12 @@ The inherited currencies are now separated by political role.
 | April–May 2024 | Local and abortion votes, first KPO payment, Article 7 closure and the coalition fight over European credit |
 | June–July 2024 | IVF delivery, the Belarus-border soldier's death, European elections and PSL's defeat of abortion decriminalisation |
 | August–October 2024 | Widow's pension, the post-abortion-defeat movement reckoning, flood reconstruction, falling refugee solidarity, asylum suspension, Razem's possible exit and presidential referral of Tribunal repair |
-| November–December 2024 | Independence Day, KO and Left presidential nominations, Christmas Eve labour reform, KPO co-financing and the first full coalition budget |
+| November–December 2024 | Variable US presidential election, Independence Day, KO and Left presidential nominations, Christmas Eve labour reform, KPO co-financing and the first full coalition budget |
 | January–March 2025 | Separate Left presidential campaigns, Braun's Konfederacja rupture, religion and health education, asylum suspension, gender-recognition procedure and the spring audit of the movement settlement |
 | April–June 2025 | Shorter-working-time pilot, presidential debate, both election rounds, support trading, cabinet confidence and the two-stage Third Way/PSL settlement |
 | July–September 2025 | A cabinet reshuffle or post-confidence formation branch, presidential inauguration, Russian drone incursion and Hołownia succession |
 | October–December 2025 | KO consolidation, KPO review, Marshal rotation, Independence Day, EU marriage recognition, collective bargaining, Left leadership, CJEU–Tribunal collision and the post-presidential budget |
-| January–March 2026 | Poland 2050 succession and split, ambassador–Marshal crisis, competing KRS bills, the de-personalised centrist party and six Tribunal vacancies |
+| January–March 2026 | Poland 2050 succession and split, a Trump-dependent ambassador–Marshal crisis or alternate Washington review, competing KRS bills, the de-personalised centrist party and six Tribunal vacancies |
 | April–July 2026 | KO's enlarged leadership, PIP/KPO enforcement, Kanał Zero television, partnership legislation and veto, Tribunal competence, Braun procedure, centrist and PiS ruptures, hate crime, appointments and the final KPO window |
 | September–October 2026 | **Scenario horizon:** 2027 budget red lines and a possible judicial-status bill at the Palace |
 | November–December 2026 | **Scenario horizon:** Independence Day, a conditional constructive no-confidence motion, final budget, and a conditional snap election followed by presidential and Sejm cabinet attempts |
@@ -489,20 +516,34 @@ committee/coalition registration and local candidate effects.
 
 ## Active quality groups
 
-The playable code uses five caucuses:
+The playable code starts with six caucuses:
 
 - `barons`: old SLD organisational elites, socially cautious and economically
   accommodationist;
 - `spring`: the Wiosna organisation and leadership network;
 - `labor`: trade-union and public-service social democrats;
 - `progressives`: the younger, more women-led secular and equality current;
-- `razem`: Razem as a cooperating but legally autonomous party current.
+- `razem`: Razem as a cooperating but legally autonomous party current;
+- `pps`: a tiny, low-influence socialist current.
 
-Each has `*_strength` and `*_dissent`. Strength is normalised to a 100-point
-factional makeup. Weighted dissent creates persistent unity pressure, and a
-caucus with at least 12 strength and 60 dissent becomes an active veto player.
-Those values gate congress, programme, primary, Senate, formation and budget
-choices as well as weighting annual ratification.
+Each has `*_strength`, `*_dissent`, active/in-Left membership flags, a live
+display name, an independent-party name and an electoral outside option.
+`factions` contains only caucuses that still belong to the Left. Strength is
+normalised across that live roster, so merged and departed organisations cast
+no hidden internal vote. Weighted dissent creates persistent unity pressure,
+and a caucus with at least 12 strength and 60 dissent becomes an active veto
+player. At 72 dissent a repeatable, caucus-specific crisis can produce a
+bespoke settlement, an orderly departure or a punitive expulsion. Each exit
+has different costs to networks, credibility, money, movements or coalition
+relations.
+
+Structural events use the same machinery. The Wiosna merger removes `spring`
+and transfers its complete live strength between the labour and younger
+progressive successors. Razem and PPS can sit inside the Left, leave with
+their MPs or later return through a pact. Barons, labour and progressive
+currents can also form their own named parties. Seat transfers happen when the
+split occurs, and the departed group no longer appears in internal
+ratification, advisor counts or the Left's caucus display.
 
 Other active state clusters include:
 
@@ -579,10 +620,12 @@ The presentation layer adapted from the inherited election flow is now active
 in Polish scenes. July 2023 displays a projected Sejm semicircle, coalition
 worksheet and readiness assessment, then returns to the campaign. In October
 the continuous route apportions 460 certified seats from the campaign's stored
-projection, divides Left, PSL and Poland 2050 mandates among their internal
+projection, divides the main Left mandate only among its currently active
 caucuses, and presents a result table, Sejm chart and viable coalition
-arrangements. The standalone formation drill instead uses the historical 2023
-snapshot.
+arrangements. Departed Left caucuses contest under their own names and
+thresholds; Unia Centrum, Rozwój and Korona likewise receive separate votes
+and seats when the Poland 2050, PiS or Konfederacja split chains create them.
+The standalone formation drill instead uses the historical 2023 snapshot.
 
 If Lewica joins a cabinet, its coalition mandate becomes ministry leverage.
 The player allocates that leverage among Labour, Equality, Housing, Health,
