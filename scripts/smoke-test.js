@@ -4190,6 +4190,40 @@ function runSmoke(game) {
         qualities.pis_cohabitation_last_shift < 0,
       'Trzaskowski–PiS backlash did not produce a defensive rally'
     );
+
+    startStandard('cooperative-president-partnership-signature');
+    qualities = engine.state.qualities;
+    qualities.president_name = 'Rafał Trzaskowski';
+    qualities.pres_2025_hostile_president = 0;
+    engine.goToScene('poland_events_2026.partnership_veto_2026');
+    assert.strictEqual(qualities.partnership_presidential_outcome, 'Signed');
+    assert(
+      currentChoices().some(function(choice) {
+        return choice.id ===
+          'poland_events_2026.partnership_signed_implement';
+      }) &&
+      !currentChoices().some(function(choice) {
+        return choice.id === 'poland_events_2026.partnership_campaign';
+      }),
+      'A cooperative Trzaskowski presidency did not open the signature path'
+    );
+
+    startStandard('hostile-president-partnership-veto');
+    qualities = engine.state.qualities;
+    qualities.president_name = 'Karol Nawrocki';
+    qualities.pres_2025_hostile_president = 1;
+    engine.goToScene('poland_events_2026.partnership_veto_2026');
+    assert.strictEqual(qualities.partnership_presidential_outcome, 'Vetoed');
+    assert(
+      currentChoices().some(function(choice) {
+        return choice.id === 'poland_events_2026.partnership_campaign';
+      }) &&
+      !currentChoices().some(function(choice) {
+        return choice.id ===
+          'poland_events_2026.partnership_signed_implement';
+      }),
+      'A hostile presidency did not preserve the veto path'
+    );
   }
 
   function openDatedEventQueue(year, month) {

@@ -83,7 +83,9 @@ Q.sejm_quorum_floor = 230;
 Q.sejm_statutory_majority = 231;
 
 const partyIds = [
-    "pis", "ko", "p2050", "psl", "left", "konf", "other"
+    "pis", "ko", "p2050", "psl", "left", "konf", "other",
+    "sld_breakaway", "spring_breakaway", "labor_left", "young_left",
+    "razem", "pps", "centrum", "rozwoj", "korona"
 ];
 const projectedEntries = partyIds.map(function(id) {
     return {
@@ -112,7 +114,13 @@ if (projectedTotal > 0) {
     );
 }
 for (const id of partyIds) {
-    Q[id + "_seats"] = certified[id];
+    if (id == "razem") {
+        Q.razem_party_seats = certified[id];
+    } else if (id == "pps") {
+        Q.pps_party_seats = certified[id];
+    } else {
+        Q[id + "_seats"] = certified[id];
+    }
     Q[id + "_projected_seats"] = certified[id];
     Q["election_2023_" + id + "_vote"] = finiteFormation(
         Q[id + "_vote_intent"],
@@ -120,17 +128,33 @@ for (const id of partyIds) {
     );
 }
 
-const leftCaucuses = apportionFormation(Q.left_seats, [
-    {id: "barons", weight: 6},
-    {id: "new_generation", weight: 8},
-    {id: "spring", weight: 5},
-    {id: "razem", weight: 7}
-]);
-Q.left_barons_seats = leftCaucuses.barons;
-Q.left_new_generation_seats = leftCaucuses.new_generation;
-Q.left_spring_seats = leftCaucuses.spring;
-Q.razem_seats = leftCaucuses.razem;
-Q.nowa_lewica_seats = Math.max(0, Q.left_seats - Q.razem_seats);
+const leftCaucusDefinitions = [
+    {id: "barons", weight: Q.barons_active ? Q.barons_strength : 0},
+    {id: "spring", weight: Q.spring_active ? Q.spring_strength : 0},
+    {id: "labor", weight: Q.labor_active ? Q.labor_strength : 0},
+    {
+        id: "progressives",
+        weight: Q.progressives_active ? Q.progressives_strength : 0
+    },
+    {id: "razem", weight: Q.razem_active ? Q.razem_strength : 0},
+    {id: "pps", weight: Q.pps_active ? Q.pps_strength : 0}
+].filter(function(entry) {
+    return Number(entry.weight) > 0;
+});
+const leftCaucuses = leftCaucusDefinitions.length
+    ? apportionFormation(Q.left_seats, leftCaucusDefinitions)
+    : {};
+Q.left_barons_seats = leftCaucuses.barons || 0;
+Q.left_spring_seats = leftCaucuses.spring || 0;
+Q.left_labor_seats = leftCaucuses.labor || 0;
+Q.left_progressives_seats = leftCaucuses.progressives || 0;
+Q.left_new_generation_seats =
+    Q.left_labor_seats + Q.left_progressives_seats;
+Q.razem_seats = leftCaucuses.razem || 0;
+Q.left_pps_seats = leftCaucuses.pps || 0;
+Q.nowa_lewica_seats =
+    Q.left_barons_seats + Q.left_spring_seats +
+    Q.left_labor_seats + Q.left_progressives_seats;
 
 const pslCaucuses = apportionFormation(Q.psl_seats, [
     {id: "core", weight: 19},
@@ -150,11 +174,18 @@ Q.p2050_loyalist_seats = p2050Caucuses.loyalist;
 Q.p2050_liberal_seats = p2050Caucuses.liberal;
 Q.p2050_independent_seats = p2050Caucuses.independent;
 
+Q.left_splinter_seats =
+    Q.sld_breakaway_seats + Q.spring_breakaway_seats +
+    Q.labor_left_seats + Q.young_left_seats +
+    Q.razem_party_seats + Q.pps_party_seats;
+Q.left_family_seats = Q.left_seats + Q.left_splinter_seats;
 Q.coalition_democratic_seats =
-    Q.ko_seats + Q.p2050_seats + Q.psl_seats + Q.left_seats;
+    Q.ko_seats + Q.p2050_seats + Q.psl_seats +
+    Q.centrum_seats + Q.left_family_seats;
 Q.coalition_center_seats =
-    Q.ko_seats + Q.p2050_seats + Q.psl_seats;
-Q.coalition_right_seats = Q.pis_seats + Q.konf_seats;
+    Q.ko_seats + Q.p2050_seats + Q.psl_seats + Q.centrum_seats;
+Q.coalition_right_seats =
+    Q.pis_seats + Q.konf_seats + Q.rozwoj_seats + Q.korona_seats;
 Q.coalition_pis_psl_seats = Q.pis_seats + Q.psl_seats;
 Q.seat_subvention_seats = Q.left_seats;
 Q.seat_subvention = Q.left_seats > 0
@@ -275,13 +306,50 @@ Q.psl_seats = 32;
 Q.left_seats = 26;
 Q.konf_seats = 18;
 Q.other_seats = 0;
+Q.sld_breakaway_seats = 0;
+Q.spring_breakaway_seats = 0;
+Q.labor_left_seats = 0;
+Q.young_left_seats = 0;
+Q.razem_party_seats = 0;
+Q.pps_party_seats = 0;
+Q.centrum_seats = 0;
+Q.rozwoj_seats = 0;
+Q.korona_seats = 0;
 Q.coalition_seats = 0;
 
 Q.left_barons_seats = 6;
-Q.left_new_generation_seats = 8;
-Q.left_spring_seats = 5;
+Q.left_labor_seats = 5;
+Q.left_progressives_seats = 7;
+Q.left_new_generation_seats = 12;
+Q.left_spring_seats = 0;
 Q.razem_seats = 7;
-Q.nowa_lewica_seats = 19;
+Q.left_pps_seats = 1;
+Q.nowa_lewica_seats = 18;
+Q.left_splinter_seats = 0;
+Q.left_family_seats = 26;
+Q.spring_merged = 1;
+Q.spring_active = 0;
+Q.spring_in_left = 0;
+Q.spring_strength = 0;
+Q.barons_active = 1;
+Q.barons_in_left = 1;
+Q.barons_strength = 26;
+Q.labor_active = 1;
+Q.labor_in_left = 1;
+Q.labor_strength = 22;
+Q.progressives_active = 1;
+Q.progressives_in_left = 1;
+Q.progressives_strength = 28;
+Q.razem_active = 1;
+Q.razem_in_left = 1;
+Q.razem_strength = 21;
+Q.pps_active = 1;
+Q.pps_in_left = 1;
+Q.pps_strength = 3;
+Q.barons_name = "Nowa Lewica establishment";
+Q.labor_name = "Social-democratic labour";
+Q.progressives_name = "New Left progressives";
+Q.left_party_name = "Nowa Lewica";
 Q.psl_core_seats = 19;
 Q.psl_regional_seats = 11;
 Q.psl_conservative_seats = 2;

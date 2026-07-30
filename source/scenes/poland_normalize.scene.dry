@@ -13,9 +13,130 @@ if (Q.started) {
         }
     };
 
-    if (!Array.isArray(Q.factions)) {
-        Q.factions = ["barons", "spring", "labor", "progressives", "razem"];
+    const caucusDefaults = {
+        barons: {
+            strength: 27,
+            dissent: 12,
+            name: "SLD organisation",
+            partyName: "Democratic Left Alliance"
+        },
+        spring: {
+            strength: 19,
+            dissent: 16,
+            name: "Wiosna",
+            partyName: "Spring"
+        },
+        labor: {
+            strength: 14,
+            dissent: 18,
+            name: "Labour Left",
+            partyName: "Labour Left"
+        },
+        progressives: {
+            strength: 18,
+            dissent: 14,
+            name: "Younger progressives",
+            partyName: "Young Left"
+        },
+        razem: {
+            strength: 20,
+            dissent: 28,
+            name: "Razem",
+            partyName: "Razem"
+        },
+        pps: {
+            strength: 2,
+            dissent: 20,
+            name: "PPS",
+            partyName: "PPS"
+        }
+    };
+    const caucusIds = Object.keys(caucusDefaults);
+    Q.caucus_ids = caucusIds.slice();
+    for (const caucus of caucusIds) {
+        const defaults = caucusDefaults[caucus];
+        if (!Number.isFinite(Number(Q[caucus + "_strength"]))) {
+            Q[caucus + "_strength"] = defaults.strength;
+        }
+        if (!Number.isFinite(Number(Q[caucus + "_dissent"]))) {
+            Q[caucus + "_dissent"] = defaults.dissent;
+        }
+        if (Q[caucus + "_active"] === undefined) {
+            if (
+                caucus == "razem" &&
+                Q.razem_in_left_club !== undefined
+            ) {
+                Q[caucus + "_active"] =
+                    Q.razem_in_left_club ? 1 : 0;
+            } else if (caucus == "spring" && Q.spring_merged) {
+                Q[caucus + "_active"] = 0;
+            } else if (Q[caucus + "_party_formed"]) {
+                Q[caucus + "_active"] = 0;
+            } else {
+                Q[caucus + "_active"] = 1;
+            }
+        }
+        if (Q[caucus + "_in_left"] === undefined) {
+            Q[caucus + "_in_left"] =
+                Q[caucus + "_active"] ? 1 : 0;
+        }
+        if (Q[caucus + "_party_formed"] === undefined) {
+            Q[caucus + "_party_formed"] = 0;
+        }
+        if (!Number.isFinite(Number(Q[caucus + "_exit_strength"]))) {
+            Q[caucus + "_exit_strength"] = 0;
+        }
+        if (!Number.isFinite(Number(Q[caucus + "_party_relation"]))) {
+            Q[caucus + "_party_relation"] = 0;
+        }
+        if (!Number.isFinite(Number(Q[caucus + "_last_crisis_time"]))) {
+            Q[caucus + "_last_crisis_time"] = -99;
+        }
+        if (
+            typeof Q[caucus + "_name"] !== "string" ||
+            !Q[caucus + "_name"].trim().length
+        ) {
+            Q[caucus + "_name"] = defaults.name;
+        }
+        if (
+            typeof Q[caucus + "_party_name"] !== "string" ||
+            !Q[caucus + "_party_name"].trim().length
+        ) {
+            Q[caucus + "_party_name"] = defaults.partyName;
+        }
     }
+    Q.factions = caucusIds.filter(function(caucus) {
+        return Q[caucus + "_active"] &&
+            Q[caucus + "_in_left"];
+    });
+    Q.razem_in_left_club = Q.razem_active ? 1 : 0;
+
+    if (Q.spring_merged) {
+        Q.spring_active = 0;
+        Q.spring_in_left = 0;
+        Q.spring_strength = 0;
+        Q.spring_name = "Wiosna (merged)";
+        Q.barons_name = "Nowa Lewica establishment";
+        Q.labor_name = "Social-democratic labour";
+        Q.progressives_name = "New Left progressives";
+        Q.factions = caucusIds.filter(function(caucus) {
+            return Q[caucus + "_active"] &&
+                Q[caucus + "_in_left"];
+        });
+    }
+    if (Q.rename_event_done || Q.spring_merged) {
+        Q.left_party_name = Q.barons_active
+            ? "Nowa Lewica"
+            : "New Left Renewal";
+    } else {
+        Q.left_party_name = "Lewica";
+    }
+    const autonomousPartners = [];
+    if (Q.razem_active) autonomousPartners.push("Razem");
+    if (Q.pps_active) autonomousPartners.push("PPS");
+    Q.left_family_name = autonomousPartners.length
+        ? Q.left_party_name + " · " + autonomousPartners.join(" · ")
+        : Q.left_party_name;
 
     // Keep constitutional office, cabinet ownership and Lewica's role
     // separate. Later events can replace a prime minister or move the Left
@@ -46,6 +167,8 @@ if (Q.started) {
         Q.government_owner = "KO-led democratic coalition";
     } else if (
         governmentText.includes("dziemianowicz") ||
+        governmentText.includes("biejat") ||
+        governmentText.includes("czarzasty") ||
         governmentText.includes("biedroń") ||
         governmentText.includes("biedron") ||
         governmentText.includes("zandberg") ||
@@ -854,10 +977,13 @@ if (Q.started) {
     }, 0);
     const advisorCaucuses = {
         barons: ["czarzasty", "wieczorek"],
-        spring: ["biedron"],
+        spring: Q.spring_active ? ["biedron"] : [],
         labor: ["dziemianowicz_bak"],
-        progressives: ["zukowska", "kotula", "gawkowski", "nowicka"],
-        razem: ["zandberg", "biejat", "zawisza", "matysiak"]
+        progressives: [
+            "zukowska", "kotula", "gawkowski", "nowicka"
+        ].concat(Q.spring_active ? [] : ["biedron"]),
+        razem: ["zandberg", "biejat", "zawisza", "matysiak"],
+        pps: []
     };
     for (const faction of Q.factions) {
         const caucusRoster = advisorCaucuses[faction] || [];
@@ -901,6 +1027,50 @@ if (Q.started) {
     }
     Q.internal_dissent = Math.round(weightedDissent / 100);
     Q.faction_vetoes = activeVetoes;
+    Q.caucus_crisis_pending = Q.factions.some(function(caucus) {
+        return Q[caucus + "_dissent"] >= 72 &&
+            Number(Q.time) >=
+                Number(Q[caucus + "_last_crisis_time"]) + 4;
+    }) ? 1 : 0;
+
+    const splinterSeatQualities = [
+        "sld_breakaway_seats",
+        "spring_breakaway_seats",
+        "labor_left_seats",
+        "young_left_seats",
+        "razem_party_seats",
+        "pps_party_seats"
+    ];
+    Q.left_splinter_seats = splinterSeatQualities.reduce(
+        function(total, quality) {
+            return total + Math.max(
+                0,
+                Math.round(Number(Q[quality]) || 0)
+            );
+        },
+        0
+    );
+    Q.left_family_seats =
+        Math.max(0, Math.round(Number(Q.left_seats) || 0)) +
+        Q.left_splinter_seats;
+    const splinterRelations = [
+        ["sld_breakaway_seats", "barons_party_relation"],
+        ["spring_breakaway_seats", "spring_party_relation"],
+        ["labor_left_seats", "labor_party_relation"],
+        ["young_left_seats", "progressives_party_relation"],
+        ["razem_party_seats", "razem_party_relation"],
+        ["pps_party_seats", "pps_party_relation"]
+    ];
+    Q.left_splinter_support_votes = splinterRelations.reduce(
+        function(total, entry) {
+            return total + (
+                Number(Q[entry[1]]) >= 45
+                    ? Math.max(0, Math.round(Number(Q[entry[0]]) || 0))
+                    : 0
+            );
+        },
+        0
+    );
 
     const chamberNumbers = [
         "senate_total",

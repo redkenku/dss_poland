@@ -742,6 +742,63 @@ window.disableGrayMode = function() {
       }
       var valueCell = row.lastElementChild;
       var valueText = valueCell ? valueCell.textContent.trim() : '';
+      var issueValues = valueText.match(
+        /^(\d+(?:\.\d+)?)\s*·\s*(\d+(?:\.\d+)?)\s*·\s*(\d+(?:\.\d+)?)$/
+      );
+      if (issueValues) {
+        var issueLabel = row.firstElementChild
+          ? row.firstElementChild.textContent.trim()
+          : 'Public issue';
+        var issueDescription = row.nextElementSibling;
+        var issueDescriptionText = '';
+        if (
+          issueDescription &&
+          issueDescription.classList.contains('ledger-subrow')
+        ) {
+          issueDescription.classList.add('issue-description');
+          issueDescriptionText = issueDescription.textContent.trim();
+        }
+
+        row.classList.add('issue-signal-row');
+        row.setAttribute('tabindex', '0');
+        row.setAttribute(
+          'aria-label',
+          issueLabel +
+          '. Support ' + issueValues[1] +
+          ', salience ' + issueValues[2] +
+          ', backlash ' + issueValues[3] +
+          (issueDescriptionText ? '. ' + issueDescriptionText : '')
+        );
+        valueCell.classList.add('issue-values-source');
+        valueCell.setAttribute('aria-hidden', 'true');
+
+        var triplet = document.createElement('span');
+        triplet.className = 'issue-triplet';
+        triplet.setAttribute('aria-hidden', 'true');
+        var issueChannels = [
+          ['support', 'Support', Number(issueValues[1])],
+          ['salience', 'Salience', Number(issueValues[2])],
+          ['backlash', 'Backlash', Number(issueValues[3])]
+        ];
+        for (var channelIndex = 0;
+          channelIndex < issueChannels.length;
+          channelIndex++) {
+          var channel = document.createElement('span');
+          channel.className =
+            'issue-channel issue-' + issueChannels[channelIndex][0];
+          channel.title =
+            issueChannels[channelIndex][1] +
+            ': ' + issueChannels[channelIndex][2];
+          var channelFill = document.createElement('span');
+          channelFill.style.width =
+            clampSidebarNumber(issueChannels[channelIndex][2], 0, 100) +
+            '%';
+          channel.appendChild(channelFill);
+          triplet.appendChild(channel);
+        }
+        row.appendChild(triplet);
+        continue;
+      }
       var bounded = valueText.match(
         /^(-?\d+(?:\.\d+)?)\s*\/\s*(100)\s*$/
       );
@@ -764,6 +821,21 @@ window.disableGrayMode = function() {
         rowLabel + ': ' + bounded[1] + ' out of ' + bounded[2],
         NaN
       );
+    }
+
+    var firstIssueRow = root.querySelector('.issue-signal-row');
+    if (firstIssueRow) {
+      var issueLegend = document.createElement('div');
+      issueLegend.className = 'issue-legend';
+      issueLegend.setAttribute(
+        'aria-label',
+        'Issue channels: support, salience and backlash'
+      );
+      issueLegend.innerHTML =
+        '<span class="issue-support">Support</span>' +
+        '<span class="issue-salience">Salience</span>' +
+        '<span class="issue-backlash">Backlash</span>';
+      firstIssueRow.parentNode.insertBefore(issueLegend, firstIssueRow);
     }
 
     var sections = root.querySelectorAll('.ledger-section');
