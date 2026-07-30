@@ -23,6 +23,7 @@ const deckIds = [
 const deckTags = {
   poland_party_deck: 'poland_party_card',
   poland_government_deck: 'poland_government_card',
+  poland_negotiation_deck: 'poland_negotiation_card',
 };
 
 const requiredNumericQualities = [
@@ -79,6 +80,18 @@ const requiredNumericQualities = [
   'poland_fundraising_timer',
   'poland_campaigning_timer',
   'poland_rally_timer',
+  'poland_crisis_compact_timer',
+  'poland_oversight_bargain_timer',
+  'poland_palace_mediation_timer',
+  'national_crisis_pressure',
+  'government_negotiation_hostility',
+  'negotiation_leverage',
+  'negotiation_capital',
+  'negotiation_attempts',
+  'negotiation_successes',
+  'pis_cohabitation_stress',
+  'pis_cohabitation_rally',
+  'pis_cohabitation_last_shift',
   'n_advisors',
   'barons_advisor_count',
   'spring_advisor_count',
@@ -3978,8 +3991,8 @@ function runSmoke(game) {
     });
     assert.deepStrictEqual(
       oppositionDecks,
-      ['poland_party_deck'],
-      'Opposition should see only the consolidated Party deck'
+      ['poland_party_deck', 'poland_negotiation_deck'],
+      'Opposition should see Party and government-negotiation decks'
     );
 
     qualities.left_in_government = 1;
@@ -3999,7 +4012,7 @@ function runSmoke(game) {
     assert.deepStrictEqual(
       governingDecks,
       ['poland_government_deck', 'poland_party_deck'],
-      'Government participation did not reveal exactly two contextual decks'
+      'Government participation did not reveal its two contextual decks'
     );
 
     const governmentCard = drawFromDeck('poland_government_deck');
@@ -4052,6 +4065,11 @@ function runSmoke(game) {
         'poland_government_card'
       );
     });
+    const negotiationCardIds = cardIds.filter(function(cardId) {
+      return (game.scenes[cardId].tags || []).includes(
+        'poland_negotiation_card'
+      );
+    });
     assert.strictEqual(
       partyCardIds.length,
       16,
@@ -4061,6 +4079,11 @@ function runSmoke(game) {
       governmentCardIds.length,
       4,
       'Government Affairs did not contain exactly four native cards'
+    );
+    assert.strictEqual(
+      negotiationCardIds.length,
+      3,
+      'Negotiation with Government did not contain exactly three native cards'
     );
     assert(
       cardIds.includes('poland_senate_docket'),
@@ -4083,6 +4106,90 @@ function runSmoke(game) {
         cardId + ' has no legal political outcome at zero resources'
       );
     });
+  }
+
+  function testNegotiationAndCohabitation() {
+    startStandard('opposition-negotiation-resolution');
+    let qualities = engine.state.qualities;
+    qualities.left_in_government = 0;
+    qualities.government_has_confidence = 1;
+    qualities.caretaker_government = 0;
+    qualities.prime_minister = 'Mateusz Morawiecki';
+    qualities.government_name = 'Morawiecki PiS cabinet';
+    qualities.president_name = 'Rafał Trzaskowski';
+    qualities.inflation = 15;
+    qualities.economic_growth = -2;
+    qualities.resources = 5;
+    engine.goToScene('poland_hub');
+    assert.strictEqual(qualities.government_party, 'pis');
+    assert.strictEqual(
+      qualities.left_role,
+      'Opposition — no ministers and no state-budget authority'
+    );
+    assert(
+      currentChoices().some(function(choice) {
+        return choice.id === 'poland_negotiation_deck';
+      }),
+      'Opposition negotiation deck did not appear under a functioning PiS cabinet'
+    );
+    qualities.negotiation_leverage = 60;
+    const securityBefore = qualities.household_security;
+    engine.goToScene('poland_crisis_compact');
+    choose('poland_crisis_compact.targeted');
+    assert.strictEqual(qualities.negotiation_attempts, 1);
+    assert.strictEqual(qualities.negotiation_last_threshold, 54);
+    assert.strictEqual(qualities.negotiation_success, 1);
+    assert.strictEqual(
+      qualities.household_security,
+      securityBefore + 5,
+      'Successful crisis compact did not deliver its published material effect'
+    );
+    assert.strictEqual(qualities.left_in_government, 0);
+
+    startStandard('trzaskowski-pis-fracture');
+    qualities = engine.state.qualities;
+    qualities.left_in_government = 0;
+    qualities.government_has_confidence = 1;
+    qualities.caretaker_government = 0;
+    qualities.prime_minister = 'Mateusz Morawiecki';
+    qualities.government_name = 'Morawiecki PiS cabinet';
+    qualities.president_name = 'Rafał Trzaskowski';
+    qualities.trz_cohabitation_temperature = 70;
+    qualities.trz_right_fragmentation = 85;
+    qualities.trz_right_backlash = 0;
+    qualities.public_trust = 25;
+    qualities.month_actions = 1;
+    engine.goToScene('poland_hub');
+    const stressBefore = qualities.pis_cohabitation_stress;
+    engine.goToScene('poland_advance');
+    assert(
+      qualities.pis_cohabitation_stress > stressBefore &&
+        qualities.pis_cohabitation_last_shift > 0,
+      'Trzaskowski–PiS fracture pressure did not produce internal stress'
+    );
+
+    startStandard('trzaskowski-pis-rally');
+    qualities = engine.state.qualities;
+    qualities.left_in_government = 0;
+    qualities.government_has_confidence = 1;
+    qualities.caretaker_government = 0;
+    qualities.prime_minister = 'Mateusz Morawiecki';
+    qualities.government_name = 'Morawiecki PiS cabinet';
+    qualities.president_name = 'Rafał Trzaskowski';
+    qualities.trz_cohabitation_temperature = 70;
+    qualities.trz_right_fragmentation = 0;
+    qualities.trz_right_backlash = 90;
+    qualities.far_right_agenda = 80;
+    qualities.president_relation = 0;
+    qualities.month_actions = 1;
+    engine.goToScene('poland_hub');
+    const rallyBefore = qualities.pis_cohabitation_rally;
+    engine.goToScene('poland_advance');
+    assert(
+      qualities.pis_cohabitation_rally > rallyBefore &&
+        qualities.pis_cohabitation_last_shift < 0,
+      'Trzaskowski–PiS backlash did not produce a defensive rally'
+    );
   }
 
   function openDatedEventQueue(year, month) {
@@ -4308,6 +4415,7 @@ function runSmoke(game) {
     );
     choose('poland_events_2025.confidence_after_presidential');
     choose('poland_events_2025.confidence_opposition');
+    choose('poland_events_2025.confidence_oppose_2025');
     choose('poland_events_2025.confidence_return');
     assert.deepStrictEqual(
       currentChoices().map(function(choice) {
@@ -4317,6 +4425,7 @@ function runSmoke(game) {
     );
     choose('poland_events_2025.third_way_ends');
     choose('poland_events_2025.td_bilateral');
+    choose('poland_events_2025.td_roll_calls');
     assert.strictEqual(engine.state.sceneId, 'poland_hub');
     assert.strictEqual(qualities.poland_event_phase, 0);
 
@@ -4400,6 +4509,7 @@ function runSmoke(game) {
     testRivalPartyAI();
     testContextualDecks();
     testZeroResourceCardFallbacks();
+    testNegotiationAndCohabitation();
     testMandatoryDatedEventQueue();
     testAdvisorRepresentationDrift();
     decksUsed.clear();

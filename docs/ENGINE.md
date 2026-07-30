@@ -73,7 +73,7 @@ The GitHub workflow performs the same broad operation and publishes
 | `source/info.dry` | Game title, author, IFID, and top-level metadata | Yes |
 | `source/scenes/root.scene.dry` | Entry menu and initial state | Yes, carefully |
 | `source/scenes/poland_hub.scene.dry` | Active Polish hand and pinned system cards | Yes |
-| `source/scenes/cards/` | Two live decks: 16 Party and four Government cards | Yes |
+| `source/scenes/cards/` | Three live decks: Party, Government and opposition Negotiation cards | Yes |
 | `source/scenes/poland_advisors.scene.dry` | Twelve directly rendered Polish adviser cards | Yes |
 | `source/scenes/poland_advisor_groups.scene.dry` | Compatibility menus for older saves | Yes, carefully |
 | `source/scenes/poland_advance.scene.dry` | Polish monthly update and dated router | Yes |
@@ -353,13 +353,17 @@ main hand: party/government/adviser actions ◄─────────┘
 
 This is the system that must be converted, not just the opening scene.
 
-The active Polish hand has exactly two live decks:
+The active Polish hand has three contextual live decks:
 
 - **Party Affairs** is always available and draws one of sixteen party cards.
 - **Government Affairs** requires government participation, Sejm confidence,
   no caretaker cabinet and at least one relevant Lewica-held ministry whose
   policy opportunity is currently useful and off cooldown. Each of its four
   cards repeats the same ownership and cabinet safety conditions.
+- **Negotiation with Government** appears only while Lewica is outside a
+  functioning cabinet. Its crisis compact, oversight bargain and
+  presidential-mediation cards publish their score, threshold and likely
+  effect before the player chooses.
 
 Party opportunities also carry contextual `view-if` gates. Media-build cards
 wait for the media-system event, the presidential channel requires real Palace
@@ -369,7 +373,7 @@ tracked problem is already settled. Broad campaigning and rally cards remain
 available to prevent an empty Party deck.
 
 Earlier experimental media, parliamentary and social deck scene IDs remain as
-compatibility redirects. They are not additional decks. Both live decks share
+compatibility redirects. They are not additional decks. All live decks share
 the same persistent three-card hand.
 
 ## QDisplays
@@ -439,7 +443,7 @@ As of 30 July 2026:
 | Local HTTP launch | Working through `npm start` |
 | Opening date and Polish caucus qualities | Converted |
 | Status display and interface labels | Converted for the active slice |
-| Native two-deck hand and time advancement | Converted; 16 contextual Party cards, four ministry-bound Government cards and state-neutral held-card discard |
+| Native contextual hand and time advancement | Converted; Party, ministry-bound Government and opposition Negotiation decks share one three-card hand with state-neutral held-card discard |
 | Factional advisor bureau and reshuffling | Converted; twelve advisors in five political caucuses, three active cards and a full-slate editor |
 | Dense party/institution/economy/voter ledger | Converted, including Senate, ideologies and voter blocs |
 | Dated events | Continuous October 2019–July 2023 campaign; 45 monthly leadership turns |

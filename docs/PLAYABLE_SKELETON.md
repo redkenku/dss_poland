@@ -85,7 +85,10 @@ native persistent hand:
 
 1. **Party Affairs** supplies sixteen cards. **Government Affairs** supplies
    four cards and appears only when Lewica holds a relevant ministry in a
-   cabinet with confidence. These are the only live decks.
+   cabinet with confidence. **Negotiation with Government** appears only when
+   Lewica is outside a functioning cabinet and offers crisis cooperation,
+   oversight bargains or presidential mediation. These are the only live
+   decks.
 2. Hold at most three cards. Unplayed cards persist between months and can
    become invalid if their conditions stop being true. **Discard an
    opportunity** removes one held card without playing it: no monthly action,
@@ -196,11 +199,11 @@ The inherited currencies are now separated by political role.
 | January–March 2024 | Competing prosecutor commands, Kamiński/Wąsik warrants and pardons, Republika's advertiser crisis, farmers, Kanał Zero, the KRS action plan and the Sejm's Tribunal resolution |
 | April–May 2024 | Local and abortion votes, first KPO payment, Article 7 closure and the coalition fight over European credit |
 | June–July 2024 | IVF delivery, the Belarus-border soldier's death, European elections and PSL's defeat of abortion decriminalisation |
-| August–October 2024 | Widow's pension, flood reconstruction, falling refugee solidarity, asylum suspension, Razem's possible exit and presidential referral of Tribunal repair |
+| August–October 2024 | Widow's pension, the post-abortion-defeat movement reckoning, flood reconstruction, falling refugee solidarity, asylum suspension, Razem's possible exit and presidential referral of Tribunal repair |
 | November–December 2024 | Independence Day, KO and Left presidential nominations, Christmas Eve labour reform, KPO co-financing and the first full coalition budget |
-| January–March 2025 | Separate Left presidential campaigns, Braun's Konfederacja rupture, religion and health education, asylum suspension and gender-recognition procedure |
-| April–June 2025 | Shorter-working-time pilot, presidential debate, both election rounds, support trading, cabinet confidence and the end of Third Way |
-| July–September 2025 | Cabinet reshuffle, presidential inauguration, Russian drone incursion and Hołownia succession |
+| January–March 2025 | Separate Left presidential campaigns, Braun's Konfederacja rupture, religion and health education, asylum suspension, gender-recognition procedure and the spring audit of the movement settlement |
+| April–June 2025 | Shorter-working-time pilot, presidential debate, both election rounds, support trading, cabinet confidence and the two-stage Third Way/PSL settlement |
+| July–September 2025 | A cabinet reshuffle or post-confidence formation branch, presidential inauguration, Russian drone incursion and Hołownia succession |
 | October–December 2025 | KO consolidation, KPO review, Marshal rotation, Independence Day, EU marriage recognition, collective bargaining, Left leadership, CJEU–Tribunal collision and the post-presidential budget |
 | January–March 2026 | Poland 2050 succession and split, ambassador–Marshal crisis, competing KRS bills, the de-personalised centrist party and six Tribunal vacancies |
 | April–July 2026 | KO's enlarged leadership, PIP/KPO enforcement, Kanał Zero television, partnership legislation and veto, Tribunal competence, Braun procedure, centrist and PiS ruptures, hate crime, appointments and the final KPO window |

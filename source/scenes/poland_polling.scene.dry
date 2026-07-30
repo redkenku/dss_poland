@@ -17,8 +17,8 @@ const partyNames = {
     ko: "KO",
     psl: "PSL",
     konf: "Konfederacja",
-    p2050: "Poland 2050",
-    other: "Other"
+    p2050: "Polska 2050",
+    other: "Inni"
 };
 const isFormationEra =
     Q.scenario_mode == "formation_2023" ||
@@ -259,10 +259,25 @@ const delta = function(id) {
         audienceBaseline[id];
 };
 const leftBlocChange = function(groupId) {
+    const failedNegotiations = Math.max(
+        0,
+        finitePolling(Q.negotiation_attempts, 0) -
+            finitePolling(Q.negotiation_successes, 0)
+    );
+    const governingPenalty = Q.left_in_government
+        ? Math.max(
+            0,
+            finitePolling(Q.government_coalition_dissent, 30) - 35
+        ) * 0.025
+        : 0;
     const common =
-        delta("party_unity") * 0.035 +
-        delta("public_trust") * 0.025 +
-        delta("media_capacity") * 0.018;
+        delta("party_unity") * 0.055 +
+        delta("public_trust") * 0.055 +
+        delta("media_capacity") * 0.030 +
+        delta("government_delivery") * 0.040 +
+        finitePolling(Q.negotiation_successes, 0) * 0.35 -
+        failedNegotiations * 0.12 -
+        governingPenalty;
     if (groupId == "metropolitan_liberals") {
         return common +
             delta("young_support") * 0.10 +
@@ -460,6 +475,13 @@ for (const group of groupDefinitions) {
         return roundedShares[b] - roundedShares[a];
     });
     const runner = rankedParties[1] || rankedParties[0];
+    const previousLeftShare = Number(
+        Q[group.id + "_left"]
+    );
+    Q[group.id + "_left_previous"] =
+        Number.isFinite(previousLeftShare)
+            ? Math.round(previousLeftShare * 10) / 10
+            : roundedShares.left;
     Q[group.id + "_size"] = group.size;
     Q[group.id + "_turnout"] = Math.round(turnout);
     Q[group.id + "_leader"] = partyNames[leader];

@@ -99,6 +99,10 @@ Q.status_budget_authority = statusText(
 );
 Q.status_month_actions = statusNumber(Q.month_actions, 0);
 Q.status_max_month_actions = statusNumber(Q.max_month_actions, 1);
+Q.status_month_actions_remaining = Math.max(
+    0,
+    Q.status_max_month_actions - Q.status_month_actions
+);
 Q.status_advisor_timer = Math.max(
     0,
     statusNumber(Q.advisor_action_timer, 0)
@@ -814,59 +818,106 @@ for (const group of voterGroupsForStatus) {
         Q[group + "_left"],
         0
     );
+    Q["status_" + group + "_left_previous"] = statusOneDecimal(
+        Q[group + "_left_previous"],
+        Q[group + "_left"]
+    );
 }
 !}
 
-= Overview
+= Campaign pulse
 
 <div class="ledger-masthead"><b>[+ status_date +]</b><span>[+ status_difficulty +]</span></div>
 <div class="ledger-headline">[+ status_headline +]</div>
 [? if not status_started: <div class="ledger-notice">Preview of the October 2019 starting position. Begin a campaign to activate the ledger.</div>?]
 
-<div class="ledger-section"><div class="ledger-title"><span class="party party-lewica">Lewica</span></div>
-<div class="ledger-row"><span>Position</span><b>[+ status_position +]</b></div>
-<div class="ledger-row"><span>Poll / current seats</span><b>[+ status_left_poll +]% · [+ status_left_seats +]</b></div>
-<div class="ledger-row"><span>Modelled vote / projection</span><b>[+ status_left_intent +]% · [+ status_left_projection +]</b></div>
-<div class="ledger-row"><span>Alliance unity</span><b>[+ status_party_unity +]/100</b></div>
-<div class="ledger-subrow">[? if status_party_unity < 30: <span class="meter-critical">fracture imminent</span>?][? if status_party_unity >= 30 and status_party_unity < 50: <span class="meter-warning">brittle</span>?][? if status_party_unity >= 50 and status_party_unity < 70: <span class="meter-steady">negotiated</span>?][? if status_party_unity >= 70: <span class="meter-good">cohesive</span>?]</div>
-<div class="ledger-row"><span>Party resources</span><b>[+ status_resources +] · annual income +[+ status_party_income +]</b></div>
-<div class="ledger-subrow">Dues [+ status_member_dues +] + seat subvention [+ status_seat_subvention +] ([+ status_subvention_seats +] seats). Last payout: [+ status_last_annual_payout_label +].</div>
-<div class="ledger-row"><span>Emergency appeal</span><b>[? if status_fundraising_timer = 0: available?][? if status_fundraising_timer > 0: [+ status_fundraising_timer +] mo.?]</b></div>
- [? if scenario_mode != "formation_2023":
-<div class="ledger-row"><span>Monthly action</span><b>[+ status_month_actions +]/[+ status_max_month_actions +]</b></div>
-<div class="ledger-row"><span>Advisor action</span><b>[? if status_advisor_timer = 0: available?][? if status_advisor_timer > 0: [+ status_advisor_timer +] mo.?]</b></div>
-<div class="ledger-row"><span>Leadership slate</span><b>[+ status_advisors +] advisors</b></div>
-<div class="ledger-subrow">[+ status_active_advisors +]</div>
-<div class="ledger-subrow">Old SLD [+ status_barons_advisors +] · Wiosna [+ status_spring_advisors +] · labour [+ status_labor_advisors +] · new SLD/progressives [+ status_progressives_advisors +] · Razem [+ status_razem_advisors +]</div>
-<div class="ledger-row"><span>Reshuffle</span><b>[? if status_reshuffle_timer = 0: available?][? if status_reshuffle_timer > 0: [+ status_reshuffle_timer +] mo.?]</b></div>
-<div class="ledger-row"><span>Months led</span><b>[+ status_leadership_actions +]/87</b></div>
-?]</div>
+<div class="pulse-panel">
+<div class="pulse-heading"><span class="party party-lewica">Lewica</span><span class="role-badge">[+ status_position +]</span></div>
 
-<div class="ledger-section"><div class="ledger-title">Government</div>
-<div class="ledger-row"><span>Cabinet</span><b>[? if status_government_party = "pis": <span class="party party-pis">[+ status_government +]</span>?][? if status_government_party = "ko": <span class="party party-ko">[+ status_government +]</span>?][? if status_government_party = "lewica": <span class="party party-lewica">[+ status_government +]</span>?][? if status_government_party = "psl": <span class="party party-psl">[+ status_government +]</span>?][? if status_government_party = "p2050": <span class="party party-p2050">[+ status_government +]</span>?][? if status_government_party = "other": <span class="party">[+ status_government +]</span>?]</b></div>
+<div class="pulse-grid">
+<div class="pulse-card pulse-poll" data-meter="100" data-tone="party" data-threshold="5">
+<span class="pulse-label">Poll</span>
+<div><strong class="pulse-number">[+ status_left_poll +]%</strong><span class="seat-badge">[+ status_left_seats +] seats</span></div>
+</div>
+
+<div class="pulse-card pulse-unity" data-meter="100" data-tone="positive">
+<span class="pulse-label">Unity</span>
+<div><strong>[? if status_party_unity < 30: Fracturing?][? if status_party_unity >= 30 and status_party_unity < 50: Brittle?][? if status_party_unity >= 50 and status_party_unity < 70: Negotiated?][? if status_party_unity >= 70: Cohesive?]</strong><span class="pulse-number">[+ status_party_unity +]</span></div>
+</div>
+
+[? if status_started: <div class="pulse-card pulse-resources">?]
+[? if status_started: <span class="pulse-label">Resources</span>?]
+[? if status_started: <div><strong class="pulse-number">[+ status_resources +]</strong><span class="flow-badge">+[+ status_party_income +]/yr</span></div>?]
+[? if status_started: </div>?]
+
+[? if status_started: <div class="pulse-card pulse-pressure" data-meter="100" data-tone="risk">?]
+[? if status_started: <span class="pulse-label">Public pressure</span>?]
+[? if status_started: <div><strong>[+ status_public_panic_band +]</strong><span class="pulse-number">[+ status_public_panic +]</span></div>?]
+[? if status_started: </div>?]
+</div>
+
+[? if status_started and scenario_mode != "formation_2023": <div class="readiness-grid" aria-label="Available campaign actions">?]
+[? if status_started and scenario_mode != "formation_2023" and status_month_actions_remaining > 0: <div class="readiness-item is-ready"><span class="readiness-mark" aria-hidden="true"></span><span>Monthly</span><b>Ready</b></div>?]
+[? if status_started and scenario_mode != "formation_2023" and status_month_actions_remaining = 0: <div class="readiness-item is-spent"><span class="readiness-mark" aria-hidden="true"></span><span>Monthly</span><b>Spent</b></div>?]
+[? if status_started and scenario_mode != "formation_2023" and status_advisor_timer = 0: <div class="readiness-item is-ready"><span class="readiness-mark" aria-hidden="true"></span><span>Advisor</span><b>Ready</b></div>?]
+[? if status_started and scenario_mode != "formation_2023" and status_advisor_timer > 0: <div class="readiness-item is-cooling"><span class="readiness-mark" aria-hidden="true"></span><span>Advisor</span><b>[+ status_advisor_timer +] mo.</b></div>?]
+[? if status_started and scenario_mode != "formation_2023" and status_reshuffle_timer = 0: <div class="readiness-item is-ready"><span class="readiness-mark" aria-hidden="true"></span><span>Reshuffle</span><b>Ready</b></div>?]
+[? if status_started and scenario_mode != "formation_2023" and status_reshuffle_timer > 0: <div class="readiness-item is-cooling"><span class="readiness-mark" aria-hidden="true"></span><span>Reshuffle</span><b>[+ status_reshuffle_timer +] mo.</b></div>?]
+[? if status_started and scenario_mode != "formation_2023" and status_fundraising_timer = 0: <div class="readiness-item is-ready"><span class="readiness-mark" aria-hidden="true"></span><span>Appeal</span><b>Ready</b></div>?]
+[? if status_started and scenario_mode != "formation_2023" and status_fundraising_timer > 0: <div class="readiness-item is-cooling"><span class="readiness-mark" aria-hidden="true"></span><span>Appeal</span><b>[+ status_fundraising_timer +] mo.</b></div>?]
+[? if status_started and scenario_mode != "formation_2023": </div>?]
+
+<div class="power-strip">
+<span><small>Cabinet</small><b>[? if status_government_party = "pis": <span class="party party-pis">[+ status_government +]</span>?][? if status_government_party = "ko": <span class="party party-ko">[+ status_government +]</span>?][? if status_government_party = "lewica": <span class="party party-lewica">[+ status_government +]</span>?][? if status_government_party = "psl": <span class="party party-psl">[+ status_government +]</span>?][? if status_government_party = "p2050": <span class="party party-p2050">[+ status_government +]</span>?][? if status_government_party = "other": <span class="party">[+ status_government +]</span>?]</b></span>
+<span><small>Next test</small><b>[+ status_next_budget +]</b></span>
+</div>
+</div>
+
+<details class="ledger-disclosure">
+<summary><span>Leadership bureau</span><b>[+ status_advisors +]</b></summary>
+<div class="disclosure-body">
+<div class="ledger-row"><span>Active slate</span><b>[+ status_active_advisors +]</b></div>
+<div class="faction-mix"><span class="party-sld" title="Old SLD">[+ status_barons_advisors +]</span><span class="party-wiosna" title="Wiosna">[+ status_spring_advisors +]</span><span class="party-left-labor" title="Labour">[+ status_labor_advisors +]</span><span class="party-progressive" title="Progressives">[+ status_progressives_advisors +]</span><span class="party-razem" title="Razem">[+ status_razem_advisors +]</span></div>
+<div class="ledger-row"><span>Campaign</span><b>[+ status_leadership_actions +] of 87 months</b></div>
+<div class="ledger-note">Old SLD · Wiosna · labour · progressives · Razem</div>
+</div>
+</details>
+
+<details class="ledger-disclosure">
+<summary><span>Government detail</span><b class="disclosure-state">[+ status_prime_minister +]</b></summary>
+<div class="disclosure-body">
 <div class="ledger-row"><span>President</span><b>[+ status_president +]</b></div>
 <div class="ledger-row"><span>Prime Minister</span><b>[? if status_prime_minister_party = "pis": <span class="party party-pis">[+ status_prime_minister +]</span>?][? if status_prime_minister_party = "ko": <span class="party party-ko">[+ status_prime_minister +]</span>?][? if status_prime_minister_party = "lewica": <span class="party party-lewica">[+ status_prime_minister +]</span>?][? if status_prime_minister_party = "psl": <span class="party party-psl">[+ status_prime_minister +]</span>?][? if status_prime_minister_party = "p2050": <span class="party party-p2050">[+ status_prime_minister +]</span>?][? if status_prime_minister_party = "other": <span class="party">[+ status_prime_minister +]</span>?]</b></div>
 <div class="ledger-row"><span>Lewica's role</span><b>[+ status_left_role +]</b></div>
 <div class="ledger-row"><span>Sejm Marshal</span><b>[+ status_sejm_speaker +]</b></div>
 <div class="ledger-row"><span>Coalition</span><b>[+ status_coalition_status +]</b></div>
-<div class="ledger-row"><span>Coalition dissent</span><b>[+ status_government_coalition_dissent +]/100</b></div>
+<div class="ledger-row" data-polarity="risk"><span>Coalition dissent</span><b>[+ status_government_coalition_dissent +]/100</b></div>
 [? if not left_in_government and government_has_confidence and not caretaker_government: <div class="ledger-row"><span>Negotiating position</span><b>[+ status_negotiation_leverage +] leverage · [+ status_government_hostility +] hostility</b></div><div class="ledger-subrow">Crisis pressure [+ status_crisis_pressure +]/100 · [+ status_negotiation_forecast +]</div><div class="ledger-subrow">Last result: [+ status_negotiation_last +] · [+ status_negotiation_successes +] agreements</div>?]
-[? if status_president = "Rafał Trzaskowski" and status_government_party = "pis": <div class="ledger-row"><span>PiS cohabitation</span><b>stress [+ status_pis_cohabitation_stress +] · rally [+ status_pis_cohabitation_rally +]</b></div><div class="ledger-subrow">[+ status_pis_cohabitation_state +]</div>?]</div>
+[? if status_president = "Rafał Trzaskowski" and status_government_party = "pis": <div class="ledger-row"><span>PiS cohabitation</span><b>stress [+ status_pis_cohabitation_stress +] · rally [+ status_pis_cohabitation_rally +]</b></div><div class="ledger-subrow">[+ status_pis_cohabitation_state +]</div>?]
+</div>
+</details>
 
-<div class="ledger-section"><div class="ledger-title">Political line</div>
+<details class="ledger-disclosure">
+<summary><span>Political line</span><b class="disclosure-state">[+ status_budget_strategy +]</b></summary>
+<div class="disclosure-body">
 <div class="ledger-row"><span>Project</span><b>[+ status_project +]</b></div>
 [? if scenario_mode != "formation_2023": <div class="ledger-row"><span>President 2020</span><b>[+ status_candidate +]</b></div>?]
 <div class="ledger-row"><span>Budget line</span><b>[+ status_budget_strategy +]</b></div>
-<div class="ledger-row"><span>Next fiscal test</span><b>[+ status_next_budget +]</b></div>
-[? if scenario_mode != "formation_2023": <div class="ledger-row"><span>Public mood</span><b>[+ status_public_panic +]/100 pressure</b></div><div class="ledger-subrow">Hottest: [+ status_public_hottest +]</div>?]
-[? if left_in_government: <div class="ledger-row"><span>State-budget capacity</span><b>[+ status_budget +]</b></div><div class="ledger-subrow">[+ status_budget_authority +]</div>?]</div>
+[? if scenario_mode != "formation_2023": <div class="ledger-row" data-polarity="risk"><span>Public pressure</span><b>[+ status_public_panic +]/100</b></div><div class="ledger-subrow">Hottest: [+ status_public_hottest +]</div>?]
+[? if left_in_government: <div class="ledger-row"><span>State-budget capacity</span><b>[+ status_budget +]</b></div><div class="ledger-subrow">[+ status_budget_authority +]</div>?]
+</div>
+</details>
 
-<div class="ledger-section"><div class="ledger-title">Economy</div>
+<details class="ledger-disclosure">
+<summary><span>Economy</span><b class="disclosure-state">[+ status_economic_growth +]% growth</b></summary>
+<div class="disclosure-body">
 <div class="ledger-row"><span>Real growth</span><b>[+ status_economic_growth +]%</b></div>
 <div class="ledger-row"><span>Inflation</span><b>[+ status_inflation +]%</b></div>
 <div class="ledger-row"><span>Registered unemployment</span><b>[+ status_unemployment +]%</b></div>
 <div class="ledger-row"><span>Public debt</span><b>[+ status_public_debt +]% GDP</b></div>
-<div class="ledger-row"><span>Budget balance</span><b>[+ status_budget_balance +]% GDP</b></div></div>
+<div class="ledger-row"><span>Budget balance</span><b>[+ status_budget_balance +]% GDP</b></div>
+</div>
+</details>
 
 @politics
 title: Parties
@@ -1037,14 +1088,14 @@ call: status
 <div class="faction-row"><span>PiS · PSL</span><span>[+ status_coalition_pis_psl_seats +] · [+ status_coalition_pis_psl_score +]/100</span></div></div>
 
 <div class="ledger-section"><div class="ledger-title">Mutually exclusive voter blocs</div>
-<div class="faction-row"><span><b>Metropolitan liberals</b></span><span>[+ status_metropolitan_liberals_size +]% electorate · Lewica [+ status_metropolitan_liberals_left +]% · [+ status_metropolitan_liberals_turnout +]% turnout · [+ status_metropolitan_liberals_leader +] leads</span></div>
-<div class="faction-row"><span><b>Liberal professionals</b></span><span>[+ status_liberal_professionals_size +]% · Lewica [+ status_liberal_professionals_left +]% · [+ status_liberal_professionals_turnout +]% turnout · [+ status_liberal_professionals_leader +] leads</span></div>
-<div class="faction-row"><span><b>Public-service families</b></span><span>[+ status_public_service_families_size +]% · Lewica [+ status_public_service_families_left +]% · [+ status_public_service_families_turnout +]% turnout · [+ status_public_service_families_leader +] leads</span></div>
-<div class="faction-row"><span><b>Industrial and logistics</b></span><span>[+ status_industrial_logistics_size +]% · Lewica [+ status_industrial_logistics_left +]% · [+ status_industrial_logistics_turnout +]% turnout · [+ status_industrial_logistics_leader +] leads</span></div>
-<div class="faction-row"><span><b>Provincial welfare voters</b></span><span>[+ status_provincial_welfare_size +]% · Lewica [+ status_provincial_welfare_left +]% · [+ status_provincial_welfare_turnout +]% turnout · [+ status_provincial_welfare_leader +] leads</span></div>
-<div class="faction-row"><span><b>Rural localists</b></span><span>[+ status_rural_localists_size +]% · Lewica [+ status_rural_localists_left +]% · [+ status_rural_localists_turnout +]% turnout · [+ status_rural_localists_leader +] leads</span></div>
-<div class="faction-row"><span><b>Older welfare households</b></span><span>[+ status_older_welfare_households_size +]% · Lewica [+ status_older_welfare_households_left +]% · [+ status_older_welfare_households_turnout +]% turnout · [+ status_older_welfare_households_leader +] leads</span></div>
-<div class="faction-row"><span><b>Anti-establishment youth</b></span><span>[+ status_anti_establishment_youth_size +]% · Lewica [+ status_anti_establishment_youth_left +]% · [+ status_anti_establishment_youth_turnout +]% turnout · [+ status_anti_establishment_youth_leader +] leads</span></div>
+<div class="faction-row"><span><b>Metropolitan liberals</b></span><span>[+ status_metropolitan_liberals_size +]% electorate · Lewica [+ status_metropolitan_liberals_left +]% (prior [+ status_metropolitan_liberals_left_previous +]%) · [+ status_metropolitan_liberals_turnout +]% turnout · [+ status_metropolitan_liberals_leader +] leads</span></div>
+<div class="faction-row"><span><b>Liberal professionals</b></span><span>[+ status_liberal_professionals_size +]% · Lewica [+ status_liberal_professionals_left +]% (prior [+ status_liberal_professionals_left_previous +]%) · [+ status_liberal_professionals_turnout +]% turnout · [+ status_liberal_professionals_leader +] leads</span></div>
+<div class="faction-row"><span><b>Public-service families</b></span><span>[+ status_public_service_families_size +]% · Lewica [+ status_public_service_families_left +]% (prior [+ status_public_service_families_left_previous +]%) · [+ status_public_service_families_turnout +]% turnout · [+ status_public_service_families_leader +] leads</span></div>
+<div class="faction-row"><span><b>Industrial and logistics</b></span><span>[+ status_industrial_logistics_size +]% · Lewica [+ status_industrial_logistics_left +]% (prior [+ status_industrial_logistics_left_previous +]%) · [+ status_industrial_logistics_turnout +]% turnout · [+ status_industrial_logistics_leader +] leads</span></div>
+<div class="faction-row"><span><b>Provincial welfare voters</b></span><span>[+ status_provincial_welfare_size +]% · Lewica [+ status_provincial_welfare_left +]% (prior [+ status_provincial_welfare_left_previous +]%) · [+ status_provincial_welfare_turnout +]% turnout · [+ status_provincial_welfare_leader +] leads</span></div>
+<div class="faction-row"><span><b>Rural localists</b></span><span>[+ status_rural_localists_size +]% · Lewica [+ status_rural_localists_left +]% (prior [+ status_rural_localists_left_previous +]%) · [+ status_rural_localists_turnout +]% turnout · [+ status_rural_localists_leader +] leads</span></div>
+<div class="faction-row"><span><b>Older welfare households</b></span><span>[+ status_older_welfare_households_size +]% · Lewica [+ status_older_welfare_households_left +]% (prior [+ status_older_welfare_households_left_previous +]%) · [+ status_older_welfare_households_turnout +]% turnout · [+ status_older_welfare_households_leader +] leads</span></div>
+<div class="faction-row"><span><b>Anti-establishment youth</b></span><span>[+ status_anti_establishment_youth_size +]% · Lewica [+ status_anti_establishment_youth_left +]% (prior [+ status_anti_establishment_youth_left_previous +]%) · [+ status_anti_establishment_youth_turnout +]% turnout · [+ status_anti_establishment_youth_leader +] leads</span></div>
 <div class="ledger-note">These eight groups are the complete electorate and sum to 100. The Lewica share is recalculated after every month from choices, rival actions, issue fit and turnout.</div></div>
 
 <div class="ledger-section"><div class="ledger-title">Campaign capacity</div>
