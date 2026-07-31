@@ -1,0 +1,850 @@
+title: Opposition budget process
+
+@start
+title: Open the government's budget file
+new-page: true
+view-if: annual_budget_left_cabinet_authority = 0
+call: poland_normalize
+on-arrival: {!
+Q.annual_budget_year = Number(Q.annual_budget_year) || Number(Q.year) || 2019;
+Q.annual_budget_fiscal_year = Q.annual_budget_year + 1;
+Q.opposition_budget_stage = 1;
+Q.opposition_budget_priority_count = 0;
+Q.opposition_budget_priority_1_code = 0;
+Q.opposition_budget_priority_2_code = 0;
+Q.opposition_budget_priority_1 = "Not selected";
+Q.opposition_budget_priority_2 = "Not selected";
+Q.opposition_budget_priority_candidate_code = 0;
+Q.opposition_budget_priority_candidate = "Not selected";
+Q.opposition_budget_conference_management = "Conference not held";
+Q.opposition_budget_conference_code = 0;
+Q.opposition_budget_rebel_count = 0;
+Q.opposition_budget_named_rebels = "None";
+Q.opposition_budget_tactic = "No tactic selected";
+Q.opposition_budget_tactic_code = 0;
+Q.opposition_budget_amendment_1 = "No amendment filed";
+Q.opposition_budget_amendment_2 = "No amendment filed";
+Q.opposition_budget_amendment_1_passed = 0;
+Q.opposition_budget_amendment_2_passed = 0;
+Q.opposition_budget_amendments_passed = 0;
+Q.opposition_budget_negotiation_score = 0;
+Q.opposition_budget_negotiation_threshold = 0;
+Q.annual_budget_passed = 0;
+Q.annual_budget_margin = 0;
+Q.annual_budget_shortfall = 0;
+Q.annual_budget_left_yes = 0;
+Q.annual_budget_left_no = 0;
+Q.annual_budget_left_abstain = 0;
+Q.annual_budget_government_yes = 0;
+Q.annual_budget_government_abstain = 0;
+Q.annual_budget_yes = 0;
+Q.annual_budget_no = 0;
+Q.annual_budget_abstain = 0;
+
+const oppositionYear = Number(Q.annual_budget_year) || 2019;
+const oppositionDrafts = {
+    2019: {
+        title: "PiS's 2020 consolidation budget",
+        priorities: "social transfers, revenue centralisation and continuity after the election",
+        omissions: "public-sector pay, housing, labour inspection and durable local finance"
+    },
+    2020: {
+        title: "PiS's 2021 pandemic budget",
+        priorities: "emergency health spending, anti-crisis shields and central control of recovery",
+        omissions: "full sick-pay replacement, council liquidity, housing security and reproductive care"
+    },
+    2021: {
+        title: "PiS's 2022 Polish Deal budget",
+        priorities: "the Polish Deal tax settlement, health contributions and discretionary local compensation",
+        omissions: "administrative repair, rights safeguards, stable hospital finance and transparent local grants"
+    },
+    2022: {
+        title: "PiS's 2023 war-and-inflation budget",
+        priorities: "defence, energy shields, refugee support and inflation relief",
+        omissions: "a wage floor, long-term refugee services, housing and accountable procurement"
+    },
+    2023: {
+        title: "the inherited 2024 transition budget",
+        priorities: "teacher pay, IVF restoration, local-government finance and a rapid public-media transition",
+        omissions: "a settled housing programme, durable health staffing and the full equality timetable"
+    },
+    2024: {
+        title: "the coalition's first full 2025 budget",
+        priorities: "flood reconstruction, record defence commitments, KPO co-financing and coalition continuity",
+        omissions: "Razem's wage, housing and health promises and a funded route after the abortion defeat"
+    },
+    2025: {
+        title: "the 2026 post-presidential budget",
+        priorities: "defence, school reform, coalition survival and accommodation with a hostile Palace",
+        omissions: "shorter working time, enforceable collective bargaining, housing delivery and local-service staffing"
+    },
+    2026: {
+        title: "the pre-election 2027 budget",
+        priorities: "deficit restraint, defence, remaining KPO milestones and pre-election protection of incumbents",
+        omissions: "funded Labour Inspection powers, partnership delivery, municipal services and social housing"
+    }
+};
+const oppositionDraft = oppositionDrafts[oppositionYear] || oppositionDrafts[2026];
+Q.opposition_budget_draft_title = oppositionDraft.title;
+Q.opposition_budget_draft_priorities = oppositionDraft.priorities;
+Q.opposition_budget_draft_omissions = oppositionDraft.omissions;
+
+const chamberTotal = Math.max(1, Math.round(Number(Q.sejm_total) || 460));
+const leftSeats = Math.max(
+    0,
+    Math.min(chamberTotal, Math.round(Number(Q.left_seats) || 0))
+);
+let governmentSeats = Math.round(Number(Q.coalition_seats) || 0);
+const storedGovernmentPreview =
+    Math.round(Number(Q.annual_budget_preview_government_yes) || 0) +
+    Math.round(Number(Q.annual_budget_preview_government_abstain) || 0);
+if (oppositionYear >= 2023 && storedGovernmentPreview > 0) {
+    governmentSeats = storedGovernmentPreview;
+}
+if (governmentSeats <= 0) {
+    if (Q.government_party == "pis") {
+        governmentSeats = Math.round(Number(Q.pis_seats) || 0);
+    } else if (Q.government_party == "ko") {
+        governmentSeats =
+            Math.round(Number(Q.ko_seats) || 0) +
+            Math.round(Number(Q.p2050_seats) || 0) +
+            Math.round(Number(Q.psl_seats) || 0);
+    } else if (Q.government_party == "psl") {
+        governmentSeats = Math.round(Number(Q.psl_seats) || 0);
+    } else if (Q.government_party == "p2050") {
+        governmentSeats = Math.round(Number(Q.p2050_seats) || 0);
+    }
+}
+governmentSeats = Math.max(
+    0,
+    Math.min(chamberTotal - leftSeats, governmentSeats)
+);
+Q.opposition_budget_government_seats = governmentSeats;
+Q.opposition_budget_left_seats = leftSeats;
+Q.opposition_budget_other_opposition_seats = Math.max(
+    0,
+    chamberTotal - governmentSeats - leftSeats
+);
+Q.opposition_budget_government_margin = governmentSeats -
+    Q.opposition_budget_other_opposition_seats;
+Q.opposition_budget_left_is_pivotal =
+    governmentSeats <= Q.opposition_budget_other_opposition_seats ? 1 : 0;
+Q.opposition_budget_legal_influence = oppositionYear <= 2020
+    ? "Sejm amendments, a recorded vote and Senate amendments; no executive spending authority"
+    : "Sejm amendments, bargaining and a recorded vote; no executive spending authority";
+!}
+go-to: audit if opposition_budget_audit_pending = 1 and opposition_budget_audit_year < annual_budget_year; read_draft if opposition_budget_audit_pending = 0 or opposition_budget_audit_year >= annual_budget_year
+
+@audit
+title: Stage 6 of 6 — Audit last year's bargain
+new-page: true
+view-if: opposition_budget_audit_pending = 1 and opposition_budget_audit_year < annual_budget_year
+call: poland_normalize
+on-arrival: {!
+Q.opposition_budget_stage = 6;
+Q.opposition_budget_audit_capacity_gain = 0;
+const applyEnactedPriority = function(code) {
+    const priorityCode = Number(code) || 0;
+    if (priorityCode == 1) {
+        Q.household_security += 2;
+    } else if (priorityCode == 2 || priorityCode == 7) {
+        Q.health_capacity += 2;
+    } else if (priorityCode == 3) {
+        Q.household_security += 1;
+        Q.local_network += 1;
+    } else if (priorityCode == 4 || priorityCode == 15) {
+        Q.minority_safety += 2;
+    } else if (priorityCode == 5 || priorityCode == 11 || priorityCode == 14) {
+        Q.local_network += 2;
+    } else if (priorityCode == 6) {
+        Q.military_trust += 2;
+    } else if (priorityCode == 8) {
+        Q.government_delivery += 1;
+        Q.climate_state_capacity += 1;
+    } else if (priorityCode == 9) {
+        Q.government_procedural_restraint += 2;
+    } else if (priorityCode == 10) {
+        Q.refugee_service_capacity += 1;
+        Q.energy_security += 1;
+    } else if (priorityCode == 12) {
+        Q.local_network += 1;
+        Q.household_security += 1;
+    } else if (priorityCode == 13 || priorityCode == 16) {
+        Q.household_security += 1;
+        Q.government_delivery += 1;
+    }
+    if (priorityCode > 0) Q.opposition_budget_audit_capacity_gain += 2;
+};
+if (Q.opposition_budget_audit_enacted) {
+    if (Q.opposition_budget_audit_priority_1_enacted) {
+        applyEnactedPriority(Q.opposition_budget_audit_priority_1_code);
+    }
+    if (Q.opposition_budget_audit_priority_2_enacted) {
+        applyEnactedPriority(Q.opposition_budget_audit_priority_2_code);
+    }
+    Q.government_delivery += Math.max(
+        1,
+        Number(Q.opposition_budget_audit_priority_1_enacted) +
+            Number(Q.opposition_budget_audit_priority_2_enacted)
+    );
+    Q.opposition_budget_audit_result =
+        "Enacted clauses added " + Q.opposition_budget_audit_capacity_gain +
+        " public-capacity points";
+} else if (Q.opposition_budget_audit_tactic_code == 1) {
+    Q.opposition_budget_audit_result =
+        "The shadow programme changed political ownership, not public capacity";
+} else {
+    Q.opposition_budget_audit_result =
+        "No enacted Lewica clause changed public capacity";
+}
+Q.opposition_budget_audit_done = 1;
+Q.opposition_budget_audit_pending = 0;
+Q.news_headline = Q.opposition_budget_audit_result;
+!}
+
+= Fiscal-year [+ opposition_budget_audit_fiscal_year +] accounts
+
+Last year's tactic was **[+ opposition_budget_audit_tactic +]**. The recorded
+Lewica clauses were **[+ opposition_budget_audit_amendment_1 +]** and **[+
+opposition_budget_audit_amendment_2 +]**.
+
+<div class="ledger-section ledger-section-first"><div class="ledger-title">Delivery audit</div>
+<div class="ledger-row"><span>Budget enacted</span><b>[? if opposition_budget_audit_budget_passed: yes?][? if not opposition_budget_audit_budget_passed: no?]</b></div>
+<div class="ledger-row"><span>Lewica clause enacted</span><b>[? if opposition_budget_audit_enacted: yes?][? if not opposition_budget_audit_enacted: no?]</b></div>
+<div class="ledger-row"><span>Public-capacity gain</span><b>[+ opposition_budget_audit_capacity_gain +]</b></div>
+<div class="ledger-row"><span>Finding</span><b>[+ opposition_budget_audit_result +]</b></div></div>
+
+A passed Senate proposal, a press release or a cabinet promise is not counted
+as delivery. Only language that survived the final bill changes hospitals,
+household security, councils, defence or administrative capacity.
+
+- @audit_continue: Open this year's draft
+
+@audit_continue
+go-to: poland_budget_2023_2026.annual_budget if annual_budget_left_cabinet_authority = 1; read_draft if annual_budget_left_cabinet_authority = 0
+
+@read_draft
+title: Stage 1 of 6 — Read the government draft
+new-page: true
+on-arrival: opposition_budget_stage = 1
+
+= [+ opposition_budget_draft_title +]
+
+The government's actual priorities are **[+ opposition_budget_draft_priorities
++]**. Its draft leaves **[+ opposition_budget_draft_omissions +]** exposed.
+
+<div class="ledger-section ledger-section-first"><div class="ledger-title">What the chamber can do</div>
+<div class="ledger-row"><span>Government bloc</span><b>[+ opposition_budget_government_seats +] seats</b></div>
+<div class="ledger-row"><span>Other opposition</span><b>[+ opposition_budget_other_opposition_seats +] seats</b></div>
+<div class="ledger-row"><span>Lewica controls</span><b>[+ opposition_budget_left_seats +] votes</b></div>
+<div class="ledger-row"><span>Lewica pivotal on the current count</span><b>[? if opposition_budget_left_is_pivotal: yes?][? if not opposition_budget_left_is_pivotal: no?]</b></div>
+<div class="ledger-row"><span>Legal influence</span><b>[+ opposition_budget_legal_influence +]</b></div></div>
+
+Lewica may amend, bargain, abstain or oppose. It cannot spend a złoty, order a
+ministry to implement a promise or treat a shadow programme as enacted law.
+
+- @read_priorities: Choose two Left priorities
+
+@read_priorities
+title: Put two priorities on the conference table
+on-arrival: opposition_budget_stage = 2
+go-to: priorities
+
+@priorities
+title: Stage 2 of 6 — Choose two Left priorities
+new-page: true
+
+The menu changes with the year's crises. Choose exactly two. The conference
+will have to reconcile both; the parliamentary tactic will determine whether
+either becomes an amendment, a concession or only a shadow-programme claim.
+
+Selected: **[+ opposition_budget_priority_1 +]**[? if opposition_budget_priority_count = 2: and **[+ opposition_budget_priority_2 +]**?].
+
+- @priority_wages
+- @priority_services
+- @priority_housing
+- @priority_equality
+- @priority_local
+- @priority_security
+- @priority_pandemic
+- @priority_polish_deal
+- @priority_energy_refugees
+- @priority_transition
+- @priority_flood
+- @priority_kpo
+- @priority_razem_promises
+- @priority_education
+- @priority_inspection
+- @priority_partnerships
+
+@priority_wages
+title: Wages and work
+view-if: opposition_budget_priority_1_code != 1
+on-arrival: {!
+Q.opposition_budget_priority_candidate_code = 1;
+const wageLabels = {
+    2019: "public-sector wages and labour inspection",
+    2020: "sick pay and wage replacement",
+    2021: "wages protected through the Polish Deal",
+    2022: "an inflation-proof wage floor",
+    2023: "teacher and public-sector pay",
+    2024: "the promised public-sector wage settlement",
+    2025: "collective bargaining and shorter working time",
+    2026: "enforceable pay and collective agreements"
+};
+Q.opposition_budget_priority_candidate =
+    wageLabels[Q.annual_budget_year] || "wages and work";
+!}
+go-to: priority_record
+
+@priority_services
+title: Health and public services
+view-if: opposition_budget_priority_1_code != 2
+on-arrival: {!
+Q.opposition_budget_priority_candidate_code = 2;
+const serviceLabels = {
+    2019: "hospital staffing and public services",
+    2020: "hospital capacity and safe staffing",
+    2021: "stable hospital finance and care",
+    2022: "health and public services under inflation",
+    2023: "health staffing and IVF delivery",
+    2024: "health funding promised to Razem",
+    2025: "health staffing after the presidential campaign",
+    2026: "protected health and care services"
+};
+Q.opposition_budget_priority_candidate =
+    serviceLabels[Q.annual_budget_year] || "health and public services";
+!}
+go-to: priority_record
+
+@priority_housing
+title: Housing
+view-if: annual_budget_year != 2021 and opposition_budget_priority_1_code != 3
+on-arrival: opposition_budget_priority_candidate_code = 3; opposition_budget_priority_candidate = "social housing and tenant security"
+go-to: priority_record
+
+@priority_equality
+title: Equality and care
+view-if: annual_budget_year != 2022 and annual_budget_year != 2025 and opposition_budget_priority_1_code != 4
+on-arrival: opposition_budget_priority_candidate_code = 4; opposition_budget_priority_candidate = "equality, reproductive care and anti-discrimination services"
+go-to: priority_record
+
+@priority_local
+title: Local government
+view-if: annual_budget_year != 2022 and annual_budget_year != 2024 and opposition_budget_priority_1_code != 5
+on-arrival: opposition_budget_priority_candidate_code = 5; opposition_budget_priority_candidate = "predictable local-government finance"
+go-to: priority_record
+
+@priority_security
+title: Defence and security
+view-if: annual_budget_year >= 2021 and opposition_budget_priority_1_code != 6
+on-arrival: {!
+Q.opposition_budget_priority_candidate_code = 6;
+Q.opposition_budget_priority_candidate = Q.annual_budget_year == 2024
+    ? "defence readiness without raiding social services"
+    : "defence, security and accountable procurement";
+!}
+go-to: priority_record
+
+@priority_pandemic
+title: Pandemic income protection
+view-if: annual_budget_year = 2020 and opposition_budget_priority_1_code != 7
+on-arrival: opposition_budget_priority_candidate_code = 7; opposition_budget_priority_candidate = "pandemic sick pay, care and income protection"
+go-to: priority_record
+
+@priority_polish_deal
+title: Repair the Polish Deal
+view-if: annual_budget_year = 2021 and opposition_budget_priority_1_code != 9
+on-arrival: opposition_budget_priority_candidate_code = 9; opposition_budget_priority_candidate = "a costed Polish Deal repair and transparent grants"
+go-to: priority_record
+
+@priority_energy_refugees
+title: Energy and refugee services
+view-if: annual_budget_year = 2022 and opposition_budget_priority_1_code != 10
+on-arrival: opposition_budget_priority_candidate_code = 10; opposition_budget_priority_candidate = "energy relief and durable refugee services"
+go-to: priority_record
+
+@priority_transition
+title: Transition institutions
+view-if: annual_budget_year = 2023 and opposition_budget_priority_1_code != 9
+on-arrival: opposition_budget_priority_candidate_code = 9; opposition_budget_priority_candidate = "IVF, public-media and delivery safeguards in the transition"
+go-to: priority_record
+
+@priority_flood
+title: Flood reconstruction
+view-if: annual_budget_year = 2024 and opposition_budget_priority_1_code != 11
+on-arrival: opposition_budget_priority_candidate_code = 11; opposition_budget_priority_candidate = "named flood reconstruction funds for homes and councils"
+go-to: priority_record
+
+@priority_kpo
+title: KPO public investment
+view-if: (annual_budget_year = 2024 or annual_budget_year = 2026) and opposition_budget_priority_1_code != 8
+on-arrival: opposition_budget_priority_candidate_code = 8; opposition_budget_priority_candidate = "KPO co-financing tied to public investment and milestones"
+go-to: priority_record
+
+@priority_razem_promises
+title: Razem's written promises
+view-if: annual_budget_year = 2024 and opposition_budget_priority_1_code != 12
+on-arrival: opposition_budget_priority_candidate_code = 12; opposition_budget_priority_candidate = "the wage, housing and health promises made to Razem"
+go-to: priority_record
+
+@priority_education
+title: Schools and local services
+view-if: annual_budget_year = 2025 and opposition_budget_priority_1_code != 14
+on-arrival: opposition_budget_priority_candidate_code = 14; opposition_budget_priority_candidate = "school reform with funded local-service staffing"
+go-to: priority_record
+
+@priority_inspection
+title: Labour Inspection enforcement
+view-if: annual_budget_year >= 2025 and opposition_budget_priority_1_code != 13
+on-arrival: opposition_budget_priority_candidate_code = 13; opposition_budget_priority_candidate = "staff and enforcement powers for Labour Inspection"
+go-to: priority_record
+
+@priority_partnerships
+title: Partnership and equality delivery
+view-if: annual_budget_year = 2026 and opposition_budget_priority_1_code != 15
+on-arrival: opposition_budget_priority_candidate_code = 15; opposition_budget_priority_candidate = "partnership recognition and funded equality services"
+go-to: priority_record
+
+@priority_record
+on-arrival: {!
+if (Q.opposition_budget_priority_count <= 0) {
+    Q.opposition_budget_priority_1_code =
+        Q.opposition_budget_priority_candidate_code;
+    Q.opposition_budget_priority_1 =
+        Q.opposition_budget_priority_candidate;
+    Q.opposition_budget_priority_count = 1;
+} else {
+    Q.opposition_budget_priority_2_code =
+        Q.opposition_budget_priority_candidate_code;
+    Q.opposition_budget_priority_2 =
+        Q.opposition_budget_priority_candidate;
+    Q.opposition_budget_priority_count = 2;
+}
+!}
+go-to: priorities if opposition_budget_priority_count < 2; conference if opposition_budget_priority_count >= 2
+
+@conference
+title: Stage 3 of 6 — Internal conference
+new-page: true
+call: poland_normalize
+on-arrival: {!
+Q.opposition_budget_stage = 3;
+Q.opposition_budget_barons_demand =
+    "name an administrable local beneficiary and do not rescue the cabinet for free";
+Q.opposition_budget_spring_demand =
+    "keep equality and care visible in the final public line";
+Q.opposition_budget_labor_demand =
+    "put wages, staffing and enforcement ahead of a tactical headline";
+Q.opposition_budget_progressives_demand =
+    "publish a deadline and protect housing or equality from deletion";
+Q.opposition_budget_razem_demand =
+    "no yes vote for promises that are neither costed nor written into the bill";
+Q.opposition_budget_pps_demand =
+    "protect wages and municipal services, even if the club must vote no";
+!}
+
+= Demands and red lines, not percentages
+
+The conference must reconcile **[+ opposition_budget_priority_1 +]** with **[+
+opposition_budget_priority_2 +]**. Each active current states what would make
+it rebel:
+
+[? if barons_active: - **[+ barons_name +]:** [+ opposition_budget_barons_demand +].?]
+[? if spring_active: - **[+ spring_name +]:** [+ opposition_budget_spring_demand +].?]
+[? if labor_active: - **[+ labor_name +]:** [+ opposition_budget_labor_demand +].?]
+[? if progressives_active: - **[+ progressives_name +]:** [+ opposition_budget_progressives_demand +].?]
+[? if razem_active: - **Razem:** [+ opposition_budget_razem_demand +].?]
+[? if pps_active: - **PPS:** [+ opposition_budget_pps_demand +].?]
+
+No weighted ratification score decides the answer. Leadership must choose how
+the parliamentary club will manage a disagreement that remains visible.
+
+- @conference_negotiate
+- @conference_promise
+- @conference_free_vote
+- @conference_discipline
+
+@conference_negotiate
+title: Negotiate one common instruction
+subtitle: Cost: 1 party resource. Both priorities remain; reservations are published.
+choose-if: resources >= 1
+unavailable-subtitle: The conference has no staff capacity left for a negotiated text.
+on-arrival: resources -= 1; opposition_budget_conference_code = 1; opposition_budget_conference_management = "Negotiated common instruction"; party_unity += 2; razem_cooperation += 2
+go-to: conference_result
+
+@conference_promise
+title: Promise the omitted demand in the next manifesto
+subtitle: Holds the room today, but creates an auditable promise rather than enacted policy.
+on-arrival: opposition_budget_conference_code = 2; opposition_budget_conference_management = "Future manifesto promise"; budget_promises += 2; party_unity -= 1; razem_dissent += 3
+go-to: conference_result
+
+@conference_free_vote
+title: Permit a free vote
+subtitle: Honest factional autonomy; the final roll call will name dissenters.
+on-arrival: opposition_budget_conference_code = 3; opposition_budget_conference_management = "Free vote"; party_unity -= 3
+go-to: conference_result
+
+@conference_discipline
+title: Impose parliamentary discipline
+subtitle: A clear line with a risk of public defiance.
+on-arrival: opposition_budget_conference_code = 4; opposition_budget_conference_management = "Imposed discipline"; party_unity += 1; razem_dissent += 4; progressives_dissent += 2
+go-to: conference_result
+
+@conference_result
+title: The conference instruction
+new-page: true
+on-arrival: {!
+const leftDelegation = Math.max(0, Math.round(Number(Q.left_seats) || 0));
+if (Q.opposition_budget_conference_code == 1) {
+    Q.opposition_budget_rebel_count = Q.party_unity < 28 ? 1 : 0;
+} else if (Q.opposition_budget_conference_code == 2) {
+    Q.opposition_budget_rebel_count = leftDelegation > 0 ? 1 : 0;
+} else if (Q.opposition_budget_conference_code == 3) {
+    Q.opposition_budget_rebel_count = Math.min(
+        3,
+        Math.max(1, Math.round(leftDelegation * 0.08))
+    );
+} else {
+    Q.opposition_budget_rebel_count =
+        (Number(Q.razem_dissent) || 0) >= 55 ? 1 : 0;
+}
+Q.opposition_budget_rebel_count = Math.min(
+    leftDelegation,
+    Q.opposition_budget_rebel_count
+);
+const rebelNames = [];
+if (Q.opposition_budget_rebel_count > 0 && Q.razem_active) {
+    rebelNames.push("Adrian Zandberg");
+}
+if (Q.opposition_budget_rebel_count > 1 && Q.razem_active) {
+    rebelNames.push("Marcelina Zawisza");
+}
+if (Q.opposition_budget_rebel_count > rebelNames.length && Q.pps_active) {
+    rebelNames.push("Joanna Senyszyn");
+}
+if (Q.opposition_budget_rebel_count > rebelNames.length && Q.spring_active) {
+    rebelNames.push("Krzysztof Śmiszek");
+}
+if (Q.opposition_budget_rebel_count > rebelNames.length) {
+    rebelNames.push("Tomasz Trela");
+}
+Q.opposition_budget_named_rebels = rebelNames.length
+    ? rebelNames.slice(0, Q.opposition_budget_rebel_count).join(", ")
+    : "None";
+!}
+
+**[+ opposition_budget_conference_management +]** becomes the club rule.
+Reserved dissenters: **[+ opposition_budget_rebel_count +]**. Named deputies:
+**[+ opposition_budget_named_rebels +]**.
+
+These are possible deviations from the line, not a fictional internal vote.
+Their actual yes, no or abstention will appear in the Sejm roll call.
+
+- @choose_tactic: Choose the parliamentary tactic
+
+@choose_tactic
+go-to: tactics
+
+@tactics
+title: Stage 4 of 6 — Choose the parliamentary tactic
+new-page: true
+on-arrival: opposition_budget_stage = 4
+
+The government knows Lewica's two priorities and the conference rule. Choose
+what is actually filed and how the club will vote.
+
+- @tactic_shadow
+- @tactic_amendments
+- @tactic_bargain
+- @tactic_abstain
+- @tactic_against
+
+@tactic_shadow
+title: Publish a costed shadow budget and vote no
+subtitle: Cost: 1 party resource. Builds issue ownership, credibility and media attention—not state capacity.
+choose-if: resources >= 1
+unavailable-subtitle: Costing and publishing the full programme requires one party resource.
+on-arrival: resources -= 1; opposition_budget_tactic_code = 1; opposition_budget_tactic = "Costed shadow budget"; annual_budget_posture = "Vote no"
+go-to: resolve
+
+@tactic_amendments
+title: Submit two named amendments and vote on the government's answer
+subtitle: Cost: 1 party resource. Each amendment gets its own recorded result.
+choose-if: resources >= 1
+unavailable-subtitle: Drafting and whipping two amendments requires one party resource.
+on-arrival: resources -= 1; opposition_budget_tactic_code = 2; opposition_budget_tactic = "Two named Sejm amendments"; annual_budget_posture = "Vote no after amendments"
+go-to: resolve
+
+@tactic_bargain
+title: Bargain for named concessions
+subtitle: Cost: 1 party resource. No concession exists until the cabinet accepts exact language and the budget passes.
+choose-if: resources >= 1
+unavailable-subtitle: A written negotiation and monitoring file requires one party resource.
+on-arrival: resources -= 1; opposition_budget_tactic_code = 3; opposition_budget_tactic = "Named-concession bargain"; annual_budget_posture = "Conditional line"
+go-to: resolve
+
+@tactic_abstain
+title: Abstain and let the government own its budget
+subtitle: No concession, no Lewica yes votes and no policy credit.
+on-arrival: opposition_budget_tactic_code = 4; opposition_budget_tactic = "Unconditional abstention"; annual_budget_posture = "Abstain"
+go-to: resolve
+
+@tactic_against
+title: Vote against without publishing a shadow budget
+subtitle: A clean opposition vote, but no alternative programme to audit or own.
+on-arrival: opposition_budget_tactic_code = 5; opposition_budget_tactic = "Straight opposition vote"; annual_budget_posture = "Vote no"
+go-to: resolve
+
+@resolve
+title: Stage 5 of 6 — Resolve the real vote
+new-page: true
+call: poland_normalize
+on-arrival: {!
+Q.opposition_budget_stage = 5;
+const relationByGovernment = Q.government_party == "pis"
+    ? Number(Q.pis_relation) || 0
+    : (Q.government_party == "ko"
+        ? Number(Q.ko_relation) || 0
+        : (Q.government_party == "psl"
+            ? Number(Q.psl_relation) || 0
+            : Number(Q.p2050_relation) || 0));
+const conferenceBonus = Q.opposition_budget_conference_code == 1
+    ? 8
+    : (Q.opposition_budget_conference_code == 4 ? 3 : 0);
+const pivotalBonus = Q.opposition_budget_left_is_pivotal ? 16 : 0;
+Q.opposition_budget_negotiation_score = Math.round(
+    (Number(Q.negotiation_leverage) || 0) * 0.55 +
+    relationByGovernment * 0.35 + conferenceBonus + pivotalBonus
+);
+Q.opposition_budget_negotiation_threshold =
+    Q.government_party == "pis" ? 54 : 46;
+Q.opposition_budget_amendment_1 =
+    "Amendment: " + Q.opposition_budget_priority_1;
+Q.opposition_budget_amendment_2 =
+    "Amendment: " + Q.opposition_budget_priority_2;
+
+if (Q.opposition_budget_tactic_code == 2) {
+    Q.opposition_budget_amendment_1_passed =
+        Q.opposition_budget_negotiation_score >=
+            Q.opposition_budget_negotiation_threshold ? 1 : 0;
+    Q.opposition_budget_amendment_2_passed =
+        Q.opposition_budget_negotiation_score >=
+            Q.opposition_budget_negotiation_threshold + 12 ? 1 : 0;
+    Q.annual_budget_posture = "Vote no after amendments";
+} else if (Q.opposition_budget_tactic_code == 3) {
+    const bargainScore = Q.opposition_budget_negotiation_score + 10;
+    Q.opposition_budget_negotiation_score = bargainScore;
+    Q.opposition_budget_amendment_1_passed =
+        bargainScore >= Q.opposition_budget_negotiation_threshold ? 1 : 0;
+    Q.opposition_budget_amendment_2_passed =
+        bargainScore >= Q.opposition_budget_negotiation_threshold + 12 ? 1 : 0;
+    if (
+        Q.opposition_budget_amendment_1_passed &&
+        Q.opposition_budget_amendment_2_passed &&
+        Q.opposition_budget_left_is_pivotal
+    ) {
+        Q.annual_budget_posture = "Conditional support";
+    } else if (Q.opposition_budget_amendment_1_passed) {
+        Q.annual_budget_posture = "Abstain on named concession";
+    } else {
+        Q.annual_budget_posture = "Vote no — bargain refused";
+    }
+}
+Q.opposition_budget_amendments_passed =
+    Number(Q.opposition_budget_amendment_1_passed) +
+    Number(Q.opposition_budget_amendment_2_passed);
+if (!Q.opposition_budget_amendment_1_passed) {
+    Q.opposition_budget_amendment_1 += " — rejected";
+} else {
+    Q.opposition_budget_amendment_1 += " — adopted into the bill";
+}
+if (!Q.opposition_budget_amendment_2_passed) {
+    Q.opposition_budget_amendment_2 += " — rejected";
+} else {
+    Q.opposition_budget_amendment_2 += " — adopted into the bill";
+}
+if (Q.opposition_budget_tactic_code != 2 &&
+    Q.opposition_budget_tactic_code != 3) {
+    Q.opposition_budget_amendment_1 = "No amendment filed";
+    Q.opposition_budget_amendment_2 = "No amendment filed";
+}
+
+const chamberTotal = Math.max(1, Math.round(Number(Q.sejm_total) || 460));
+const leftSeats = Math.max(
+    0,
+    Math.min(chamberTotal, Math.round(Number(Q.left_seats) || 0))
+);
+const governmentStress =
+    (Number(Q.government_coalition_dissent) || 0) +
+    (Q.caretaker_government ? 12 : 0) +
+    (!Q.government_has_confidence ? 8 : 0);
+const governmentDefections = Math.min(
+    Q.opposition_budget_government_seats,
+    Math.max(0, Math.round((governmentStress - 35) / 8))
+);
+Q.annual_budget_government_yes =
+    Q.opposition_budget_government_seats - governmentDefections;
+Q.annual_budget_government_abstain = governmentDefections;
+
+const rebels = Math.min(
+    leftSeats,
+    Math.max(0, Number(Q.opposition_budget_rebel_count) || 0)
+);
+if (Q.annual_budget_posture == "Conditional support") {
+    Q.annual_budget_left_yes = leftSeats - rebels;
+    Q.annual_budget_left_no = rebels;
+    Q.annual_budget_left_abstain = 0;
+} else if (
+    Q.annual_budget_posture == "Abstain" ||
+    Q.annual_budget_posture == "Abstain on named concession"
+) {
+    Q.annual_budget_left_yes = 0;
+    Q.annual_budget_left_no = rebels;
+    Q.annual_budget_left_abstain = leftSeats - rebels;
+} else {
+    Q.annual_budget_left_yes = 0;
+    Q.annual_budget_left_no = leftSeats - rebels;
+    Q.annual_budget_left_abstain = rebels;
+}
+Q.annual_budget_yes =
+    Q.annual_budget_government_yes + Q.annual_budget_left_yes;
+Q.annual_budget_no =
+    Q.opposition_budget_other_opposition_seats + Q.annual_budget_left_no;
+Q.annual_budget_abstain =
+    Q.annual_budget_government_abstain + Q.annual_budget_left_abstain;
+Q.annual_budget_present =
+    Q.annual_budget_yes + Q.annual_budget_no + Q.annual_budget_abstain;
+Q.annual_budget_threshold = Q.annual_budget_no + 1;
+Q.annual_budget_passed =
+    Q.annual_budget_present >=
+        Math.max(1, Number(Q.sejm_quorum_floor) || 230) &&
+    Q.annual_budget_yes > Q.annual_budget_no ? 1 : 0;
+Q.annual_budget_margin = Q.annual_budget_passed
+    ? Q.annual_budget_yes - Q.annual_budget_no
+    : 0;
+Q.annual_budget_shortfall = Q.annual_budget_passed
+    ? 0
+    : Math.max(0, Q.annual_budget_no + 1 - Q.annual_budget_yes);
+Q.annual_budget_strategy = Q.opposition_budget_tactic;
+Q.annual_budget_concession = Q.opposition_budget_amendments_passed
+    ? (Q.opposition_budget_amendments_passed == 2
+        ? Q.opposition_budget_priority_1 + " and " +
+            Q.opposition_budget_priority_2
+        : Q.opposition_budget_priority_1)
+    : "None enacted at the Sejm vote";
+Q.annual_budget_negotiation_success =
+    Q.opposition_budget_amendments_passed > 0 ? 1 : 0;
+Q.annual_budget_concession_strength =
+    Q.opposition_budget_amendments_passed;
+Q.annual_budget_result = Q.annual_budget_passed
+    ? Q.opposition_budget_tactic + " — budget passed " +
+        Q.annual_budget_yes + " to " + Q.annual_budget_no
+    : Q.opposition_budget_tactic + " — budget defeated by " +
+        Q.annual_budget_shortfall;
+Q["annual_budget_done_" + Q.annual_budget_year] = 1;
+Q["annual_budget_passed_" + Q.annual_budget_year] =
+    Q.annual_budget_passed;
+Q.budget_deadline_active =
+    Q.annual_budget_year >= 2023 && !Q.annual_budget_passed ? 1 : 0;
+
+if (Q.opposition_budget_tactic_code == 1) {
+    Q.opposition_budget_issue_ownership += 5;
+    Q.opposition_budget_credibility += 4;
+    Q.opposition_budget_media_attention += 4;
+    Q.media_capacity += 2;
+    Q.public_trust += 1;
+}
+
+Q.opposition_budget_audit_pending = 1;
+Q.opposition_budget_audit_done = 0;
+Q.opposition_budget_audit_year = Q.annual_budget_year;
+Q.opposition_budget_audit_fiscal_year = Q.annual_budget_fiscal_year;
+Q.opposition_budget_audit_tactic = Q.opposition_budget_tactic;
+Q.opposition_budget_audit_tactic_code = Q.opposition_budget_tactic_code;
+Q.opposition_budget_audit_budget_passed = Q.annual_budget_passed;
+Q.opposition_budget_audit_priority_1_code =
+    Q.opposition_budget_priority_1_code;
+Q.opposition_budget_audit_priority_2_code =
+    Q.opposition_budget_priority_2_code;
+Q.opposition_budget_audit_priority_1_enacted =
+    Q.annual_budget_passed ? Q.opposition_budget_amendment_1_passed : 0;
+Q.opposition_budget_audit_priority_2_enacted =
+    Q.annual_budget_passed ? Q.opposition_budget_amendment_2_passed : 0;
+Q.opposition_budget_audit_enacted =
+    Q.opposition_budget_audit_priority_1_enacted ||
+    Q.opposition_budget_audit_priority_2_enacted ? 1 : 0;
+Q.opposition_budget_audit_amendment_1 =
+    Q.opposition_budget_amendment_1;
+Q.opposition_budget_audit_amendment_2 =
+    Q.opposition_budget_amendment_2;
+Q.opposition_budget_audit_result = "Audit due next year";
+
+/* Compatibility fields for the retained 2019–20 Senate docket. */
+if (Q.annual_budget_year == 2019) {
+    Q.budget_2019_done = 1;
+    Q.budget_2019_ratified =
+        Q.opposition_budget_tactic_code == 1 ? 1 : 0;
+    Q.budget_2019_rebels = rebels > 0 ? 1 : 0;
+    Q.budget_2019_backing = Math.max(
+        0,
+        leftSeats ? Math.round((leftSeats - rebels) * 100 / leftSeats) : 0
+    );
+    Q.budget_2019_vetoes = 0;
+}
+if (Q.annual_budget_year == 2020) {
+    Q.budget_2020_done = 1;
+    Q.budget_2020_ratified =
+        Q.opposition_budget_tactic_code == 1 ? 1 : 0;
+    Q.budget_2020_rebels = rebels > 0 ? 1 : 0;
+    Q.budget_backing = Math.max(
+        0,
+        leftSeats ? Math.round((leftSeats - rebels) * 100 / leftSeats) : 0
+    );
+    Q.budget_vetoes = 0;
+    Q.budget_package_code =
+        Q.opposition_budget_priority_1_code == 5 ? 2 :
+        (Q.opposition_budget_priority_1_code == 4 ? 3 :
+        (Q.opposition_budget_tactic_code == 3 ? 4 : 1));
+}
+if (Q.annual_budget_year == 2021) Q.budget_2021_done = 1;
+if (Q.annual_budget_year == 2022) Q.budget_2022_done = 1;
+Q.news_headline = Q.annual_budget_passed
+    ? "The government's budget passes after a recorded opposition process"
+    : "The government loses the budget vote without automatically losing office";
+!}
+
+= Government majority, Lewica line and amendments
+
+<div class="ledger-section ledger-section-first"><div class="ledger-title">Real Sejm roll call</div>
+<div class="ledger-row"><span>Government yes</span><b>[+ annual_budget_government_yes +]</b></div>
+<div class="ledger-row"><span>Lewica line</span><b>[+ annual_budget_posture +]</b></div>
+<div class="ledger-row"><span>Named rebels</span><b>[+ opposition_budget_named_rebels +]</b></div>
+<div class="ledger-row"><span>Lewica split</span><b>[+ annual_budget_left_yes +] yes · [+ annual_budget_left_no +] no · [+ annual_budget_left_abstain +] abstain</b></div>
+<div class="ledger-row"><span>Whole chamber</span><b>[+ annual_budget_yes +] yes · [+ annual_budget_no +] no · [+ annual_budget_abstain +] abstain</b></div>
+<div class="ledger-row"><span>Required</span><b>[+ annual_budget_threshold +] yes</b></div></div>
+
+<div class="ledger-section"><div class="ledger-title">What actually passed</div>
+<div class="ledger-row"><span>Government acceptance score</span><b>[+ opposition_budget_negotiation_score +] / [+ opposition_budget_negotiation_threshold +]</b></div>
+<div class="ledger-row"><span>Priority one</span><b>[+ opposition_budget_amendment_1 +]</b></div>
+<div class="ledger-row"><span>Priority two</span><b>[+ opposition_budget_amendment_2 +]</b></div>
+<div class="ledger-row"><span>Budget</span><b>[? if annual_budget_passed: passed?][? if not annual_budget_passed: failed?]</b></div></div>
+
+[? if opposition_budget_tactic_code = 1: The shadow budget has already added
+political issue ownership, credibility and media attention. It has added
+**zero public capacity**.?]
+
+[? if opposition_budget_amendments_passed > 0 and annual_budget_passed: The
+adopted language is now eligible for next year's delivery audit. No capacity
+improves today.?]
+[? if opposition_budget_amendments_passed > 0 and not annual_budget_passed:
+Amendments attached to a defeated bill are not enacted and will score no
+capacity at audit.?]
+
+[? if annual_budget_year <= 2020: The budget now enters the retained Senate
+stage. The upper chamber may propose amendments but may not reject the budget.?]
+
+- @complete: Record the vote
+
+@complete
+go-to: poland_senate.budget_2019 if annual_budget_year = 2019; poland_senate.budget_2020 if annual_budget_year = 2020; poland_events_2021_2023.december_2021_hub if annual_budget_year = 2021; poland_hub if annual_budget_year = 2022; poland_budget_2023_2026.opposition_budget_failed if annual_budget_year >= 2023 and annual_budget_passed = 0; poland_budget_2023_2026.return_queue if annual_budget_year >= 2023 and annual_budget_passed = 1

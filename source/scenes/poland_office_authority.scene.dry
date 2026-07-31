@@ -1,0 +1,136 @@
+title: Constitutional office compatibility
+
+@resolve
+title: One person cannot hold both offices
+subtitle: The legally competent institution fills each vacancy; Lewica chooses only its response.
+new-page: true
+tags: poland_event
+priority: 100
+order: 0
+max-visits: 8
+view-if: continuous_campaign = 1 and office_incompatibility_pending = 1
+on-arrival: {!
+const president = String(Q.president_name || "");
+const avoidPresident = function(preferred, fallback) {
+    return preferred == president ? fallback : preferred;
+};
+const previousKind = String(Q.office_incompatibility_kind || "Office");
+const filled = [];
+
+if (String(Q.prime_minister || "").includes("succession pending")) {
+    const successors = {
+        pis: ["Beata Szydło", "Przemysław Czarnek"],
+        ko: ["Donald Tusk", "Radosław Sikorski"],
+        lewica: ["Agnieszka Dziemianowicz-Bąk", "Magdalena Biejat"],
+        psl: ["Piotr Zgorzelski", "Krzysztof Hetman"],
+        p2050: ["Katarzyna Pełczyńska-Nałęcz", "Paulina Hennig-Kloska"],
+        independent: ["Independent caretaker nominee", "Non-partisan Sejm nominee"],
+        other: ["Cross-party caretaker nominee", "Non-partisan Sejm nominee"]
+    };
+    const slate = successors[Q.government_party] || successors.other;
+    Q.prime_minister = avoidPresident(slate[0], slate[1]);
+    Q.government_name =
+        Q.prime_minister + " constitutional succession cabinet";
+    Q.caretaker_government = 1;
+    Q.formation_in_progress = 1;
+    Q.office_incompatibility_pm_formation = 1;
+    Q.snap_formation_context =
+        "Prime-ministerial vacancy after presidential inauguration";
+    Q.snap_formation_attempt = 0;
+    filled.push("Prime Minister: " + Q.prime_minister);
+}
+
+if (String(Q.sejm_speaker || "").includes("Sejm election pending")) {
+    const speakerSlates = {
+        pis: ["Elżbieta Witek", "Mariusz Błaszczak"],
+        ko: ["Monika Wielichowska", "Radosław Sikorski"],
+        lewica: ["Włodzimierz Czarzasty", "Agnieszka Dziemianowicz-Bąk"],
+        psl: ["Piotr Zgorzelski", "Krzysztof Hetman"],
+        p2050: ["Katarzyna Pełczyńska-Nałęcz", "Paulina Hennig-Kloska"],
+        independent: ["Cross-party Sejm nominee", "Senior Deputy Marshal"],
+        other: ["Cross-party Sejm nominee", "Senior Deputy Marshal"]
+    };
+    const slate = speakerSlates[Q.government_party] || speakerSlates.other;
+    Q.sejm_speaker = avoidPresident(slate[0], slate[1]);
+    filled.push("Sejm Marshal: " + Q.sejm_speaker);
+}
+
+if (String(Q.senate_marshal || "").includes("Senate election pending")) {
+    Q.senate_marshal = avoidPresident(
+        "Małgorzata Kidawa-Błońska",
+        "Coalition Senate nominee"
+    );
+    filled.push("Senate Marshal: " + Q.senate_marshal);
+}
+
+if (String(Q.p2050_leader || "").includes("party election pending")) {
+    Q.p2050_leader = avoidPresident(
+        "Katarzyna Pełczyńska-Nałęcz",
+        "Paulina Hennig-Kloska"
+    );
+    filled.push("Poland 2050 acting leader: " + Q.p2050_leader);
+}
+if (String(Q.psl_leader || "").includes("party election pending")) {
+    Q.psl_leader = avoidPresident("Piotr Zgorzelski", "Krzysztof Hetman");
+    filled.push("PSL acting leader: " + Q.psl_leader);
+}
+
+const portfolio = String(Q.office_incompatibility_portfolio || "");
+if (portfolio) {
+    const ministerKey = portfolio + "_minister";
+    const partyKey = portfolio + "_minister_party";
+    if (String(Q[ministerKey] || "").includes("appointment pending")) {
+        const partyLabels = {
+            pis: "PiS", ko: "KO", lewica: "Lewica", psl: "PSL",
+            p2050: "Poland 2050", independent: "Cabinet", other: "Cabinet"
+        };
+        const previousParty = String(
+            Q.office_incompatibility_previous_minister_party || ""
+        );
+        Q[partyKey] = previousParty &&
+            previousParty != "Vacant" &&
+            previousParty != "Unassigned"
+                ? previousParty
+                : (partyLabels[Q.government_party] || "Cabinet");
+        Q[ministerKey] = "Cabinet " + portfolio + " nominee";
+        filled.push(portfolio + " minister: " + Q[ministerKey]);
+    }
+}
+
+Q.office_incompatibility_resolution = filled.length
+    ? filled.join(" · ")
+    : previousKind + " vacancy recorded for the competent institution";
+Q.office_incompatibility_pending = 0;
+Q.office_incompatibility_resolved = 1;
+Q.office_incompatibility_portfolio = "";
+Q.office_incompatibility_previous_minister_party = "";
+Q.news_headline =
+    "Constitutional incompatibility triggers a recorded succession process";
+!}
+
+= The second office is vacated before succession
+
+The presidential mandate cannot be combined with a cabinet portfolio,
+premiership or parliamentary Marshalship. Monthly normalisation vacated the
+incompatible office but appointed nobody. The Sejm, Senate, Prime Minister or
+party rules have now supplied the recorded successor:
+
+**[+ office_incompatibility_resolution +]**
+
+Lewica can accept the competent institution's act or demand a recorded vote
+and conflict-of-interest file. Neither response appoints the successor.
+
+- @accept
+- @record
+
+@accept
+title: Recognise the succession and return to substantive politics
+subtitle: Accept the competent authority; public trust +2, constitutional restraint +2.
+on-arrival: public_trust += 2; constitutional_restraint += 2; news_headline = "The succession is recognised without inventing a party appointment power"
+go-to: poland_events_2026.snap_formation_attempt_one if office_incompatibility_pm_formation = 1; poland_event_queue if office_incompatibility_pm_formation = 0
+
+@record
+title: Demand the roll call, legal basis and recusals in public
+subtitle: Media capacity +3 and trust +1; coalition dissent +2 from prolonged scrutiny.
+on-arrival: media_capacity += 3; public_trust += 1; government_coalition_dissent += 2; news_headline = "The new office-holder begins under a published authority record"
+go-to: poland_events_2026.snap_formation_attempt_one if office_incompatibility_pm_formation = 1; poland_event_queue if office_incompatibility_pm_formation = 0

@@ -431,15 +431,51 @@ if (Q.pres_first_calc_mode == "first_result") {
         formatVotes(Q.pres_r1_valid_votes);
     Q.presidential_result =
         Math.round(share.left * 100) / 100;
+    Q.pres_historical_benchmark = 2.22;
+    Q.pres_expected_result = Math.round(
+        (
+            Number.isFinite(Number(Q.pres_poll_left))
+                ? Number(Q.pres_poll_left)
+                : Number(Q.presidential_candidate_base) || 2.2
+        ) * 100
+    ) / 100;
+    Q.pres_expectation_gap = Math.round(
+        (Q.presidential_result - Q.pres_expected_result) * 100
+    ) / 100;
+    Q.pres_historical_gap = Math.round(
+        (Q.presidential_result - Q.pres_historical_benchmark) * 100
+    ) / 100;
+    const leftTransformed =
+        ordered[0] == "left" || ordered[1] == "left";
+    if (leftTransformed) {
+        Q.pres_performance_band = "Party-system transformation";
+        Q.pres_performance_level = 4;
+    } else if (Q.presidential_result < 2.5) {
+        Q.pres_performance_band = "Shattering disaster";
+        Q.pres_performance_level = -3;
+    } else if (Q.presidential_result < 4) {
+        Q.pres_performance_band = "Severe defeat";
+        Q.pres_performance_level = -2;
+    } else if (Q.presidential_result < 5.5) {
+        Q.pres_performance_band = "Disappointing or ambiguous";
+        Q.pres_performance_level = -1;
+    } else if (Q.presidential_result < 7.5) {
+        Q.pres_performance_band = "Base held; broadly satisfying";
+        Q.pres_performance_level = 1;
+    } else if (Q.presidential_result < 10) {
+        Q.pres_performance_band = "Strong result";
+        Q.pres_performance_level = 2;
+    } else {
+        Q.pres_performance_band = "Breakthrough";
+        Q.pres_performance_level = 3;
+    }
     Q.pres_first_round_complete = 1;
     Q.pres_2020_phase = Q.pres_first_round_majority
         ? "Decided in the first round"
         : "Between rounds";
 
     if (Q.pres_first_round_majority) {
-        Q.president_name = Q.pres_r1_leader_key == "trzaskowski"
-            ? "Andrzej Duda"
-            : Q.pres_r1_leader_name;
+        Q.president_name = Q.pres_r1_leader_name;
         Q.pres_runoff_winner_key = Q.pres_r1_leader_key;
         Q.pres_runoff_winner_name = Q.pres_r1_leader_name;
         Q.pres_runoff_complete = 1;
@@ -454,6 +490,153 @@ if (Q.pres_first_calc_mode == "first_result") {
         }
     }
     if (wasNewCount) {
+        const level = Number(Q.pres_performance_level) || 0;
+        const previousFailure = Q.pres_feedback_active &&
+            (Number(Q.pres_feedback_direction) || 0) < 0 && level < 0;
+        let duration = level == -3 || level >= 3 ? 12 :
+            (level == -2 || level == 2 ? 10 :
+            (level == -1 ? 7 : 8));
+        let consideration = level == -3 ? -6 :
+            (level == -2 ? -3.8 :
+            (level == -1 ? -1.4 :
+            (level == 1 ? 1.2 :
+            (level == 2 ? 2.7 :
+            (level == 3 ? 4.2 : 5.5)))));
+        let feedbackTurnout = level == -3 ? -5 :
+            (level == -2 ? -3.1 :
+            (level == -1 ? -1.0 :
+            (level == 1 ? 1.4 :
+            (level == 2 ? 2.4 :
+            (level == 3 ? 3.4 : 4.5)))));
+        if (previousFailure) {
+            duration = Math.min(12, duration + 2);
+            consideration *= 1.15;
+            feedbackTurnout *= 1.15;
+            Q.pres_feedback_reinforcements =
+                (Number(Q.pres_feedback_reinforcements) || 0) + 1;
+        }
+        const expectationAdjustment = Math.max(
+            -1.5,
+            Math.min(1.5, (Number(Q.pres_expectation_gap) || 0) * 0.25)
+        );
+        consideration += expectationAdjustment;
+        feedbackTurnout += expectationAdjustment * 0.65;
+        if (level == 1) {
+            consideration = Math.max(0.5, consideration);
+            feedbackTurnout = Math.max(0.6, feedbackTurnout);
+        }
+        Q.pres_feedback_active = 1;
+        Q.pres_feedback_source = "2020 presidential first round";
+        Q.pres_feedback_direction = level < 0 ? -1 : 1;
+        Q.pres_feedback_duration = duration;
+        Q.pres_feedback_months_remaining = duration;
+        Q.pres_feedback_decay_factor = 1;
+        Q.pres_feedback_consideration =
+            Math.round(consideration * 100) / 100;
+        Q.pres_feedback_turnout =
+            Math.round(feedbackTurnout * 100) / 100;
+        Q.pres_feedback_consideration_current =
+            Q.pres_feedback_consideration;
+        Q.pres_feedback_turnout_current = Q.pres_feedback_turnout;
+        Q.pres_feedback_leadership_pressure = 0;
+        Q.pres_feedback_leadership_challenge = 0;
+        Q.pres_feedback_donor_loss = 0;
+        Q.pres_feedback_activist_loss = 0;
+        Q.pres_feedback_media_loss = 0;
+        Q.pres_feedback_faction_pressure = 0;
+        Q.pres_feedback_tactical_flight = 0;
+        Q.pres_feedback_base_certainty = 0;
+        Q.pres_feedback_squeeze_protection = 0;
+        if (level == -3) {
+            Q.pres_feedback_leadership_pressure = 85;
+            Q.pres_feedback_leadership_challenge = 1;
+            Q.pres_feedback_donor_loss = 2;
+            Q.pres_feedback_activist_loss = 6;
+            Q.pres_feedback_media_loss = 4;
+            Q.pres_feedback_faction_pressure = 8;
+            Q.pres_feedback_tactical_flight = 6;
+            Q.resources -= 2;
+            Q.organiser_energy -= 6;
+            Q.media_capacity -= 4;
+            Q.media_access -= 5;
+            Q.leadership_authority -= 9;
+            Q.list_confidence -= 8;
+            Q.winner_reputation -= 7;
+            Q.electoral_viability -= 5;
+            Q.party_unity -= 7;
+            Q.barons_dissent += 7;
+            Q.spring_dissent += 8;
+            Q.labor_dissent += 5;
+            Q.progressives_dissent += 7;
+            Q.razem_dissent += 6;
+        } else if (level == -2) {
+            Q.pres_feedback_leadership_pressure = 65;
+            Q.pres_feedback_leadership_challenge = 1;
+            Q.pres_feedback_donor_loss = 1;
+            Q.pres_feedback_activist_loss = 4;
+            Q.pres_feedback_media_loss = 3;
+            Q.pres_feedback_faction_pressure = 6;
+            Q.pres_feedback_tactical_flight = 4;
+            Q.resources -= 1;
+            Q.organiser_energy -= 4;
+            Q.media_capacity -= 3;
+            Q.media_access -= 3;
+            Q.leadership_authority -= 6;
+            Q.list_confidence -= 5;
+            Q.winner_reputation -= 4;
+            Q.electoral_viability -= 3;
+            Q.party_unity -= 5;
+            Q.barons_dissent += 5;
+            Q.spring_dissent += 6;
+            Q.labor_dissent += 3;
+            Q.progressives_dissent += 5;
+            Q.razem_dissent += 4;
+        } else if (level == -1) {
+            Q.pres_feedback_leadership_pressure = 30;
+            Q.pres_feedback_activist_loss = 1;
+            Q.pres_feedback_media_loss = 1;
+            Q.pres_feedback_faction_pressure = 2;
+            Q.pres_feedback_tactical_flight = 1;
+            Q.organiser_energy -= 1;
+            Q.media_capacity -= 1;
+            Q.media_access -= 1;
+            Q.leadership_authority -= 2;
+            Q.list_confidence -= 2;
+            Q.winner_reputation -= 1;
+            Q.party_unity -= 2;
+            Q.spring_dissent += 2;
+            Q.progressives_dissent += 2;
+            Q.razem_dissent += 1;
+        } else {
+            Q.pres_feedback_base_certainty = level == 1 ? 65 :
+                (level == 2 ? 78 : 92);
+            Q.pres_feedback_squeeze_protection = 1;
+            Q.party_unity += level == 1 ? 3 : (level == 2 ? 4 : 6);
+            Q.organiser_energy += level == 1 ? 2 : (level == 2 ? 3 : 5);
+            Q.media_capacity += level == 1 ? 1 : (level == 2 ? 2 : 4);
+            Q.media_access += level == 1 ? 1 : (level == 2 ? 2 : 4);
+            Q.leadership_authority += level == 1 ? 3 :
+                (level == 2 ? 4 : 6);
+            Q.list_confidence += level == 1 ? 5 :
+                (level == 2 ? 6 : 8);
+            Q.winner_reputation += level == 1 ? 2 :
+                (level == 2 ? 4 : 6);
+            Q.electoral_viability += level == 1 ? 2 :
+                (level == 2 ? 3 : 5);
+            Q.tactical_desertion_to_ko = Math.max(
+                0,
+                Q.tactical_desertion_to_ko - (level == 1 ? 2 : 4)
+            );
+            Q.tactical_desertion_to_abstention = Math.max(
+                0,
+                Q.tactical_desertion_to_abstention - (level == 1 ? 1 : 3)
+            );
+            Q.barons_dissent -= level == 1 ? 1 : 2;
+            Q.spring_dissent -= level == 1 ? 1 : 2;
+            Q.progressives_dissent -= level == 1 ? 1 : 2;
+        }
+        Q.pres_feedback_tactical_current =
+            Q.pres_feedback_tactical_flight;
         Q.p2050_emerged = 1;
         Q.p2050_relation = Math.max(
             Number(Q.p2050_relation) || 0,
@@ -686,7 +869,7 @@ go-to: debate_hub
 
 @debate_rights_dignity
 title: Expose the scapegoat and demand a functioning health service
-subtitle: Bind equal dignity to hospitals capable of delivering public health.
+subtitle: Bind equal dignity to a health-policy demand; a debate answer cannot add hospital capacity.
 on-arrival: {!
 Q.pres_debate_rights_done = 1;
 Q.pres_debate_stops_remaining -= 1;
@@ -694,7 +877,10 @@ Q.pres_debate_score +=
     Q.presidential_candidate == "Adrian Zandberg" ? 2.1 : 1.7;
 Q.pres_debate_rights_line = "Dignity and public capacity";
 Q.public_trust += 2;
-Q.health_capacity += 1;
+Q.health_policy_pressure += 1;
+Q.last_policy_stage = "Proposal";
+Q.last_policy_authority = "Presidential candidate";
+Q.last_policy_implementation = 0;
 Q.media_capacity += 1;
 Q.news_headline =
     "A hostile values question becomes an indictment of public-service failure";
@@ -920,6 +1106,16 @@ Turnout: **[+ pres_r1_turnout +]%**
 <div class="poll-row"><span class="party party-lewica"><b>[+ presidential_candidate +]</b></span><span>[+ pres_r1_display_left +]%</span><span>[+ pres_r1_votes_left_display +]</span></div>
 <div class="poll-row"><span><b>Other</b></span><span>[+ pres_r1_display_other +]%</span><span>[+ pres_r1_votes_other_display +]</span></div>
 </div>
+
+<div class="ledger-section"><div class="ledger-title">Presidential performance benchmark</div>
+<div class="ledger-row"><span>Political verdict</span><b>[+ pres_performance_band +]</b></div>
+<div class="ledger-row"><span>Final tracking expectation</span><b>[+ pres_expected_result +]% · [? if pres_expectation_gap >= 0: +?][+ pres_expectation_gap +] points</b></div>
+<div class="ledger-row"><span>Historical 2020 comparator</span><b>Robert Biedroń 2.22% · [? if pres_historical_gap >= 0: +?][+ pres_historical_gap +] points</b></div>
+<div class="ledger-subrow">Below 2.5%: shattering disaster · 2.5–4%: severe defeat · 4–5.5%: disappointing or ambiguous · 5.5–7.5%: base held · 7.5–10%: strong · 10%+: breakthrough · runoff/win: party-system transformation.</div>
+[? if pres_performance_level = -3: <div class="ledger-subrow">The disaster opens a leadership challenge, costs [+ pres_feedback_donor_loss +] donor resources and [+ pres_feedback_activist_loss +] activist capacity, weakens media access, raises faction demands and sends tactical voters elsewhere.</div>?]
+[? if pres_performance_level = 1: <div class="ledger-subrow">The base held. Greater certainty and turnout protect Lewica from the immediate tactical squeeze.</div>?]
+[? if pres_performance_level >= 2: <div class="ledger-subrow">The result expands consideration, activist confidence and media access beyond the existing base.</div>?]
+<div class="ledger-subrow">Consideration and Left turnout enter the next monthly electorate rebuild, then decay over [+ pres_feedback_duration +] months.</div></div>
 
 [? if pres_first_round_majority = 0: **[+ pres_r1_leader_name +]** and
 **[+ pres_r1_runner_name +]** advance. Every other electorate becomes contested;

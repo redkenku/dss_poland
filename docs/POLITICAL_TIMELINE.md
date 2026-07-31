@@ -157,6 +157,16 @@ removed the dual structure in 2025.
   common candidate preserves unity but ties all partners to Wiosna's campaign.
   ([PAP](https://www.pap.pl/aktualnosci/news%2C566478%2Crazem-poparlo-biedronia-jako-wspolnego-kandydata-lewicy-na-prezydenta.html))
 
+- **25–29 January — Borys Budka replaces Grzegorz Schetyna as PO chair.**
+  Budka won the direct membership election in the first round; outgoing chair
+  Schetyna declared that he would remain active and support both Budka and
+  presidential candidate Małgorzata Kidawa-Błońska.
+  **Adaptation value:** a rival succession changes both cooperation and
+  competition for the Left. Budka has a fresh member mandate, while Schetyna's
+  organisation and preferred candidate remain inside the broad alliance.
+  ([PO history](https://platforma.org/pl/historia);
+  [PAP](https://www.pap.pl/aktualnosci/news%2C579117%2Cbudka-nowym-szefem-po-schetyna-bede-go-wspieral.html))
+
 - **13–31 March — Poland closes its borders and enters lockdown.** Schools,
   much retail and public venues closed; entry and movement were restricted;
   and the government declared a state of epidemic. Successive “anti-crisis
@@ -182,6 +192,16 @@ removed the dual structure in 2025.
   with every opposition partner collide at once.
   ([Polish Radio](https://www.polskieradio.pl/395/7784/artykul/2505619%2Cupdate-poland%E2%80%99s-presidential-elections-deferred-amid-epidemic);
   [NIK audit](https://www.nik.gov.pl/kontrola-panstwowa-2021/05/kontrola-wyborow-korespondencyjnych-prezydenta-rp.html))
+
+- **15 May — Kidawa-Błońska withdraws and KO nominates Trzaskowski.** The
+  original candidate's campaign had collapsed amid the pandemic and her
+  rejection of the proposed May ballot. After her withdrawal, PO's executive
+  unanimously recommended Warsaw mayor Rafał Trzaskowski; Nowoczesna,
+  Inicjatywa Polska and the Greens also backed him.
+  **Adaptation value:** the replacement restores KO's viability and sharply
+  raises the cost of an independent Left campaign, but also creates a stronger
+  possible partner against Duda in the runoff.
+  ([PAP](https://www.pap.pl/aktualnosci/news%2C645201%2Crafal-trzaskowski-kandydatem-ko-na-prezydenta.html))
 
 - **17 June — eleven candidates meet in the final full-field TVP debate.**
   Every candidate received one minute on each of five common questions:
@@ -451,6 +471,14 @@ removed the dual structure in 2025.
   gains a fresher national brand. The alliance can be partner, competitor, or
   electoral-threshold casualty.
   ([Poland 2050](https://polska2050.pl/umowa-koalicyjna-z-polskim-stronnictwem-ludowym/))
+
+- **3 May — Solidarna Polska becomes Suwerenna Polska.** Ziobro's party kept
+  its leader and organisation but made sovereignty and resistance to EU
+  pressure the centre of its pre-election brand.
+  **Adaptation value:** a renamed junior partner can sharpen its independent
+  identity without leaving the United Right; the Left can distinguish its
+  factional interests while assigning responsibility to the whole government.
+  ([PAP](https://www.pap.pl/aktualnosci/news%2C1576355%2Ccymanski-jesli-podejme-decyzje-o-odejsciu-z-sp-pierwszy-dowie-sie-o-tym))
 
 - **14 May — PiS announces that 500+ will become 800+ from 2024.** Kaczyński
   used a party programme convention to promise an increase of the universal
@@ -734,6 +762,15 @@ removed the dual structure in 2025.
   **Adaptation value:** migration becomes an internal coalition and left-faction
   issue, not just a contest with PiS and Konfederacja.
   ([Notes from Poland](https://notesfrompoland.com/2024/10/12/poland-to-suspend-asylum-rights-as-part-of-tougher-migration-policy-to-regain-control-of-borders/))
+
+- **12 October — PiS absorbs Suwerenna Polska.** Kaczyński and representatives
+  of the smaller hard-right ally signed a merger agreement and ideological
+  declaration. The former junior partner's people and justice-policy identity
+  moved inside PiS rather than disappearing.
+  **Adaptation value:** consolidation strengthens one legal and electoral
+  organisation while creating a more organised sovereigntist faction inside
+  the PiS succession struggle.
+  ([PAP](https://www.pap.pl/en/news/polands-main-opposition-party-pis-merges-smaller-ally))
 
 - **24–27 October — Razem splits, then leaves the Lewica club.** Five
   parliamentarians, including Senate deputy speaker Magdalena Biejat, left Razem

@@ -131,14 +131,23 @@ it.
 
 ## The story contest
 
-Every major story has five independent outcomes:
+The opinion model does not turn coverage directly into support. Every important
+story is resolved through the same contest:
 
-- **salience** — how many people notice it;
-- **frame** — what question people think the story is about;
-- **ownership** — which actor is credited with raising or solving it;
-- **credibility** — which messenger is believed;
-- **conversion** — whether attention changes participation, consideration,
-  turnout or coalition behaviour.
+`reach × audience trust × signed frame × messenger credibility × issue salience × Left credibility`
+
+The signed frame records whether the dominant interpretation helps or hurts
+the Left; its strength participates in the product. The product then produces
+five separate outcomes: **persuasion**, **backlash**, **mobilisation**,
+**abstention** and **issue ownership**. A story can therefore mobilise a party
+core, increase conservative backlash, lose broader sympathy and produce almost
+no persuasion at the same time. None of those outputs substitutes for reach or
+for the public's prior attitude toward the issue.
+
+Salience memory decays comparatively quickly. Distrust, backlash and party
+reputation recover on slower and deliberately unequal clocks. A corrected
+headline can disappear while the belief that a party is incompetent or
+opportunistic remains.
 
 For example, a Left minister can obtain huge salience on Republika while the
 dominant frame is “coalition chaos.” A movement doctor with smaller reach can
@@ -150,6 +159,28 @@ The first report is not permanent. Documents, a good hostile interview,
 independent verification and visible policy delivery can change a frame.
 Deletion, denial and attacks on reporters may preserve core supporters while
 making recovery with persuadable voters harder.
+
+The electorate beneath those stories has seven independent latent attitudes:
+acceptance of capitalism and private hierarchy; expectation of welfare
+transfers and public services; cultural conservatism; order and threat
+sensitivity; universal solidarity; institutional trust; and appetite for
+political change. Poland can consequently be capitalist and culturally
+conservative while retaining strong expectations of pensions, family benefits
+and public healthcare. Welfare expectation is never treated as socialist
+identification.
+
+Three long stories demonstrate why the separation matters:
+
+- the pandemic initially increases solidarity and public-health salience, but
+  prolonged restriction, insecurity and distrust feed order and anti-system
+  channels unless workplace protection and public services have credible Left
+  ownership;
+- the Women's Strike tracks activist mobilisation, broad sympathy, party
+  conversion and conservative backlash separately, so party capture or an
+  undisciplined message can grow the core while shrinking the coalition;
+- migration separates empathy, border competence, local-service capacity,
+  welfare competition and disinformation. Delivery protects solidarity;
+  moral rhetoric without administrative capacity can lose the broader frame.
 
 ## Building a Left ecosystem
 

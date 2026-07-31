@@ -407,6 +407,9 @@ const konfVoteSignal = finiteAI(
 Q.party_system_left_pull = clampAI(
     (leftVoteSignal - 10) * 4 +
         (finiteAI(Q.labor_credibility, 46) - 45) * 0.6 +
+        (finiteAI(Q.issue_ownership, 42) - 42) * 0.48 +
+        (finiteAI(Q.electoral_viability, 62) - 55) * 0.30 +
+        (finiteAI(Q.media_access, 31) - 31) * 0.22 +
         Math.max(0, finiteAI(Q.left_projected_seats, 49) - 40) * 0.25 +
         Math.max(0, finiteAI(Q.party_unity, 58) - 50) * 0.20 +
         (Q.social_floor_written ? 7 : 0) +
@@ -444,7 +447,9 @@ Q.party_system_pendulum = moveTowardAI(
 Q.democratic_rightward_pressure = clampAI(
     Math.max(0, Q.party_system_pendulum) +
         Q.party_system_konf_pull * 0.35 +
-        Q.covid_anti_system_pressure * 0.15,
+        Q.covid_anti_system_pressure * 0.15 +
+        Math.max(0, 45 - finiteAI(Q.issue_ownership, 42)) * 0.25 +
+        Math.max(0, 40 - finiteAI(Q.media_access, 31)) * 0.16,
     0,
     100
 );
@@ -1367,7 +1372,7 @@ const successorParties = [
     },
     {
         id: "rozwoj",
-        active: !!Q.pis_split,
+        active: !!Q.rozwoj_party_formed,
         parent: "pis",
         label: "Rozwój"
     },
@@ -1495,6 +1500,47 @@ for (const successor of successorParties) {
             successor.label + " attacks its former party from outside";
     }
     headlines.push(Q[id + "_ai_headline"]);
+}
+
+// Component parties and associations keep acting even when they share a
+// parliamentary club. This uses the same persistent record shape as split
+// parties and never changes their leader or transfers their whole following.
+const autonomousGroupIds = [
+    "porozumienie", "solidarna", "rozwoj_plus", "nowoczesna", "ipl",
+    "greens", "ko_splinter"
+];
+const autonomousGroups = (Q.rival_group_records || []).filter(
+    function(record) {
+        return record.active && autonomousGroupIds.includes(record.id);
+    }
+);
+if (autonomousGroups.length) {
+    const groupIndex = Math.abs(Number(Q.rival_ai_tick) || 0) %
+        autonomousGroups.length;
+    const activeGroup = autonomousGroups[groupIndex];
+    const organisingMonth = randomAI() <= 0.55;
+    if (organisingMonth) {
+        activeGroup.organisation = Math.min(
+            100,
+            (Number(activeGroup.organisation) || 0) + 1
+        );
+        activeGroup.cohesion = Math.min(
+            100,
+            (Number(activeGroup.cohesion) || 0) + 1
+        );
+        Q.rival_group_month_action =
+            activeGroup.name + " builds its own branches and member roll";
+    } else {
+        const relationDirection = activeGroup.relation >= 45 ? 1 : -1;
+        activeGroup.relation = Math.max(
+            -100,
+            Math.min(100, activeGroup.relation + relationDirection)
+        );
+        Q.rival_group_month_action = activeGroup.relation >= 45
+            ? activeGroup.name + " keeps an autonomous cooperation channel"
+            : activeGroup.name + " differentiates itself from Lewica";
+    }
+    headlines.push(Q.rival_group_month_action);
 }
 
 const voteSignalAI = function(id) {

@@ -139,22 +139,6 @@ if (previewGovernment <= 0) {
             Math.round(Number(Q.p2050_seats) || 0);
     }
 }
-const previewExternalLeftSupport =
-    !Q.left_in_government &&
-    (
-        Q.position == "Confidence-and-supply opposition" ||
-        String(Q.left_cabinet_model || "").toLowerCase()
-            .includes("confidence and supply")
-    );
-if (previewExternalLeftSupport) {
-    previewGovernment = Math.max(
-        0,
-        previewGovernment - Math.max(
-            previewLeft,
-            Math.round(Number(Q.left_committed_seats) || 0)
-        )
-    );
-}
 previewGovernment = Math.max(
     0,
     Math.min(previewTotal - previewLeft, previewGovernment)
@@ -214,14 +198,13 @@ The draft was recorded as submitted in **September [+ budget_submission_year
 - @government_rural_compact
 - @government_minimum
 - @government_dare
-- @opposition_shadow
-- @opposition_bargain
-- @opposition_tolerate
+- @poland_opposition_budget.audit: Audit last year's enacted opposition clauses
+- @poland_opposition_budget.start: Read the government draft and open the six-stage opposition process
 
 @government_social_protocol
 title: Bind housing, health, labour inspection and wages into one protocol
 subtitle: Cost: 3 budget capacity. Strongest Left settlement; hardest PSL–KO negotiation.
-view-if: annual_budget_left_cabinet_authority = 1
+view-if: annual_budget_left_cabinet_authority = 1 and (opposition_budget_audit_pending = 0 or opposition_budget_audit_year >= annual_budget_year)
 choose-if: annual_budget_left_cabinet_authority = 1 and budget >= 3
 unavailable-subtitle: The governing reserve cannot finance the protocol.
 on-arrival: {!
@@ -240,7 +223,7 @@ go-to: internal_ratification
 @government_rural_compact
 title: Exchange rural investment for care, housing and workplace enforcement
 subtitle: Cost: 2 budget capacity. Stabilises PSL; compromises the programme.
-view-if: annual_budget_left_cabinet_authority = 1
+view-if: annual_budget_left_cabinet_authority = 1 and (opposition_budget_audit_pending = 0 or opposition_budget_audit_year >= annual_budget_year)
 choose-if: annual_budget_left_cabinet_authority = 1 and budget >= 2
 unavailable-subtitle: The governing reserve cannot carry both sides of the bargain.
 on-arrival: {!
@@ -258,7 +241,7 @@ go-to: internal_ratification
 @government_minimum
 title: Protect existing benefits and postpone the expensive promises
 subtitle: Cost: 1 budget capacity. Easier coalition arithmetic; severe movement cost.
-view-if: annual_budget_left_cabinet_authority = 1
+view-if: annual_budget_left_cabinet_authority = 1 and (opposition_budget_audit_pending = 0 or opposition_budget_audit_year >= annual_budget_year)
 choose-if: annual_budget_left_cabinet_authority = 1 and budget >= 1
 unavailable-subtitle: Even the minimum package lacks a reserve.
 on-arrival: {!
@@ -277,7 +260,7 @@ go-to: internal_ratification
 @government_dare
 title: Table the Left draft and dare partners to defeat the government
 subtitle: No budget cost. Converts policy dissent into a confidence crisis.
-view-if: annual_budget_left_cabinet_authority = 1
+view-if: annual_budget_left_cabinet_authority = 1 and (opposition_budget_audit_pending = 0 or opposition_budget_audit_year >= annual_budget_year)
 on-arrival: {!
 Q.annual_budget_strategy = "Coalition dare";
 Q.annual_budget_package_code = 4;
@@ -768,6 +751,12 @@ const oppositionLeftSeats = Math.max(
 let declaredGovernmentSeats = Math.round(
     Number(Q.coalition_seats) || 0
 );
+const storedOppositionGovernmentSeats = Math.round(
+    Number(Q.opposition_budget_government_seats) || 0
+);
+if (storedOppositionGovernmentSeats > 0) {
+    declaredGovernmentSeats = storedOppositionGovernmentSeats;
+}
 if (declaredGovernmentSeats <= 0) {
     if (Q.government_party == "pis") {
         declaredGovernmentSeats =
@@ -784,22 +773,6 @@ if (declaredGovernmentSeats <= 0) {
         declaredGovernmentSeats =
             Math.round(Number(Q.p2050_seats) || 0);
     }
-}
-const externalLeftSupport =
-    !Q.left_in_government &&
-    (
-        Q.position == "Confidence-and-supply opposition" ||
-        String(Q.left_cabinet_model || "").toLowerCase()
-            .includes("confidence and supply")
-    );
-if (externalLeftSupport) {
-    declaredGovernmentSeats = Math.max(
-        0,
-        declaredGovernmentSeats - Math.max(
-            oppositionLeftSeats,
-            Math.round(Number(Q.left_committed_seats) || 0)
-        )
-    );
 }
 declaredGovernmentSeats = Math.max(
     0,
@@ -914,44 +887,29 @@ Q.annual_budget_result =
     Q.annual_budget_yes + " to " + Q.annual_budget_no;
 Q.next_budget_label =
     "December " + (Number(Q.annual_budget_year) + 1);
-const concessionScale =
-    Number(Q.annual_budget_concession_strength) >= 2 ? 1 : 0.6;
-if (
-    Q.annual_budget_negotiation_success &&
-    Q.annual_budget_concession_code == 1
-) {
-    Q.household_security += Math.round(3 * concessionScale);
-    Q.labor_credibility += Math.round(3 * concessionScale);
-    Q.government_delivery += Math.round(2 * concessionScale);
-    Q.fiscal_stress += Math.round(2 * concessionScale);
-} else if (
-    Q.annual_budget_negotiation_success &&
-    Q.annual_budget_concession_code == 2
-) {
-    Q.government_procedural_restraint +=
-        Math.round(4 * concessionScale);
-    Q.judicial_legitimacy += Math.round(2 * concessionScale);
-    Q.government_delivery += Math.round(1 * concessionScale);
-} else if (
-    Q.annual_budget_negotiation_success &&
-    Q.annual_budget_concession_code == 3
-) {
-    Q.household_security += Math.round(4 * concessionScale);
-    Q.labor_credibility += Math.round(4 * concessionScale);
-    Q.government_procedural_restraint +=
-        Math.round(3 * concessionScale);
-    Q.government_delivery += Math.round(3 * concessionScale);
-    Q.fiscal_stress += Math.round(3 * concessionScale);
+if (Q.annual_budget_negotiation_success) {
+    Q.opposition_budget_audit_pending = 1;
+    Q.opposition_budget_audit_done = 0;
+    Q.opposition_budget_audit_year = Q.annual_budget_year;
+    Q.opposition_budget_audit_fiscal_year = Q.annual_budget_fiscal_year;
+    Q.opposition_budget_audit_budget_passed = 1;
+    Q.opposition_budget_audit_enacted = 1;
+    Q.opposition_budget_audit_priority_1_enacted = 1;
+    Q.opposition_budget_audit_tactic = Q.annual_budget_strategy;
+    Q.opposition_budget_audit_amendment_1 =
+        Q.annual_budget_concession + " — enacted; delivery not yet audited";
+    Q.opposition_budget_audit_result = "Audit due next year";
 }
 Q.news_headline = Q.annual_budget_negotiation_success
     ? "The government's budget passes with its written Lewica concession"
     : "The government carries its budget without a Lewica concession";
 !}
 
-The cabinet—not Lewica—now implements the budget. [? if
+The cabinet—not Lewica—now implements the budget. No public-capacity score is
+awarded at passage. [? if
 annual_budget_negotiation_success: The published **[+
 annual_budget_concession +]** is part of that government text, so Lewica can
-audit whether the cabinet delivers it.?][? if not
+audit delivery next year.?][? if not
 annual_budget_negotiation_success: Lewica secured no state programme through
 this vote. Its result is the political posture **[+ annual_budget_strategy
 +]**.?]

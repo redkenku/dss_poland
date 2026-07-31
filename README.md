@@ -35,6 +35,7 @@ Pages workflow still uses Node 16.
 | `npm run build` | Compile `source/` into `out/` |
 | `npm run build -- --force` | Force a complete recompile |
 | `npm run smoke` | Build, replay the original long-form slice, and run extended-system regressions |
+| `npm run smoke:phase7` | Build and run the focused persistent PiS/KO organisation fixtures |
 | `npm run serve` | Serve the existing build without recompiling |
 | `npm run serve -- 3000` | Serve the existing build on port 3000 |
 | `npm run dendrynexus -- <command>` | Invoke the bundled engine CLI directly |
@@ -87,17 +88,32 @@ mechanics without replaying the earlier campaign.
 - The Left begins as a coalition of SLD barons, Wiosna, labour figures,
   younger progressives, Razem and a tiny PPS current. Strength and dissent
   affect primaries, coalition commitments, budgets and confidence votes.
-  Mergers redistribute live strength; sufficiently alienated caucuses can
-  leave, take MPs and advisors, form separately polled parties and contest
-  later elections. PSL and the centrist parties behave as similarly divided
-  coalition partners rather than fixed vote blocks.
-- Nine public-opinion fields separately track support, salience and backlash:
+  Mergers redistribute live strength; alienated caucuses escalate through
+  leaks, deadline demands, public criticism, failed whips, individual
+  defections and parliamentary clubs before a separately polled list appears.
+  MPs weigh offices, local organisation, personal following, ideology and list
+  dependence, so a split never assumes the whole estimated bloc leaves. Low
+  unity damages dues and campaign capacity without ending play; elections and
+  the final assessment judge any threshold losses. PSL and the centrist
+  parties behave as similarly divided coalition partners rather than fixed
+  vote blocks.
+- Persistent PiS/United Right and KO records separately track rival apparatus,
+  component parties, currents, named loyalties and exclusive seat transfers.
+  Lewica can bargain, attack, concede policy or recruit individuals, but it
+  cannot appoint a rival leader or move an entire current with one choice.
+- Nine public-opinion fields separately track support, salience and backlash,
+  above seven independent latent attitudes (capitalism, welfare expectation,
+  cultural conservatism, order sensitivity, solidarity, institutional trust
+  and appetite for change):
   abortion rights, refugee solidarity, border security, vaccination and
   public health, social spending, LGBT equality, secularism, rule-of-law
   repair, and defence. Monthly cooling produces an overall pressure index and
-  hottest issue. Selected cards calculate a reception from the current
-  climate, so the same proposal can become a breakthrough, a narrow favourable
-  result, a contested move, a backlash or a reversal.
+  hottest issue. Important stories multiply reach, audience trust, frame,
+  messenger credibility, issue salience and Left credibility, then record
+  persuasion, backlash, mobilisation, abstention and ownership separately.
+  Lewica's historical decline is a hostile but reversible pressure track over
+  viability, reputation, ownership, authority, coalition blur, media access
+  and list confidence.
 - Eight mutually exclusive voter blocs score every party. Turnout,
   positioning and organisation produce underlying intention, a sampled public
   poll and a national d'Hondt seat indicator. PiS, KO, PSL, Konfederacja and
@@ -105,8 +121,14 @@ mechanics without replaying the earlier campaign.
   internal currents and hidden relations with one another.
 - The 2020 and 2025 presidential contests are simulated elections with
   candidate fields, noisy polling, debate movement, partial transfers,
-  abstention and support bargaining. Results alter the Palace relationship,
-  veto environment and later coalition crises.
+  abstention and support bargaining. Candidate and total-field benchmarks
+  drive decaying voter-consideration, turnout and party-organisation feedback;
+  results also alter the Palace relationship, veto environment and later
+  coalition crises.
+- Every dated Polish event is indexed in a generated authority manifest. Run
+  `npm run manifest` after event edits and `npm run check-events` to enforce
+  event coverage, policy-stage authority and the core constitutional and
+  electoral invariants before building.
 - The judiciary is a multi-institution crisis rather than one legitimacy
   meter. Events cover the prosecutor command dispute, warrants and pardons,
   KRS design, the Constitutional Tribunal, preventive referrals, European
@@ -121,7 +143,11 @@ mechanics without replaying the earlier campaign.
   compliance against funded enforcement.
 - The 2019 opposition Senate majority and budget-amendment procedure remain
   playable. The Senate may amend a budget but cannot reject it or participate
-  in a confidence vote.
+  in a confidence vote. Opposition budgets now run through a six-stage process:
+  read the government draft, choose two year-specific Left priorities, manage
+  a visible faction conference, choose a parliamentary tactic, resolve the
+  actual roll call and audit enacted delivery the following year. Shadow
+  budgets build political ownership rather than public capacity.
 - The Polish ledger now covers polls and seats, public opinion, rival AI,
   coalition arithmetic, Left factions, ministries, media, the Palace, Senate,
   judiciary and KPO. The active route does not enter the inherited German

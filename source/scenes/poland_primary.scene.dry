@@ -205,45 +205,66 @@ Q.primary_biejat_weight = Q.primary_biejat_eligible
     ? Math.max(1, Math.round(biejat)) : 0;
 
 const candidates = [
-    ["Robert Biedroń", Q.primary_biedron_weight],
-    ["Adrian Zandberg", Q.primary_zandberg_weight],
-    ["Agnieszka Dziemianowicz-Bąk", Q.primary_adb_weight],
-    ["Anna-Maria Żukowska", Q.primary_zukowska_weight],
-    ["Katarzyna Kotula", Q.primary_kotula_weight],
-    ["Magdalena Biejat", Q.primary_biejat_weight]
+    ["Robert Biedroń", "biedron", Q.primary_biedron_weight],
+    ["Adrian Zandberg", "zandberg", Q.primary_zandberg_weight],
+    ["Agnieszka Dziemianowicz-Bąk", "adb", Q.primary_adb_weight],
+    ["Anna-Maria Żukowska", "zukowska", Q.primary_zukowska_weight],
+    ["Katarzyna Kotula", "kotula", Q.primary_kotula_weight],
+    ["Magdalena Biejat", "biejat", Q.primary_biejat_weight]
 ].filter(function(candidate) {
-    return candidate[1] > 0;
+    return candidate[2] > 0;
 });
 Q.primary_total_weight = candidates.reduce(function(total, candidate) {
-    return total + candidate[1];
+    return total + candidate[2];
 }, 0);
 Q.primary_random_roll =
     this.random.uint32() / 4294967296 * Q.primary_total_weight;
 
-let cumulative = 0;
-Q.primary_winner = candidates[0][0];
-for (const candidate of candidates) {
-    cumulative += candidate[1];
-    if (Q.primary_random_roll < cumulative) {
-        Q.primary_winner = candidate[0];
-        break;
-    }
-}
-const ordered = candidates.slice().sort(function(left, right) {
-    return right[1] - left[1];
+// This is a tally, not a weighted lottery. Organisation and campaign choices
+// establish each candidate's base; bounded candidate-level turnout variance
+// then produces votes for every eligible name. The highest tally wins and the
+// displayed shares are calculated from those same counted votes.
+const adjusted = candidates.map(function(candidate) {
+    const turnoutFactor =
+        0.82 + this.random.uint32() / 4294967296 * 0.36;
+    return [candidate[0], candidate[1], candidate[2], candidate[2] * turnoutFactor];
+}.bind(this));
+const adjustedTotal = adjusted.reduce(function(total, candidate) {
+    return total + candidate[3];
+}, 0);
+let allocatedVotes = 0;
+const tallied = adjusted.map(function(candidate, index) {
+    const votes = index == adjusted.length - 1
+        ? Math.max(0, Math.round(Q.primary_turnout) - allocatedVotes)
+        : Math.max(
+            0,
+            Math.floor(
+                Math.round(Q.primary_turnout) *
+                candidate[3] /
+                Math.max(1, adjustedTotal)
+            )
+        );
+    allocatedVotes += votes;
+    Q["primary_" + candidate[1] + "_tally"] = votes;
+    return [candidate[0], candidate[1], candidate[2], votes];
 });
-const runner = ordered.find(function(candidate) {
-    return candidate[0] != Q.primary_winner;
+const ordered = tallied.slice().sort(function(left, right) {
+    if (right[3] != left[3]) return right[3] - left[3];
+    if (right[2] != left[2]) return right[2] - left[2];
+    return left[0] < right[0] ? -1 : 1;
 });
+Q.primary_winner = ordered[0][0];
+const runner = ordered[1];
 Q.primary_runner_up = runner ? runner[0] : "None";
-const winner = candidates.find(function(candidate) {
-    return candidate[0] == Q.primary_winner;
-});
+const winner = ordered[0];
+Q.primary_total_votes = tallied.reduce(function(total, candidate) {
+    return total + candidate[3];
+}, 0);
 Q.primary_winner_share = Math.round(
-    winner[1] * 1000 / Q.primary_total_weight
+    winner[3] * 1000 / Math.max(1, Q.primary_total_votes)
 ) / 10;
 Q.primary_runner_share = runner
-    ? Math.round(runner[1] * 1000 / Q.primary_total_weight) / 10
+    ? Math.round(runner[3] * 1000 / Math.max(1, Q.primary_total_votes)) / 10
     : 0;
 Q.primary_mandate = Math.round(Q.primary_winner_share);
 
@@ -276,7 +297,7 @@ on-arrival: presidential_candidate = "Katarzyna Kotula"; presidential_candidate_
 go-to: result
 
 @result_biejat
-on-arrival: presidential_candidate = "Magdalena Biejat"; presidential_candidate_base = 2.7; primary_active = 0; razem_dissent -= 8; labor_dissent -= 4; organiser_energy += 3; labor_credibility += 3; household_security += 2; barons_dissent += 6; spring_dissent += 3; party_unity -= 1; news_headline = "Biejat wins the open Left primary"
+on-arrival: presidential_candidate = "Magdalena Biejat"; presidential_candidate_base = 2.7; primary_active = 0; razem_dissent -= 8; labor_dissent -= 4; organiser_energy += 3; labor_credibility += 3; household_policy_pressure += 2; barons_dissent += 6; spring_dissent += 3; party_unity -= 1; last_policy_stage = "Primary programme"; last_policy_authority = "Lewica party electorate"; last_policy_implementation = "Not enacted"; news_headline = "Biejat wins the open Left primary"
 go-to: result
 
 @result

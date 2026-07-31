@@ -1,9 +1,9 @@
 title: Discard an opportunity
-subtitle: Spend 1 party resource; unavailable after this month's use or without funds.
+subtitle: Spend 1 party resource and this month's action; unavailable after this month's use or without funds.
 is-pinned-card: true
 view-if: started = 1 and poland_hand_count > 0
-choose-if: poland_discard_available = 1
-unavailable-subtitle: Requires a held card, 1 resource and an unused discard this month.
+choose-if: poland_discard_available = 1 and month_actions < max_month_actions
+unavailable-subtitle: Requires a held card, 1 resource, an unused discard and an available monthly action.
 card-image: img/poland/cards/discard.webp
 new-page: true
 on-arrival: {!
@@ -19,7 +19,8 @@ Q.poland_discard_current_month_key = discardMonthKey;
 Q.poland_discard_allowed =
     hand.length > 0 &&
     Number(Q.poland_discard_month_key) != discardMonthKey &&
-    Number(Q.resources) >= 1
+    Number(Q.resources) >= 1 &&
+    Number(Q.month_actions) < Number(Q.max_month_actions)
         ? 1
         : 0;
 for (let index = 0; index < slots.length; index += 1) {
@@ -33,8 +34,8 @@ for (let index = 0; index < slots.length; index += 1) {
 
 = Discard an opportunity
 
-Choose one held card to remove. This costs **1 party resource**, does not
-consume the monthly action, and does not trigger the card's effects. The
+Choose one held card to remove. This costs **1 party resource and the monthly
+action**, and does not trigger the card's effects. The
 discard is available **once per calendar month**; the opportunity can return
 in a later draw.
 
@@ -53,10 +54,10 @@ used.** Keep the hand, play a card, or end the month.?]
 
 @slot_1
 title: Discard “[+ poland_discard_slot_1_title +]”
-subtitle: Cost: 1 party resource; uses this calendar month's discard.
+subtitle: Cost: 1 party resource and 1 monthly action; uses this calendar month's discard.
 view-if: poland_discard_slot_count >= 1
-choose-if: poland_discard_allowed = 1
-unavailable-subtitle: Requires 1 resource and an unused discard this month.
+choose-if: poland_discard_allowed = 1 and month_actions < max_month_actions
+unavailable-subtitle: Requires 1 resource, an available action and an unused discard this month.
 on-arrival: {!
 const hand = this.state.currentHands["poland_hub"] || [];
 const index = hand.findIndex(card =>
@@ -66,10 +67,12 @@ const discardMonthKey = Number(Q.year) * 100 + Number(Q.month);
 if (
     index >= 0 &&
     Number(Q.resources) >= 1 &&
+    Number(Q.month_actions) < Number(Q.max_month_actions) &&
     Number(Q.poland_discard_month_key) != discardMonthKey
 ) {
     hand.splice(index, 1);
     Q.resources -= 1;
+    Q.month_actions += 1;
     Q.poland_discard_month_key = discardMonthKey;
 }
 Q.poland_discard_slot_count = 0;
@@ -81,14 +84,14 @@ Q.poland_discard_slot_2_title = "";
 Q.poland_discard_slot_3_id = "";
 Q.poland_discard_slot_3_title = "";
 !}
-go-to: poland_hub
+go-to: commit
 
 @slot_2
 title: Discard “[+ poland_discard_slot_2_title +]”
-subtitle: Cost: 1 party resource; uses this calendar month's discard.
+subtitle: Cost: 1 party resource and 1 monthly action; uses this calendar month's discard.
 view-if: poland_discard_slot_count >= 2
-choose-if: poland_discard_allowed = 1
-unavailable-subtitle: Requires 1 resource and an unused discard this month.
+choose-if: poland_discard_allowed = 1 and month_actions < max_month_actions
+unavailable-subtitle: Requires 1 resource, an available action and an unused discard this month.
 on-arrival: {!
 const hand = this.state.currentHands["poland_hub"] || [];
 const index = hand.findIndex(card =>
@@ -98,10 +101,12 @@ const discardMonthKey = Number(Q.year) * 100 + Number(Q.month);
 if (
     index >= 0 &&
     Number(Q.resources) >= 1 &&
+    Number(Q.month_actions) < Number(Q.max_month_actions) &&
     Number(Q.poland_discard_month_key) != discardMonthKey
 ) {
     hand.splice(index, 1);
     Q.resources -= 1;
+    Q.month_actions += 1;
     Q.poland_discard_month_key = discardMonthKey;
 }
 Q.poland_discard_slot_count = 0;
@@ -113,14 +118,14 @@ Q.poland_discard_slot_2_title = "";
 Q.poland_discard_slot_3_id = "";
 Q.poland_discard_slot_3_title = "";
 !}
-go-to: poland_hub
+go-to: commit
 
 @slot_3
 title: Discard “[+ poland_discard_slot_3_title +]”
-subtitle: Cost: 1 party resource; uses this calendar month's discard.
+subtitle: Cost: 1 party resource and 1 monthly action; uses this calendar month's discard.
 view-if: poland_discard_slot_count >= 3
-choose-if: poland_discard_allowed = 1
-unavailable-subtitle: Requires 1 resource and an unused discard this month.
+choose-if: poland_discard_allowed = 1 and month_actions < max_month_actions
+unavailable-subtitle: Requires 1 resource, an available action and an unused discard this month.
 on-arrival: {!
 const hand = this.state.currentHands["poland_hub"] || [];
 const index = hand.findIndex(card =>
@@ -130,10 +135,12 @@ const discardMonthKey = Number(Q.year) * 100 + Number(Q.month);
 if (
     index >= 0 &&
     Number(Q.resources) >= 1 &&
+    Number(Q.month_actions) < Number(Q.max_month_actions) &&
     Number(Q.poland_discard_month_key) != discardMonthKey
 ) {
     hand.splice(index, 1);
     Q.resources -= 1;
+    Q.month_actions += 1;
     Q.poland_discard_month_key = discardMonthKey;
 }
 Q.poland_discard_slot_count = 0;
@@ -145,7 +152,16 @@ Q.poland_discard_slot_2_title = "";
 Q.poland_discard_slot_3_id = "";
 Q.poland_discard_slot_3_title = "";
 !}
-go-to: poland_hub
+go-to: commit
+
+@commit
+title: The opportunity leaves the agenda
+subtitle: The resource and monthly action are spent; turn the month with the remaining hand intact.
+
+The selected opportunity has been removed. The other held cards remain for a
+later month, when their availability conditions are evaluated again.
+
+- #poland_card_finish
 
 @cancel
 title: Keep every held card

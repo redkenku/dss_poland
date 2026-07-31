@@ -100,7 +100,7 @@ title: Hold a small, lawful civic-independence commemoration
 subtitle: Cost: 1 resource.
 choose-if: resources >= 1
 unavailable-subtitle: The party cannot organise it safely.
-on-arrival: resources -= 1; independence_march_strategy = "Civic tradition"; civic_independence_years += 1; civic_patriotism += 5; public_trust += 3; health_capacity += 1; local_network += 2; news_headline = "A restrained civic commemoration contests both monopoly and impunity"
+on-arrival: resources -= 1; independence_march_strategy = "Civic tradition"; civic_independence_years += 1; civic_patriotism += 5; public_trust += 3; health_policy_pressure += 1; local_network += 2; news_headline = "A restrained civic commemoration contests both monopoly and impunity"
 
 - @poland_foreign_events.us_election_2020: Continue
 
@@ -165,6 +165,7 @@ const extensionFlags = [
     "left_pact_2023_done",
     "church_2023_done",
     "third_way_2023_done",
+    "sovereign_rename_2023_done",
     "lex_tusk_2023_done",
     "june_2023_done",
     "june_march_2023_done",
@@ -250,10 +251,64 @@ title: A minority government and an anti-restriction right
 new-page: true
 on-arrival: {!
 Q.august_2021_done = 1;
+Q.porozumienie_status =
+    "Jarosław Gowin-led opposition circle outside the United Right";
 Q.united_right_cohesion = Math.max(
     0,
     (Number(Q.united_right_cohesion) || 55) - 14
 );
+const rivalGroup = function(id) {
+    return (Q.rival_group_records || []).find(function(record) {
+        return record.id == id;
+    });
+};
+const porozumienie = rivalGroup("porozumienie");
+Q.porozumienie_exit_done = 1;
+Q.porozumienie_active = 1;
+Q.porozumienie_seats = 6;
+Q.pis_seats = Math.max(0, (Number(Q.pis_seats) || 0) - 6);
+Q.other_seats = Math.max(0, Number(Q.other_seats) || 0) + 6;
+if (porozumienie) {
+    porozumienie.active = 1;
+    porozumienie.allied = 0;
+    porozumienie.legal_status = "independent parliamentary party";
+    porozumienie.mp_count = 6;
+    porozumienie.sejm_mps = 6;
+    porozumienie.exclusive_seats = 6;
+    porozumienie.cohesion = 63;
+    porozumienie.defection_readiness = 100;
+    porozumienie.electoral_outside_option =
+        "independent opposition party and parliamentary circle";
+}
+const porozumienieClub = [
+    "gowin", "michalek", "sroka", "wypij", "bukowiec"
+];
+const continuedPiS = [
+    "ociepa", "gut_mostowy", "murdzek", "baszko", "piechowiak",
+    "dabrowska_banaszek"
+];
+for (const person of (Q.rival_person_records || [])) {
+    if (porozumienieClub.includes(person.id)) {
+        person.party = "porozumienie";
+        person.organisation = "porozumienie";
+        person.loyalty = "Gowin";
+        person.status = "Porozumienie circle MP";
+    } else if (continuedPiS.includes(person.id)) {
+        person.party = "pis";
+        person.organisation = "pis-aligned successor";
+        person.loyalty = "continued PiS allegiance";
+        person.status = "PiS-club MP";
+    }
+}
+if (!(Q.rival_person_records || []).some(function(person) {
+    return person.id == "pawlowska";
+})) {
+    Q.rival_person_records.push({
+        id: "pawlowska", name: "Monika Pawłowska", chamber: "Sejm",
+        party: "porozumienie", organisation: "porozumienie",
+        loyalty: "Gowin", status: "Porozumienie circle MP"
+    });
+}
 const trustedVaccination =
     (
         Q.vaccination_strategy == "Public-health mobilisation" ||
@@ -279,9 +334,24 @@ Q.news_headline =
 
 = August 2021 — The governing majority frays
 
-Jarosław Gowin and his Agreement party leave the United Right. At the same
-time, Konfederacja refuses a cross-party vaccination appeal and offers a
-political home to the anti-restriction movement.
+Prime Minister Morawiecki dismisses **Jarosław Gowin** and Gowin's Agreement
+party leaves the United Right. The remaining camp is commanded by **Jarosław
+Kaczyński**, with Morawiecki's government now dependent on discipline,
+defectors and bill-by-bill majorities.
+
+**Outgoing → incoming:** Gowin, deputy premier and internal coalition veto →
+Gowin, leader of an opposition parliamentary circle; Kaczyński remains leader
+of a smaller governing camp.
+**Supporting bloc:** Agreement's market liberals and institutional
+conservatives reject important Polish Deal tax provisions after their earlier
+rebellion over the postal election. Six MPs form a real Porozumienie circle;
+former party colleagues who stay with PiS do not follow automatically.
+**Why now:** Gowin's dismissal turns a long programme dispute into formal exit.
+
+For Lewica, a minority PiS cabinet creates real leverage on social bills and a
+possible no-confidence count, but every selective deal can again be framed as
+rescuing the government. At the same time, Konfederacja recruits from
+anti-restriction anger.
 
 - @aug21_health
 - @aug21_majority
@@ -293,7 +363,7 @@ title: Build a cross-party public-health front without PiS control
 subtitle: Cost: 1 resource. Contest the anti-system story with delivery.
 choose-if: resources >= 1
 unavailable-subtitle: No spare organisational capacity.
-on-arrival: resources -= 1; health_capacity += 4; public_trust += 3; pandemic_deaths_pressure -= 2; konf_poll_momentum -= 0.2; psl_relation += 2; p2050_relation += 2; news_headline = "Local health delivery narrows Konfederacja's opening"
+on-arrival: resources -= 1; health_policy_pressure += 4; public_trust += 3; pandemic_deaths_pressure -= 2; konf_poll_momentum -= 0.2; psl_relation += 2; p2050_relation += 2; last_policy_stage = "Advocacy"; last_policy_authority = "Opposition local network"; last_policy_implementation = 0; news_headline = "Local health proposals narrow Konfederacja's opening"
 
 **Result:** [+ news_headline +].
 
@@ -312,7 +382,7 @@ on-arrival: ko_relation += 4; p2050_relation += 3; psl_relation += 2; pis_relati
 @aug21_workers
 title: Trade one vote for a worker and hospital package
 subtitle: A concrete issue bargain revives every argument from the recovery fund.
-on-arrival: government_favors += 1; pis_relation += 5; ko_relation -= 5; razem_dissent += 5; labor_credibility += 4; household_security += 3; health_capacity += 2; news_headline = "A social bargain keeps one government bill alive"
+on-arrival: government_favors += 1; pis_relation += 5; ko_relation -= 5; razem_dissent += 5; labor_credibility += 4; household_policy_pressure += 3; health_policy_pressure += 2; last_policy_stage = "Negotiated concession"; last_policy_authority = "PiS cabinet and Sejm majority"; last_policy_implementation = 0; news_headline = "A social bargain keeps one government bill alive"
 
 **Result:** [+ news_headline +].
 
@@ -368,6 +438,13 @@ Q.border_order_relation_payoff = Math.max(
 Q.border_2021_done = 1;
 Q.border_2021_event_done = 1;
 Q.cultural_issue_salience += 10;
+Q.story_queue = Array.isArray(Q.story_queue) ? Q.story_queue : [];
+Q.story_queue.push({
+    kind: "migration_border",
+    title: "The eastern-border story contest",
+    issue: "refugee_solidarity",
+    label: "Empathy, border competence and lawful processing"
+});
 Q.news_headline =
     "The Belarus border becomes a security and humanitarian crisis";
 !}
@@ -657,7 +734,7 @@ title: Fund legal defence and demand binding hospital protocols
 subtitle: Cost: 1 resource.
 choose-if: resources >= 1
 unavailable-subtitle: No capacity for the legal network.
-on-arrival: resources -= 1; health_capacity += 4; feminist_trust += 5; movement_autonomy += 3; progressive_credibility += 3; news_headline = "Clinical protocols become the first demand"
+on-arrival: resources -= 1; health_policy_pressure += 4; feminist_trust += 5; movement_autonomy += 3; progressive_credibility += 3; last_policy_stage = "Proposal"; last_policy_authority = "Opposition and clinical advocates"; last_policy_implementation = 0; news_headline = "Clinical protocols become the first demand"
 go-to: november_2021_hub
 
 @nov21_march
@@ -928,7 +1005,9 @@ Q.budget_2021_done = 1;
 Q.next_budget_label = "December 2022";
 Q.budget = 0;
 Q.budget_authority = "Opposition — no state spending authority";
+Q.annual_budget_year = 2021;
 !}
+go-to: poland_opposition_budget.start
 
 = December 2021 — The year-end vote
 
@@ -945,7 +1024,7 @@ title: Oppose with one social and administrative correction
 subtitle: Cost: 1 resource.
 choose-if: resources >= 1
 unavailable-subtitle: No capacity to cost the package.
-on-arrival: resources -= 1; budget_2021_package = "Common social correction"; budget_2021_package_code = 1; labor_credibility += 4; health_capacity += 2; household_security += 2
+on-arrival: resources -= 1; budget_2021_package = "Common social correction"; budget_2021_package_code = 1; labor_credibility += 4; health_policy_pressure += 2; household_policy_pressure += 2; last_policy_stage = "Proposal"; last_policy_authority = "Parliamentary opposition"; last_policy_implementation = 0
 go-to: budget_2021_ratification
 
 @budget21_deal
@@ -960,8 +1039,12 @@ Q.pis_relation += Q.budget21_pis_relation_payoff;
 Q.ko_relation -= 6;
 Q.razem_dissent += 8;
 Q.progressives_dissent += 4;
-Q.health_capacity += 3;
+Q.budget_2021_concession_pending = 1;
+Q.health_policy_pressure += 3;
 Q.local_network += 2;
+Q.last_policy_stage = "Negotiated concession";
+Q.last_policy_authority = "PiS cabinet and Lewica parliamentary clubs";
+Q.last_policy_implementation = "Pending budget passage and execution";
 !}
 go-to: budget_2021_ratification
 
@@ -1098,6 +1181,15 @@ Q.polish_deal_2022_done = 1;
 Q.inflation = Math.max(Number(Q.inflation) || 0, 9.2);
 Q.economic_issue_salience += 8;
 Q.covid_anti_system_pressure += 2;
+if (Q.budget_2021_concession_pending && Q.budget_2021_ratified) {
+    Q.health_capacity += 3;
+    Q.budget_2021_concession_implemented = 1;
+    Q.last_policy_stage = "Implementation";
+    Q.last_policy_authority = "PiS Council of Ministers";
+    Q.last_policy_implementation =
+        "Hospital concession enters the 2022 budget";
+}
+Q.budget_2021_concession_pending = 0;
 Q.news_headline = "Tax chaos and Omicron test confidence in the state";
 !}
 
@@ -1113,7 +1205,7 @@ COVID wave gives the anti-restriction right another audience.
 
 @jan22_progressive
 title: Defend redistribution and publish a technical repair
-on-arrival: labor_credibility += 4; public_trust += 2; household_security += 2; pis_economic_position -= 2; ko_economic_position -= 1; barons_dissent += 2; news_headline = "The Left separates progressive taxation from administrative failure"
+on-arrival: labor_credibility += 4; public_trust += 2; household_policy_pressure += 2; pis_economic_position -= 2; ko_economic_position -= 1; barons_dissent += 2; last_policy_stage = "Advocacy"; last_policy_authority = "Parliamentary opposition"; last_policy_implementation = 0; news_headline = "The Left separates progressive taxation from administrative failure"
 
 **Result:** [+ news_headline +].
 
@@ -1134,7 +1226,7 @@ title: Offer a worker, pension and public-service tax floor
 subtitle: Cost: 1 resource.
 choose-if: resources >= 1
 unavailable-subtitle: No capacity to cost the alternative.
-on-arrival: resources -= 1; labor_credibility += 6; household_security += 4; workers_support += 2; pensioner_support += 2; budget_promises += 1; news_headline = "A Left tax floor competes with both PiS and KO"
+on-arrival: resources -= 1; labor_credibility += 6; household_policy_pressure += 4; workers_support += 2; pensioner_support += 2; budget_promises += 1; last_policy_stage = "Proposal"; last_policy_authority = "Parliamentary opposition"; last_policy_implementation = 0; news_headline = "A Left tax floor competes with both PiS and KO"
 
 **Result:** [+ news_headline +].
 
@@ -1179,7 +1271,7 @@ title: Back Ukrainian self-defence and a Polish social shield
 subtitle: Cost: 2 resources. Razem's regional-solidarity line.
 choose-if: resources >= 2
 unavailable-subtitle: No capacity for the combined operation.
-on-arrival: resources -= 2; ukraine_solidarity += 9; military_trust += 4; household_security += 3; president_relation += 4; razem_dissent -= 7; labor_dissent -= 2; budget_promises += 1; news_headline = "The Left joins defence solidarity without accepting austerity"
+on-arrival: resources -= 2; ukraine_solidarity += 9; military_trust += 4; household_policy_pressure += 3; president_relation += 4; razem_dissent -= 7; labor_dissent -= 2; budget_promises += 1; last_policy_stage = "Proposal"; last_policy_authority = "Parliamentary opposition"; last_policy_implementation = 0; news_headline = "The Left joins defence solidarity without accepting austerity"
 
 **Result:** [+ news_headline +].
 
@@ -1216,7 +1308,20 @@ on-arrival: ukraine_solidarity -= 6; military_trust -= 8; public_trust -= 5; raz
 @march_2022
 title: A country of hosts
 new-page: true
-on-arrival: ukraine_refugees_done = 1; refugee_service_capacity += 3; local_network += 2; news_headline = "Millions of border crossings become a test of schools, homes and clinics"
+on-arrival: {!
+Q.ukraine_refugees_done = 1;
+Q.refugee_service_capacity += 3;
+Q.local_network += 2;
+Q.story_queue = Array.isArray(Q.story_queue) ? Q.story_queue : [];
+Q.story_queue.push({
+    kind: "migration_services",
+    title: "Emergency welcome needs public services",
+    issue: "refugee_solidarity",
+    label: "Refugee solidarity and receiving-community capacity"
+});
+Q.news_headline =
+    "Millions of border crossings become a test of schools, homes and clinics";
+!}
 
 = March 2022 — Emergency welcome needs public services
 
@@ -1234,7 +1339,7 @@ title: Finance local housing, schools and health access
 subtitle: Cost: 2 resources.
 choose-if: resources >= 2
 unavailable-subtitle: The policy team cannot assemble the package.
-on-arrival: resources -= 2; refugee_settlement = "Funded local services"; refugee_service_capacity += 8; local_network += 4; health_capacity += 3; household_security += 2; psl_relation += 2; budget_promises += 1; news_headline = "Emergency welcome becomes a local-service plan"
+on-arrival: resources -= 2; refugee_settlement = "Funded local services proposal"; refugee_service_capacity += 3; local_network += 4; health_policy_pressure += 3; household_policy_pressure += 2; psl_relation += 2; budget_promises += 1; last_policy_stage = "Proposal"; last_policy_authority = "Opposition and local-government network"; last_policy_implementation = 0; news_headline = "Emergency welcome becomes a local-service plan"
 
 **Result:** [+ news_headline +].
 
@@ -1292,7 +1397,7 @@ it and what replaces Russian energy.
 
 @apr22_windfall
 title: Pair the embargo with a windfall levy and household shield
-on-arrival: household_security += 5; labor_credibility += 4; energy_security += 2; left_economic_position -= 3; ko_relation -= 1; konf_poll_momentum += 0.1; news_headline = "The Left assigns the war-energy bill to excess profits"
+on-arrival: household_policy_pressure += 5; labor_credibility += 4; energy_security += 2; left_economic_position -= 3; ko_relation -= 1; konf_poll_momentum += 0.1; last_policy_stage = "Proposal"; last_policy_authority = "Parliamentary opposition"; last_policy_implementation = 0; news_headline = "The Left assigns the war-energy bill to excess profits"
 
 **Result:** [+ news_headline +].
 
@@ -1304,7 +1409,7 @@ title: Make public energy and rapid transition the replacement
 subtitle: Cost: 1 resource.
 choose-if: resources >= 1
 unavailable-subtitle: No organisational capacity for the programme.
-on-arrival: resources -= 1; energy_security += 5; climate_state_capacity += 4; public_trust += 2; labor_dissent += 2; rural_support -= 1; news_headline = "Public investment becomes the answer to Russian energy"
+on-arrival: resources -= 1; energy_security += 2; administrative_reform_pressure += 4; public_trust += 2; labor_dissent += 2; rural_support -= 1; last_policy_stage = "Proposal"; last_policy_authority = "Parliamentary opposition"; last_policy_implementation = 0; news_headline = "Public investment becomes the answer to Russian energy"
 
 **Result:** [+ news_headline +].
 
@@ -1412,7 +1517,7 @@ judicial changes, reopening the bargain the Left made in 2021.
 
 @jun22_enforce
 title: Audit every promise in the Left's 2021 bargain
-on-arrival: kpo_delivery += 3; public_trust += 3; labor_credibility += 2; pis_relation -= 2; ko_relation -= 1; barons_dissent += 2; news_headline = "The Left publishes a recovery-fund promise ledger"
+on-arrival: kpo_scrutiny += 3; public_trust += 3; labor_credibility += 2; pis_relation -= 2; ko_relation -= 1; barons_dissent += 2; last_policy_stage = "Audit"; last_policy_authority = "Parliamentary opposition"; last_policy_implementation = 0; news_headline = "The Left publishes a recovery-fund promise ledger"
 
 **Result:** [+ news_headline +].
 
@@ -1440,15 +1545,21 @@ Q.news_headline =
 
 @jun22_speed
 title: Accept partial repair to accelerate investment
+subtitle: Negotiated concession: KPO preparation pressure +5; funds and implementation remain conditional on later milestones.
 choose-if: kpo_government_bargain_open = 1
 unavailable-subtitle: PiS will take the votes but will not sustain this bargain.
 on-arrival: {!
-Q.kpo_delivery += 5;
+Q.kpo_2022_concession_pending = 1;
+Q.kpo_scrutiny += 5;
 Q.judicial_legitimacy -= 3;
 Q.pis_relation += Q.kpo_government_relation_payoff;
 Q.ko_relation -= 4;
-Q.household_security += 2;
+Q.household_policy_pressure += 2;
 Q.razem_dissent += 6;
+Q.last_policy_stage = "Negotiated concession";
+Q.last_policy_authority = "PiS cabinet and Lewica parliamentary clubs";
+Q.last_policy_implementation =
+    "Pending Commission milestones and government execution";
 Q.news_headline = "Investment speed outruns judicial repair";
 !}
 
@@ -1489,7 +1600,7 @@ administrative trust nor KPO money arrives automatically.
 
 @jul22_index
 title: Demand indexed wages, pensions and public contracts
-on-arrival: household_security += 5; labor_credibility += 5; public_sector_support += 3; budget_promises += 2; left_economic_position -= 4; inflation += 0.3; news_headline = "The Left makes indexation the answer to inflation"
+on-arrival: household_policy_pressure += 5; labor_credibility += 5; public_sector_support += 3; budget_promises += 2; left_economic_position -= 4; inflation += 0.3; last_policy_stage = "Proposal"; last_policy_authority = "Parliamentary opposition"; last_policy_implementation = 0; news_headline = "The Left makes indexation the answer to inflation"
 
 **Result:** [+ news_headline +].
 
@@ -1507,7 +1618,7 @@ on-arrival: public_trust += 3; liberal_professionals_left_affinity += 2; left_ec
 
 @jul22_investment
 title: Make courts and KPO investment the anti-inflation package
-on-arrival: kpo_delivery += 2; judicial_legitimacy += 3; ko_relation += 3; household_security += 1; public_trust += 2; news_headline = "Frozen investment and broken courts become one economic case"
+on-arrival: kpo_scrutiny += 2; judicial_legitimacy += 3; ko_relation += 3; household_policy_pressure += 1; public_trust += 2; last_policy_stage = "Advocacy"; last_policy_authority = "Parliamentary opposition"; last_policy_implementation = 0; news_headline = "Frozen investment and broken courts become one economic case"
 
 **Result:** [+ news_headline +].
 
@@ -1531,7 +1642,7 @@ regulation, local coordination and cross-border warnings.
 
 @aug22_transparency
 title: Demand live monitoring, disclosure and regulatory enforcement
-on-arrival: climate_state_capacity += 7; public_trust += 4; progressive_credibility += 2; industrial_logistics_left_affinity -= 1; news_headline = "The Left demands a monitoring system, not a culprit of convenience"
+on-arrival: administrative_reform_pressure += 7; public_trust += 4; progressive_credibility += 2; industrial_logistics_left_affinity -= 1; last_policy_stage = "Proposal"; last_policy_authority = "Parliamentary opposition"; last_policy_implementation = 0; news_headline = "The Left demands a monitoring system, not a culprit of convenience"
 
 **Result:** [+ news_headline +].
 
@@ -1540,7 +1651,7 @@ on-arrival: climate_state_capacity += 7; public_trust += 4; progressive_credibil
 
 @aug22_local
 title: Put river towns and local services in command
-on-arrival: local_network += 5; psl_relation += 3; climate_state_capacity += 4; media_capacity += 1; news_headline = "Oder towns build the response the centre failed to provide"
+on-arrival: local_network += 5; psl_relation += 3; administrative_reform_pressure += 4; media_capacity += 1; last_policy_stage = "Advocacy"; last_policy_authority = "Opposition local network"; last_policy_implementation = 0; news_headline = "Oder towns document the response the centre failed to provide"
 
 **Result:** [+ news_headline +].
 
@@ -1549,7 +1660,7 @@ on-arrival: local_network += 5; psl_relation += 3; climate_state_capacity += 4; 
 
 @aug22_joint
 title: Seek a Polish–German inquiry and warning protocol
-on-arrival: climate_state_capacity += 5; ko_relation += 3; p2050_relation += 2; public_trust += 2; far_right_agenda += 1; news_headline = "A cross-border inquiry follows the river rather than the rhetoric"
+on-arrival: administrative_reform_pressure += 5; ko_relation += 3; p2050_relation += 2; public_trust += 2; far_right_agenda += 1; last_policy_stage = "Proposed inquiry"; last_policy_authority = "Parliamentary opposition"; last_policy_implementation = 0; news_headline = "A cross-border inquiry proposal follows the river rather than the rhetoric"
 
 **Result:** [+ news_headline +].
 
@@ -1590,7 +1701,7 @@ claims that its energy model would already have worked.
 
 @sep22_cap
 title: Cap household prices and levy extraordinary profits
-on-arrival: household_security += 6; labor_credibility += 4; budget_promises += 2; left_economic_position -= 4; pis_economic_position -= 2; news_headline = "A windfall-funded cap becomes the social opposition line"
+on-arrival: household_policy_pressure += 6; labor_credibility += 4; budget_promises += 2; left_economic_position -= 4; pis_economic_position -= 2; last_policy_stage = "Proposal"; last_policy_authority = "Parliamentary opposition"; last_policy_implementation = 0; news_headline = "A windfall-funded cap becomes the social opposition line"
 
 **Result:** [+ news_headline +].
 
@@ -1602,7 +1713,7 @@ title: Pair short relief with public-energy investment
 subtitle: Cost: 2 resources.
 choose-if: resources >= 2
 unavailable-subtitle: The programme cannot be assembled.
-on-arrival: resources -= 2; household_security += 3; energy_security += 7; climate_state_capacity += 5; public_trust += 3; news_headline = "Relief and transition enter one costed programme"
+on-arrival: resources -= 2; household_policy_pressure += 3; energy_security += 3; administrative_reform_pressure += 5; public_trust += 3; last_policy_stage = "Proposal"; last_policy_authority = "Parliamentary opposition"; last_policy_implementation = 0; news_headline = "Relief and transition enter one costed programme"
 
 **Result:** [+ news_headline +].
 
@@ -1611,7 +1722,7 @@ on-arrival: resources -= 2; household_security += 3; energy_security += 7; clima
 
 @sep22_target
 title: Target help at vulnerable households and public services
-on-arrival: household_security += 4; health_capacity += 2; public_sector_support += 2; left_economic_position += 1; razem_dissent += 3; barons_dissent -= 2; news_headline = "Targeted relief limits cost and reopens universalism"
+on-arrival: household_policy_pressure += 4; health_policy_pressure += 2; public_sector_support += 2; left_economic_position += 1; razem_dissent += 3; barons_dissent -= 2; last_policy_stage = "Proposal"; last_policy_authority = "Parliamentary opposition"; last_policy_implementation = 0; news_headline = "Targeted relief limits cost and reopens universalism"
 
 **Result:** [+ news_headline +].
 
@@ -1633,6 +1744,8 @@ new-page: true
 on-arrival: {!
 Q.konf_succession_2022_done = 1;
 Q.konf_leader = "Mentzen–Bosak–Braun";
+Q.konf_libertarian_outgoing_leader = "Janusz Korwin-Mikke";
+Q.konf_libertarian_leader = "Sławomir Mentzen";
 Q.konf_org_resources =
     Math.max(0, Number(Q.konf_org_resources) || 0) + 2;
 Q.konf_economic_position = Math.min(
@@ -1647,9 +1760,21 @@ Q.news_headline =
 
 = October 2022 — A more disciplined public face
 
-Sławomir Mentzen replaces Janusz Korwin-Mikke as party leader. Konfederacja
-still contains nationalists and Braunists, but its tax revolt gains a more
-disciplined public face.
+**Janusz Korwin-Mikke** steps down as leader of KORWiN and his chosen successor,
+vice-chair **Sławomir Mentzen**, wins the party congress. This is succession
+inside Konfederacja's libertarian component, not control of the entire
+federation: Bosak's nationalists and Braun's clerical radicals remain separate
+power centres.
+
+**Outgoing → incoming:** Janusz Korwin-Mikke → Sławomir Mentzen.
+**Incoming bloc:** younger market radicals, tax-brand organisers and digital
+campaigners, initially backed by the founder.
+**Why now:** the libertarian machine wants professional discipline and online
+reach without surrendering its radical economic programme.
+
+For Lewica, the danger is not simply harsher rhetoric. Mentzen can make welfare
+retrenchment look generational and anti-system, competing directly for young
+renters and precarious workers whom the Left has failed to organise.
 
 - @oct22_economics
 - @oct22_isolate
@@ -1826,7 +1951,9 @@ Q.budget_2022_done = 1;
 Q.next_budget_label = "December 2023";
 Q.budget = 0;
 Q.budget_authority = "Opposition — no state spending authority";
+Q.annual_budget_year = 2022;
 !}
+go-to: poland_opposition_budget.start
 
 = December 2022 — The year-end vote
 
@@ -1843,7 +1970,7 @@ title: Oppose with one war-solidarity and household shield
 subtitle: Cost: 2 resources.
 choose-if: resources >= 2
 unavailable-subtitle: No capacity to cost the combined package.
-on-arrival: resources -= 2; budget_2022_package = "Solidarity and household shield"; budget_2022_package_code = 1; household_security += 4; ukraine_solidarity += 2; labor_credibility += 3
+on-arrival: resources -= 2; budget_2022_package = "Solidarity and household shield"; budget_2022_package_code = 1; household_policy_pressure += 4; ukraine_solidarity += 2; labor_credibility += 3; last_policy_stage = "Proposal"; last_policy_authority = "Parliamentary opposition"; last_policy_implementation = 0
 go-to: budget_2022_ratification
 
 @budget22_security
@@ -1874,8 +2001,12 @@ Q.government_favors += 1;
 Q.pis_relation += Q.budget22_pis_relation_payoff;
 Q.ko_relation -= 6;
 Q.refugee_service_capacity += 4;
-Q.household_security += 3;
+Q.budget_2022_concession_pending = 1;
+Q.household_policy_pressure += 3;
 Q.razem_dissent += 7;
+Q.last_policy_stage = "Negotiated concession";
+Q.last_policy_authority = "PiS cabinet and Lewica parliamentary clubs";
+Q.last_policy_implementation = "Pending budget passage and execution";
 !}
 go-to: budget_2022_ratification
 
@@ -1977,7 +2108,20 @@ backing. Internal vetoes: **[+ budget_2022_vetoes +]**.
 @january_2023
 title: Another judicial bill tied to KPO
 new-page: true
-on-arrival: kpo_bill_2023_done = 1; institutional_issue_salience += 6; news_headline = "A new judicial bill promises to unlock recovery money"
+on-arrival: {!
+Q.kpo_bill_2023_done = 1;
+Q.institutional_issue_salience += 6;
+if (Q.budget_2022_concession_pending && Q.budget_2022_ratified) {
+    Q.household_security += 3;
+    Q.budget_2022_concession_implemented = 1;
+    Q.last_policy_stage = "Implementation";
+    Q.last_policy_authority = "PiS Council of Ministers";
+    Q.last_policy_implementation =
+        "Energy-cap concession enters the 2023 budget";
+}
+Q.budget_2022_concession_pending = 0;
+Q.news_headline = "A new judicial bill promises to unlock recovery money";
+!}
 
 = January 2023 — Will this bill meet the milestone?
 
@@ -2000,7 +2144,7 @@ on-arrival: kpo_bill_quality = 3; judicial_legitimacy += 4; constitutional_restr
 
 @jan23_unlock
 title: Accept an imperfect law to unlock investment
-on-arrival: kpo_bill_quality = 2; kpo_delivery += 4; household_security += 2; pis_relation += 3; ko_relation -= 3; razem_dissent += 5; news_headline = "Recovery investment outranks another perfect court bill"
+on-arrival: kpo_bill_quality = 2; kpo_scrutiny += 4; household_policy_pressure += 2; pis_relation += 3; ko_relation -= 3; razem_dissent += 5; last_policy_stage = "Negotiated concession"; last_policy_authority = "PiS cabinet and parliamentary majority"; last_policy_implementation = 0; news_headline = "Recovery investment outranks another perfect court bill"
 
 **Result:** [+ news_headline +].
 
@@ -2281,6 +2425,8 @@ Q.third_way_relation_payoff = Math.max(
     )
 );
 Q.third_way_2023_done = 1;
+Q.third_way_active = 1;
+Q.third_way_split = 0;
 Q.third_way_cohesion = Number.isFinite(Number(Q.third_way_cohesion))
     ? Number(Q.third_way_cohesion)
     : 58;
@@ -2293,8 +2439,22 @@ Q.news_headline = "PSL and Poland 2050 create Third Way";
 
 = April 2023 — Two parties, one threshold
 
-Poland 2050 gains county organisation; PSL gains a fresh national brand. Their
-alliance is simultaneously a partner, a competitor and a threshold risk.
+**Szymon Hołownia** and **Władysław Kosiniak-Kamysz** turn their separately led
+parties into the jointly branded **Third Way** electoral coalition. It has no
+single incoming party leader: Hołownia supplies the reformist national face
+while Kosiniak-Kamysz controls PSL's county organisation.
+
+**Separate → joint leadership:** Hołownia/Poland 2050 + Kosiniak-Kamysz/PSL →
+two principals under one electoral brand.
+**Supporting blocs:** Poland 2050's state-capacity reformers and founder
+loyalists join PSL's local-government networks and survival-minded agrarians.
+**Why now:** Poland 2050 needs durable local structures, PSL needs a renewed
+national offer and both need a list capable of clearing the coalition
+threshold outside Tusk's one-list project.
+
+For Lewica, Third Way is simultaneously a democratic partner, a social and
+rural competitor and a threshold risk capable of deciding whether PiS loses
+power.
 
 - @apr23_nonaggression
 - @apr23_counties
@@ -2392,6 +2552,23 @@ Q.lex_tusk_relation_payoff = Math.max(
     )
 );
 Q.lex_tusk_2023_done = 1;
+Q.sovereign_rename_2023_done = 1;
+Q.suwerenna_renamed = 1;
+Q.sovereign_poland_status =
+    "Independent United Right partner under the Suwerenna Polska name";
+Q.political_bulletin_pending = 1;
+Q.political_bulletin_year = 2023;
+Q.political_bulletin_title =
+    "Solidarna Polska becomes Suwerenna Polska";
+Q.political_bulletin_summary =
+    "Ziobro remains leader; the allied party changes its name and sovereignty emphasis.";
+const renamedSolidarna = (Q.rival_group_records || []).find(function(record) {
+    return record.id == "solidarna";
+});
+if (renamedSolidarna) {
+    renamedSolidarna.name = "Suwerenna Polska";
+    renamedSolidarna.legal_status = "renamed allied party";
+}
 Q.institutional_issue_salience += 9;
 Q.news_headline = "The Russian-influence commission unifies the opposition";
 !}
@@ -2516,7 +2693,7 @@ title: Return with protocols, legal defence and named deadlines
 subtitle: Cost: 1 resource.
 choose-if: resources >= 1
 unavailable-subtitle: No legal-medical operation is ready.
-on-arrival: resources -= 1; health_capacity += 4; feminist_trust += 5; public_trust += 3; progressive_credibility += 2; news_headline = "The Left returns with implementation, not only a future bill"
+on-arrival: resources -= 1; health_policy_pressure += 4; feminist_trust += 5; public_trust += 3; progressive_credibility += 2; last_policy_stage = "Implementation proposal"; last_policy_authority = "Parliamentary opposition"; last_policy_implementation = 0; news_headline = "The Left returns with an implementation plan, not implemented policy"
 go-to: june_2023_hub
 
 @jun23_autonomy
@@ -2570,7 +2747,7 @@ near Belarus keeps security in the campaign.
 
 @jul23_material
 title: Defend universal security and expose the tax-cut bill
-on-arrival: labor_credibility += 5; household_security += 3; public_service_families_left_affinity += 2; anti_establishment_youth_left_affinity += 1; konf_poll_momentum -= 0.2; news_headline = "The Left contests Konfederacja on who pays for insecurity"
+on-arrival: labor_credibility += 5; household_policy_pressure += 3; public_service_families_left_affinity += 2; anti_establishment_youth_left_affinity += 1; konf_poll_momentum -= 0.2; last_policy_stage = "Advocacy"; last_policy_authority = "Election campaign"; last_policy_implementation = 0; news_headline = "The Left contests Konfederacja on who pays for insecurity"
 go-to: poland_election.campaign_projection
 
 @jul23_competence

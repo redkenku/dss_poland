@@ -35,7 +35,7 @@ They can also be used against you in December.
 
 @services_guarantee
 title: Guarantee health and education capacity
-subtitle: Cost: 2 resources. Strong delivery preparation and a heavy future bill.
+subtitle: Cost: 2 resources. Opposition creates policy pressure, not state capacity; a cabinet can implement it.
 choose-if: resources >= 2
 unavailable-subtitle: Preparing a serious public-services guarantee costs two resources.
 on-arrival: {!
@@ -50,16 +50,30 @@ const net = Math.round(Math.max(
 ));
 const scale = Math.max(0.65, Math.min(1.50, 1 + net * 0.15));
 Q.resources -= 2;
-Q.health_capacity += Math.max(3, Math.round(5 * scale));
-Q.household_security += Math.max(2, Math.round(3 * scale));
+if (Q.left_in_government) {
+    Q.health_capacity += Math.max(3, Math.round(5 * scale));
+    Q.household_security += Math.max(2, Math.round(3 * scale));
+    Q.government_delivery += 1;
+    Q.last_policy_stage = "Cabinet implementation";
+    Q.last_policy_authority = "Council of Ministers";
+    Q.last_policy_implementation = "Funded public-service guarantee";
+} else {
+    Q.health_policy_pressure += Math.max(3, Math.round(5 * scale));
+    Q.household_policy_pressure += Math.max(2, Math.round(3 * scale));
+    Q.last_policy_stage = "Opposition programme";
+    Q.last_policy_authority = "Lewica party leadership";
+    Q.last_policy_implementation = "Not enacted";
+}
 Q.public_trust += 2 + net * 0.35;
 Q.labor_credibility += Math.max(2, Math.round(3 * scale));
-Q.government_delivery += 1;
 Q.budget_promises += 2;
 Q.barons_dissent += 2 + (net < 0 ? 1 : 0);
 Q.public_sector_support += Math.max(2, Math.round(5 * scale));
 Q.women_support += net >= 0 ? 1 : 0;
 Q.left_poll += net * 0.08;
+Q.issue_ownership += 3 + net;
+Q.social_spending_left_ownership += 4 + net;
+Q.electoral_viability += Math.max(0, net) * 0.5;
 Q.primary_union_slate = 1;
 Q.social_spending_support += net >= 1 ? 2 : (net <= -2 ? -1 : 1);
 Q.social_spending_salience += 6;
@@ -76,6 +90,20 @@ Q.public_opinion_last_issue = "Social spending and public services";
 Q.public_opinion_last_reception = Q.card_public_response;
 Q.public_opinion_last_delta = net;
 Q.public_opinion_last_action = "Public-services guarantee";
+Q.story_queue = Array.isArray(Q.story_queue) ? Q.story_queue : [];
+Q.story_queue.push({
+    title: "Public-services guarantee",
+    issue: "social_spending",
+    label: "Social spending and public services",
+    reach: Math.min(100, 38 + Number(Q.media_capacity) * 0.72),
+    audienceTrust: Number(Q.public_trust),
+    frame: net >= 0 ? 54 + net * 14 : -54 + net * 14,
+    messengerCredibility:
+        (Number(Q.labor_credibility) + Number(Q.public_trust)) / 2,
+    issueSalience: salience,
+    leftCredibility:
+        (Number(Q.labor_credibility) + Number(Q.issue_ownership)) / 2
+});
 Q.news_headline = net >= 1
     ? "A measurable services guarantee meets a public demand"
     : (net <= -1
@@ -104,7 +132,7 @@ show where the money and staff come from. ?]
 @parliamentary_hearing
 title: Give workers a parliamentary hearing
 subtitle: Free and visible, but weaker than the commitment organisers requested.
-on-arrival: labor_credibility += 3; public_trust += 1; health_capacity += 1; media_capacity += 1; razem_dissent += 3; labor_dissent += 1; workers_support += 2; public_sector_support += 2; news_headline = "Workers testify while the Left postpones its guarantees"
+on-arrival: labor_credibility += 3; public_trust += 1; health_policy_pressure += 1; media_capacity += 1; razem_dissent += 3; labor_dissent += 1; workers_support += 2; public_sector_support += 2; last_policy_stage = "Advocacy"; last_policy_authority = "Party hearing"; last_policy_implementation = 0; news_headline = "Workers testify while the Left postpones its guarantees"
 
 The testimony reaches television and exposes familiar abuses. The caucus
 promises to return with legislation. Union representatives have heard that

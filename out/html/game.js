@@ -96,11 +96,84 @@
   window.disableAudio = function() {
       window.dendryUI.toggle_audio(false);
       window.dendryUI.saveSettings();
+      window.updateRadio();
   };
 
   window.enableAudio = function() {
       window.dendryUI.toggle_audio(true);
+      if (!window.dendryUI.currentAudio) {
+        var startScene = window.dendryUI.game.scenes['root.new_game'];
+        if (startScene && startScene.audio) {
+          window.dendryUI.audio(startScene.audio);
+        }
+      }
       window.dendryUI.saveSettings();
+      window.updateRadio();
+  };
+
+  var observedRadioAudio = null;
+
+  var radioTrackTitle = function(url) {
+    var path = decodeURIComponent(String(url || '').split(/[?#]/)[0]);
+    var filename = path.slice(path.lastIndexOf('/') + 1);
+    return filename
+      .replace(/\.[^.]+$/, '')
+      .replace(/[_-]+/g, ' ');
+  };
+
+  window.updateRadio = function() {
+    var radio = document.getElementById('radio');
+    if (!radio || !window.dendryUI) {
+      return;
+    }
+    var audio = window.dendryUI.currentAudio;
+    var playlist = window.dendryUI.audioPlaylist || [];
+    radio.hidden = !audio;
+    if (!audio) {
+      return;
+    }
+    if (observedRadioAudio !== audio) {
+      observedRadioAudio = audio;
+      ['play', 'pause', 'ended'].forEach(function(eventName) {
+        audio.addEventListener(eventName, window.updateRadio);
+      });
+    }
+    document.getElementById('radio-toggle').textContent =
+      audio.paused ? 'Play' : 'Pause';
+    document.getElementById('radio-next').disabled = playlist.length < 2;
+    document.getElementById('radio-track').textContent =
+      radioTrackTitle(window.dendryUI.currentAudioURL || audio.currentSrc);
+  };
+
+  window.toggleRadio = function() {
+    var audio = window.dendryUI.currentAudio;
+    if (!audio) {
+      return;
+    }
+    window.dendryUI.toggle_audio(audio.paused);
+    window.dendryUI.saveSettings();
+    window.updateRadio();
+  };
+
+  window.nextRadioTrack = function() {
+    var audio = window.dendryUI.currentAudio;
+    var playlist = window.dendryUI.audioPlaylist || [];
+    if (!audio || playlist.length < 2) {
+      return;
+    }
+    var current = window.dendryUI.currentAudioURL ||
+      audio.getAttribute('src') || audio.currentSrc;
+    var index = playlist.findIndex(function(track) {
+      return current === track || current.endsWith('/' + track);
+    });
+    var next = playlist[(index + 1) % playlist.length];
+    audio.pause();
+    audio.src = next;
+    window.dendryUI.currentAudioURL = next;
+    window.dendryUI.disable_audio = false;
+    audio.play();
+    window.dendryUI.saveSettings();
+    window.updateRadio();
   };
 
   window.enableImages = function() {
@@ -1036,6 +1109,8 @@ window.disableGrayMode = function() {
       window.updateSidebar();
       window.updateSidebarRight();
       window.enhancePartyElements(document.getElementById('content'));
+      window.updateRadio();
+      window.setTimeout(window.updateRadio, 0);
   };
 
   /*
@@ -1195,6 +1270,7 @@ window.disableGrayMode = function() {
     window.updateSidebar();
     window.statusTabRight = "status_right";
     window.updateSidebarRight();
+    window.updateRadio();
   };
 
 }());

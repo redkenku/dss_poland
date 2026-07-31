@@ -66,11 +66,36 @@ find it slow; lawyers find it usable.
 
 @pis_social
 title: Negotiate one social amendment with PiS
-subtitle: No resource cost. Delivery, but high opposition and factional costs.
-on-arrival: month_actions += 1; pis_relation += 7 if pis_accept_social >= 50; pis_relation += 2 if pis_accept_social < 50; government_delivery += 3 if pis_accept_social >= 50; household_security += 3 if pis_accept_social >= 50; public_trust -= 2 if pis_accept_social < 50; ko_relation -= 5; razem_dissent += 4; progressives_dissent += 3; party_unity -= 2; news_headline = "A social amendment tests PiS's solidarist wing"
+subtitle: No resource cost. PiS acceptance can pass an amendment, but household delivery waits for the cabinet callback; KO and factional costs arrive now.
+on-arrival: {!
+Q.month_actions += 1;
+const accepted = Number(Q.pis_accept_social) >= 50;
+Q.pis_relation += accepted ? 7 : 2;
+if (accepted) {
+    Q.pis_social_amendment_pending = 1;
+    Q.pis_social_amendment_due_time = (Number(Q.time) || 0) + 1;
+    Q.last_policy_stage = "Passage";
+    Q.last_policy_authority = "PiS cabinet and Sejm majority";
+    Q.last_policy_implementation = 0;
+} else {
+    Q.public_trust -= 2;
+    Q.last_policy_stage = "Proposal rejected";
+    Q.last_policy_authority = "Lewica parliamentary opposition";
+    Q.last_policy_implementation = 0;
+}
+Q.ko_relation -= 5;
+Q.razem_dissent += 4;
+Q.progressives_dissent += 3;
+Q.party_unity -= 2;
+Q.news_headline = accepted
+    ? "A social amendment passes and enters the PiS implementation queue"
+    : "PiS rejects the negotiated social amendment";
+!}
 
-A social amendment passes with Left votes. Beneficiaries do not care who owned
-the bill; KO does. Every caucus now asks whether an exception has become a
-strategy.
+[? if pis_social_amendment_pending: A social amendment passes with Left votes,
+but beneficiaries see no material change until the cabinet implements it next
+month. ?][? if not pis_social_amendment_pending: PiS takes the meeting and
+rejects the amendment. ?] KO objects either way. Every caucus asks whether an
+exception has become a strategy.
 
 - @poland_hub: Return to the leadership table

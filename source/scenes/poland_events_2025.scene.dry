@@ -20,6 +20,15 @@ if (!Q.pres_2025_candidate ||
 }
 if (!Q.pres_2025_united_left) {
     Q.pres_2025_razem_candidate = "Adrian Zandberg";
+    if (!Q.pres_2025_nomination_method ||
+        Q.pres_2025_nomination_method == "Not chosen") {
+        Q.pres_2025_nomination_method = "Separate candidacies";
+        Q.pres_2025_unity_effect = 0;
+    }
+} else if (!Q.pres_2025_nomination_method ||
+    Q.pres_2025_nomination_method == "Not chosen") {
+    Q.pres_2025_nomination_method = "Inherited common nomination";
+    Q.pres_2025_unity_effect = 0;
 }
 Q.news_headline =
     Q.pres_2025_united_left
@@ -59,7 +68,7 @@ title: Make one final common-candidate offer to Zandberg
 subtitle: Requires substantial Razem cooperation.
 choose-if: razem_cooperation >= 55
 unavailable-subtitle: The split has become part of both campaigns' legitimacy.
-on-arrival: pres_2025_left_candidate = "Adrian Zandberg"; pres_2025_candidate = "Adrian Zandberg"; pres_2025_razem_candidate = "None"; pres_2025_united_left = 1; pres_2025_campaign_strength += 6; razem_cooperation += 4; barons_dissent += 7; spring_dissent += 4; party_unity += 3; news_headline = "The Left makes Zandberg its common presidential candidate"
+on-arrival: pres_2025_left_candidate = "Adrian Zandberg"; pres_2025_candidate = "Adrian Zandberg"; pres_2025_razem_candidate = "None"; pres_2025_united_left = 1; pres_2025_nomination_method = "Late leadership withdrawal"; pres_2025_unity_effect = -0.8; pres_2025_campaign_strength += 6; razem_cooperation += 4; barons_dissent += 7; spring_dissent += 4; party_unity += 3; news_headline = "The Left makes Zandberg its common presidential candidate"
 go-to: poland_event_queue
 
 @braun_breaks_konf
@@ -182,10 +191,10 @@ or build a parent-and-teacher coalition for the next election.
 
 @pis_school_pilots
 title: Coordinate municipal pilots and teacher training
-subtitle: Cost: 1 resource.
+subtitle: Cost: 1 resource; builds a local network and national health-policy pressure, not ministry capacity.
 choose-if: resources >= 1
 unavailable-subtitle: The local programme has no organiser budget.
-on-arrival: resources -= 1; local_network += 5; health_capacity += 1; public_trust += 2; news_headline = "Opposition councils test health education without claiming national authority"
+on-arrival: resources -= 1; local_network += 5; health_policy_pressure += 1; public_trust += 2; last_policy_stage = "Proposal"; last_policy_authority = "Opposition councils and teacher networks"; last_policy_implementation = 0; news_headline = "Opposition councils test health education without claiming national authority"
 go-to: poland_event_queue
 
 @pis_school_bill
@@ -717,38 +726,44 @@ const pisIntent = finitePres25(Q.pis_vote_intent, 35.38);
 const konfIntent = finitePres25(Q.konf_vote_intent, 7.16);
 const campaign = finitePres25(Q.pres_2025_campaign_strength, 0);
 const debate = finitePres25(Q.pres_2025_debate_shift, 0);
-let governmentLeft;
-let razemLeft;
+let governmentLeftBase;
+let razemLeftBase;
 if (Q.pres_2025_united_left) {
-    governmentLeft =
-        8.75 +
+    // A common ticket is a new electorate, not Biejat plus Zandberg. The
+    // nomination route can create public legitimacy or strand coerced voters.
+    governmentLeftBase =
+        7.70 +
         (leftIntent - 8.61) * 0.55 +
-        campaign * 0.35 +
+        campaign * 0.20 +
         debate * 0.65 +
-        noise(1.4);
-    razemLeft = 0;
+        clampPres25(finitePres25(Q.pres_2025_unity_effect, 0), -1.5, 1.5);
+    razemLeftBase = 0;
 } else {
-    governmentLeft =
+    governmentLeftBase =
         4.23 +
         (leftIntent - 8.61) * 0.28 +
         campaign * 0.20 +
-        debate * 0.55 +
-        noise(1.0);
-    razemLeft =
+        debate * 0.55;
+    razemLeftBase =
         4.86 +
         (leftIntent - 8.61) * 0.30 +
-        (finitePres25(Q.razem_strength, 20) - 20) * 0.06 +
-        (Q.pres_2025_left_candidate == "Adrian Zandberg" ? 0 : 0.4) +
-        noise(0.9);
+        (finitePres25(Q.razem_strength, 20) - 20) * 0.06;
 }
-governmentLeft = Math.max(0.4, governmentLeft);
-razemLeft = Math.max(0, razemLeft);
-let ko =
+governmentLeftBase = Math.max(0.4, governmentLeftBase);
+razemLeftBase = Math.max(0, razemLeftBase);
+const governmentLeft = Math.max(
+    0.4,
+    governmentLeftBase + noise(Q.pres_2025_united_left ? 1.4 : 1.0)
+);
+const razemLeft = Math.max(
+    0,
+    razemLeftBase + (Q.pres_2025_united_left ? 0 : noise(0.9))
+);
+let koBase =
     31.36 +
     (koIntent - 30.70) * 0.34 +
     (finitePres25(Q.ko_relation, 50) - 50) * 0.025 -
-    Math.max(0, governmentLeft + razemLeft - 10) * 0.18 +
-    noise(1.4);
+    Math.max(0, governmentLeftBase + razemLeftBase - 10) * 0.18;
 if (Q.pres_2025_incumbent) {
     Q.pres_2025_incumbent_record =
         1.2 +
@@ -759,32 +774,59 @@ if (Q.pres_2025_incumbent) {
             finitePres25(Q.pis_cohabitation_rally, 0)
         ) * 0.022 +
         (Q.trz_rights_bill_outcome == "Passed and signed" ? 1.0 : 0);
-    ko += Q.pres_2025_incumbent_record;
+    koBase += Q.pres_2025_incumbent_record;
 }
-let right =
+const ko =
+    koBase -
+    (
+        Math.max(0, governmentLeft + razemLeft - 10) -
+        Math.max(0, governmentLeftBase + razemLeftBase - 10)
+    ) * 0.18 +
+    noise(1.4);
+const rightBase =
     29.54 +
     (pisIntent - 35.38) * 0.25 +
-    (finitePres25(Q.far_right_agenda, 32) - 32) * 0.018 +
-    noise(1.4);
-let mentzen =
+    (finitePres25(Q.far_right_agenda, 32) - 32) * 0.018;
+const mentzenBase =
     14.81 +
     (konfIntent - 7.16) * 0.35 +
-    (finitePres25(Q.konf_mentzenite_share, 47) - 47) * 0.025 +
-    noise(1.2);
-let braun =
+    (finitePres25(Q.konf_mentzenite_share, 47) - 47) * 0.025;
+const braunBase =
     6.34 +
     finitePres25(Q.braun_martyrdom, 0) * 0.06 +
-    (finitePres25(Q.konf_braunist_share, 18) - 18) * 0.025 +
-    noise(0.8);
-let holownia =
+    (finitePres25(Q.konf_braunist_share, 18) - 18) * 0.025;
+const holowniaBase =
     4.99 +
-    (finitePres25(Q.p2050_vote_intent, 4.0) - 4.0) * 0.25 +
-    noise(0.7);
-let stanowski =
+    (finitePres25(Q.p2050_vote_intent, 4.0) - 4.0) * 0.25;
+const stanowskiBase =
     1.24 +
-    (finitePres25(Q.kanal_zero_capacity, 12) - 12) * 0.025 +
-    noise(0.35);
-let other = 2.63;
+    (finitePres25(Q.kanal_zero_capacity, 12) - 12) * 0.025;
+const right = rightBase + noise(1.4);
+const mentzen = mentzenBase + noise(1.2);
+const braun = braunBase + noise(0.8);
+const holownia = holowniaBase + noise(0.7);
+const stanowski = stanowskiBase + noise(0.35);
+const other = 2.63;
+const expectedRaw = {
+    ko: Math.max(0.5, koBase),
+    right: Math.max(0.5, rightBase),
+    left: governmentLeftBase,
+    razem: razemLeftBase,
+    mentzen: Math.max(0.3, mentzenBase),
+    braun: Math.max(0.2, braunBase),
+    holownia: Math.max(0.2, holowniaBase),
+    stanowski: Math.max(0.1, stanowskiBase),
+    other: other
+};
+const expectedTotal = Object.keys(expectedRaw).reduce(function(sum, key) {
+    return sum + expectedRaw[key];
+}, 0);
+Q.pres_2025_candidate_expectation = Math.round(
+    expectedRaw.left * 10000 / expectedTotal
+) / 100;
+Q.pres_2025_field_expectation = Math.round(
+    (expectedRaw.left + expectedRaw.razem) * 10000 / expectedTotal
+) / 100;
 const raw = {
     ko: Math.max(0.5, ko),
     right: Math.max(0.5, right),
@@ -817,7 +859,9 @@ const candidateNames = {
 };
 const ranked = Object.keys(raw)
     .filter(function(key) {
-        return raw[key] > 0;
+        // "Other candidates" is a reporting aggregate, not one candidacy.
+        // It contributes to the 100% denominator but can never be a finalist.
+        return key != "other" && raw[key] > 0;
     })
     .sort(function(a, b) {
         return raw[b] - raw[a];
@@ -826,8 +870,10 @@ Q.pres_2025_finalist_a_key = ranked[0];
 Q.pres_2025_finalist_b_key = ranked[1];
 Q.pres_2025_finalist_a = candidateNames[ranked[0]];
 Q.pres_2025_finalist_b = candidateNames[ranked[1]];
-Q.pres_2025_left_result =
+Q.pres_2025_player_result = Math.round(raw.left * 100) / 100;
+Q.pres_2025_field_result =
     Math.round((raw.left + raw.razem) * 100) / 100;
+Q.pres_2025_left_result = Q.pres_2025_field_result;
 Q.pres_2025_ko_result = Q.pres_2025_r1_ko;
 Q.pres_2025_right_result = Q.pres_2025_r1_right;
 Q.pres_2025_radical_result =
@@ -835,6 +881,245 @@ Q.pres_2025_radical_result =
 Q.pres_2025_left_finalist =
     ranked[0] == "left" || ranked[1] == "left" ||
     ranked[0] == "razem" || ranked[1] == "razem" ? 1 : 0;
+Q.pres_2025_player_finalist =
+    ranked[0] == "left" || ranked[1] == "left" ? 1 : 0;
+Q.pres_2025_candidate_historical =
+    Q.pres_2025_left_candidate == "Magdalena Biejat" ? 4.23 :
+    (Q.pres_2025_left_candidate == "Adrian Zandberg" ? 4.86 : 0);
+Q.pres_2025_historical_field = 9.09;
+Q.pres_2025_candidate_expectation_gap = Math.round(
+    (Q.pres_2025_player_result - Q.pres_2025_candidate_expectation) * 100
+) / 100;
+Q.pres_2025_field_expectation_gap = Math.round(
+    (Q.pres_2025_field_result - Q.pres_2025_field_expectation) * 100
+) / 100;
+Q.pres_2025_candidate_historical_gap = Math.round(
+    (Q.pres_2025_player_result - Q.pres_2025_candidate_historical) * 100
+) / 100;
+Q.pres_2025_field_historical_gap = Math.round(
+    (Q.pres_2025_field_result - Q.pres_2025_historical_field) * 100
+) / 100;
+const performanceVerdict25 = function(result, transformed) {
+    if (transformed) {
+        return {label: "Party-system transformation", level: 4};
+    }
+    if (result < 2.5) {
+        return {label: "Shattering disaster", level: -3};
+    }
+    if (result < 4) {
+        return {label: "Severe defeat", level: -2};
+    }
+    if (result < 5.5) {
+        return {label: "Disappointing or ambiguous", level: -1};
+    }
+    if (result < 7.5) {
+        return {label: "Base held; broadly satisfying", level: 1};
+    }
+    if (result < 10) {
+        return {label: "Strong result", level: 2};
+    }
+    return {label: "Breakthrough", level: 3};
+};
+const candidateVerdict = performanceVerdict25(
+    Q.pres_2025_player_result,
+    Q.pres_2025_player_finalist
+);
+const fieldVerdict = performanceVerdict25(
+    Q.pres_2025_field_result,
+    Q.pres_2025_left_finalist
+);
+Q.pres_2025_candidate_band = candidateVerdict.label;
+Q.pres_2025_candidate_level = candidateVerdict.level;
+Q.pres_2025_field_band = fieldVerdict.label;
+Q.pres_2025_field_level = fieldVerdict.level;
+Q.pres_2025_leadership_defeat =
+    !Q.pres_2025_united_left &&
+    Q.pres_2025_left_candidate == "Magdalena Biejat" &&
+    Q.pres_2025_razem_candidate == "Adrian Zandberg" &&
+    raw.left < raw.razem ? 1 : 0;
+Q.pres_2025_zandberg_claim = Q.pres_2025_leadership_defeat;
+if (!Q.pres_2025_feedback_applied) {
+    const candidateLevel = Number(Q.pres_2025_candidate_level) || 0;
+    const fieldLevel = Number(Q.pres_2025_field_level) || 0;
+    let combinedLevel = candidateLevel * 0.72 + fieldLevel * 0.28;
+    if (Q.pres_2025_leadership_defeat) {
+        combinedLevel -= 1.4;
+    }
+    let consideration = combinedLevel * 1.45;
+    let feedbackTurnout = combinedLevel * 1.10;
+    const expectationAdjustment = clampPres25(
+        (Number(Q.pres_2025_candidate_expectation_gap) || 0) * 0.18 +
+            (Number(Q.pres_2025_field_expectation_gap) || 0) * 0.08,
+        -1.2,
+        1.2
+    );
+    consideration += expectationAdjustment;
+    feedbackTurnout += expectationAdjustment * 0.70;
+    if (candidateLevel == -3) {
+        // A two-percent candidate result remains a disaster even when another
+        // Left candidacy keeps the combined field respectable.
+        consideration = Math.min(-6, consideration);
+        feedbackTurnout = Math.min(-5, feedbackTurnout);
+    } else if (candidateLevel == 1) {
+        consideration = Math.max(0.5, consideration);
+        feedbackTurnout = Math.max(0.6, feedbackTurnout);
+    }
+    const previousFailure = Q.pres_feedback_active &&
+        (Number(Q.pres_feedback_direction) || 0) < 0 && consideration < 0;
+    let duration = candidateLevel == -3 || candidateLevel >= 3 ? 12 :
+        (Math.abs(combinedLevel) >= 1.5 ? 10 : 8);
+    if (Q.pres_2025_leadership_defeat) {
+        duration = Math.max(duration, 10);
+    }
+    if (previousFailure) {
+        duration = Math.min(12, duration + 2);
+        consideration *= 1.15;
+        feedbackTurnout *= 1.15;
+        Q.pres_feedback_reinforcements =
+            (Number(Q.pres_feedback_reinforcements) || 0) + 1;
+    }
+    Q.pres_feedback_active = 1;
+    Q.pres_feedback_source = "2025 presidential verdict";
+    Q.pres_feedback_direction = consideration < 0 ? -1 : 1;
+    Q.pres_feedback_duration = duration;
+    Q.pres_feedback_months_remaining = duration;
+    Q.pres_feedback_decay_factor = 1;
+    Q.pres_feedback_consideration =
+        Math.round(consideration * 100) / 100;
+    Q.pres_feedback_turnout =
+        Math.round(feedbackTurnout * 100) / 100;
+    Q.pres_feedback_consideration_current =
+        Q.pres_feedback_consideration;
+    Q.pres_feedback_turnout_current = Q.pres_feedback_turnout;
+    Q.pres_feedback_leadership_pressure = 0;
+    Q.pres_feedback_leadership_challenge = 0;
+    Q.pres_feedback_donor_loss = 0;
+    Q.pres_feedback_activist_loss = 0;
+    Q.pres_feedback_media_loss = 0;
+    Q.pres_feedback_faction_pressure = 0;
+    Q.pres_feedback_tactical_flight = 0;
+    Q.pres_feedback_base_certainty = 0;
+    Q.pres_feedback_squeeze_protection = 0;
+    if (candidateLevel == -3) {
+        Q.pres_feedback_leadership_pressure = 88;
+        Q.pres_feedback_leadership_challenge = 1;
+        Q.pres_feedback_donor_loss = 2;
+        Q.pres_feedback_activist_loss = 6;
+        Q.pres_feedback_media_loss = 4;
+        Q.pres_feedback_faction_pressure = 8;
+        Q.pres_feedback_tactical_flight = 6;
+        Q.resources -= 2;
+        Q.organiser_energy -= 6;
+        Q.media_capacity -= 4;
+        Q.media_access -= 5;
+        Q.leadership_authority -= 10;
+        Q.list_confidence -= 8;
+        Q.winner_reputation -= 8;
+        Q.electoral_viability -= 5;
+        Q.party_unity -= 8;
+        Q.barons_dissent += 8;
+        Q.spring_dissent += 8;
+        Q.labor_dissent += 6;
+        Q.progressives_dissent += 8;
+        Q.razem_dissent += 6;
+    } else if (Q.pres_2025_leadership_defeat) {
+        Q.pres_feedback_leadership_pressure = 75;
+        Q.pres_feedback_leadership_challenge = 1;
+        Q.pres_feedback_donor_loss = 1;
+        Q.pres_feedback_activist_loss = 3;
+        Q.pres_feedback_media_loss = 2;
+        Q.pres_feedback_faction_pressure = 7;
+        Q.pres_feedback_tactical_flight = 3;
+        Q.resources -= 1;
+        Q.organiser_energy -= 3;
+        Q.media_capacity -= 2;
+        Q.media_access -= 2;
+        Q.leadership_authority -= 9;
+        Q.list_confidence -= 5;
+        Q.winner_reputation -= 5;
+        Q.electoral_viability += fieldLevel >= 2 ? 1 : -2;
+        Q.party_unity -= 6;
+        Q.barons_dissent += 5;
+        Q.spring_dissent += 5;
+        Q.labor_dissent += 4;
+        Q.progressives_dissent += 4;
+        Q.razem_dissent -= 3;
+        Q.razem_cooperation -= 6;
+    } else if (candidateLevel == -2) {
+        Q.pres_feedback_leadership_pressure = 60;
+        Q.pres_feedback_leadership_challenge = 1;
+        Q.pres_feedback_donor_loss = 1;
+        Q.pres_feedback_activist_loss = 4;
+        Q.pres_feedback_media_loss = 3;
+        Q.pres_feedback_faction_pressure = 5;
+        Q.pres_feedback_tactical_flight = 4;
+        Q.resources -= 1;
+        Q.organiser_energy -= 4;
+        Q.media_capacity -= 3;
+        Q.media_access -= 3;
+        Q.leadership_authority -= 6;
+        Q.list_confidence -= 5;
+        Q.winner_reputation -= 4;
+        Q.electoral_viability -= 3;
+        Q.party_unity -= 5;
+        Q.barons_dissent += 4;
+        Q.spring_dissent += 5;
+        Q.progressives_dissent += 5;
+    } else if (candidateLevel == -1) {
+        Q.pres_feedback_leadership_pressure = 28;
+        Q.pres_feedback_activist_loss = 1;
+        Q.pres_feedback_media_loss = 1;
+        Q.pres_feedback_faction_pressure = 2;
+        Q.pres_feedback_tactical_flight = 1;
+        Q.organiser_energy -= 1;
+        Q.media_capacity -= 1;
+        Q.media_access -= 1;
+        Q.leadership_authority -= 2;
+        Q.list_confidence -= 2;
+        Q.winner_reputation -= 1;
+        Q.party_unity -= 2;
+        Q.spring_dissent += 2;
+        Q.progressives_dissent += 2;
+    } else {
+        Q.pres_feedback_base_certainty = candidateLevel == 1 ? 65 :
+            (candidateLevel == 2 ? 78 : 92);
+        Q.pres_feedback_squeeze_protection = 1;
+        Q.party_unity += candidateLevel == 1 ? 3 :
+            (candidateLevel == 2 ? 4 : 6);
+        Q.organiser_energy += candidateLevel == 1 ? 2 :
+            (candidateLevel == 2 ? 3 : 5);
+        Q.media_capacity += candidateLevel == 1 ? 1 :
+            (candidateLevel == 2 ? 2 : 4);
+        Q.media_access += candidateLevel == 1 ? 1 :
+            (candidateLevel == 2 ? 2 : 4);
+        Q.leadership_authority += candidateLevel == 1 ? 3 :
+            (candidateLevel == 2 ? 4 : 6);
+        Q.list_confidence += candidateLevel == 1 ? 5 :
+            (candidateLevel == 2 ? 6 : 8);
+        Q.winner_reputation += candidateLevel == 1 ? 2 :
+            (candidateLevel == 2 ? 4 : 6);
+        Q.electoral_viability += candidateLevel == 1 ? 2 :
+            (candidateLevel == 2 ? 3 : 5);
+        Q.tactical_desertion_to_ko = Math.max(
+            0,
+            Q.tactical_desertion_to_ko - (candidateLevel == 1 ? 2 : 4)
+        );
+        Q.tactical_desertion_to_abstention = Math.max(
+            0,
+            Q.tactical_desertion_to_abstention -
+                (candidateLevel == 1 ? 1 : 3)
+        );
+        Q.barons_dissent -= candidateLevel == 1 ? 1 : 2;
+        Q.spring_dissent -= candidateLevel == 1 ? 1 : 2;
+        Q.progressives_dissent -= candidateLevel == 1 ? 1 : 2;
+    }
+    Q.pres_feedback_tactical_current =
+        Q.pres_feedback_tactical_flight;
+    if (Q.pres_2025_zandberg_claim) {
+        Q.razem_strength += 2;
+    }
+    Q.pres_2025_feedback_applied = 1;
+}
 Q.pres_2025_round_one_done = 1;
 Q.news_headline =
     Q.pres_2025_finalist_a + " and " +
@@ -854,6 +1139,19 @@ Q.news_headline =
 <div class="election-table-row"><span>Szymon Hołownia</span><span class="party party-p2050">PL2050</span><b>[+ pres_2025_r1_holownia +]%</b><span></span></div>
 <div class="election-table-row"><span>Krzysztof Stanowski</span><span>independent</span><b>[+ pres_2025_r1_stanowski +]%</b><span></span></div>
 </div>
+
+<div class="ledger-section"><div class="ledger-title">Two separate Left verdicts</div>
+<div class="ledger-row"><span>Player-backed candidate · [+ pres_2025_left_candidate +]</span><b>[+ pres_2025_player_result +]% · [+ pres_2025_candidate_band +]</b></div>
+<div class="ledger-subrow">Campaign expectation [+ pres_2025_candidate_expectation +]% · [? if pres_2025_candidate_expectation_gap >= 0: +?][+ pres_2025_candidate_expectation_gap +] points.</div>
+[? if pres_2025_candidate_historical > 0: <div class="ledger-subrow">Personal historical comparator [+ pres_2025_candidate_historical +]% · [? if pres_2025_candidate_historical_gap >= 0: +?][+ pres_2025_candidate_historical_gap +] points.</div>?]
+<div class="ledger-row"><span>Total Left field</span><b>[+ pres_2025_field_result +]% · [+ pres_2025_field_band +]</b></div>
+<div class="ledger-subrow">Campaign expectation [+ pres_2025_field_expectation +]% · [? if pres_2025_field_expectation_gap >= 0: +?][+ pres_2025_field_expectation_gap +] points. Historical Biejat–Zandberg field 9.09% · [? if pres_2025_field_historical_gap >= 0: +?][+ pres_2025_field_historical_gap +] points.</div>
+[? if pres_2025_united_left: <div class="ledger-subrow">Nomination: [+ pres_2025_nomination_method +]. The common ticket is modelled through a [? if pres_2025_unity_effect >= 0: legitimacy gain of +[+ pres_2025_unity_effect +]?][? if pres_2025_unity_effect < 0: demobilisation cost of [+ pres_2025_unity_effect +]?] points before campaign and debate effects; it does not inherit the arithmetic 9.09%.</div>?]
+[? if pres_2025_leadership_defeat: <div class="ledger-subrow"><b>Leadership defeat:</b> Biejat finished behind Zandberg. The strong combined field does not erase the challenge to New Left's leadership, donor network or claim to direct a future common list.</div>?]
+<div class="ledger-subrow">Below 2.5%: shattering disaster · 2.5–4%: severe defeat · 4–5.5%: disappointing or ambiguous · 5.5–7.5%: base held · 7.5–10%: strong · 10%+: breakthrough · runoff/win: party-system transformation.</div>
+[? if pres_2025_candidate_level = -3: <div class="ledger-subrow">A result below 2.5% opens a leadership challenge, loses [+ pres_feedback_donor_loss +] donor resources and [+ pres_feedback_activist_loss +] activist capacity, weakens media access, empowers faction demands and accelerates tactical flight.</div>?]
+[? if pres_2025_candidate_level = 1: <div class="ledger-subrow">A broadly satisfying result stabilises the base, improves voter certainty and protects the party from immediate squeeze.</div>?]
+<div class="ledger-subrow">The next monthly poll recalculates consideration and Left turnout. The feedback then decays over [+ pres_feedback_duration +] months unless another failure reinforces it.</div></div>
 
 Runoff: **[+ pres_2025_finalist_a +] vs [+ pres_2025_finalist_b +]**
 
@@ -881,7 +1179,7 @@ ceasing to be a Left candidacy.?]
 @runoff_accord
 title: Trade a democratic endorsement for a written social and judicial accord
 subtitle: Cost: 2 resources. Available when the Left is not in the runoff.
-view-if: pres_2025_left_finalist = 0
+view-if: pres_2025_player_finalist = 0
 choose-if: resources >= 2
 unavailable-subtitle: The party cannot finance a joint runoff operation.
 on-arrival: resources -= 2; pres_2025_transfer_strategy = "Negotiated democratic accord"; pres_2025_transfer_strength = 1.1; ko_relation += 6; party_unity += 1; razem_dissent += 3; labor_credibility += 2; news_headline = "The Left prices its runoff endorsement"
@@ -890,28 +1188,28 @@ go-to: poland_event_queue
 @runoff_immediate
 title: Endorse the democratic finalist immediately
 subtitle: Transfer strength +0.45 and KO relations +4; Razem dissent +5.
-view-if: pres_2025_left_finalist = 0
+view-if: pres_2025_player_finalist = 0
 on-arrival: pres_2025_transfer_strategy = "Immediate democratic endorsement"; pres_2025_transfer_strength = 0.45; ko_relation += 4; public_trust += 1; razem_dissent += 5; news_headline = "The Left mobilises against the PiS-backed finalist without conditions"
 go-to: poland_event_queue
 
 @runoff_free
 title: Release voters without an endorsement
 subtitle: Transfer strength −0.45 and KO relations −8; party unity −2.
-view-if: pres_2025_left_finalist = 0
+view-if: pres_2025_player_finalist = 0
 on-arrival: pres_2025_transfer_strategy = "Free vote"; pres_2025_transfer_strength = -0.45; ko_relation -= 8; progressives_dissent += 4; razem_dissent -= 2; party_unity -= 2; news_headline = "The Left refuses to command its voters"
 go-to: poland_event_queue
 
 @runoff_insurgent
 title: Run a worker-and-housing insurgency against both old blocs
 subtitle: Transfer strength +0.6 and labour credibility +5; KO relations −5.
-view-if: pres_2025_left_finalist = 1
+view-if: pres_2025_player_finalist = 1
 on-arrival: pres_2025_transfer_strategy = "Left insurgency"; pres_2025_transfer_strength = 0.6; labor_credibility += 5; ko_relation -= 5; psl_relation -= 2; turnout_readiness += 4; news_headline = "The Left enters the runoff without dissolving into the democratic camp"
 go-to: poland_event_queue
 
 @runoff_broad
 title: Offer KO and the centre a constitutional unity presidency
 subtitle: Cost: 2 resources.
-view-if: pres_2025_left_finalist = 1
+view-if: pres_2025_player_finalist = 1
 choose-if: resources >= 2
 unavailable-subtitle: The joint turnout operation cannot be financed.
 on-arrival: resources -= 2; pres_2025_transfer_strategy = "Broad constitutional front"; pres_2025_transfer_strength = 1.2; ko_relation += 7; p2050_relation += 5; psl_relation += 3; razem_dissent += 2; turnout_readiness += 5; news_headline = "A Left finalist offers a constitutional majority without abandoning the programme"
@@ -930,8 +1228,9 @@ on-arrival: {!
 const finalistA = Q.pres_2025_finalist_a_key;
 const finalistB = Q.pres_2025_finalist_b_key;
 const democraticKey =
-    finalistA == "ko" || finalistB == "ko" ? "ko" :
-    (finalistA == "left" || finalistB == "left" ? "left" :
+    Q.pres_2025_player_finalist &&
+    (finalistA == "left" || finalistB == "left") ? "left" :
+    (finalistA == "ko" || finalistB == "ko" ? "ko" :
     (finalistA == "razem" || finalistB == "razem" ? "razem" : finalistA));
 const opponentKey =
     finalistA == democraticKey ? finalistB : finalistA;
@@ -1344,8 +1643,8 @@ replacement or the constitutional formation ladder must now find a majority.?]
 go-to: poland_event_queue
 
 @third_way_ends
-title: Third Way decides whether it still has a future
-subtitle: PSL and Poland 2050 act on their own cohesion, dissent and electoral risk
+title: Third Way reaches its expiry date
+subtitle: Its own cohesion and accumulated disputes decide whether the pact survives
 new-page: true
 tags: poland_event
 priority: 25
@@ -1356,6 +1655,7 @@ on-arrival: {!
 const thirdWayRoll =
     Math.floor((this.random.uint32() / 4294967296) * 13) - 6;
 let splitPressure =
+    46 +
     Math.max(0, 55 - (Number(Q.third_way_cohesion) || 0)) +
     (Number(Q.p2050_coalition_dissent) || 0) * 0.28 +
     (Number(Q.psl_coalition_dissent) || 0) * 0.24 +
@@ -1364,37 +1664,56 @@ let splitPressure =
     thirdWayRoll;
 if (!Q.government_has_confidence) splitPressure += 8;
 Q.third_way_split_pressure = Math.round(splitPressure);
-Q.third_way_split = splitPressure >= 46 ? 1 : 0;
+Q.third_way_split = splitPressure >= 52 ? 1 : 0;
 Q.third_way_active = Q.third_way_split ? 0 : 1;
-if (Q.third_way_split) {
-    Q.third_way_cohesion -= 25;
-    Q.news_headline = Q.government_has_confidence
+Q.third_way_cohesion += Q.third_way_split ? -25 : 8;
+Q.third_way_outgoing_leadership =
+    "Szymon Hołownia and Władysław Kosiniak-Kamysz as joint electoral principals";
+Q.third_way_incoming_leadership = Q.third_way_split
+    ? "Hołownia for Poland 2050 and Kosiniak-Kamysz for PSL, negotiating separately"
+    : "Hołownia and Kosiniak-Kamysz under a renewed, looser pact";
+Q.news_headline = Q.third_way_split
+    ? (Q.government_has_confidence
         ? "PSL and Poland 2050 end Third Way while both remain in the parliamentary bargain"
-        : "PSL and Poland 2050 end Third Way inside a government-formation crisis";
-} else {
-    Q.third_way_cohesion += 8;
-    Q.news_headline =
-        "PSL and Poland 2050 renew Third Way under a looser bilateral pact";
-}
+        : "PSL and Poland 2050 end Third Way inside a government-formation crisis")
+    : "PSL and Poland 2050 renew Third Way after a close internal reckoning";
 !}
 
-= June 2025 — Two centre parties, two survival plans
+= June 2025 — One deadline, two possible futures
 
-[? if third_way_split and government_has_confidence: The cabinet survived the confidence vote, so
+**Outgoing → incoming:** [+ third_way_outgoing_leadership +] → [+
+third_way_incoming_leadership +].
+**Supporting blocs:** PSL's county barons and agrarian conservatives want an
+independent survival strategy; Poland 2050's founder loyalists and reform wings
+want freedom from PSL's social-policy vetoes.
+**Why now:** the four-election pact has run its course, both parties performed
+poorly in the presidential election and the joint brand no longer hides their
+different electorates. The accumulated split-pressure index is **[+
+third_way_split_pressure +]**.
+
+[? if third_way_split: The principals conclude that separate parties now offer
+better survival odds. Lewica cannot veto that decision; it can only choose how
+to deal with the successor clubs.?]
+[? if not third_way_split: The pressure falls just short. Both principals renew
+the pact, but only as a looser electoral agreement that preserves more party
+autonomy.?]
+
+[? if government_has_confidence: The cabinet survived the confidence vote, so
 the end of an electoral brand becomes an immediate renegotiation among parties
 that still supply its majority.?]
-[? if third_way_split and not government_has_confidence: The cabinet has already lost confidence.
-Third Way is dissolving inside formation talks, where each successor party can
+[? if not government_has_confidence: The cabinet has already lost confidence.
+Third Way dissolves inside formation talks, where each successor party can
 sell its seats separately.?]
-[? if not third_way_split: The partners choose to keep a looser common list.
-Their split pressure was **[+ third_way_split_pressure +]**, not high enough to
-overcome threshold fear and the value of shared parliamentary infrastructure.?]
+
+For Lewica, coalition management now requires separate majorities with PSL and
+Poland 2050. Playing them against each other may win one bill and destroy the
+government's remaining trust.
 
 - @td_bilateral
 - @td_psl
 - @td_rebuild
-- @td_renewal_respect
-- @td_renewal_compete
+- @td_renew
+- @td_loose_pact
 
 @td_bilateral
 title: Replace the bloc with separate written agreements
@@ -1417,16 +1736,18 @@ view-if: third_way_split = 1
 on-arrival: third_way_response = "Attempt to rebuild a centrist electoral shelter"; p2050_relation += 5; psl_relation += 2; ko_relation -= 2; public_trust -= 1; third_way_cohesion += 5; news_headline = "The coalition discusses reviving a brand voters have just rejected"
 go-to: td_psl_accounting
 
-@td_renewal_respect
-title: Respect the renewed centrist pact and negotiate through both leaders
+@td_renew
+title: Respect the renewed joint list and demand a written social protocol
+subtitle: Third Way cohesion +4 and both relations +2; no private vetoes.
 view-if: third_way_split = 0
-on-arrival: third_way_response = "Renewed Third Way recognised"; psl_relation += 3; p2050_relation += 3; third_way_cohesion += 3; public_trust += 1; news_headline = "Lewica treats the centrist pact as another party's decision"
+on-arrival: third_way_response = "Renewed joint list with a written social protocol"; third_way_cohesion += 4; psl_relation += 2; p2050_relation += 2; public_trust += 1; news_headline = "Lewica treats the renewed alliance as one negotiating partner"
 go-to: poland_event_queue
 
-@td_renewal_compete
-title: Compete for social voters without trying to break the pact
+@td_loose_pact
+title: Work with each party separately while tolerating the common brand
+subtitle: Poland 2050 relations +3 and PSL relations +1; cohesion −2.
 view-if: third_way_split = 0
-on-arrival: third_way_response = "Programmatic competition with renewed Third Way"; labor_credibility += 3; rural_support += 2; psl_relation -= 2; p2050_relation -= 2; party_unity += 2; news_headline = "The Left contests the centre without choosing its leaders for it"
+on-arrival: third_way_response = "Separate channels under a loose electoral pact"; p2050_relation += 3; psl_relation += 1; third_way_cohesion -= 2; government_coalition_dissent += 1; news_headline = "The renewed Third Way survives through separate coalition channels"
 go-to: poland_event_queue
 
 @td_psl_accounting
@@ -1595,22 +1916,20 @@ Q.budget = 0;
 Q.budget_authority = "Opposition — no state spending authority";
 Q.position = "Confidence-and-supply opposition";
 Q.coalition_status = "Minority democratic cabinet";
-const pslStillInCabinet =
-    !Q.coalition_broken &&
-    Math.max(0, Number(Q.psl_seats) || 0) > 0;
-const p2050StillInCabinet =
-    Math.max(0, Number(Q.p2050_seats) || 0) > 0;
-Q.coalition_seats = Math.min(
-    Number(Q.sejm_total) || 460,
-    Math.max(0, Number(Q.ko_seats) || 0) +
-        Math.max(0, Number(Q.p2050_seats) || 0) +
-        Math.max(0, Number(Q.centrum_seats) || 0) +
-        (
-            pslStillInCabinet
-                ? Math.max(0, Number(Q.psl_seats) || 0)
-                : 0
-        )
-);
+const sittingCabinetPortfolios = [
+    "labor", "equality", "housing", "health", "digital", "science",
+    "interior", "finance", "economy", "justice", "foreign",
+    "agriculture", "defence"
+];
+// Read actual office-holding before changing the coalition status.  A prior
+// PSL resignation must not be undone merely because this later event resets
+// the broader crisis flag.
+const pslStillInCabinet = sittingCabinetPortfolios.some(function(portfolio) {
+    return Q[portfolio + "_minister_party"] == "PSL";
+});
+const p2050StillInCabinet = sittingCabinetPortfolios.some(function(portfolio) {
+    return Q[portfolio + "_minister_party"] == "Poland 2050";
+});
 Q.party_unity -= 3;
 Q.razem_cooperation += 5;
 Q.ko_relation -= 10;
@@ -1641,6 +1960,19 @@ for (const portfolio of Object.keys(exitCabinet)) {
     Q[portfolio + "_minister_party"] = exitCabinet[portfolio][0];
     Q[portfolio + "_minister"] = exitCabinet[portfolio][1];
 }
+// coalition_seats is cabinet-party membership, not the confidence-and-supply
+// tally.  Centrum and the departing Left remain outside unless they hold an
+// actual Council of Ministers portfolio.
+Q.coalition_seats = Math.min(
+    Number(Q.sejm_total) || 460,
+    Math.max(0, Number(Q.ko_seats) || 0) +
+        (p2050StillInCabinet
+            ? Math.max(0, Number(Q.p2050_seats) || 0)
+            : 0) +
+        (pslStillInCabinet
+            ? Math.max(0, Number(Q.psl_seats) || 0)
+            : 0)
+);
 Q.family_minister_party = Q.labor_minister_party;
 Q.family_minister = Q.labor_minister;
 Q.ministry_count = 0;
@@ -1674,15 +2006,31 @@ Q.left_cabinet_model =
     "New Left ministers · Razem external support";
 Q.position = "Coalition government";
 Q.coalition_status = "Reconstituted democratic coalition";
-const partnerCabinetSeats =
-    Math.max(0, Number(Q.ko_seats) || 0) +
-    Math.max(0, Number(Q.p2050_seats) || 0) +
-    Math.max(0, Number(Q.centrum_seats) || 0) +
-    Math.max(0, Number(Q.psl_seats) || 0);
+const entryPortfolios = [
+    "labor", "equality", "housing", "health", "digital", "science",
+    "interior", "finance", "economy", "justice", "foreign",
+    "agriculture", "defence"
+];
+const entryPartySeats = {
+    KO: Math.max(0, Number(Q.ko_seats) || 0),
+    PSL: Math.max(0, Number(Q.psl_seats) || 0),
+    "Poland 2050": Math.max(0, Number(Q.p2050_seats) || 0)
+};
+const entryCabinetParties = [];
+for (const portfolio of entryPortfolios) {
+    const party = Q[portfolio + "_minister_party"];
+    if (
+        Object.prototype.hasOwnProperty.call(entryPartySeats, party) &&
+        entryCabinetParties.indexOf(party) < 0
+    ) {
+        entryCabinetParties.push(party);
+    }
+}
 Q.coalition_seats = Math.min(
     Number(Q.sejm_total) || 460,
-    partnerCabinetSeats +
-        Math.max(0, Number(Q.left_seats) || 0)
+    entryCabinetParties.reduce(function(total, party) {
+        return total + entryPartySeats[party];
+    }, 0)
 );
 Q.budget = Math.max(2, Number(Q.budget) || 0);
 Q.budget_authority =
@@ -2166,6 +2514,42 @@ Q.prime_minister = Q.formation_2025_candidate;
 Q.government_name =
     Q.formation_2025_candidate + " democratic cabinet";
 Q.razem_in_government = 0;
+const successorCabinet = {
+    labor: ["KO", "Coalition social-policy nominee"],
+    equality: ["KO", "Coalition equality nominee"],
+    housing: ["KO", "Coalition housing nominee"],
+    health: ["KO", "Izabela Leszczyna"],
+    digital: Number(Q.p2050_seats) > 0
+        ? ["Poland 2050", "Coalition digital nominee"]
+        : ["KO", "Coalition digital nominee"],
+    science: ["KO", "Coalition science nominee"],
+    interior: ["KO", "Marcin Kierwiński"],
+    finance: ["KO", "Andrzej Domański"],
+    economy: Number(Q.psl_seats) > 0
+        ? ["PSL", "Krzysztof Hetman"]
+        : ["KO", "Coalition development nominee"],
+    justice: ["KO", "Adam Bodnar"],
+    foreign: ["KO", "Radosław Sikorski"],
+    agriculture: Number(Q.psl_seats) > 0
+        ? ["PSL", "Czesław Siekierski"]
+        : ["KO", "Coalition agriculture nominee"],
+    defence: Number(Q.psl_seats) > 0
+        ? ["PSL", "Władysław Kosiniak-Kamysz"]
+        : ["KO", "Coalition defence nominee"]
+};
+if (Q.formation_2025_left_cabinet) {
+    successorCabinet.labor = [
+        "Lewica", "Agnieszka Dziemianowicz-Bąk"
+    ];
+    successorCabinet.digital = ["Lewica", "Krzysztof Gawkowski"];
+}
+for (const portfolio of Object.keys(successorCabinet)) {
+    Q[portfolio + "_minister_party"] = successorCabinet[portfolio][0];
+    Q[portfolio + "_minister"] = successorCabinet[portfolio][1];
+}
+Q.family_minister_party = Q.labor_minister_party;
+Q.family_minister = Q.labor_minister;
+Q.cabinet_roster_government_party = "ko";
 if (Q.formation_2025_left_cabinet) {
     Q.left_in_government = 1;
     Q.left_cabinet_committed = 1;
@@ -2175,8 +2559,10 @@ if (Q.formation_2025_left_cabinet) {
     Q.coalition_status = "Rebuilt democratic coalition";
     Q.coalition_seats = Math.min(
         Number(Q.sejm_total) || 460,
-        (Number(Q.formation_2025_core_pool) || 0) +
-            (Number(Q.formation_2025_left_pool) || 0)
+        Math.max(0, Number(Q.ko_seats) || 0) +
+            Math.max(0, Number(Q.p2050_seats) || 0) +
+            Math.max(0, Number(Q.psl_seats) || 0) +
+            Math.max(0, Number(Q.left_seats) || 0)
     );
     Q.budget = Math.max(2, Number(Q.budget) || 0);
     Q.budget_authority =
@@ -2194,8 +2580,12 @@ if (Q.formation_2025_left_cabinet) {
     Q.budget = 0;
     Q.budget_authority =
         "Opposition — no state spending authority";
-    Q.coalition_seats =
-        Number(Q.formation_2025_core_pool) || 0;
+    Q.coalition_seats = Math.min(
+        Number(Q.sejm_total) || 460,
+        Math.max(0, Number(Q.ko_seats) || 0) +
+            Math.max(0, Number(Q.p2050_seats) || 0) +
+            Math.max(0, Number(Q.psl_seats) || 0)
+    );
     if (Q.formation_2025_mode == "Confidence and supply") {
         Q.position = "Confidence-and-supply opposition";
         Q.coalition_status = "Minority democratic cabinet";
@@ -2294,6 +2684,7 @@ max-visits: 1
 view-if: continuous_campaign = 1 and year = 2025 and month = 8 and pres_2025_runoff_done = 1
 on-arrival: {!
 Q.president_name = Q.pres_2025_winner;
+Q.left_president = Q.pres_2025_winner_key == "left" ? 1 : 0;
 if (Q.pres_2025_hostile_president) {
     Q.president_relation = Math.min(
         Number(Q.president_relation) || 20,
@@ -2422,13 +2813,22 @@ priority: 27
 order: 11
 max-visits: 1
 view-if: continuous_campaign = 1 and year = 2025 and month = 9 and president_name != "Szymon Hołownia"
-on-arrival: p2050_coalition_dissent += 7; news_headline = "Poland 2050 enters a leadership contest without an electoral shelter"
+on-arrival: p2050_outgoing_leader = "Szymon Hołownia"; p2050_succession_blocs = "Pełczyńska-Nałęcz state-capacity reformers, Hennig-Kloska green centrists and founder personalists"; p2050_coalition_dissent += 7; news_headline = "Hołownia leaves and Poland 2050 enters a leadership contest without an electoral shelter"
 
 = September 2025 — A movement after its founder
 
-Hołownia is leaving the leadership while Poland 2050 still holds cabinet and
-parliamentary offices. Lewica can stay neutral between the successor camps or
-back the faction most focused on delivering coalition policy.
+Founder **Szymon Hołownia** says he will leave the leadership while Poland
+2050 still holds cabinet and parliamentary offices.
+
+**Outgoing → incoming:** Hołownia → an open successor contest.
+**Competing blocs:** [+ p2050_succession_blocs +].
+**Why now:** his 2025 presidential collapse, the end of Third Way and the loss
+of the Marshal's chair make founder-led politics a liability; ministers and
+MPs now need an organisation capable of surviving the threshold.
+
+For Lewica, a partner's succession can reopen delivery bargains or trigger a
+defection race. It can stay neutral between the camps or openly back the wing
+most focused on coalition policy.
 
 - @holownia_neutral
 - @holownia_partner
@@ -2441,48 +2841,360 @@ go-to: poland_event_queue
 
 @holownia_partner
 title: Back the policy-delivery wing around Pełczyńska-Nałęcz
-subtitle: Poland 2050 relations +5 and household security +2; partner dissent +4.
-on-arrival: p2050_relation += 5; p2050_coalition_dissent += 4; ko_relation -= 1; household_security += 2; news_headline = "The Left intervenes in the centrist succession"
+subtitle: Poland 2050 relations +5 and household-policy pressure +2; partner dissent +4, with no cabinet implementation.
+on-arrival: p2050_relation += 5; p2050_coalition_dissent += 4; ko_relation -= 1; household_policy_pressure += 2; last_policy_stage = "Proposal"; last_policy_authority = "Party-to-party leadership channel"; last_policy_implementation = 0; news_headline = "The Left intervenes in the centrist succession"
 go-to: poland_event_queue
 
 @ko_consolidation_2025
-title: KO consolidates into one legal party
-subtitle: Former coalition partners become factions inside one party
+title: KO opens its consolidation convention
+subtitle: PO, Nowoczesna and Inicjatywa Polska negotiate; the Greens remain separate
 new-page: true
 tags: poland_event
 priority: 24
 order: 10
 max-visits: 1
 view-if: continuous_campaign = 1 and year = 2025 and month = 10
-on-arrival: ko_consolidated = 1; ko_coalition_dissent += 3; news_headline = "PO, Nowoczesna and Inicjatywa Polska move their conflicts inside KO"
+on-arrival: ko_merger_stage = 1; ko_coalition_dissent += 3; ko_consolidation_outgoing_leaders = "Donald Tusk (PO), Adam Szłapka (Nowoczesna) and Barbara Nowacka (Inicjatywa Polska) as leaders of separate organisations"; ko_consolidation_incoming_bloc = "Donald Tusk backed by PO's dominant apparatus and pro-merger majorities in Nowoczesna and Inicjatywa Polska"; ko_leader = "Donald Tusk"; news_headline = "KO's component parties open a six-part consolidation negotiation"
 
-= October 2025 — One party, several successors
+= October 2025 — A coalition is not yet one party
 
-PO, Nowoczesna and Inicjatywa Polska now operate inside a single legal party.
-Lewica must choose whether to work with KO's progressive faction, bargain
-through Tusk's party organisation, or keep greater distance from the whole
-bloc.
+**Outgoing → incoming:** Donald Tusk's PO, Adam Szłapka's Nowoczesna and
+Barbara Nowacka's Inicjatywa Polska enter as separately led organisations. The
+historical consolidation creates one KO party under Tusk; PO's dominant
+apparatus and pro-merger majorities in the two smaller parties support him,
+while the Greens remain a separate ally.
 
-- @ko_progressives
-- @ko_apparatus
-- @ko_distance
+**Why now:** years of campaigning under one coalition label have made three
+memberships, structures, debts and sets of candidate rules an electoral
+liability. The convention negotiates the terms, representation and treatment
+of dissenters around the consolidation.
 
-@ko_progressives
-title: Build a permanent channel to Nowacka and KO progressives
-subtitle: KO relations +4 and progressive credibility +2; PSL −1.
-on-arrival: ko_relation += 4; progressive_credibility += 2; ko_social_liberal_share += 4; ko_classical_liberal_share -= 4; psl_relation -= 1; news_headline = "A progressive coalition channel bypasses part of KO's apparatus"
-go-to: poland_event_queue
+For Lewica, one disciplined liberal competitor is harder to out-organise, but
+the programme, local-list and minority disputes create openings. Lewica can
+condition cooperation, compete for organisers, defend a social-investment
+floor or attack the apparatus deal; it cannot cast another party's ballot or
+appoint its leader.
 
-@ko_apparatus
-title: Deal through Tusk and Kierwiński's organisation
-subtitle: KO relations +7 and local network +2; strengthens KO's classical liberals.
-on-arrival: ko_relation += 7; barons_dissent -= 2; local_network += 2; ko_classical_liberal_share += 2; ko_social_liberal_share -= 2; news_headline = "The two party machines make coalition bargaining predictable"
-go-to: poland_event_queue
+- @ko_merger_leadership
 
-@ko_distance
-title: Treat consolidation as a reason to sharpen Left autonomy
-subtitle: Unity +2, Razem +3 and labour credibility +3; KO relations −5.
-on-arrival: ko_relation -= 5; party_unity += 2; razem_cooperation += 3; labor_credibility += 3; news_headline = "The Left refuses to become another faction inside KO"
+@ko_merger_leadership
+title: Leadership and internal representation
+new-page: true
+
+= 1. Representation
+
+- @ko_leadership_plural
+- @ko_leadership_po
+- @ko_leadership_recruit
+
+@ko_leadership_plural
+title: Condition cooperation on protected component voices
+on-arrival: ko_merger_integration += 8; ko_merger_dissent -= 4; ko_relation += 3; ko_merger_stage = 2; news_headline = "Lewica rewards a plural statute without choosing KO's chair"
+go-to: ko_merger_programme
+
+@ko_leadership_po
+title: Deal through PO as the only reliable counterparty
+on-arrival: ko_merger_integration += 5; ko_merger_dissent += 7; ko_relation += 5; ko_merger_stage = 2; news_headline = "The party machines privilege PO's mandate"
+go-to: ko_merger_programme
+
+@ko_leadership_recruit
+title: Recruit individual organisers during the dispute
+on-arrival: ko_merger_recruitment += 6; ko_merger_dissent += 3; local_network += 2; ko_relation -= 2; ko_merger_stage = 2; news_headline = "Lewica recruits people while KO negotiates representation"
+go-to: ko_merger_programme
+
+@ko_merger_programme
+title: Economic and cultural programme
+new-page: true
+
+= 2. Programme
+
+- @ko_programme_balance
+- @ko_programme_liberal
+- @ko_programme_attack
+
+@ko_programme_balance
+title: Trade rights cooperation for a social-investment floor
+on-arrival: ko_merger_integration += 6; ko_merger_dissent -= 2; ko_social_liberal_share += 3; ko_classical_liberal_share -= 3; labor_credibility += 2; ko_merger_stage = 3; news_headline = "A social and cultural accord narrows KO's programme dispute"
+go-to: ko_merger_local
+
+@ko_programme_liberal
+title: Accept a classical-liberal plank for a democratic alliance
+on-arrival: ko_merger_federalism += 7; ko_merger_dissent += 4; ko_classical_liberal_share += 4; ko_social_liberal_share -= 4; razem_dissent += 4; ko_merger_stage = 3; news_headline = "Economic concessions preserve a distinct liberal identity"
+go-to: ko_merger_local
+
+@ko_programme_attack
+title: Attack every component over labour, housing and services
+on-arrival: ko_merger_integration -= 5; ko_merger_dissent += 6; labor_credibility += 4; ko_relation -= 4; ko_merger_stage = 3; news_headline = "A Left economic attack widens KO's programme dispute"
+go-to: ko_merger_local
+
+@ko_merger_local
+title: Local structures and candidate places
+new-page: true
+
+= 3. Structures and lists
+
+- @ko_local_guarantees
+- @ko_local_compete
+- @ko_local_attack
+
+@ko_local_guarantees
+title: Sign a non-aggression pact around transparent guarantees
+on-arrival: ko_merger_integration += 6; ko_merger_federalism += 2; ko_merger_dissent -= 2; ko_relation += 2; ko_merger_stage = 4; news_headline = "Published local guarantees reduce the price of consolidation"
+go-to: ko_merger_assets
+
+@ko_local_compete
+title: Compete for councillors and organisers while lists are unsettled
+on-arrival: ko_merger_recruitment += 6; ko_merger_dissent += 4; local_network += 3; ko_relation -= 3; ko_merger_stage = 4; news_headline = "Lewica recruits individuals from unsettled KO structures"
+go-to: ko_merger_assets
+
+@ko_local_attack
+title: Expose PO domination of regions and candidate places
+on-arrival: ko_merger_integration -= 4; ko_merger_dissent += 7; media_capacity += 2; ko_relation -= 4; ko_merger_stage = 4; news_headline = "Candidate-place arithmetic becomes a public KO grievance"
+go-to: ko_merger_assets
+
+@ko_merger_assets
+title: Property, debt and organisational assets
+new-page: true
+
+= 4. Assets and liabilities
+
+- @ko_assets_audit
+- @ko_assets_federal
+- @ko_assets_attack
+
+@ko_assets_audit
+title: Condition cooperation on an independent audit
+on-arrival: ko_merger_integration += 5; ko_merger_dissent -= 2; public_trust += 2; ko_merger_stage = 5; news_headline = "An asset-and-debt audit makes a common vehicle credible"
+go-to: ko_merger_dissolution
+
+@ko_assets_federal
+title: Treat separate assets as the basis of a federation
+on-arrival: ko_merger_federalism += 9; ko_merger_integration -= 2; ko_merger_dissent -= 1; ko_merger_stage = 5; news_headline = "Separate assets become the architecture of a KO federation"
+go-to: ko_merger_dissolution
+
+@ko_assets_attack
+title: Publish every disputed debt and property claim
+on-arrival: ko_merger_dissent += 9; ko_merger_integration -= 4; media_capacity += 3; ko_relation -= 3; ko_merger_stage = 5; news_headline = "Asset disputes turn consolidation into a public fight"
+go-to: ko_merger_dissolution
+
+@ko_merger_dissolution
+title: Whether each component dissolves
+new-page: true
+
+= 5. Separate component ballots
+
+The Greens take no dissolution vote and remain outside the proposed party.
+
+- @ko_dissolution_respect
+- @ko_dissolution_alliance
+- @ko_dissolution_recruit
+
+@ko_dissolution_respect
+title: Recognise each component ballot and endorse no result
+on-arrival: ko_merger_integration += 5; ko_merger_dissent -= 4; public_trust += 2; ko_merger_stage = 6; news_headline = "Lewica recognises the component ballots without assigning their outcome"
+go-to: ko_merger_dissenters
+
+@ko_dissolution_alliance
+title: Offer the same alliance whether KO merges or federates
+on-arrival: ko_merger_federalism += 7; ko_relation += 4; party_unity -= 1; ko_merger_stage = 6; news_headline = "A democratic alliance no longer depends on KO's legal form"
+go-to: ko_merger_dissenters
+
+@ko_dissolution_recruit
+title: Invite individual dissenters to Lewica before ballots close
+on-arrival: ko_merger_recruitment += 7; ko_merger_dissent += 5; local_network += 2; ko_relation -= 3; ko_merger_stage = 6; news_headline = "Individual KO dissenters receive a Left offer"
+go-to: ko_merger_dissenters
+
+@ko_merger_dissenters
+title: Treatment of dissenters
+new-page: true
+
+= 6. Losing minorities
+
+- @ko_dissenters_protection
+- @ko_dissenters_recruit
+- @ko_dissenters_attack
+
+@ko_dissenters_protection
+title: Back representation and no purge of losing minorities
+on-arrival: ko_merger_integration += 6; ko_merger_dissent -= 5; ko_relation += 3; public_trust += 2; news_headline = "A no-purge rule protects losing KO minorities"
+go-to: ko_merger_result_2025
+
+@ko_dissenters_recruit
+title: Offer individual dissenters list talks with Lewica
+on-arrival: ko_merger_recruitment += 8; ko_merger_dissent += 5; local_network += 2; ko_relation -= 4; news_headline = "Lewica opens individual list talks with KO dissenters"
+go-to: ko_merger_result_2025
+
+@ko_dissenters_attack
+title: Attack consolidation as a closed apparatus deal
+on-arrival: ko_merger_dissent += 10; ko_merger_integration -= 4; party_unity += 2; labor_credibility += 2; ko_relation -= 5; news_headline = "Lewica attacks the KO consolidation process"
+go-to: ko_merger_result_2025
+
+@ko_merger_result_2025
+title: The component ballots are counted
+new-page: true
+on-arrival: {!
+const group = function(id) {
+    return (Q.rival_group_records || []).find(function(record) {
+        return record.id == id;
+    });
+};
+const po = group("po");
+const nowoczesna = group("nowoczesna");
+const ipl = group("ipl");
+const greens = group("greens");
+const koParty = group("ko_party");
+const splinter = group("ko_splinter");
+const integration = Number(Q.ko_merger_integration) || 0;
+const federalism = Number(Q.ko_merger_federalism) || 0;
+const dissent = Number(Q.ko_merger_dissent) || 0;
+const recruitment = Number(Q.ko_merger_recruitment) || 0;
+Q.ko_consolidated = 0;
+Q.ko_splinter_active = 0;
+Q.ko_splinter_seats = 0;
+Q.ko_individual_defectors = 0;
+if (dissent >= 72) {
+    const progressive = Q.ko_social_liberal_share >=
+        Q.ko_classical_liberal_share;
+    const availableKoSeats = Math.max(0, Number(Q.ko_seats) || 0);
+    const defectors = availableKoSeats > 0
+        ? Math.min(
+            Math.max(3, Math.round(recruitment / 3)),
+            availableKoSeats
+        )
+        : 0;
+    Q.ko_splinter_active = 1;
+    Q.ko_splinter_type = progressive ? "Progressive" : "Classical-liberal";
+    Q.ko_splinter_seats = defectors;
+    Q.ko_seats = Math.max(0, Q.ko_seats - defectors);
+    Q.ko_merger_result = Q.ko_splinter_type + " splinter after failed talks";
+    if (splinter) {
+        splinter.active = 1;
+        splinter.name = Q.ko_splinter_type + " KO splinter";
+        splinter.legal_status = "independent organisation";
+        splinter.organisation = 24 + Math.min(16, recruitment);
+        splinter.cohesion = 58;
+        splinter.mp_count = defectors;
+        splinter.sejm_mps = defectors;
+        splinter.exclusive_seats = defectors;
+    }
+} else if (integration >= 72 && dissent <= 55) {
+    Q.ko_consolidated = 1;
+    Q.ko_merger_result = "Historical full consolidation";
+    if (po) {
+        po.active = 0;
+        po.legal_status = "renamed into Koalicja Obywatelska";
+    }
+    for (const component of [nowoczesna, ipl]) {
+        if (component) {
+            component.active = 0;
+            component.legal_status = "dissolved; members join individually";
+        }
+    }
+    if (koParty) {
+        koParty.active = 1;
+        koParty.legal_status = "registered party";
+        koParty.organisation = 84;
+        koParty.cohesion = Math.max(60, 84 - Math.round(dissent / 3));
+        koParty.mp_count = Number(Q.ko_seats) || 0;
+        koParty.sejm_mps = Number(Q.ko_seats) || 0;
+    }
+} else if (integration >= 58) {
+    Q.ko_merger_result = "Partial merger; Nowoczesna survives";
+    if (po) {
+        po.active = 0;
+        po.legal_status = "renamed into Koalicja Obywatelska";
+    }
+    if (ipl) {
+        ipl.active = 0;
+        ipl.legal_status = "dissolved into renamed PO";
+    }
+    if (nowoczesna) {
+        nowoczesna.active = 1;
+        nowoczesna.legal_status = "surviving allied party";
+    }
+    if (koParty) {
+        koParty.active = 1;
+        koParty.legal_status = "registered party after partial merger";
+        koParty.organisation = 74;
+        koParty.mp_count = Math.max(0, (Number(Q.ko_seats) || 0) - 8);
+        koParty.sejm_mps = koParty.mp_count;
+    }
+} else if (federalism >= 52) {
+    Q.ko_merger_result = "Federation of separate component parties";
+    for (const component of [po, nowoczesna, ipl]) {
+        if (component) {
+            component.active = 1;
+            component.legal_status = "federated component party";
+        }
+    }
+    if (koParty) {
+        koParty.active = 0;
+        koParty.legal_status = "federal electoral alliance";
+    }
+} else if (recruitment >= 10) {
+    Q.ko_individual_defectors = Math.min(
+        8,
+        Math.round(recruitment / 2),
+        Math.max(0, Number(Q.ko_seats) || 0)
+    );
+    Q.ko_seats = Math.max(
+        0,
+        (Number(Q.ko_seats) || 0) - Q.ko_individual_defectors
+    );
+    Q.left_seats = Math.max(0, Number(Q.left_seats) || 0) +
+        Q.ko_individual_defectors;
+    Q.nowa_lewica_seats = Math.max(
+        0,
+        Number(Q.nowa_lewica_seats) || 0
+    ) + Q.ko_individual_defectors;
+    Q.ko_merger_result = "Components survive with individual defections";
+    let remainingDefectors = Q.ko_individual_defectors;
+    for (const component of [nowoczesna, ipl, po]) {
+        if (component) {
+            component.active = 1;
+            component.legal_status = "surviving party after individual defections";
+            const componentDepartures = Math.min(
+                remainingDefectors,
+                Math.max(0, Number(component.mp_count) || 0)
+            );
+            component.mp_count = Math.max(
+                0,
+                Number(component.mp_count) - componentDepartures
+            );
+            component.sejm_mps = Math.max(
+                0,
+                Number(component.sejm_mps) - componentDepartures
+            );
+            remainingDefectors -= componentDepartures;
+        }
+    }
+} else {
+    Q.ko_merger_result = "Consolidation rejected; components survive";
+    for (const component of [po, nowoczesna, ipl]) {
+        if (component) {
+            component.active = 1;
+            component.legal_status = "surviving allied party";
+        }
+    }
+}
+if (greens) {
+    greens.active = 1;
+    greens.allied = 1;
+    greens.legal_status = "allied separate party";
+}
+Q.ko_merger_stage = 7;
+Q.news_headline = "KO convention result: " + Q.ko_merger_result;
+!}
+
+= [+ ko_merger_result +]
+
+The Greens remain a separate allied party. Component and splinter records stay
+in the organisation ledger; no result appoints a leader for KO.
+
+- @ko_merger_finish
+
+@ko_merger_finish
+title: Return the result to the coalition table
 go-to: poland_event_queue
 
 @marshal_rotation_2025
@@ -2750,7 +3462,7 @@ not silently restore him.?]
 title: Consolidate behind Czarzasty through 2027
 subtitle: Baron dissent −6 and strength +4; progressive and Wiosna dissent +4.
 view-if: advisor_reshuffle_removed_czarzasty = 0 and barons_active = 1
-on-arrival: barons_strength += 4; barons_dissent -= 6; spring_dissent += 4; progressives_dissent += 4; party_unity += 1; sejm_speaker = "Włodzimierz Czarzasty" if sejm_rotation_crisis = 0; news_headline = "The old organisational centre keeps control through the election cycle"
+on-arrival: barons_strength += 4; barons_dissent -= 6; spring_dissent += 4; progressives_dissent += 4; party_unity += 1; news_headline = "The old organisational centre keeps control of New Left through the election cycle"
 go-to: poland_event_queue
 
 @leader_transition

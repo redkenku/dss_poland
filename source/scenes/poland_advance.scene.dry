@@ -40,6 +40,30 @@ for (const faction of Q.factions) {
     Q[faction + "_strength"] += represented * 0.50;
 }
 
+// Disunity is operational damage, not a game-over trigger. It erodes the
+// common campaign while leaving the player in charge of the coordinating
+// centre or whatever rump survives.
+if (Q.party_unity < 35 && Q.factions.length > 0) {
+    const mostDissenting = Q.factions.slice().sort(function(a, b) {
+        return Number(Q[b + "_dissent"]) - Number(Q[a + "_dissent"]);
+    })[0];
+    const capacityLoss = Q.party_unity < 15 ? 1 : 0.5;
+    Q.campaign_capacity_loss += capacityLoss;
+    Q.media_capacity -= capacityLoss * 0.55;
+    Q.local_network -= capacityLoss * 0.35;
+    Q.organiser_energy -= capacityLoss * 0.45;
+    Q[mostDissenting + "_contradictory_appearances"] += 1;
+    if (Q.party_unity < 25) {
+        Q.dues_withheld += Q.party_unity < 15 ? 0.50 : 0.25;
+        for (const faction of Q.factions) {
+            Q[faction + "_grievance_memory"] +=
+                Q.party_unity < 15 ? 4 : 2;
+            Q[faction + "_dissent"] +=
+                Q.party_unity < 15 ? 1.5 : 0.75;
+        }
+    }
+}
+
 const monthlyTimers = [
     "roundtable_cooldown",
     "hostile_interview_cooldown",
@@ -50,6 +74,7 @@ const monthlyTimers = [
     "poland_local_structures_timer",
     "poland_programme_convention_timer",
     "poland_opposition_coordination_timer",
+    "poland_rival_organisations_timer",
     "poland_rural_hinge_timer",
     "poland_presidential_channel_timer",
     "poland_rapid_response_timer",
@@ -98,6 +123,33 @@ for (const timer of monthlyTimers) {
 
 Q.time += 1;
 Q.month += 1;
+if (
+    Q.partnership_implementation_pending &&
+    Number(Q.time) >= Number(Q.partnership_implementation_due_time)
+) {
+    Q.partnership_implementation_pending = 0;
+    Q.partnership_implementation_complete = 1;
+    Q.minority_safety += 3;
+    Q.government_delivery += 4;
+    Q.administrative_capacity += 2;
+    Q.last_policy_stage = "Implementation";
+    Q.last_policy_authority = "Council of Ministers implementing enacted partnership law";
+    Q.last_policy_implementation = 1;
+    Q.news_headline = "The enacted partnership law enters administrative operation";
+}
+if (
+    Q.pis_social_amendment_pending &&
+    Number(Q.time) >= Number(Q.pis_social_amendment_due_time)
+) {
+    Q.pis_social_amendment_pending = 0;
+    Q.pis_social_amendment_implemented = 1;
+    Q.household_security += 3;
+    Q.government_delivery += 3;
+    Q.last_policy_stage = "Implementation";
+    Q.last_policy_authority = "PiS Council of Ministers executing the enacted amendment";
+    Q.last_policy_implementation = 1;
+    Q.news_headline = "The enacted social amendment reaches households under PiS administration";
+}
 if (Q.month > 12) {
     Q.month = 1;
     Q.year += 1;
@@ -119,13 +171,24 @@ if (Q.month > 12) {
         } else if (Q.internal_dissent >= 55) {
             duesCollected -= 1;
         }
+        const withheldDues = Math.min(
+            Math.max(0, duesCollected),
+            Math.floor(Math.max(0, Number(Q.dues_withheld) || 0))
+        );
+        duesCollected -= withheldDues;
+        Q.dues_withheld = Math.max(
+            0,
+            (Number(Q.dues_withheld) || 0) - withheldDues
+        );
+        Q.lost_dues_total += withheldDues;
         Q.last_dues_payout = Math.max(0, duesCollected);
         Q.last_subvention_payout = Q.seat_subvention;
         Q.last_annual_payout =
             Q.last_dues_payout + Q.last_subvention_payout;
         Q.last_annual_payout_label =
             Q.year + ": " + Q.last_dues_payout + " dues + " +
-            Q.last_subvention_payout + " subvention";
+            Q.last_subvention_payout + " subvention" +
+            (withheldDues > 0 ? " · " + withheldDues + " withheld" : "");
         Q.resources += Q.last_annual_payout;
         Q.last_resource_restore_year = Q.year;
     }
@@ -194,6 +257,220 @@ if (Q.internal_dissent >= 50) {
 }
 if (Q.faction_vetoes > 0) {
     Q.party_unity -= Q.faction_vetoes;
+}
+
+const caucusSeatRecords = {
+    barons: {
+        internal: "left_barons_seats",
+        separate: "sld_breakaway_seats"
+    },
+    spring: {
+        internal: "left_spring_seats",
+        separate: "spring_breakaway_seats"
+    },
+    labor: {
+        internal: "left_labor_seats",
+        separate: "labor_left_seats"
+    },
+    progressives: {
+        internal: "left_progressives_seats",
+        separate: "young_left_seats"
+    },
+    razem: {
+        internal: "razem_seats",
+        separate: "razem_party_seats"
+    },
+    pps: {
+        internal: "left_pps_seats",
+        separate: "pps_party_seats"
+    }
+};
+const caucusAdvisers = {
+    barons: ["czarzasty", "wieczorek"],
+    spring: ["biedron"],
+    labor: ["dziemianowicz_bak"],
+    progressives: ["zukowska", "kotula", "gawkowski", "nowicka"],
+    razem: ["zandberg", "biejat", "zawisza", "matysiak"],
+    pps: []
+};
+const escalationThresholds = [0, 48, 58, 67, 74, 81, 88, 94];
+for (const faction of Q.factions.slice()) {
+    if (!Q[faction + "_active"] || !Q[faction + "_in_left"]) continue;
+    const dissent = Math.max(0, Number(Q[faction + "_dissent"]) || 0);
+    const grievance = Math.max(
+        0,
+        Number(Q[faction + "_grievance_memory"]) || 0
+    );
+    const offices = Math.min(
+        100,
+        (Number(Q[faction + "_office_hold"]) || 0) +
+            (Number(Q[faction + "_advisor_count"]) || 0) * 8 +
+            (Q.left_in_government ? 6 : 0)
+    );
+    const listDependence = Math.max(
+        0,
+        Number(Q[faction + "_list_dependence"]) || 0
+    );
+    const escalationPressure =
+        dissent +
+        grievance * 0.55 +
+        Math.max(0, 35 - Number(Q.party_unity)) * 0.80 +
+        Math.max(0, Number(Q.poll_danger_months) || 0) * 2 -
+        offices * 0.035 -
+        listDependence * 0.025;
+    let targetStage = 0;
+    for (let stage = 1; stage <= 7; stage += 1) {
+        if (escalationPressure >= escalationThresholds[stage]) {
+            targetStage = stage;
+        }
+    }
+    const currentStage = Math.max(
+        0,
+        Math.min(7, Math.round(
+            Number(Q[faction + "_escalation_stage"]) || 0
+        ))
+    );
+    if (
+        targetStage > currentStage &&
+        Number(Q.time) > Number(Q[faction + "_last_escalation_time"])
+    ) {
+        const nextStage = currentStage + 1;
+        Q[faction + "_escalation_stage"] = nextStage;
+        Q[faction + "_last_escalation_time"] = Number(Q.time) || 0;
+        Q[faction + "_defection_readiness"] = Math.max(
+            Number(Q[faction + "_defection_readiness"]) || 0,
+            nextStage * 14
+        );
+        Q.faction_stage_highwater = Math.max(
+            Number(Q.faction_stage_highwater) || 0,
+            nextStage
+        );
+
+        if (nextStage == 1) {
+            Q.faction_leaks += 1;
+            Q.media_capacity -= 0.4;
+            Q.public_trust -= 0.2;
+            Q.news_headline =
+                Q[faction + "_name"] + " begins briefing against the common line";
+        } else if (nextStage == 2) {
+            Q[faction + "_demand_deadline"] = Q.time + 2;
+            Q[faction + "_demand_answered"] = 0;
+            Q[faction + "_grievance_memory"] += 1;
+            Q.news_headline =
+                Q[faction + "_name"] + " sets a deadline for " +
+                Q[faction + "_demand"];
+        } else if (nextStage == 3) {
+            Q.faction_public_criticisms += 1;
+            Q[faction + "_contradictory_appearances"] += 1;
+            Q.media_capacity -= 0.8;
+            Q.public_trust -= 0.5;
+            Q.news_headline =
+                Q[faction + "_name"] + " threatens a free vote in public";
+        } else if (nextStage == 4) {
+            Q[faction + "_failed_whips"] += 1;
+            Q.left_coalition_dissent += 3;
+            Q.party_unity -= 1;
+            const resigningAdviser = (caucusAdvisers[faction] || []).find(
+                function(adviser) {
+                    return Number(Q[adviser + "_advisor"]) === 1;
+                }
+            );
+            if (resigningAdviser) {
+                Q[resigningAdviser + "_advisor"] = 0;
+                Q[faction + "_adviser_resignations"] += 1;
+                Q.last_adviser_resignation = resigningAdviser;
+            }
+            Q.news_headline =
+                Q[faction + "_name"] + " refuses the whip";
+        } else if (nextStage == 5) {
+            const seatRecord = caucusSeatRecords[faction];
+            const currentLeftSeats = Math.max(
+                0,
+                Math.round(Number(Q.left_seats) || 0)
+            );
+            const recordedSeats = Math.max(
+                0,
+                Math.round(Number(Q[seatRecord.internal]) || 0)
+            );
+            const proportionalSeats = currentLeftSeats > 0
+                ? Math.max(
+                    1,
+                    Math.round(
+                        currentLeftSeats *
+                        (Number(Q[faction + "_strength"]) || 0) /
+                        100
+                    )
+                )
+                : 0;
+            const estimatedSeats = Math.min(
+                currentLeftSeats,
+                recordedSeats > 0 ? recordedSeats : proportionalSeats
+            );
+            const individualRate = Math.max(
+                0.08,
+                Math.min(
+                    0.36,
+                    0.04 +
+                    (Number(Q[faction + "_personal_following"]) || 0) * 0.001 +
+                    (Number(Q[faction + "_ideological_intensity"]) || 0) * 0.001 +
+                    (100 - listDependence) * 0.0008 +
+                    (Number(Q[faction + "_local_organisation"]) || 0) * 0.0006 +
+                    grievance * 0.001 -
+                    offices * 0.0007
+                )
+            );
+            const defectors = estimatedSeats > 0
+                ? Math.min(
+                    estimatedSeats,
+                    Math.max(1, Math.round(estimatedSeats * individualRate))
+                )
+                : 0;
+            Q[faction + "_estimated_mps"] = Math.max(
+                Number(Q[faction + "_estimated_mps"]) || 0,
+                estimatedSeats
+            );
+            Q[faction + "_individual_defections"] += defectors;
+            Q[faction + "_mp_departed"] += defectors;
+            Q[faction + "_mp_retained"] = Math.max(
+                0,
+                estimatedSeats - defectors
+            );
+            Q.left_seats = Math.max(0, currentLeftSeats - defectors);
+            if (recordedSeats > 0) {
+                Q[seatRecord.internal] = Math.max(
+                    0,
+                    recordedSeats - defectors
+                );
+            }
+            Q[seatRecord.separate] = Math.max(
+                0,
+                Math.round(Number(Q[seatRecord.separate]) || 0)
+            ) + defectors;
+            if (Q.left_in_government) {
+                Q.coalition_seats = Math.max(
+                    0,
+                    (Number(Q.coalition_seats) || 0) - defectors
+                );
+                Q.government_coalition_dissent += 2;
+            }
+            Q.party_unity -= defectors > 0 ? 1 : 0;
+            Q.news_headline = defectors > 0
+                ? defectors + " " + Q[faction + "_name"] +
+                    " MP" + (defectors == 1 ? " defects" : "s defect")
+                : Q[faction + "_name"] +
+                    " cannot yet persuade an MP to defect";
+        } else if (nextStage == 6) {
+            const seatRecord = caucusSeatRecords[faction];
+            if (!Q[faction + "_circle_formed"]) {
+                Q[faction + "_circle_formed"] = 1;
+            }
+            Q.news_headline =
+                Q[faction + "_name"] + " registers a parliamentary circle";
+        } else if (nextStage == 7) {
+            Q.news_headline =
+                Q[faction + "_name"] + " approves a competing electoral list";
+        }
+    }
 }
 
 if (Q.barons_strength >= 25 && Q.barons_dissent < 50) {
@@ -395,9 +672,633 @@ if (
     }
 }
 
-// Public attention cools slowly between shocks. Support itself does not reset:
-// event and card persuasion remains part of the campaign's history. Backlash
-// only drifts very gently toward the pressure implied by salience and division.
+// Important stories share one contest resolver. `frame` is signed: positive
+// values carry a Left-compatible interpretation and negative values carry a
+// hostile one. Its absolute strength participates in the required six-factor
+// product; direction is restored only after the multiplication.
+const clampMood = function(value, low, high) {
+    const numeric = Number(value);
+    return Math.max(
+        low,
+        Math.min(high, Number.isFinite(numeric) ? numeric : low)
+    );
+};
+Q.story_salience_memory =
+    clampMood(Q.story_salience_memory, 0, 100) * 0.78;
+Q.story_distrust_memory =
+    clampMood(Q.story_distrust_memory, 0, 100) * 0.975;
+Q.story_backlash_memory =
+    clampMood(Q.story_backlash_memory, 0, 100) * 0.985;
+Q.story_reputation_memory =
+    clampMood(Q.story_reputation_memory, 0, 100) * 0.992;
+const queuedStories = Array.isArray(Q.story_queue)
+    ? Q.story_queue.slice()
+    : [];
+Q.story_queue = [];
+for (const story of queuedStories) {
+    const issue = typeof story.issue == "string"
+        ? story.issue
+        : "social_spending";
+    const kind = typeof story.kind == "string" ? story.kind : "authored";
+    let derivedReach = Number(story.reach);
+    let derivedAudienceTrust = Number(story.audienceTrust);
+    let derivedFrame = Number(story.frame);
+    let derivedMessenger = Number(story.messengerCredibility);
+    let derivedLeftCredibility = Number(story.leftCredibility);
+    if (kind == "pandemic_opening") {
+        derivedReach = 96;
+        derivedAudienceTrust = Q.public_trust;
+        if (Q.covid_policy == "Restrictions with a social shield") {
+            derivedFrame = 78;
+            derivedMessenger = (Q.labor_credibility + Q.health_capacity) / 2;
+        } else if (Q.covid_policy == "Constitutional emergency") {
+            derivedFrame = 34;
+            derivedMessenger = Q.constitutional_restraint;
+        } else if (Q.covid_policy == "National unity") {
+            derivedFrame = 24;
+            derivedMessenger = Q.public_trust;
+        } else {
+            derivedFrame = -74;
+            derivedMessenger = Math.max(22, Q.public_trust - 12);
+        }
+        derivedLeftCredibility = (
+            Q.labor_credibility + Q.health_capacity + Q.issue_ownership
+        ) / 3;
+    }
+    if (kind == "womens_ruling" || kind == "womens_followup") {
+        derivedReach = kind == "womens_ruling" ? 94 : 82;
+        derivedAudienceTrust = (
+            Q.public_trust + Q.feminist_trust + Q.movement_autonomy
+        ) / 3;
+        if (kind == "womens_ruling") {
+            if (Q.abortion_strategy == "Autonomous movement support") {
+                derivedFrame = 74;
+                derivedMessenger = Q.feminist_trust;
+            } else if (Q.abortion_strategy == "Party-led mobilisation") {
+                derivedFrame = 34;
+                derivedMessenger = Math.max(25, Q.progressive_credibility - 8);
+            } else if (Q.abortion_strategy == "Broad democratic front") {
+                derivedFrame = 68;
+                derivedMessenger = (Q.feminist_trust + Q.public_trust) / 2;
+            } else if (Q.abortion_strategy == "Palace restoration front") {
+                derivedFrame = 58;
+                derivedMessenger =
+                    (Q.feminist_trust + Q.president_relation) / 2;
+            } else {
+                derivedFrame = -66;
+                derivedMessenger = Q.public_trust;
+            }
+        } else if (Q.womens_strike_followup == "Independent legal defence") {
+            derivedFrame = 70;
+            derivedMessenger = Q.feminist_trust;
+        } else if (Q.womens_strike_followup == "Social programme") {
+            derivedFrame = 54;
+            derivedMessenger =
+                (Q.feminist_trust + Q.labor_credibility) / 2;
+        } else {
+            derivedFrame = -58;
+            derivedMessenger = Q.public_trust;
+        }
+        derivedLeftCredibility = (
+            Q.progressive_credibility + Q.feminist_trust + Q.issue_ownership
+        ) / 3;
+    }
+    if (kind == "migration_border" || kind == "migration_services" ||
+        kind == "migration_welfare") {
+        derivedReach = kind == "migration_border" ? 90 : 82;
+        derivedAudienceTrust = (
+            Q.public_trust + Q.institutional_trust
+        ) / 2;
+        if (kind == "migration_border") {
+            if (Q.border_doctrine ==
+                "Controlled processing with monitored access") {
+                derivedFrame = 76;
+                derivedMessenger =
+                    (Q.border_security_confidence + Q.local_network) / 2;
+            } else if (Q.border_doctrine ==
+                "Rights-first humanitarian access") {
+                derivedFrame = Q.migration_local_service_capacity >= 48
+                    ? 24 : -38;
+                derivedMessenger = Q.progressive_credibility;
+            } else if (Q.border_doctrine ==
+                "Security first with deferred scrutiny") {
+                derivedFrame = -30;
+                derivedMessenger = Q.border_security_confidence;
+            } else {
+                derivedFrame = -62;
+                derivedMessenger = Math.max(20, Q.media_capacity);
+            }
+        } else if (kind == "migration_services") {
+            if (String(Q.refugee_settlement).includes(
+                "Funded local services"
+            )) {
+                derivedFrame = 80;
+                derivedMessenger =
+                    (Q.local_network + Q.health_capacity) / 2;
+            } else if (String(Q.refugee_settlement).includes(
+                "Volunteer emergency reception"
+            )) {
+                derivedFrame = 36;
+                derivedMessenger = Q.movement_autonomy;
+            } else if (String(Q.refugee_settlement).includes(
+                "One humanitarian standard"
+            )) {
+                derivedFrame = Q.migration_local_service_capacity >= 48
+                    ? 18 : -34;
+                derivedMessenger = Q.progressive_credibility;
+            } else {
+                derivedFrame = -20;
+                derivedMessenger = Q.border_security_confidence;
+            }
+        } else if (String(Q.refugee_settlement).includes("services")) {
+            derivedFrame = 74;
+            derivedMessenger =
+                (Q.local_network + Q.labor_credibility) / 2;
+        } else if (String(Q.refugee_settlement).includes("transparent")) {
+            derivedFrame = 56;
+            derivedMessenger = Q.public_trust;
+        } else {
+            derivedFrame = -72;
+            derivedMessenger = Math.max(20, Q.public_trust - 8);
+        }
+        derivedLeftCredibility = (
+            Q.progressive_credibility + Q.migration_border_competence +
+            Q.migration_local_service_capacity + Q.issue_ownership
+        ) / 4;
+    }
+    const reach = clampMood(derivedReach, 0, 100);
+    const audienceTrust = clampMood(derivedAudienceTrust, 0, 100);
+    const frame = clampMood(derivedFrame, -100, 100);
+    const messengerCredibility = clampMood(
+        derivedMessenger,
+        0,
+        100
+    );
+    const issueSalience = clampMood(
+        Number.isFinite(Number(story.issueSalience))
+            ? story.issueSalience
+            : Q[issue + "_salience"],
+        0,
+        100
+    );
+    const leftCredibility = clampMood(derivedLeftCredibility, 0, 100);
+    const direction = frame < 0 ? -1 : (frame > 0 ? 1 : 0);
+    const messageCredibility = direction < 0
+        ? clampMood(100 - leftCredibility * 0.5, 0, 100)
+        : leftCredibility;
+    const storySignal = 100 * direction *
+        (reach / 100) *
+        (audienceTrust / 100) *
+        (Math.abs(frame) / 100) *
+        (messengerCredibility / 100) *
+        (issueSalience / 100) *
+        (messageCredibility / 100);
+    let receptivity = clampMood(Q.change_appetite, 0, 100);
+    let resistance = 45;
+    if (["social_spending", "vaccination"].includes(issue)) {
+        receptivity = (
+            clampMood(Q.welfare_expectation, 0, 100) +
+            clampMood(Q.institutional_trust, 0, 100)
+        ) / 2;
+        resistance = Math.max(
+            0,
+            clampMood(Q.capitalism_acceptance, 0, 100) -
+                clampMood(Q.welfare_expectation, 0, 100) * 0.45
+        );
+    } else if ([
+        "abortion_rights", "lgbt_equality", "secular_state"
+    ].includes(issue)) {
+        receptivity = (
+            clampMood(Q.change_appetite, 0, 100) +
+            100 - clampMood(Q.cultural_conservatism, 0, 100)
+        ) / 2;
+        resistance = clampMood(Q.cultural_conservatism, 0, 100);
+    } else if (["refugee_solidarity", "border_security"].includes(issue)) {
+        receptivity = clampMood(Q.universal_solidarity, 0, 100);
+        resistance = (
+            clampMood(Q.order_threat_sensitivity, 0, 100) +
+            clampMood(Q.migration_welfare_competition, 0, 100) +
+            clampMood(Q.migration_disinformation, 0, 100)
+        ) / 3;
+    } else if (["rule_of_law", "national_security"].includes(issue)) {
+        receptivity = (
+            clampMood(Q.institutional_trust, 0, 100) +
+            clampMood(Q.order_threat_sensitivity, 0, 100)
+        ) / 2;
+        resistance = 100 - clampMood(Q.institutional_trust, 0, 100);
+    }
+    const positiveSignal = Math.max(0, storySignal);
+    const negativeSignal = Math.max(0, -storySignal);
+    const persuasion = positiveSignal * (0.55 + receptivity / 220);
+    const backlash =
+        negativeSignal * (0.72 + resistance / 260) +
+        positiveSignal * resistance / 620;
+    const mobilisation =
+        storySignal * (0.46 + clampMood(Q.change_appetite, 0, 100) / 240) -
+        backlash * 0.12;
+    const abstention =
+        negativeSignal * (0.72 - clampMood(Q.change_appetite, 0, 100) / 300) -
+        positiveSignal * (0.18 + audienceTrust / 600);
+    const ownership =
+        storySignal * (0.62 + leftCredibility / 320) - backlash * 0.10;
+    Q.story_last_title = story.title || "Important story";
+    Q.story_last_issue = story.label || issue;
+    Q.story_last_reach = Math.round(reach);
+    Q.story_last_audience_trust = Math.round(audienceTrust);
+    Q.story_last_frame = Math.round(frame);
+    Q.story_last_messenger_credibility =
+        Math.round(messengerCredibility);
+    Q.story_last_issue_salience = Math.round(issueSalience);
+    Q.story_last_left_credibility = Math.round(leftCredibility);
+    Q.story_last_signal = Math.round(storySignal * 10) / 10;
+    Q.story_persuasion = Math.round(persuasion * 10) / 10;
+    Q.story_backlash = Math.round(backlash * 10) / 10;
+    Q.story_mobilisation = Math.round(mobilisation * 10) / 10;
+    Q.story_abstention = Math.round(abstention * 10) / 10;
+    Q.story_issue_ownership = Math.round(ownership * 10) / 10;
+    Q.story_salience_memory = clampMood(
+        Q.story_salience_memory + Math.abs(storySignal) * 0.70,
+        0,
+        100
+    );
+    Q.story_distrust_memory = clampMood(
+        Q.story_distrust_memory + negativeSignal * 0.32 + backlash * 0.10,
+        0,
+        100
+    );
+    Q.story_backlash_memory = clampMood(
+        Q.story_backlash_memory + backlash * 0.34,
+        0,
+        100
+    );
+    Q.story_reputation_memory = clampMood(
+        Q.story_reputation_memory + negativeSignal * 0.20,
+        0,
+        100
+    );
+    if (Number.isFinite(Number(Q[issue + "_support"]))) {
+        Q[issue + "_support"] +=
+            persuasion * 0.08 - backlash * 0.035;
+        Q[issue + "_salience"] += Math.abs(storySignal) * 0.38;
+        Q[issue + "_backlash"] += backlash * 0.15;
+    }
+    const issueOwnershipKey = issue + "_left_ownership";
+    Q[issueOwnershipKey] = clampMood(
+        Number.isFinite(Number(Q[issueOwnershipKey]))
+            ? Number(Q[issueOwnershipKey]) + ownership * 0.24
+            : clampMood(Q.issue_ownership, 0, 100) + ownership * 0.24,
+        0,
+        100
+    );
+    Q.issue_ownership = clampMood(
+        Number(Q.issue_ownership) + ownership * 0.055,
+        0,
+        100
+    );
+    Q.winner_reputation = clampMood(
+        Number(Q.winner_reputation) +
+            (persuasion - backlash - Math.max(0, abstention)) * 0.020,
+        0,
+        100
+    );
+    Q.turnout_readiness += mobilisation * 0.035 -
+        Math.max(0, abstention) * 0.045;
+    Q.left_poll_momentum +=
+        (persuasion - backlash - Math.max(0, abstention)) * 0.012;
+    Q.public_opinion_last_issue = story.label || issue;
+    Q.public_opinion_last_reception = storySignal >= 2
+        ? "favourable"
+        : (storySignal <= -2 ? "backlash" : "contested");
+    Q.public_opinion_last_delta =
+        Math.round((persuasion - backlash) * 10) / 10;
+    Q.public_opinion_last_action = story.title || "Important story";
+
+    if (kind == "womens_ruling" || kind == "womens_followup") {
+        let activistShift = 0;
+        let sympathyShift = 0;
+        let conversionShift = 0;
+        let conservativeShift = 0;
+        if (kind == "womens_ruling" &&
+            Q.abortion_strategy == "Autonomous movement support") {
+            activistShift = 12; sympathyShift = 9;
+            conversionShift = 2; conservativeShift = 4;
+        } else if (kind == "womens_ruling" &&
+            Q.abortion_strategy == "Party-led mobilisation") {
+            activistShift = 15; sympathyShift = -6;
+            conversionShift = 8; conservativeShift = 13;
+        } else if (kind == "womens_ruling" &&
+            Q.abortion_strategy == "Broad democratic front") {
+            activistShift = 9; sympathyShift = 12;
+            conversionShift = 3; conservativeShift = 5;
+        } else if (kind == "womens_ruling" &&
+            Q.abortion_strategy == "Palace restoration front") {
+            activistShift = 8; sympathyShift = 9;
+            conversionShift = 3; conservativeShift = 8;
+        } else if (kind == "womens_followup" &&
+            Q.womens_strike_followup == "Independent legal defence") {
+            activistShift = 11; sympathyShift = 5;
+            conversionShift = 1; conservativeShift = 3;
+        } else if (kind == "womens_followup" &&
+            Q.womens_strike_followup == "Social programme") {
+            activistShift = 7; sympathyShift = 7;
+            conversionShift = 4; conservativeShift = 6;
+        } else {
+            activistShift = -8; sympathyShift = -8;
+            conversionShift = -5; conservativeShift = -2;
+        }
+        Q.womens_strike_activist_mobilisation += activistShift +
+            Math.max(0, mobilisation) * 0.12;
+        Q.womens_strike_public_sympathy += sympathyShift +
+            persuasion * 0.08 - backlash * 0.08;
+        Q.womens_strike_party_conversion += conversionShift +
+            ownership * 0.06;
+        Q.womens_strike_conservative_backlash += conservativeShift +
+            backlash * 0.10;
+    }
+}
+
+// Pandemic trajectory: the initial emergency creates solidaristic and public-
+// health openings. Prolonged restriction, insecurity and administrative
+// distrust later feed order and anti-system politics unless the Left has made
+// workplace protection and public services visibly its own.
+if (Q.covid_event_done && !Q.pandemic_attitude_opening_applied) {
+    Q.universal_solidarity += 5;
+    Q.welfare_expectation += 2;
+    Q.institutional_trust += 2;
+    Q.vaccination_salience += 18;
+    Q.social_spending_salience += 5;
+    Q.pandemic_attitude_opening_applied = 1;
+}
+const prolongedPandemic = Q.covid_event_done && (
+    Q.year == 2020 && Q.month >= 9 ||
+    Q.year == 2021 ||
+    Q.year == 2022 && Q.month <= 4
+);
+if (prolongedPandemic) {
+    const workplaceOwnership = (
+        clampMood(Q.labor_credibility, 0, 100) +
+        clampMood(Q.health_capacity, 0, 100) +
+        clampMood(Q.social_spending_left_ownership, 0, 100) +
+        clampMood(Q.vaccination_left_ownership, 0, 100)
+    ) / 4;
+    const pandemicWear = 0.18 +
+        clampMood(Q.pandemic_deaths_pressure, 0, 100) / 260 +
+        Math.max(0, 48 - clampMood(Q.household_security, 0, 100)) / 180;
+    const protection = Math.max(0, workplaceOwnership - 45) / 150;
+    Q.order_threat_sensitivity += pandemicWear * 0.42;
+    Q.universal_solidarity -= Math.max(0, pandemicWear - protection) * 0.28;
+    Q.institutional_trust -= Math.max(0, pandemicWear - protection) * 0.30;
+    Q.change_appetite += pandemicWear * 0.16;
+    Q.covid_anti_system_pressure +=
+        Math.max(0, pandemicWear - protection) * 0.55;
+    if (workplaceOwnership >= 58) {
+        Q.issue_ownership += 0.12;
+        Q.covid_anti_system_pressure -= 0.12;
+    }
+}
+
+// Historical Lewica decline is a hostile pressure track with authored shocks
+// and slow organisational counterplay. No branch directly changes cultural
+// conservatism or welfare expectation.
+const applyHistoryShift = function(shifts, label) {
+    for (const quality of Object.keys(shifts)) {
+        Q[quality] = clampMood(Number(Q[quality]) + shifts[quality], 0, 100);
+    }
+    Q.historical_pressure_last = label;
+};
+if (Q.pres_first_round_complete && !Q.historical_presidential_2020_applied) {
+    const result2020 = Number.isFinite(Number(Q.presidential_result))
+        ? Number(Q.presidential_result)
+        : 2.22;
+    // The count itself has already committed organisational consequences.
+    // Voter consideration and participation live in the time-limited
+    // pres_feedback record; do not manufacture a second permanent poll shock.
+    Q.historical_pressure_last =
+        "The 2020 presidential result of " + result2020 + "% is judged " +
+        (Q.pres_performance_band || "against its campaign expectation");
+    Q.historical_presidential_2020_applied = 1;
+}
+if (Q.recovery_fund_event_done && !Q.historical_recovery_bargain_applied) {
+    if (Q.recovery_fund_strategy == "Negotiated PiS deal") {
+        applyHistoryShift({
+            issue_ownership: 4,
+            electoral_viability: -4,
+            winner_reputation: -6,
+            coalition_blur: 8
+        }, "Recovery-fund safeguards deliver policy while making Lewica look like PiS's rescuer");
+    } else if (Q.recovery_fund_strategy == "Common opposition slate" ||
+        Q.recovery_fund_strategy == "Presidential safeguards") {
+        applyHistoryShift({
+            issue_ownership: 2,
+            winner_reputation: 2,
+            coalition_blur: -2
+        }, "Recovery-fund delivery remains visibly distinct from rescuing PiS");
+    } else {
+        applyHistoryShift({
+            issue_ownership: -2,
+            electoral_viability: -1
+        }, "Lewica avoids the rescue charge but gains little ownership of recovery policy");
+    }
+    Q.historical_recovery_bargain_applied = 1;
+}
+if (Q.left_revolt_event_done && !Q.historical_merger_conflict_applied) {
+    if (Q.merger_resolution == "Executive suspensions") {
+        applyHistoryShift({
+            leadership_authority: -9,
+            winner_reputation: -4,
+            list_confidence: -7,
+            media_access: -2
+        }, "Merger conflict and executive suspensions damage renewal and authority");
+    } else if (Q.merger_resolution == "Membership ballot") {
+        applyHistoryShift({
+            leadership_authority: 4,
+            list_confidence: 5,
+            winner_reputation: 2
+        }, "A member ballot converts merger conflict into a renewal mandate");
+    } else {
+        applyHistoryShift({
+            leadership_authority: -2,
+            list_confidence: -1
+        }, "A merger truce contains rather than resolves the authority dispute");
+    }
+    Q.historical_merger_conflict_applied = 1;
+}
+if ((Q.year > 2021 || Q.year == 2021 && Q.month >= 7) &&
+    !Q.historical_tusk_squeeze_applied) {
+    const differentiation = (
+        clampMood(Q.issue_ownership, 0, 100) +
+        clampMood(Q.labor_credibility, 0, 100) +
+        clampMood(Q.media_access, 0, 100)
+    ) / 3;
+    const squeeze = Math.max(1, 7 - Math.max(0, differentiation - 42) / 8);
+    applyHistoryShift({
+        electoral_viability: -squeeze,
+        media_access: -squeeze * 0.8,
+        winner_reputation: -squeeze * 0.45
+    }, differentiation >= 56
+        ? "Tusk centralises the opposition, but a differentiated Left keeps an audience"
+        : "Tusk's return centralises the anti-PiS electorate around KO");
+    Q.historical_tusk_squeeze_applied = 1;
+}
+if (Q.ukraine_invasion_event_done && !Q.historical_war_inflation_applied) {
+    const preparedMaterialSecurity = (
+        clampMood(Q.labor_credibility, 0, 100) +
+        clampMood(Q.household_security, 0, 100) +
+        clampMood(Q.national_security_left_ownership, 0, 100)
+    ) / 3;
+    const securityPenalty = Math.max(
+        1,
+        7 - Math.max(0, preparedMaterialSecurity - 42) / 7
+    );
+    applyHistoryShift({
+        electoral_viability: -securityPenalty,
+        winner_reputation: -securityPenalty * 0.55,
+        issue_ownership: preparedMaterialSecurity >= 58 ? 2 : -3
+    }, preparedMaterialSecurity >= 58
+        ? "Prepared material-security policy keeps Lewica relevant through war and inflation"
+        : "War and inflation privilege government, security and large-party competence");
+    Q.historical_war_inflation_applied = 1;
+}
+if (Q.rates_lists_2022_done && !Q.historical_common_list_applied) {
+    const listPressure = clampMood(Q.opposition_list_pressure, 0, 100);
+    applyHistoryShift({
+        list_confidence: -Math.max(1, listPressure * 0.22),
+        issue_ownership: -Math.max(0, listPressure - 5) * 0.10,
+        electoral_viability: -Math.max(0, listPressure - 4) * 0.10
+    }, listPressure <= 5
+        ? "Written list conditions protect a distinct Left identity"
+        : "Common-list pressure and tactical voting weaken distinct identity");
+    Q.historical_common_list_applied = 1;
+}
+if (Q.election_2023_certified && !Q.historical_election_2023_applied) {
+    const result2023 = Number.isFinite(Number(Q.election_2023_left_vote))
+        ? Number(Q.election_2023_left_vote)
+        : 8.61;
+    const benchmarkGap = result2023 - 12.56;
+    applyHistoryShift({
+        electoral_viability: benchmarkGap * 1.2,
+        winner_reputation: benchmarkGap * 1.4,
+        list_confidence: benchmarkGap * 0.9
+    }, result2023 >= 11
+        ? "The 2023 result reverses the expected decline"
+        : "The 2023 result confirms that 2019 was no permanent floor");
+    Q.historical_election_2023_applied = 1;
+}
+if (Q.movement_reckoning_2024_done && !Q.historical_abortion_failure_applied) {
+    const deliveryRepair = Q.movement_reckoning_result ==
+        "Clinical access and legal defence before another vote" ? 4 : 0;
+    const capturePenalty = Q.movement_reckoning_result ==
+        "Party command of the reproductive-rights campaign" ? 5 : 0;
+    applyHistoryShift({
+        issue_ownership: -6 + deliveryRepair,
+        winner_reputation: -4,
+        coalition_blur: 5 + capturePenalty,
+        list_confidence: -2 - capturePenalty
+    }, deliveryRepair
+        ? "Failed abortion reform costs trust, but clinical delivery limits the damage"
+        : "Failed abortion reform leaves responsibility without delivery credit");
+    Q.historical_abortion_failure_applied = 1;
+}
+if (Q.razem_split && !Q.historical_razem_rupture_applied) {
+    applyHistoryShift({
+        list_confidence: -9,
+        winner_reputation: -5,
+        issue_ownership: -3,
+        leadership_authority: -4
+    }, "The Razem rupture weakens trust in a common Left list");
+    Q.historical_razem_rupture_applied = 1;
+}
+if (Q.pres_2025_round_one_done && !Q.historical_presidential_2025_applied) {
+    const backedResult = Number(Q.pres_2025_player_result) ||
+        Number(Q.pres_2025_r1_left) || 0;
+    const fieldResult = Number(Q.pres_2025_field_result) ||
+        Number(Q.pres_2025_left_result) || 0;
+    // Candidate and field were scored separately at the count. In particular,
+    // the stronger candidate cannot erase a defeat for the backed leadership.
+    Q.historical_pressure_last = Q.pres_2025_leadership_defeat
+        ? "Biejat's " + backedResult +
+            "% trails Zandberg despite a " + fieldResult +
+            "% Left field, opening a leadership challenge"
+        : "The backed candidate wins " + backedResult +
+            "% and the total Left field " + fieldResult + "%";
+    Q.historical_presidential_2025_applied = 1;
+}
+
+const organisationCounterplay = (
+    clampMood(Q.local_network, 0, 100) +
+    clampMood(Q.organiser_energy, 0, 100) +
+    clampMood(Q.party_unity, 0, 100)
+) / 3;
+const credibilityCounterplay = (
+    clampMood(Q.labor_credibility, 0, 100) +
+    clampMood(Q.progressive_credibility, 0, 100) +
+    clampMood(Q.government_delivery, 0, 100)
+) / 3;
+Q.media_access +=
+    (clampMood(Q.media_capacity, 0, 100) - Q.media_access) * 0.018;
+Q.leadership_authority +=
+    (clampMood(Q.party_unity, 0, 100) - Q.leadership_authority) * 0.012;
+Q.list_confidence +=
+    (organisationCounterplay - Q.list_confidence) * 0.010;
+Q.issue_ownership +=
+    (credibilityCounterplay - Q.issue_ownership) * 0.008;
+Q.electoral_viability +=
+    (organisationCounterplay - Q.electoral_viability) * 0.006;
+const winnerCounterplay = (
+    clampMood(Q.electoral_viability, 0, 100) +
+    clampMood(Q.issue_ownership, 0, 100) +
+    clampMood(Q.public_trust, 0, 100) +
+    (Q.left_in_government
+        ? clampMood(Q.government_delivery, 0, 100)
+        : organisationCounterplay)
+) / 4;
+Q.winner_reputation +=
+    (winnerCounterplay - Q.winner_reputation) * 0.006;
+if (Q.left_in_government) {
+    Q.coalition_blur +=
+        Math.max(0, clampMood(Q.government_coalition_dissent, 0, 100) - 35) *
+            0.008 +
+        Math.max(0, 50 - clampMood(Q.issue_ownership, 0, 100)) * 0.006 -
+        Math.max(0, clampMood(Q.government_delivery, 0, 100) - 45) * 0.010;
+} else {
+    Q.coalition_blur -= 0.18;
+}
+for (const quality of [
+    "electoral_viability", "winner_reputation", "issue_ownership",
+    "leadership_authority", "coalition_blur", "media_access",
+    "list_confidence"
+]) {
+    Q[quality] = clampMood(Q[quality], 0, 100);
+}
+const tacticalFragility = Math.max(0, (
+    55 - Q.electoral_viability +
+    55 - Q.winner_reputation +
+    55 - Q.list_confidence +
+    50 - Q.issue_ownership
+) / 4);
+const tacticalKoTarget = clampMood(
+    tacticalFragility * (Q.ko_leader == "Donald Tusk" ? 0.34 : 0.22),
+    0,
+    18
+);
+const tacticalAbstentionTarget = clampMood(
+    tacticalFragility * (0.22 + Q.coalition_blur / 500),
+    0,
+    16
+);
+const tacticalP2050Target = Q.p2050_emerged
+    ? clampMood(tacticalFragility * 0.10, 0, 7)
+    : 0;
+Q.tactical_desertion_to_ko +=
+    (tacticalKoTarget - Q.tactical_desertion_to_ko) * 0.16;
+Q.tactical_desertion_to_abstention +=
+    (tacticalAbstentionTarget - Q.tactical_desertion_to_abstention) * 0.14;
+Q.tactical_desertion_to_p2050 +=
+    (tacticalP2050Target - Q.tactical_desertion_to_p2050) * 0.16;
+
+// Public attention can cool quickly between shocks. Support itself does not
+// reset; distrust, backlash and party reputation recover through the much
+// slower and deliberately uneven memory tracks above.
 const publicOpinionIssues = Array.isArray(Q.public_opinion_issues)
     ? Q.public_opinion_issues
     : [
@@ -489,6 +1390,35 @@ const repairDelta = bridgeDelta(
 );
 const militaryDelta = bridgeDelta("military_trust", Q.military_trust);
 const policeDelta = bridgeDelta("police_trust", Q.police_trust);
+const refugeeServiceDelta = bridgeDelta(
+    "refugee_services",
+    Q.refugee_service_capacity
+);
+
+// Keep the five migration components legible even though older authored
+// scenes still write to the established refugee/border qualities.
+Q.migration_empathy = clampPublic(
+    Number(Q.migration_empathy) + refugeeDelta * 0.72 -
+        antiUkrainianDelta * 0.20
+);
+Q.migration_border_competence = clampPublic(
+    Number(Q.migration_border_competence) + borderDelta * 0.78
+);
+Q.migration_local_service_capacity = clampPublic(
+    Number(Q.migration_local_service_capacity) + refugeeServiceDelta * 0.82
+);
+Q.migration_welfare_competition = clampPublic(
+    Number(Q.migration_welfare_competition) -
+        Math.max(0, refugeeServiceDelta) * 0.45 +
+        Math.max(0, -householdDelta) * 0.20 +
+        Math.max(0, antiUkrainianDelta) * 0.22
+);
+Q.migration_disinformation = clampPublic(
+    Number(Q.migration_disinformation) +
+        Math.max(0, antiUkrainianDelta) * 0.42 +
+        Math.max(0, farRightDelta) * 0.24 -
+        Math.max(0, refugeeServiceDelta) * 0.18
+);
 
 shiftPublicIssue(
     "abortion_rights",
@@ -501,13 +1431,18 @@ shiftPublicIssue(
     "refugee_solidarity",
     refugeeDelta * 0.34 +
         borderRightsDelta * 0.16 -
-        antiUkrainianDelta * 0.30,
+        antiUkrainianDelta * 0.30 +
+        refugeeServiceDelta * 0.18 -
+        Math.max(0, Number(Q.migration_welfare_competition) - 45) * 0.010 -
+        Math.max(0, Number(Q.migration_disinformation) - 45) * 0.012,
     Math.abs(refugeeDelta) * 0.18 +
         Math.abs(antiUkrainianDelta) * 0.28 +
-        Math.max(0, farRightDelta) * 0.18,
+        Math.max(0, farRightDelta) * 0.18 +
+        Math.abs(refugeeServiceDelta) * 0.08,
     Math.max(0, -refugeeDelta) * 0.24 +
         Math.abs(antiUkrainianDelta) * 0.22 +
-        Math.max(0, farRightDelta) * 0.20
+        Math.max(0, farRightDelta) * 0.20 +
+        Math.max(0, -refugeeServiceDelta) * 0.18
 );
 shiftPublicIssue(
     "border_security",
@@ -577,8 +1512,9 @@ Q.public_opinion_bridge_pressure = Math.round(
         Math.abs(judicialDelta) +
         Math.abs(repairDelta) +
         Math.abs(militaryDelta) +
-        Math.abs(policeDelta)
-    ) / 14
+        Math.abs(policeDelta) +
+        Math.abs(refugeeServiceDelta)
+    ) / 15
 );
 let publicPanicTotal = 0;
 let publicConsensusTotal = 0;
@@ -597,7 +1533,7 @@ for (const issue of publicOpinionIssues) {
         0,
         Math.min(100, Number(Q[backlashKey]) || 0)
     );
-    const salienceDecay = Q.hard_mode ? 0.20 : 0.45;
+    const salienceDecay = Q.hard_mode ? 0.55 : 0.85;
     salience = Math.max(0, salience - salienceDecay);
     const backlashTarget = Math.min(
         100,
@@ -626,21 +1562,42 @@ Q.public_opinion_hottest_issue =
     publicIssueLabels[hottestPublicIssue] || hottestPublicIssue;
 Q.public_opinion_last_updated = Q.date_label + " monthly model";
 
+// Women's Strike participation cools faster than movement reputation. Broad
+// sympathy, conservative backlash and party-conversion memory move on separate
+// clocks, so a party capture can grow the activist core and still narrow the
+// public coalition.
+if (Q.strike_event_done) {
+    Q.womens_strike_activist_mobilisation = Math.max(
+        0,
+        Number(Q.womens_strike_activist_mobilisation) -
+            (Q.year >= 2022 ? 0.55 : 0.28)
+    );
+    Q.womens_strike_public_sympathy +=
+        (50 - Number(Q.womens_strike_public_sympathy)) * 0.004;
+    Q.womens_strike_party_conversion *= 0.994;
+    Q.womens_strike_conservative_backlash *= 0.992;
+}
+for (const attitude of [
+    "capitalism_acceptance", "welfare_expectation",
+    "cultural_conservatism", "order_threat_sensitivity",
+    "universal_solidarity", "institutional_trust", "change_appetite"
+]) {
+    Q[attitude] = clampPublic(Q[attitude]);
+}
+for (const trajectory of [
+    "womens_strike_activist_mobilisation",
+    "womens_strike_public_sympathy",
+    "womens_strike_party_conversion",
+    "womens_strike_conservative_backlash",
+    "migration_empathy", "migration_border_competence",
+    "migration_local_service_capacity", "migration_welfare_competition",
+    "migration_disinformation"
+]) {
+    Q[trajectory] = clampPublic(Q[trajectory]);
+}
+
 if (Q.year == 2020 && Q.month >= 1) {
-    Q.ko_leader = "Borys Budka";
     Q.next_budget_label = "December 2020";
-}
-if (
-    Q.scenario_mode != "formation_2023" &&
-    (
-        (Q.year == 2021 && Q.month >= 7) ||
-        Q.year >= 2022
-    )
-) {
-    Q.ko_leader = "Donald Tusk";
-}
-if (Q.year == 2020 && Q.month >= 7 && Q.p2050_emerged) {
-    Q.p2050_leader = "Szymon Hołownia";
 }
 if (Q.year == 2021) {
     Q.next_budget_label = "December 2021";

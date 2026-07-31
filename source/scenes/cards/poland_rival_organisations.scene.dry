@@ -1,0 +1,122 @@
+title: Rival Organisations
+subtitle: Alliance, attack, concession or individual recruitment—never another party's leadership.
+new-page: true
+is-card: true
+tags: poland_party_card
+view-if: month_actions < max_month_actions and poland_rival_organisations_timer <= 0
+on-arrival: month_actions += 1; poland_rival_organisations_timer = 2
+card-image: img/poland/cards/coalition-council.webp
+
+= Rival organisations persist between crises
+
+PiS currents, allied or former United Right parties, KO component parties and
+their successors retain membership, cohesion, organisation and their own
+decisions. Lewica may influence one relationship this month. It cannot choose
+a rival leader or transfer a caucus wholesale.
+
+- @alliance
+- @attack
+- @concession
+- @recruit
+
+@alliance
+title: Build an alliance with the most compatible autonomous organisation
+subtitle: Cost: 1 resource. Relation and cohesion rise; Lewica autonomy narrows.
+choose-if: resources >= 1
+unavailable-subtitle: A permanent liaison team requires one resource.
+on-arrival: {!
+Q.resources -= 1;
+const candidates = (Q.rival_group_records || []).filter(function(record) {
+    return record.active &&
+        (record.kind == "party" || record.kind == "association") &&
+        !["po", "ko_party", "pis_apparatus"].includes(record.id);
+}).sort(function(first, second) {
+    return second.relation - first.relation;
+});
+const target = candidates[0];
+if (target) {
+    target.relation = Math.min(100, target.relation + 7);
+    target.cohesion = Math.min(100, target.cohesion + 2);
+    Q.news_headline = "Lewica builds an alliance channel with " + target.name;
+} else {
+    Q.news_headline = "No autonomous rival organisation accepts an alliance channel";
+}
+Q.party_unity -= 1;
+!}
+
+- #poland_card_finish
+
+@attack
+title: Publicly attack the strongest hostile rival current
+subtitle: No resource cost. The target hardens while Lewica gains definition.
+on-arrival: {!
+const candidates = (Q.rival_group_records || []).filter(function(record) {
+    return record.active && record.relation < 25;
+}).sort(function(first, second) {
+    return second.organisation - first.organisation;
+});
+const target = candidates[0];
+if (target) {
+    target.relation = Math.max(-100, target.relation - 6);
+    target.cohesion = Math.min(100, target.cohesion + 3);
+    Q.news_headline = "Lewica publicly attacks " + target.name;
+} else {
+    Q.news_headline = "Lewica attacks the rival apparatus without personalising its leadership";
+}
+Q.progressive_credibility += 2;
+Q.media_capacity += 1;
+!}
+
+- #poland_card_finish
+
+@concession
+title: Offer a social-policy concession to the welfare-conservative channel
+subtitle: Negotiated opposition concession: household-policy pressure +2, not implementation; rights-oriented caucuses dislike it.
+on-arrival: {!
+const target = (Q.rival_group_records || []).find(function(record) {
+    return record.id == "pis_welfare";
+});
+if (target) {
+    target.relation = Math.min(100, target.relation + 6);
+    target.cohesion = Math.min(100, target.cohesion + 1);
+}
+Q.pis_relation += 3;
+Q.government_favors += 1;
+Q.household_policy_pressure += 2;
+Q.progressives_dissent += 3;
+Q.last_policy_stage = "Negotiated concession";
+Q.last_policy_authority = "Party-to-party parliamentary channel";
+Q.last_policy_implementation = "Pending a competent cabinet and enacted measure";
+Q.news_headline = "A social concession opens a vote without giving Lewica control of PiS";
+!}
+
+- #poland_card_finish
+
+@recruit
+title: Recruit one individual from the least cohesive autonomous organisation
+subtitle: Cost: 1 resource. One person moves; the organisation survives.
+choose-if: resources >= 1
+unavailable-subtitle: Individual vetting and local integration require one resource.
+on-arrival: {!
+Q.resources -= 1;
+const candidates = (Q.rival_group_records || []).filter(function(record) {
+    return record.active &&
+        (record.kind == "party" || record.kind == "association") &&
+        record.mp_count > 1;
+}).sort(function(first, second) {
+    return first.cohesion - second.cohesion;
+});
+const target = candidates[0];
+if (target) {
+    target.mp_count = Math.max(0, target.mp_count - 1);
+    target.organisation = Math.max(0, target.organisation - 1);
+    target.relation = Math.max(-100, target.relation - 3);
+    Q.rival_individual_recruits += 1;
+    Q.news_headline = "One vetted organiser leaves " + target.name + " for Lewica";
+} else {
+    Q.news_headline = "No individual recruitment clears the vetting process";
+}
+Q.local_network += 1;
+!}
+
+- #poland_card_finish

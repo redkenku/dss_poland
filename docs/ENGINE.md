@@ -355,7 +355,7 @@ This is the system that must be converted, not just the opening scene.
 
 The active Polish hand has four contextual live decks:
 
-- **Party Affairs** is always available and draws one of sixteen party cards.
+- **Party Affairs** is always available and draws one of seventeen party cards.
 - **Government Affairs** requires government participation, Sejm confidence,
   no caretaker cabinet and at least one relevant Lewica-held ministry whose
   policy opportunity is currently useful and off cooldown. Its sixteen cards
@@ -468,7 +468,7 @@ As of 30 July 2026:
 | Party resources | Uncapped; annual dues plus actual-seat subvention, no monthly refill, shared emergency-fundraising lock |
 | Polling | All-party voter-bloc model, rival AI, sampled headlines and national d'Hondt indicator |
 | Election and government formation | Separate October–December 2023 historical-result prototype with coalition arrangements, confidence, ministries and budget |
-| Endings | Four scored outcomes plus early fracture/collapse |
+| Endings | Four scored final outcomes; disunity and sub-threshold polling escalate through persistent faction consequences instead of early game-over scenes |
 | Crowded-month routing | Same-turn news desks in late 2021, November 2022, February 2023 and June 2023 |
 | Beyond July 2023 and district-level elections | Research/design only |
 

@@ -218,54 +218,104 @@ The Sejm has completed its vote. The Senate has twenty days to propose
 amendments to the **2020 state budget**. It cannot reject the budget. Whatever
 passes here returns to the PiS majority in the Sejm.
 
-The opposition pact has **[+ senate_working_votes +] reliable votes**. The Left's
-internal position received **[+ budget_2019_backing +]% backing** with
-**[+ budget_2019_vetoes +] internal vetoes**.
+The opposition pact has **[+ senate_working_votes +] reliable votes**. Lewica's
+Sejm line was **[+ annual_budget_posture +]**; named dissent is already in the
+lower-chamber record rather than hidden in a weighted ratification score.
 
 - @budget_2019_common
 - @budget_2019_broker
 - @budget_2019_record
 
 @budget_2019_common
-title: Put the ratified Left shadow budget into the common amendment slate
+title: Put the published Left shadow budget into the common amendment slate
 subtitle: Spend 10 Senate leverage. The Sejm can reject it, but not pretend no alternative was costed.
 view-if: budget_2019_ratified = 1
 choose-if: senate_working_votes >= senate_majority_threshold and senate_left_leverage >= 10
 unavailable-subtitle: Requires 51 reliable votes and 10 Senate leverage.
-on-arrival: senate_left_leverage -= 10; senate_cohesion += 4; senate_amendment_credit += 3; public_trust += 2; labor_credibility += 2; ko_relation += 2; senate_budget_2019_done = 1; senate_budget_2019_result = "Common costed amendments passed"; senate_last_vote = "The Senate amended the 2020 budget on a common Left-backed slate"; news_headline = "The first opposition Senate majority writes a social budget amendment"
+on-arrival: senate_left_leverage -= 10; senate_cohesion += 4; senate_amendment_credit += 3; public_trust += 2; labor_credibility += 2; ko_relation += 2; senate_budget_2019_done = 1; senate_budget_2019_result = "Common costed amendments passed the Senate"; senate_last_vote = "The Senate amended the 2020 budget on a common Left-backed slate"; opposition_budget_senate_amendment = "Common hospital, wage, housing and inspection slate"; opposition_budget_senate_amendment_strength = 3; news_headline = "The first opposition Senate majority writes a social budget amendment"
 
 The package passes the Senate as amendments on hospitals, wages, housing and
 labour inspection. PiS retains the votes to remove them in the Sejm, but the
 opposition has produced one set of numbers and one roll call.
 
-- @budget_2019_complete: Return the budget to the Sejm
+- @budget_2019_return_vote: Return the budget to the Sejm
 
 @budget_2019_broker
 title: Broker one clinic-and-labour-inspection amendment
 subtitle: Cost: 1 resource. Can recover a single missing Senate vote.
 choose-if: resources >= 1 and senate_working_votes >= senate_majority_threshold - 1
 unavailable-subtitle: Requires one resource and at least 50 reliable senators.
-on-arrival: resources -= 1; senate_working_votes = 51 if senate_working_votes < 51; senate_left_leverage += 5; senate_cohesion += 2; senate_amendment_credit += 1; psl_relation += 3; ko_relation += 1; public_trust += 1; senate_budget_2019_done = 1; senate_budget_2019_result = "One narrow social amendment passed"; senate_last_vote = "The Senate adopted a narrow clinic-and-inspection amendment"; news_headline = "The Left brokers the Senate's narrowest budget majority"
+on-arrival: resources -= 1; senate_working_votes = 51 if senate_working_votes < 51; senate_left_leverage += 5; senate_cohesion += 2; senate_amendment_credit += 1; psl_relation += 3; ko_relation += 1; public_trust += 1; senate_budget_2019_done = 1; senate_budget_2019_result = "One narrow social amendment passed the Senate"; senate_last_vote = "The Senate adopted a narrow clinic-and-inspection amendment"; opposition_budget_senate_amendment = "Clinic and Labour Inspection amendment"; opposition_budget_senate_amendment_strength = 1; news_headline = "The Left brokers the Senate's narrowest budget majority"
 
 One independent senator is brought back to the table by language narrow enough
 for PSL and material enough for the Left. It is a smaller achievement than a
 shadow budget and a real test of whether the majority can count to fifty-one.
 
-- @budget_2019_complete: Return the budget to the Sejm
+- @budget_2019_return_vote: Return the budget to the Sejm
 
 @budget_2019_record
 title: File the separate positions and permit no fictitious common amendment
 subtitle: Always available. The Senate cannot reject the budget.
-on-arrival: senate_cohesion -= 2; senate_left_leverage -= 1 if senate_left_leverage > 0; senate_budget_2019_done = 1; senate_budget_2019_result = "No common Senate amendment"; senate_last_vote = "The 2020 budget left the Senate without a common opposition amendment"; news_headline = "The new Senate majority fails its first fiscal rehearsal"
+on-arrival: senate_cohesion -= 2; senate_left_leverage -= 1 if senate_left_leverage > 0; senate_budget_2019_done = 1; senate_budget_2019_result = "No common Senate amendment"; senate_last_vote = "The 2020 budget left the Senate without a common opposition amendment"; opposition_budget_senate_amendment = "No common Senate amendment"; opposition_budget_senate_amendment_strength = 0; news_headline = "The new Senate majority fails its first fiscal rehearsal"
 
 The budget returns to the Sejm without a common opposition amendment. The
 record remains accurate: internal disagreement was not converted into a power
 the Senate does not possess.
 
-- @budget_2019_complete: Return the budget to the Sejm
+- @budget_2019_return_vote: Return the budget to the Sejm
+
+@budget_2019_return_vote
+title: The Sejm answers the Senate
+new-page: true
+on-arrival: {!
+Q.opposition_budget_senate_final_enacted =
+    Q.opposition_budget_senate_amendment_strength == 1 &&
+    (
+        Number(Q.pis_relation) >= 18 ||
+        Number(Q.opposition_budget_government_seats) < 231
+    ) ? 1 : 0;
+if (
+    Q.opposition_budget_senate_final_enacted &&
+    Q.opposition_budget_audit_year == 2019 &&
+    Q.opposition_budget_audit_budget_passed
+) {
+    Q.opposition_budget_audit_priority_1_enacted = 1;
+    Q.opposition_budget_audit_enacted = 1;
+    Q.opposition_budget_audit_amendment_1 =
+        Q.opposition_budget_senate_amendment + " — enacted";
+    Q.senate_budget_2019_result += " and survived the Sejm";
+} else if (Q.opposition_budget_senate_amendment_strength > 0) {
+    Q.senate_budget_2019_result += " but was removed by the Sejm";
+}
+!}
+
+The Senate adopted **[+ opposition_budget_senate_amendment +]**.
+[? if opposition_budget_senate_final_enacted: The Sejm accepted the narrow
+language. It is eligible for next year's delivery audit, but grants no public
+capacity today.?]
+[? if not opposition_budget_senate_final_enacted and opposition_budget_senate_amendment_strength > 0:
+The government majority removed it. The Senate roll call remains politically
+valuable, but it is not enacted policy.?]
+[? if opposition_budget_senate_amendment_strength = 0: No amendment returned
+for a final lower-chamber decision.?]
+
+- @budget_2019_complete: Close the 2020 budget procedure
 
 @budget_2019_complete
-on-arrival: senate_pending_bill_type = "none"; senate_pending_bill = "No bill pending"; senate_budget_year = 0
+on-arrival: {!
+Q.senate_pending_bill_type = "none";
+Q.senate_pending_bill = "No bill pending";
+Q.senate_budget_year = 0;
+if (Q.budget_2019_concession_pending) {
+    Q.budget_2019_concession_pending = 0;
+    Q.opposition_budget_audit_pending = 1;
+    Q.opposition_budget_audit_enacted = 1;
+    Q.opposition_budget_audit_priority_1_enacted = 1;
+    Q.last_policy_stage = "Enacted; audit pending";
+    Q.last_policy_authority = "PiS state budget";
+    Q.last_policy_implementation = 0;
+}
+!}
 go-to: poland_hub
 
 @budget_2020
@@ -296,13 +346,13 @@ subtitle: Spend 10 Senate leverage on hospitals, sick pay, wages and housing.
 view-if: budget_package_code = 1
 choose-if: senate_working_votes >= senate_majority_threshold and senate_left_leverage >= 10
 unavailable-subtitle: Requires 51 reliable votes and 10 Senate leverage.
-on-arrival: senate_left_leverage -= 10; senate_cohesion += 3; senate_amendment_credit += 3; household_security += 2; health_capacity += 2; labor_credibility += 2; public_trust += 2; senate_budget_2020_done = 1; senate_budget_2020_result = "Social-shield amendments passed"; senate_last_vote = "The Senate amended the pandemic budget with the social shield"; news_headline = "The Senate gives the pandemic budget a social opposition"
+on-arrival: senate_left_leverage -= 10; senate_cohesion += 3; senate_amendment_credit += 3; household_policy_pressure += 2; health_policy_pressure += 2; labor_credibility += 2; public_trust += 2; senate_budget_2020_done = 1; senate_budget_2020_result = "Social-shield amendments passed the Senate"; senate_last_vote = "The Senate amended the pandemic budget with the social shield"; opposition_budget_senate_amendment = "Hospital, sick-pay, wage and housing slate"; opposition_budget_senate_amendment_strength = 3; last_policy_stage = "Passage in the Senate"; last_policy_authority = "Senate amendment power"; last_policy_implementation = 0; news_headline = "The Senate gives the pandemic budget a social opposition"
 
 The Senate majority holds around a package that can be defended in hospitals,
 workplaces and rented homes. The Sejm may strip it out; the government must do
 so line by line.
 
-- @budget_2020_complete: Return the budget to the Sejm
+- @budget_2020_return_vote: Return the budget to the Sejm
 
 @budget_2020_local
 title: Build the Senate slate around local survival
@@ -310,13 +360,13 @@ subtitle: PSL and independents can hold this majority together.
 view-if: budget_package_code = 2
 choose-if: senate_working_votes >= senate_majority_threshold
 unavailable-subtitle: The opposition pact cannot presently assemble 51 votes.
-on-arrival: senate_cohesion += 6; senate_left_leverage += 4; senate_amendment_credit += 2; psl_relation += 4; local_network += 2; health_capacity += 1; public_trust += 1; senate_budget_2020_done = 1; senate_budget_2020_result = "Local-survival amendments passed"; senate_last_vote = "The Senate amended the pandemic budget around local survival"; news_headline = "Counties and hospitals hold the Senate majority together"
+on-arrival: senate_cohesion += 6; senate_left_leverage += 4; senate_amendment_credit += 2; psl_relation += 4; local_network += 2; health_policy_pressure += 1; public_trust += 1; senate_budget_2020_done = 1; senate_budget_2020_result = "Local-survival amendments passed the Senate"; senate_last_vote = "The Senate amended the pandemic budget around local survival"; opposition_budget_senate_amendment = "County hospital, transport and council-liquidity slate"; opposition_budget_senate_amendment_strength = 2; last_policy_stage = "Passage in the Senate"; last_policy_authority = "Senate amendment power"; last_policy_implementation = 0; news_headline = "Counties and hospitals hold the Senate majority together"
 
 County hospitals, public transport and local-government liquidity create the
 widest upper-chamber agreement. The Left gains less programme ownership and
 more evidence that a material rural bargain can work.
 
-- @budget_2020_complete: Return the budget to the Sejm
+- @budget_2020_return_vote: Return the budget to the Sejm
 
 @budget_2020_equality
 title: Demand an equality-and-care amendment slate
@@ -324,13 +374,13 @@ subtitle: PSL must be persuaded, or 30 Senate leverage must substitute for goodw
 view-if: budget_package_code = 3
 choose-if: senate_working_votes >= senate_majority_threshold and ((psl_relation >= 25 and psl_accept_rights >= 35) or senate_left_leverage >= 30)
 unavailable-subtitle: Requires 51 votes plus either a receptive PSL rights caucus or 30 Senate leverage.
-on-arrival: senate_left_leverage -= 12 if senate_left_leverage >= 30 and psl_relation < 25; senate_cohesion -= 4; senate_amendment_credit += 3; progressive_credibility += 3; feminist_trust += 3; psl_relation -= 3; public_trust += 1; senate_budget_2020_done = 1; senate_budget_2020_result = "Equality-and-care amendments passed"; senate_last_vote = "The Senate adopted equality-and-care pandemic amendments"; news_headline = "The Women's Strike reaches the Senate budget"
+on-arrival: senate_left_leverage -= 12 if senate_left_leverage >= 30 and psl_relation < 25; senate_cohesion -= 4; senate_amendment_credit += 3; progressive_credibility += 3; feminist_trust += 3; psl_relation -= 3; public_trust += 1; senate_budget_2020_done = 1; senate_budget_2020_result = "Equality-and-care amendments passed the Senate"; senate_last_vote = "The Senate adopted equality-and-care pandemic amendments"; opposition_budget_senate_amendment = "Equality, care and reproductive-access slate"; opposition_budget_senate_amendment_strength = 3; news_headline = "The Women's Strike reaches the Senate budget"
 
 Care funding and practical reproductive access survive a vote that the
 opposition pact would rather avoid. The victory consumes stored leverage and
 makes the next PSL threat more credible.
 
-- @budget_2020_complete: Return the budget to the Sejm
+- @budget_2020_return_vote: Return the budget to the Sejm
 
 @budget_2020_selective
 title: Consolidate the useful provisions into one technical amendment
@@ -338,26 +388,77 @@ subtitle: A modest Senate intervention cannot turn a selective PiS deal into a c
 view-if: budget_package_code = 4
 choose-if: senate_working_votes >= senate_majority_threshold
 unavailable-subtitle: Even the technical amendment requires 51 reliable votes.
-on-arrival: senate_cohesion += 1; senate_left_leverage += 2; senate_amendment_credit += 1; government_delivery += 1; budget_breaches += 1; public_trust -= 1; senate_budget_2020_done = 1; senate_budget_2020_result = "One technical amendment passed"; senate_last_vote = "The Senate consolidated selected pandemic provisions"; news_headline = "A Senate amendment cannot disguise a fragmented budget line"
+on-arrival: senate_cohesion += 1; senate_left_leverage += 2; senate_amendment_credit += 1; administrative_reform_pressure += 1; budget_breaches += 1; public_trust -= 1; senate_budget_2020_done = 1; senate_budget_2020_result = "One technical amendment passed the Senate"; senate_last_vote = "The Senate consolidated selected pandemic provisions"; opposition_budget_senate_amendment = "One technical pandemic provision"; opposition_budget_senate_amendment_strength = 1; last_policy_stage = "Passage in the Senate"; last_policy_authority = "Senate amendment power"; last_policy_implementation = 0; news_headline = "A Senate amendment cannot disguise a fragmented budget line"
 
 The chamber improves one provision without inventing a fiscal programme that
-the Left never ratified. Delivery rises slightly; the recorded breach remains.
+the Left never published as a common line. Political pressure rises slightly;
+delivery does not, and the recorded breach remains.
 
-- @budget_2020_complete: Return the budget to the Sejm
+- @budget_2020_return_vote: Return the budget to the Sejm
 
 @budget_2020_record
 title: Return the budget without a common Senate amendment
 subtitle: Always available. A budget bill cannot be rejected here.
-on-arrival: senate_cohesion -= 3; senate_left_leverage -= 2 if senate_left_leverage >= 2; public_trust -= 1; senate_budget_2020_done = 1; senate_budget_2020_result = "No common Senate amendment"; senate_last_vote = "The pandemic budget left the Senate without a common amendment"; news_headline = "The Senate majority fractures over the pandemic budget"
+on-arrival: senate_cohesion -= 3; senate_left_leverage -= 2 if senate_left_leverage >= 2; public_trust -= 1; senate_budget_2020_done = 1; senate_budget_2020_result = "No common Senate amendment"; senate_last_vote = "The pandemic budget left the Senate without a common amendment"; opposition_budget_senate_amendment = "No common Senate amendment"; opposition_budget_senate_amendment_strength = 0; news_headline = "The Senate majority fractures over the pandemic budget"
 
 Separate speeches are entered into the record. The budget proceeds on its
 constitutional timetable, and the opposition majority loses some of the value
 created by winning the chamber.
 
-- @budget_2020_complete: Return the budget to the Sejm
+- @budget_2020_return_vote: Return the budget to the Sejm
+
+@budget_2020_return_vote
+title: The Sejm answers the pandemic amendments
+new-page: true
+on-arrival: {!
+Q.opposition_budget_senate_final_enacted =
+    Q.opposition_budget_senate_amendment_strength == 1 &&
+    (
+        Number(Q.pis_relation) >= 16 ||
+        Number(Q.opposition_budget_government_seats) < 231
+    ) ? 1 : 0;
+if (
+    Q.opposition_budget_senate_final_enacted &&
+    Q.opposition_budget_audit_year == 2020 &&
+    Q.opposition_budget_audit_budget_passed
+) {
+    Q.opposition_budget_audit_priority_1_enacted = 1;
+    Q.opposition_budget_audit_enacted = 1;
+    Q.opposition_budget_audit_amendment_1 =
+        Q.opposition_budget_senate_amendment + " — enacted";
+    Q.senate_budget_2020_result += " and survived the Sejm";
+} else if (Q.opposition_budget_senate_amendment_strength > 0) {
+    Q.senate_budget_2020_result += " but was removed by the Sejm";
+}
+!}
+
+The Senate adopted **[+ opposition_budget_senate_amendment +]**.
+[? if opposition_budget_senate_final_enacted: The final Sejm accepted the
+narrow language. It is eligible for next year's audit; no delivery is booked
+today.?]
+[? if not opposition_budget_senate_final_enacted and opposition_budget_senate_amendment_strength > 0:
+The government majority removed it. Political credit survives; public capacity
+does not change.?]
+[? if opposition_budget_senate_amendment_strength = 0: Nothing returned for a
+final lower-chamber decision.?]
+
+- @budget_2020_complete: Close the pandemic budget procedure
 
 @budget_2020_complete
-on-arrival: senate_pending_bill_type = "none"; senate_pending_bill = "No bill pending"; senate_budget_year = 0
+on-arrival: {!
+Q.senate_pending_bill_type = "none";
+Q.senate_pending_bill = "No bill pending";
+Q.senate_budget_year = 0;
+if (Q.budget_2020_concession_pending) {
+    Q.budget_2020_concession_pending = 0;
+    Q.opposition_budget_audit_pending = 1;
+    Q.opposition_budget_audit_enacted = 1;
+    Q.opposition_budget_audit_priority_1_enacted = 1;
+    Q.last_policy_stage = "Enacted; audit pending";
+    Q.last_policy_authority = "PiS state budget";
+    Q.last_policy_implementation = 0;
+}
+!}
 go-to: poland_events.budget_consequence
 
 @return_hub

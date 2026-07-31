@@ -457,6 +457,29 @@ Q.left_poll = 8.6;
 Q.konf_poll = 7.2;
 Q.other_poll = 3.7;
 Q.p2050_emerged = 1;
+Q.capitalism_acceptance = 65;
+Q.welfare_expectation = 77;
+Q.cultural_conservatism = 62;
+Q.order_threat_sensitivity = 66;
+Q.universal_solidarity = 61;
+Q.institutional_trust = 40;
+Q.change_appetite = 73;
+Q.electoral_viability = 50;
+Q.winner_reputation = 38;
+Q.issue_ownership = 36;
+Q.leadership_authority = 43;
+Q.coalition_blur = 14;
+Q.media_access = 27;
+Q.list_confidence = 49;
+Q.historical_pressure_last =
+    "The 8.61% result enters coalition talks below the 2019 return";
+Q.historical_presidential_2020_applied = 1;
+Q.historical_recovery_bargain_applied = 1;
+Q.historical_merger_conflict_applied = 1;
+Q.historical_tusk_squeeze_applied = 1;
+Q.historical_war_inflation_applied = 1;
+Q.historical_common_list_applied = 1;
+Q.historical_election_2023_applied = 1;
 Q.poll_model_initialized = 1;
 Q.poll_sample_size = 1400;
 Q.poll_margin_error = 2.6;
@@ -1094,7 +1117,7 @@ Q.government_party = "pis";
 Q.government_owner = "PiS and its governing partners";
 Q.position = "Parliamentary opposition";
 Q.coalition_status = "PiS-led confidence pact";
-Q.coalition_seats = Q.confidence_yes;
+Q.coalition_seats = Math.max(0, Number(Q.pis_seats) || 0);
 Q.left_cabinet_committed = 0;
 Q.left_cabinet_model = "Opposition";
 Q.ministries_finalized = 1;
@@ -1248,7 +1271,7 @@ authority. Voting confidence from outside does not.
 @left_new_left_cabinet
 title: Put New Left in cabinet; let Razem support from outside
 subtitle: Historical architecture: New Left governs while Razem votes under a written social floor.
-on-arrival: candidate_left_votes = left_seats + left_splinter_support_votes; left_cabinet_committed = 1; left_cabinet_model = "New Left ministers · Razem external support"; democratic_pact = "Coalition cabinet with outside Left support"; barons_dissent -= 4; progressives_dissent -= 3; razem_dissent += 5; coalition_seats = coalition_democratic_seats; news_headline = "New Left takes ministries while autonomous Left parties remain outside"
+on-arrival: candidate_left_votes = left_seats + left_splinter_support_votes; left_cabinet_committed = 1; left_cabinet_model = "New Left ministers · Razem external support"; democratic_pact = "Proposed coalition cabinet with outside Left support"; barons_dissent -= 4; progressives_dissent -= 3; razem_dissent += 5; news_headline = "New Left proposes ministers while autonomous Left parties remain outside"
 go-to: democratic_psl_mandate
 
 @left_whole_cabinet
@@ -1256,7 +1279,7 @@ title: Require the whole Left to enter and own the cabinet
 subtitle: Cost: 1 party resource. Strong collective responsibility, difficult Razem ratification.
 choose-if: resources >= 1 and left_splinter_support_votes = left_splinter_seats
 unavailable-subtitle: [? if resources < 1: A joint programme convention and ministerial vetting cost one resource. ?][? if left_splinter_support_votes < left_splinter_seats: One or more breakaway Left parties refuse collective cabinet responsibility. Rebuild relations first. ?]
-on-arrival: resources -= 1; candidate_left_votes = left_committed_seats; left_cabinet_committed = 1; left_cabinet_model = "Whole cooperating Left coalition delegation"; democratic_pact = "Whole-Left cabinet entry"; party_unity += 5; razem_dissent += 8; barons_dissent += 3; coalition_seats = coalition_democratic_seats; news_headline = "Every cooperating Left party assumes cabinet responsibility"
+on-arrival: resources -= 1; candidate_left_votes = left_committed_seats; left_cabinet_committed = 1; left_cabinet_model = "Whole cooperating Left coalition delegation"; democratic_pact = "Proposed Whole-Left cabinet entry"; party_unity += 5; razem_dissent += 8; barons_dissent += 3; news_headline = "Every cooperating Left party offers to assume cabinet responsibility"
 go-to: democratic_psl_mandate
 
 @left_supply_only
@@ -1268,7 +1291,7 @@ go-to: democratic_psl_mandate
 @left_maximal_terms
 title: Demand binding abortion, housing and labour deadlines
 subtitle: The Left offers its whole club and cabinet service; PSL begins the next meeting near the exit.
-on-arrival: candidate_left_votes = left_committed_seats; left_cabinet_committed = 1; left_cabinet_model = "Programme-bound cooperating Left entry"; democratic_pact = "Maximal social and rights timetable"; party_unity += 7; razem_dissent -= 8; progressives_dissent -= 5; psl_coalition_dissent += 18; psl_relation -= 9; coalition_seats = coalition_democratic_seats; news_headline = "The cooperating Left parties make their votes conditional"
+on-arrival: candidate_left_votes = left_committed_seats; left_cabinet_committed = 1; left_cabinet_model = "Programme-bound cooperating Left entry"; democratic_pact = "Maximal social and rights timetable proposal"; party_unity += 7; razem_dissent -= 8; progressives_dissent -= 5; psl_coalition_dissent += 18; psl_relation -= 9; news_headline = "The cooperating Left parties make their proposed votes conditional"
 go-to: democratic_psl_mandate
 
 @left_withhold
@@ -1584,9 +1607,33 @@ Q.caretaker_government = 0;
 Q.government_has_confidence = 1;
 Q.prime_minister = Q.democratic_candidate;
 Q.government_name = Q.democratic_candidate + " democratic coalition";
+if (Q.democratic_candidate == "Donald Tusk") {
+    Q.government_party = "ko";
+    Q.government_owner = "KO-led democratic coalition";
+} else if (Q.democratic_candidate == "Władysław Kosiniak-Kamysz") {
+    Q.government_party = "psl";
+    Q.government_owner = "PSL-led democratic coalition";
+} else if (Q.democratic_candidate == "Agnieszka Dziemianowicz-Bąk") {
+    Q.government_party = Q.left_cabinet_committed
+        ? "lewica" : "independent";
+    Q.government_owner = Q.left_cabinet_committed
+        ? "Lewica-led democratic coalition"
+        : "Independent parliamentary cabinet";
+} else {
+    Q.government_party = "other";
+    Q.government_owner = Q.democratic_candidate + " parliamentary cabinet";
+}
 Q.coalition_status = "KO · Poland 2050 · PSL · negotiated Left support";
-Q.coalition_seats = Q.confidence_yes;
 Q.left_in_government = Q.left_cabinet_committed ? 1 : 0;
+Q.coalition_seats = Math.min(
+    Number(Q.sejm_total) || 460,
+    Math.max(0, Number(Q.ko_seats) || 0) +
+    Math.max(0, Number(Q.p2050_seats) || 0) +
+    Math.max(0, Number(Q.psl_seats) || 0) +
+    (Q.left_in_government
+        ? Math.max(0, Number(Q.left_seats) || 0)
+        : 0)
+);
 if (Q.left_in_government) {
     Q.position = "Coalition government";
     Q.budget = 6;
@@ -1846,8 +1893,18 @@ if (
     Q.government_party = "ko";
     Q.government_owner = "KO-led democratic coalition";
 }
-Q.coalition_seats = Q.third_yes;
 Q.left_in_government = Q.third_left_cabinet ? 1 : 0;
+Q.coalition_seats = Q.government_party == "pis"
+    ? Math.max(0, Number(Q.pis_seats) || 0)
+    : Math.min(
+        Number(Q.sejm_total) || 460,
+        Math.max(0, Number(Q.ko_seats) || 0) +
+        Math.max(0, Number(Q.p2050_seats) || 0) +
+        Math.max(0, Number(Q.psl_seats) || 0) +
+        (Q.left_in_government
+            ? Math.max(0, Number(Q.left_seats) || 0)
+            : 0)
+    );
 if (Q.left_in_government) {
     Q.left_cabinet_committed = 1;
     Q.ministries_finalized = 0;
@@ -2410,7 +2467,7 @@ Q.coalition_break_threat = 0;
 Q.psl_coalition_dissent = 100;
 Q.coalition_seats =
     Q.ko_seats + Q.p2050_seats +
-    Q.centrum_seats + Q.left_committed_seats;
+    Q.left_seats;
 Q.coalition_status = "KO · Poland 2050 · Left minority cabinet";
 const resignedPSLPortfolios = {
     economy: ["KO", "Coalition development nominee"],
@@ -2456,7 +2513,33 @@ subtitle: Spend 1 governing capacity. Restore every currently committed coalitio
 view-if: left_in_government = 1
 choose-if: left_in_government = 1 and budget >= 1
 unavailable-subtitle: Requires one remaining governing-capacity point.
-on-arrival: budget -= 1; article160_psl_yes = psl_seats; article160_psl_no = 0; article160_psl_abstain = 0; article160_left_yes = left_committed_seats; article160_left_no = 0; coalition_broken = 0; coalition_seats = coalition_democratic_seats; psl_coalition_dissent -= 10; confidence_strategy = "Rural guarantee"
+on-arrival: {!
+Q.budget -= 1;
+Q.article160_psl_yes = Q.psl_seats;
+Q.article160_psl_no = 0;
+Q.article160_psl_abstain = 0;
+Q.article160_left_yes = Q.left_committed_seats;
+Q.article160_left_no = 0;
+Q.coalition_broken = 0;
+const restoredPSLPortfolios = {
+    economy: ["PSL", "Krzysztof Hetman"],
+    agriculture: ["PSL", "Czesław Siekierski"],
+    defence: ["PSL", "Władysław Kosiniak-Kamysz"]
+};
+for (const portfolio of Object.keys(restoredPSLPortfolios)) {
+    Q[portfolio + "_minister_party"] = restoredPSLPortfolios[portfolio][0];
+    Q[portfolio + "_minister"] = restoredPSLPortfolios[portfolio][1];
+}
+Q.coalition_seats = Math.min(
+    Number(Q.sejm_total) || 460,
+    Math.max(0, Number(Q.ko_seats) || 0) +
+        Math.max(0, Number(Q.p2050_seats) || 0) +
+        Math.max(0, Number(Q.psl_seats) || 0) +
+        Math.max(0, Number(Q.left_seats) || 0)
+);
+Q.psl_coalition_dissent -= 10;
+Q.confidence_strategy = "Rural guarantee";
+!}
 go-to: article160_roll
 
 @confidence_minority_discipline
@@ -2472,7 +2555,7 @@ Q.article160_left_no = 0;
 Q.coalition_broken = 1;
 Q.coalition_seats =
     Q.ko_seats + Q.p2050_seats +
-    Q.centrum_seats + Q.left_committed_seats;
+    Q.left_seats;
 const minorityCabinetReplacements = {
     economy: ["KO", "Coalition development nominee"],
     agriculture: ["KO", "Coalition agriculture nominee"],
@@ -2503,7 +2586,7 @@ Q.article160_left_no = 0;
 Q.coalition_broken = 1;
 Q.coalition_seats =
     Q.ko_seats + Q.p2050_seats +
-    Q.centrum_seats + Q.left_committed_seats;
+    Q.left_seats;
 const redlineCabinetReplacements = {
     economy: ["KO", "Coalition development nominee"],
     agriculture: ["KO", "Coalition agriculture nominee"],
@@ -2801,7 +2884,6 @@ if (Q.constructive_passed) {
     Q.formation_in_progress = 0;
     Q.formation_complete = 1;
     Q.coalition_broken = 0;
-    Q.coalition_seats = Q.confidence_yes;
     Q.constructive_vonc_cooldown = 0;
     if (Q.constructive_democratic) {
         const constructiveCandidateKey =
@@ -2863,6 +2945,17 @@ if (Q.constructive_passed) {
         Q.ending_name = "The coalition crosses right";
         Q.ending_score -= 18;
     }
+    Q.coalition_seats = Q.government_party == "pis"
+        ? Math.max(0, Number(Q.pis_seats) || 0)
+        : Math.min(
+            Number(Q.sejm_total) || 460,
+            Math.max(0, Number(Q.ko_seats) || 0) +
+            Math.max(0, Number(Q.p2050_seats) || 0) +
+            Math.max(0, Number(Q.psl_seats) || 0) +
+            (Q.left_in_government
+                ? Math.max(0, Number(Q.left_seats) || 0)
+                : 0)
+        );
     Q.news_headline =
         Q.constructive_candidate + " replaces the prime minister immediately";
 } else {

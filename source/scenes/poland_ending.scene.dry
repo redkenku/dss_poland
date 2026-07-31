@@ -209,9 +209,52 @@ Q.ending_judiciary_score = Math.round(
         (100 - Number(Q.court_backlog))
     ) / 9
 );
+const endingLeftLists = [
+    ["left", 1],
+    ["sld_breakaway", Q.barons_party_formed],
+    ["spring_breakaway", Q.spring_party_formed],
+    ["labor_left", Q.labor_party_formed],
+    ["young_left", Q.progressives_party_formed],
+    ["razem", Q.razem_party_formed],
+    ["pps", Q.pps_party_formed]
+].filter(function(entry) {
+    return entry[1];
+});
+Q.ending_fragmentation_lists = endingLeftLists.length;
+Q.ending_lists_above_threshold = endingLeftLists.reduce(
+    function(total, entry) {
+        return total + (
+            Number(Q[entry[0] + "_vote_intent"]) >= 5 ? 1 : 0
+        );
+    },
+    0
+);
+Q.ending_threshold_losses = endingLeftLists.reduce(
+    function(total, entry) {
+        return total + (
+            Number(Q[entry[0] + "_vote_intent"]) < 5 ? 1 : 0
+        );
+    },
+    0
+);
+Q.ending_family_vote = Math.round(
+    endingLeftLists.reduce(function(total, entry) {
+        return total + Math.max(
+            0,
+            Number(Q[entry[0] + "_vote_intent"]) || 0
+        );
+    }, 0) * 10
+) / 10;
+Q.ending_family_seats = Math.max(
+    0,
+    Math.round(Number(Q.left_family_projected_seats) || 0)
+);
+Q.ending_fragmentation_penalty =
+    Math.max(0, Q.ending_fragmentation_lists - 1) * 2 +
+    Q.ending_threshold_losses * 2;
 Q.ending_score =
     Math.round(Number(Q.party_unity) / 10) +
-    Math.round(Number(Q.left_vote_intent) / 2) +
+    Math.round(Number(Q.ending_family_vote) / 2) +
     Math.round(Number(Q.public_trust) / 12) +
     Math.round(
         (Number(Q.media_capacity) + Number(Q.local_network)) / 20
@@ -219,23 +262,27 @@ Q.ending_score =
     Q.ending_budget_wins * 3 +
     Math.round(Q.ending_judiciary_score / 12) +
     (Q.left_in_government ? 4 : 0) +
-    (Q.razem_split ? 0 : 5) +
-    (Q.pres_2025_winner == Q.pres_2025_left_candidate ? 6 : 0);
+    (Q.pres_2025_winner == Q.pres_2025_left_candidate ? 6 : 0) -
+    Q.ending_fragmentation_penalty;
 if (
     Q.party_unity >= 65 &&
-    Q.left_vote_intent >= 13 &&
+    Q.ending_family_vote >= 13 &&
+    Q.ending_threshold_losses == 0 &&
     Q.ending_budget_wins >= 3 &&
     Q.ending_judiciary_score >= 55 &&
     (Q.left_in_government || Q.coalition_status.indexOf("Left") >= 0)
 ) {
     Q.ending_name = "The impossible majority";
 } else if (
-    Q.party_unity >= 50 &&
-    Q.left_vote_intent >= 9 &&
+    Q.ending_family_vote >= 9 &&
+    Q.ending_lists_above_threshold >= 1 &&
     Q.ending_budget_wins >= 2
 ) {
     Q.ending_name = "A Left that can govern";
-} else if (Q.party_unity >= 30 && Q.left_vote_intent >= 5) {
+} else if (
+    Q.ending_family_vote >= 5 &&
+    Q.ending_lists_above_threshold >= 1
+) {
     Q.ending_name = "Survival with leverage";
 } else {
     Q.ending_name = "The long fragmentation";
@@ -248,6 +295,9 @@ Q.news_headline = "The 2026 budget closes the playable campaign";
 The playable campaign closes after the **December 2026 budget vote**.
 
 Lewica modelled vote: **[+ left_vote_intent +]%**  
+Left electoral family: **[+ ending_family_vote +]% across [+ ending_fragmentation_lists +] lists**
+Lists clearing 5%: **[+ ending_lists_above_threshold +]**; sub-threshold
+lists: **[+ ending_threshold_losses +]**; projected family seats: **[+ ending_family_seats +]**
 Alliance unity: **[+ party_unity +]/100**  
 Current position: **[+ position +]**  
 Budgets carried since the transfer of power: **[+ ending_budget_wins +]/4**  
@@ -256,6 +306,10 @@ Judicial settlement quality: **[+ ending_judiciary_score +]/100**
 Media and local capacity: **[+ media_capacity +] + [+ local_network +]**  
 Leadership months used: **[+ leadership_actions_taken +]/87**  
 Neglected months: **[+ neglected_months +]**
+
+The player finishes as **[+ strategic_centre_label +]**. During the campaign,
+there were **[+ individual_defections +] individual defections**, **[+ parliamentary_circles +] parliamentary clubs** and **[+ organised_left_splits +] organised splits**. Fragmentation is scored here through competing lists,
+wasted votes and seats rather than through an earlier loss screen.
 
 [? if ending_name = "The impossible majority": The coalition of mini-parties
 did not become harmonious. It became governable. The Left preserved enough
@@ -270,40 +324,13 @@ machine capable of surviving that argument.?]
 It still depends on harder choices about Razem, PSL, coalition office and
 whether incremental achievements justify the bargains that produced them.?]
 
-[? if ending_name = "The long fragmentation": Every caucus preserved a reason
-to exist and lost the capacity to act alone. The next election begins as a
-threshold and succession crisis.?]
+[? if ending_name = "The long fragmentation": The coordinating centre reaches
+the finish, but the election arithmetic is unforgiving: separate organisations
+preserved reasons to exist while too many lists failed to turn the wider Left
+vote into seats.?]
 
 - @restart: Return to the title
 - @library: Review the Polish dossier
-
-@fracture
-title: The alliance fractures
-new-page: true
-call: poland_normalize
-on-arrival: prototype_complete = 1; news_headline = "The common campaign centre fractures"
-
-= Everyone has a knife
-
-Unity falls below the point at which a common parliamentary strategy is
-credible. Regional structures, Spring and Razem begin preparing separate
-vehicles. The Left has not vanished, but this campaign centre no longer exists.
-
-- @restart: Return to the title
-
-@collapse
-title: Electoral collapse
-new-page: true
-call: poland_normalize
-on-arrival: prototype_complete = 1; news_headline = "The common project approaches electoral extinction"
-
-= Electoral freefall
-
-The common project falls below electoral viability. Factions preserve
-their own brands and blame coordination for the loss. The chapter ends before a
-second disappearance from the Sejm can become inevitable.
-
-- @restart: Return to the title
 
 @restart
 on-arrival: started = 0

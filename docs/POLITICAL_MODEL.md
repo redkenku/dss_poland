@@ -66,6 +66,25 @@ resources to research and organise that stance. They never spend the state
 budget and never acquire governing authority merely by improving relations
 with PiS, KO, the President or a Senate majority.
 
+### Authority and state ledgers
+
+Policy uses one causal sequence: **proposal → negotiated concession → passage
+→ implementation**. Opposition work can raise pressure, improve scrutiny, win
+a conditional concession or supply votes. It cannot directly increase hospital
+capacity, household security, KPO delivery or national administrative capacity.
+Those ledgers move only when the competent cabinet, ministry, chamber or other
+institution acts, including a delayed callback that verifies a prior bargain.
+
+`coalition_seats` has one meaning everywhere: MPs belonging to recognised
+parties that hold at least one Council of Ministers portfolio. It excludes
+external confidence-and-supply votes, one-off confidence recruits and the last
+roll-call yes total. Those remain in the explicit `confidence_*` qualities.
+
+Party congresses select party officers; the Sejm and Senate elect their own
+Marshals. Normalisation may vacate an incompatible office, but a full authority
+event records the institution that fills it. It may not silently turn an
+independent prime minister into a party cabinet or install a new party leader.
+
 ## Factions have two layers
 
 Formal origin and political tendency must be separate. This is the cleanest way
@@ -175,6 +194,32 @@ A party can therefore promise twenty votes and deliver seventeen. A leader who
 repeatedly promises votes they cannot deliver loses both coalition trust and
 internal authority.
 
+### Escalation is a ladder, not a cliff
+
+The playable faction record now carries this disagreement through seven
+persistent stages: private grumbling and leaks; a specific demand with a
+deadline; public criticism or a threatened free vote; rebellion, a leadership
+challenge or refusal to whip; individual defections; a parliamentary circle or
+club; and only then an organised party and electoral-list split. A settlement
+can answer the deadline early. Unanswered grievances remain in memory and make
+later escalation easier.
+
+MP movement is deliberately smaller than a caucus strength estimate. At the
+defection and list stages, each caucus applies office-holding, local
+organisation, personal following, ideological intensity, dependence on the
+common list and broker cohesion. Some MPs can defect before the organisation;
+others can keep ministries, constituency links or nominations and remain with
+the coordinating centre after their old caucus launches a party. A faction
+therefore cannot automatically deliver every MP attributed to it.
+
+Low unity no longer ends the campaign. It withholds dues, consumes media,
+local and organiser capacity, produces contradictory appearances, failed
+whips, adviser resignations and individual defections, and can eventually
+create clubs and competing lists. The player continues as the strategic
+coordinating centre or rump. National election calculations apply each list's
+threshold separately, and the December 2026 assessment scores lists, wasted
+sub-threshold votes and family seats.
+
 ### Initial caucus map
 
 This is an illustrative research map, not a fixed roster.
@@ -202,6 +247,31 @@ voting in internal ratification. The independent organisation then receives a
 poll share, must clear its own Sejm threshold and participates in the same
 460-seat allocation as the established parties. Equivalent electoral records
 are used for the Poland 2050, PiS and Konfederacja successor chains.
+
+### Persistent PiS/United Right and KO organisations
+
+The playable rival-party layer now uses a common record array rather than
+reducing every dispute to parent-party cohesion. It contains Kaczyński's
+apparatus; Porozumienie; Solidarna/Suwerenna Polska; Morawiecki's developmental
+camp and Rozwój+; welfare-conservative, security and culture-war PiS currents;
+and PO, Nowoczesna, Inicjatywa Polska, the Greens, a possible consolidated KO
+party and a possible KO splinter. Current-affinity MP estimates can overlap;
+the separate `exclusive_seats` field is the only one that transfers mandates.
+
+Porozumienie's 2021 exit therefore creates an independent six-MP organisation
+and a named person ledger in which some former members remain PiS-aligned.
+Suwerenna Polska's 2024 talks accumulate support and dissent before its own
+decision produces a merger, federation, refusal or individual accessions.
+Rozwój+ has distinct association, ultimatum, disciplinary-hearing, named-
+loyalty, individual-departure, club and party stages. Forty claimed supporters
+and forty-four cases are never treated as forty transferred MPs.
+
+KO's 2025 convention negotiates leadership representation, programme, local
+structures and list places, assets and debts, component dissolution and the
+treatment of dissenters. Full historical consolidation, federation, partial
+merger, surviving components, individual recruitment and progressive or
+classical-liberal splinters all preserve the relevant records. The Greens do
+not dissolve merely because the other components reach an agreement.
 
 ## The annual budget is the season finale
 
@@ -663,6 +733,37 @@ defend its welfare ownership or imitate the economic Darwinism on its flank.
 The result is bounded repositioning, not a scripted national march in one
 direction.
 
+### The historical Lewica pressure track
+
+The 2019 return is a threshold-clearing alliance success, not a permanent
+12-percent floor. The model uses the historical results as hostile benchmarks:
+12.56 percent in 2019, Robert Biedroń's 2.22 percent in 2020, 8.61 percent in
+2023, and the separate 4.23 and 4.86 percent results of Magdalena Biejat and
+Adrian Zandberg in 2025. They calibrate pressure; they do not script a collapse.
+
+Seven live qualities carry that pressure: `electoral_viability`,
+`winner_reputation`, `issue_ownership`, `leadership_authority`,
+`coalition_blur`, `media_access` and `list_confidence`. Coalition blur is the
+only adverse-direction quality. The others improve through organisation,
+delivery, leadership legitimacy, media investment and credible policy
+differentiation.
+
+One-off and continuing pressures cover the weak pandemic presidential
+campaign, KO's candidate reset and Hołownia's insurgency; the recovery-fund
+bargain's split between policy delivery and rescuing PiS; merger conflict and
+Czarzasty's methods; Tusk's centralisation of the anti-PiS electorate; war and
+inflation; common-list pressure; junior-coalition responsibility without full
+credit; failed abortion reform; weak media infrastructure; the Razem rupture;
+and repeated losing results. Low viability produces three explicit exits from
+Lewica consideration: tactical movement to KO, some movement to Poland 2050,
+and abstention. It does not make those voters culturally conservative.
+
+The same weakness does make rival parties more willing to adopt right-wing
+frames because progressive issue ownership and media access have fallen. A
+player can resist the historical track by building local organisation,
+credible media access, delivered material policy and a differentiated common
+list; no date or benchmark applies an unavoidable polling result.
+
 Every rival party is also an internal coalition:
 
 | Party | Hidden playable balance |
@@ -704,6 +805,25 @@ election-day shocks before two campaign moves; raw results select the two
 finalists. July stores new polling and result slack, permits exactly two support
 trades and calculates partial transfers, abstention and new turnout. Saving or
 reopening a result screen does not reroll those shocks.
+
+Both presidential counts now publish the same performance ladder: below 2.5%
+is a shattering disaster; 2.5–4% a severe defeat; 4–5.5% disappointing or
+ambiguous; 5.5–7.5% a broadly satisfying defence of the base; 7.5–10% strong;
+10% or more a breakthrough; and reaching the runoff or winning a party-system
+transformation. The verdict is shown against the final campaign expectation
+and the historical result. It creates an electorate feedback record rather
+than a flat poll penalty: the following monthly poll separately recalculates
+Left consideration and participation, then reduces that effect over six to
+twelve months. A later failure can lengthen and intensify a still-active
+negative cycle.
+
+The 2025 count has two ledgers. One judges the player-backed candidate and one
+judges the complete Left field against Biejat and Zandberg's historical 9.09%.
+Biejat finishing behind Zandberg is therefore a New Left leadership defeat
+even when their combined field is strong. A common nomination is modelled as
+a newly assembled electorate: an open primary can confer legitimacy, while a
+late leadership withdrawal can demobilise voters. It never receives the two
+historical candidacies' arithmetic sum automatically.
 
 ### Issue salience
 
