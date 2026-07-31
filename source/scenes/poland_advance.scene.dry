@@ -15,6 +15,62 @@ if (Q.month_actions > 0) {
     Q.razem_dissent += 2;
 }
 
+// Foreign-policy friction resolves on the next month turn. Risk meters are
+// consequences, not decorative numbers: coalition actors can overrule a
+// junior minister, a portfolio owner can resist the lead party, and a cabinet
+// that claimed full authority owns the result.
+const foreignOverrideRisk = Math.max(
+    0,
+    Number(Q.foreign_ministry_override_risk) || 0
+);
+const foreignPortfolioResistance = Math.max(
+    0,
+    Number(Q.foreign_portfolio_resistance) || 0
+);
+const foreignResponsibility = Math.max(
+    0,
+    Number(Q.foreign_policy_responsibility) || 0
+);
+if (foreignOverrideRisk > 0) {
+    const overrideDamage = Math.max(
+        1,
+        Math.round(foreignOverrideRisk * 0.35)
+    );
+    Q.government_delivery -= overrideDamage;
+    Q.government_coalition_dissent += overrideDamage;
+    Q.foreign_followthrough_last =
+        "The Prime Minister trims or delays the junior minister's initiative";
+} else if (foreignPortfolioResistance > 0) {
+    const resistanceDamage = Math.max(
+        1,
+        Math.round(foreignPortfolioResistance * 0.30)
+    );
+    Q.government_delivery -= resistanceDamage;
+    Q.government_coalition_dissent += resistanceDamage;
+    Q.foreign_followthrough_last =
+        "The coalition portfolio owner narrows the cabinet's foreign-policy order";
+} else if (foreignResponsibility > 0) {
+    const responsibilityShift = Math.max(
+        1,
+        Math.round(foreignResponsibility * 0.20)
+    );
+    if ((Number(Q.government_delivery) || 0) >= 55) {
+        Q.public_trust += responsibilityShift;
+        Q.foreign_followthrough_last =
+            "Visible implementation lets the cabinet claim its foreign-policy result";
+    } else if ((Number(Q.government_delivery) || 0) < 45) {
+        Q.public_trust -= responsibilityShift;
+        Q.foreign_followthrough_last =
+            "The cabinet owns the cost of a foreign-policy promise it could not deliver";
+    } else {
+        Q.foreign_followthrough_last =
+            "The cabinet's foreign-policy commitment lands without a clear political dividend";
+    }
+}
+Q.foreign_ministry_override_risk = 0;
+Q.foreign_portfolio_resistance = 0;
+Q.foreign_policy_responsibility = 0;
+
 const advisorRepresentation = {
     barons: Number(Q.barons_advisor_count) || 0,
     spring: Number(Q.spring_advisor_count) || 0,
@@ -330,8 +386,13 @@ for (const faction of Q.factions.slice()) {
             Number(Q[faction + "_escalation_stage"]) || 0
         ))
     );
+    const waitingForDemandDeadline =
+        currentStage == 2 &&
+        !Q[faction + "_demand_answered"] &&
+        Number(Q.time) < Number(Q[faction + "_demand_deadline"]);
     if (
         targetStage > currentStage &&
+        !waitingForDemandDeadline &&
         Number(Q.time) > Number(Q[faction + "_last_escalation_time"])
     ) {
         const nextStage = currentStage + 1;
@@ -1045,12 +1106,15 @@ if (prolongedPandemic) {
         clampMood(Q.pandemic_deaths_pressure, 0, 100) / 260 +
         Math.max(0, 48 - clampMood(Q.household_security, 0, 100)) / 180;
     const protection = Math.max(0, workplaceOwnership - 45) / 150;
+    const defensiveDrift = Math.max(0, pandemicWear - protection);
     Q.order_threat_sensitivity += pandemicWear * 0.42;
-    Q.universal_solidarity -= Math.max(0, pandemicWear - protection) * 0.28;
-    Q.institutional_trust -= Math.max(0, pandemicWear - protection) * 0.30;
+    Q.capitalism_acceptance += defensiveDrift * 0.20;
+    Q.cultural_conservatism += defensiveDrift * 0.16;
+    Q.universal_solidarity -= defensiveDrift * 0.28;
+    Q.institutional_trust -= defensiveDrift * 0.30;
     Q.change_appetite += pandemicWear * 0.16;
     Q.covid_anti_system_pressure +=
-        Math.max(0, pandemicWear - protection) * 0.55;
+        defensiveDrift * 0.55;
     if (workplaceOwnership >= 58) {
         Q.issue_ownership += 0.12;
         Q.covid_anti_system_pressure -= 0.12;

@@ -8,6 +8,18 @@ const projectRoot = path.resolve(__dirname, '..');
 const packageRoot = path.dirname(require.resolve('dendrynexus/package.json'));
 const cliPath = path.join(packageRoot, 'lib', 'cli', 'main.js');
 const extraArguments = process.argv.slice(2);
+const legacyRadioDirectory = path.join(
+  projectRoot,
+  'out',
+  'html',
+  'music',
+  '1928_1930'
+);
+const legacyRadio = fs.existsSync(legacyRadioDirectory)
+  ? fs.readdirSync(legacyRadioDirectory).map(function(file) {
+    return [file, fs.readFileSync(path.join(legacyRadioDirectory, file))];
+  })
+  : [];
 
 const result = childProcess.spawnSync(
   process.execPath,
@@ -25,6 +37,13 @@ if (result.error) {
 
 if (result.status !== 0) {
   process.exit(result.status === null ? 1 : result.status);
+}
+
+if (legacyRadio.length) {
+  fs.mkdirSync(legacyRadioDirectory, {recursive: true});
+  legacyRadio.forEach(function(asset) {
+    fs.writeFileSync(path.join(legacyRadioDirectory, asset[0]), asset[1]);
+  });
 }
 
 const compiledGame = path.join(projectRoot, 'out', 'game.json');

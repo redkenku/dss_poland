@@ -127,21 +127,27 @@ on-arrival: news_headline = "School reform opens two culture wars and one argume
 
 Reducing religion classes and introducing health education involve different
 teachers, parents and law. Making the health course optional may protect the
-coalition while guaranteeing uneven access.
+coalition while guaranteeing uneven access. [? if not left_in_government:
+Lewica is outside cabinet: it can organise pilots, table a bill or build the
+public coalition, but it cannot decide the ministry's national rule.?]
 
 - @schools_compulsory
 - @schools_optional
 - @schools_local
+- @pis_school_bill
+- @pis_school_coalition
 
 @schools_compulsory
 title: Insist on compulsory evidence-based health education
 subtitle: Progressive credibility +5 and young support +4; coalition dissent +7 and PSL −9.
+view-if: left_in_government = 1
 on-arrival: progressive_credibility += 5; young_support += 4; psl_relation -= 9; president_relation -= 4; government_coalition_dissent += 7; far_right_agenda += 4; news_headline = "The Left refuses an opt-out from public-health knowledge"
 go-to: poland_event_queue
 
 @schools_optional
 title: Accept the opt-out and defend reducing religion to one lesson
 subtitle: Delivery +2, PSL +3 and trust +1; progressive dissent +4.
+view-if: left_in_government = 1
 on-arrival: government_delivery += 2; psl_relation += 3; progressives_dissent += 4; feminist_trust -= 2; public_trust += 1; news_headline = "The coalition narrows school reform to what it can administer"
 go-to: poland_event_queue
 
@@ -199,11 +205,15 @@ go-to: poland_event_queue
 
 @pis_school_bill
 title: Table a compulsory health-education bill
+subtitle: Progressive credibility +4 and young support +3; PiS relations −5 and far-right agenda +3.
+view-if: left_in_government = 0
 on-arrival: progressive_credibility += 4; young_support += 3; pis_relation -= 5; far_right_agenda += 3; news_headline = "A defeated bill creates a recorded education alternative"
 go-to: poland_event_queue
 
 @pis_school_coalition
 title: Build a parent, teacher and medical coalition before legislating
+subtitle: Organiser energy +4, local network +3 and public trust +3.
+view-if: left_in_government = 0
 on-arrival: organiser_energy += 4; local_network += 3; public_trust += 3; media_capacity += 1; news_headline = "The education fight begins outside the ministry"
 go-to: poland_event_queue
 
@@ -1664,7 +1674,7 @@ let splitPressure =
     thirdWayRoll;
 if (!Q.government_has_confidence) splitPressure += 8;
 Q.third_way_split_pressure = Math.round(splitPressure);
-Q.third_way_split = splitPressure >= 52 ? 1 : 0;
+Q.third_way_split = splitPressure > 52 ? 1 : 0;
 Q.third_way_active = Q.third_way_split ? 0 : 1;
 Q.third_way_cohesion += Q.third_way_split ? -25 : 8;
 Q.third_way_outgoing_leadership =
@@ -2854,7 +2864,34 @@ priority: 24
 order: 10
 max-visits: 1
 view-if: continuous_campaign = 1 and year = 2025 and month = 10
-on-arrival: ko_merger_stage = 1; ko_coalition_dissent += 3; ko_consolidation_outgoing_leaders = "Donald Tusk (PO), Adam Szłapka (Nowoczesna) and Barbara Nowacka (Inicjatywa Polska) as leaders of separate organisations"; ko_consolidation_incoming_bloc = "Donald Tusk backed by PO's dominant apparatus and pro-merger majorities in Nowoczesna and Inicjatywa Polska"; ko_leader = "Donald Tusk"; news_headline = "KO's component parties open a six-part consolidation negotiation"
+on-arrival: {!
+const koConventionRoll =
+    Math.floor((this.random.uint32() / 4294967296) * 13) - 6;
+const koInternalDissent = Math.max(
+    0,
+    Number(Q.ko_coalition_dissent) || 0
+);
+Q.ko_merger_stage = 6;
+Q.ko_merger_integration = Math.round(
+    78 - Math.max(0, koInternalDissent - 30) * 0.35 +
+    koConventionRoll
+);
+Q.ko_merger_federalism = Math.round(
+    32 + koInternalDissent * 0.20 - koConventionRoll * 0.20
+);
+Q.ko_merger_dissent = Math.round(
+    28 + koInternalDissent * 0.45 - koConventionRoll * 0.25
+);
+Q.ko_merger_recruitment = 0;
+Q.ko_coalition_dissent += 3;
+Q.ko_consolidation_outgoing_leaders =
+    "Donald Tusk (PO), Adam Szłapka (Nowoczesna) and Barbara Nowacka (Inicjatywa Polska) as leaders of separate organisations";
+Q.ko_consolidation_incoming_bloc =
+    "Donald Tusk backed by PO's dominant apparatus and pro-merger majorities in Nowoczesna and Inicjatywa Polska";
+Q.ko_leader = "Donald Tusk";
+Q.news_headline =
+    "KO's own component ballots decide the consolidation";
+!}
 
 = October 2025 — A coalition is not yet one party
 
@@ -2869,13 +2906,14 @@ memberships, structures, debts and sets of candidate rules an electoral
 liability. The convention negotiates the terms, representation and treatment
 of dissenters around the consolidation.
 
-For Lewica, one disciplined liberal competitor is harder to out-organise, but
-the programme, local-list and minority disputes create openings. Lewica can
-condition cooperation, compete for organisers, defend a social-investment
-floor or attack the apparatus deal; it cannot cast another party's ballot or
-appoint its leader.
+For Lewica, one disciplined liberal competitor is harder to out-organise. The
+component parties will cast their own ballots from the cohesion and dissent
+they accumulated before today. Lewica chooses one public stance; it cannot
+decide their representation, programme, assets, dissolution or leader.
 
-- @ko_merger_leadership
+- @ko_leadership_plural
+- @ko_leadership_po
+- @ko_leadership_recruit
 
 @ko_merger_leadership
 title: Leadership and internal representation
@@ -2889,18 +2927,21 @@ new-page: true
 
 @ko_leadership_plural
 title: Condition cooperation on protected component voices
-on-arrival: ko_merger_integration += 8; ko_merger_dissent -= 4; ko_relation += 3; ko_merger_stage = 2; news_headline = "Lewica rewards a plural statute without choosing KO's chair"
-go-to: ko_merger_programme
+subtitle: Respect KO's ballot; KO relations +3 and public trust +2.
+on-arrival: ko_relation += 3; public_trust += 2; news_headline = "Lewica asks for plural rules without choosing KO's result"
+go-to: ko_merger_result_2025
 
 @ko_leadership_po
 title: Deal through PO as the only reliable counterparty
-on-arrival: ko_merger_integration += 5; ko_merger_dissent += 7; ko_relation += 5; ko_merger_stage = 2; news_headline = "The party machines privilege PO's mandate"
-go-to: ko_merger_programme
+subtitle: KO relations +5; progressive credibility −2.
+on-arrival: ko_relation += 5; progressive_credibility -= 2; news_headline = "Lewica prepares for PO to remain the dominant counterparty"
+go-to: ko_merger_result_2025
 
 @ko_leadership_recruit
 title: Recruit individual organisers during the dispute
-on-arrival: ko_merger_recruitment += 6; ko_merger_dissent += 3; local_network += 2; ko_relation -= 2; ko_merger_stage = 2; news_headline = "Lewica recruits people while KO negotiates representation"
-go-to: ko_merger_programme
+subtitle: Recruitment pressure +12 and local network +2; KO relations −3.
+on-arrival: ko_merger_recruitment += 12; local_network += 2; ko_relation -= 3; news_headline = "Lewica recruits individuals without casting a KO ballot"
+go-to: ko_merger_result_2025
 
 @ko_merger_programme
 title: Economic and cultural programme

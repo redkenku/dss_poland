@@ -321,6 +321,47 @@ const presidentialConsiderationWeight = function(groupId) {
     if (groupId == "older_welfare_households") return 0.80;
     return 1.20;
 };
+const leftIssueReception = function() {
+    const issues = [
+        "abortion_rights", "refugee_solidarity", "border_security",
+        "vaccination", "social_spending", "lgbt_equality",
+        "secular_state", "rule_of_law", "national_security"
+    ];
+    let weightedReception = 0;
+    let totalWeight = 0;
+    for (const issue of issues) {
+        const salience = clampPolling(Q[issue + "_salience"], 0, 100);
+        const ownership = clampPolling(
+            Q[issue + "_left_ownership"],
+            0,
+            100
+        );
+        const support = clampPolling(Q[issue + "_support"], 0, 100);
+        const backlash = clampPolling(Q[issue + "_backlash"], 0, 100);
+        const association = ownership / 100;
+        weightedReception += salience * association * (
+            (support - 50) / 50 -
+            Math.max(0, backlash - 35) / 100
+        );
+        totalWeight += salience;
+    }
+    const currentReception = clampPolling(
+        weightedReception * 6 / Math.max(1, totalWeight),
+        -2.5,
+        2.5
+    );
+    if (
+        !Number.isFinite(Number(Q.left_issue_reception_baseline)) ||
+        Number(Q.left_issue_reception_baseline) < -100
+    ) {
+        Q.left_issue_reception_baseline = currentReception;
+    }
+    return clampPolling(
+        currentReception - Number(Q.left_issue_reception_baseline),
+        -2.5,
+        2.5
+    );
+};
 const leftBlocChange = function(groupId) {
     const failedNegotiations = Math.max(
         0,
@@ -349,7 +390,8 @@ const leftBlocChange = function(groupId) {
             presidentialConsiderationWeight(groupId) +
         finitePolling(Q.negotiation_successes, 0) * 0.35 -
         failedNegotiations * 0.12 -
-        governingPenalty;
+        governingPenalty +
+        leftIssueReception();
     if (groupId == "metropolitan_liberals") {
         return common +
             delta("young_support") * 0.10 +
