@@ -165,8 +165,8 @@ separate bidders in formation and election talks.?]
 - @center_split_ministries
 
 @center_split_accept
-title: Recognise two clubs and write separate support agreements
-subtitle: The cabinet survives, but coalition dissent +5 and partner dissent +6.
+title: Recognise two clubs and write separate parliamentary agreements
+subtitle: Records the split without pretending Lewica controls another party's cabinet.
 on-arrival: {!
 Q.p2050_split = 1;
 const centrumDefectors = Math.min(
@@ -180,15 +180,22 @@ Q.p2050_seats = Math.max(
 Q.centrum_seats =
     Math.max(0, Number(Q.centrum_seats) || 0) + centrumDefectors;
 Q.p2050_coalition_dissent += 6;
-Q.government_coalition_dissent += 5;
-Q.coalition_status = Q.government_has_confidence
-    ? "KO–PSL–Left with two centrist caucuses"
-    : "Caretaker Sejm with two centrist caucuses";
+if (
+    Q.left_in_government &&
+    Q.government_has_confidence &&
+    !Q.caretaker_government
+) {
+    Q.government_coalition_dissent += 5;
+    Q.coalition_status += " · two centrist caucuses";
+}
 Q.p2050_relation -= 2;
 Q.public_trust += 1;
-Q.news_headline = Q.government_has_confidence
-    ? "The coalition survives as five negotiating parties"
-    : "Two centrist clubs enter the formation and list talks";
+Q.news_headline =
+    Q.left_in_government &&
+    Q.government_has_confidence &&
+    !Q.caretaker_government
+        ? "The cabinet now negotiates with two centrist caucuses"
+        : "Lewica opens separate parliamentary talks with two centrist clubs";
 !}
 go-to: poland_event_queue
 
@@ -203,7 +210,7 @@ go-to: poland_event_queue
 @center_split_ministries
 title: Reallocate offices and let the split become permanent
 subtitle: Coalition dissent +3 and Poland 2050 relations −4; baron dissent −2.
-view-if: government_has_confidence = 1
+view-if: left_in_government = 1 and government_has_confidence = 1 and caretaker_government = 0
 on-arrival: {!
 Q.p2050_split = 1;
 const centrumDefectors = Math.min(
@@ -527,21 +534,30 @@ go-to: poland_event_queue
 
 @tribunal_competence_2026
 title: The Tribunal expands presidential judicial power
-subtitle: The government says the ruling is legally ineffective
+subtitle: State institutions disagree over whether the ruling has legal effect
 new-page: true
 tags: poland_event
 priority: 39
 order: 5
 max-visits: 1
 view-if: continuous_campaign = 1 and year = 2026 and month = 6
-on-arrival: legal_dualism += 6; tribunal_domestic_recognition -= 4; president_judiciary_cooperation -= 4; news_headline = "Case K 2/26 creates another ruling one part of the state will not obey"
+on-arrival: {!
+Q.legal_dualism += 6;
+Q.tribunal_domestic_recognition -= 4;
+Q.president_judiciary_cooperation -= 4;
+Q.news_headline = Q.government_party == "pis"
+    ? "Case K 2/26 strengthens a presidential power the PiS cabinet accepts"
+    : "Case K 2/26 creates another ruling one part of the state will not obey";
+!}
 
-= June 2026 — A ruling the government rejects
+= June 2026 — A ruling across the institutional divide
 
 The contested Tribunal says the President has greater personal authority over
-Supreme Court appointments and leadership. The Justice Ministry says the
-panel was invalid, the applicant lacked standing and the ruling has no legal
-effect.
+Supreme Court appointments and leadership. [? if government_party != "pis":
+The Justice Ministry says the panel was invalid, the applicant lacked standing
+and the ruling has no legal effect.?][? if government_party = "pis": The PiS
+cabinet accepts that expansion; Lewica can challenge it only from Parliament
+and the courts.?]
 
 - @competence_appear
 - @competence_ignore
@@ -716,19 +732,22 @@ go-to: poland_event_queue
 
 @unia_centrum_2026
 title: Unia Centrum becomes a political party
-subtitle: Another governing caucus prepares an independent electoral claim
+subtitle: A centrist parliamentary caucus prepares an independent electoral claim
 new-page: true
 tags: poland_event
 priority: 28
 order: 11
 max-visits: 1
 view-if: continuous_campaign = 1 and year = 2026 and month = 7 and p2050_split = 1
-on-arrival: unia_centrum_formed = 1; government_coalition_dissent += 3; news_headline = "Unia Centrum turns a parliamentary split into an electoral competitor"
+on-arrival: unia_centrum_formed = 1; government_coalition_dissent += 3 if government_party = "ko" and government_has_confidence = 1; news_headline = "Unia Centrum turns a parliamentary split into an electoral competitor"
 
-= July 2026 — Five governing parties and several thresholds
+= July 2026 — Another party and another threshold
 
 The centrist splinter has converted its parliamentary club into a party that
-may contest the next election. Lewica can negotiate with it separately, offer
+may contest the next election. [? if left_in_government: It is now another
+cabinet partner with its own threshold risk.?][? if not left_in_government:
+It is not Lewica's governing caucus; the available tools are parliamentary
+coordination and list talks.?] Lewica can negotiate with it separately, offer
 a broader common list to both centrist parties, or make it prove that it has
 an electorate of its own.
 
@@ -737,9 +756,9 @@ an electorate of its own.
 - @centrum_ignore
 
 @centrum_bilateral
-title: Negotiate a separate governing protocol with Unia Centrum
-subtitle: Centrum relations set to 48; coalition dissent +2 and Poland 2050 relations −2.
-on-arrival: centrum_relation = 48; p2050_relation -= 2; government_coalition_dissent += 2; public_trust += 1; news_headline = "The coalition council gains another bilateral agreement"
+title: Negotiate a separate cooperation protocol with Unia Centrum
+subtitle: Centrum relations set to 48; Poland 2050 relations −2.
+on-arrival: centrum_relation = 48; p2050_relation -= 2; government_coalition_dissent += 2 if left_in_government = 1; public_trust += 1; news_headline = "Lewica signs a bilateral parliamentary agreement with Unia Centrum"
 go-to: poland_event_queue
 
 @centrum_common
@@ -1118,7 +1137,7 @@ tags: poland_event
 priority: 30
 order: 5
 max-visits: 1
-view-if: continuous_campaign = 1 and year = 2026 and month = 11 and (government_coalition_dissent >= 45 or early_election_risk >= 45 or coalition_broken = 1)
+view-if: continuous_campaign = 1 and year = 2026 and month = 11 and government_has_confidence = 1 and caretaker_government = 0 and formation_in_progress = 0 and (government_coalition_dissent >= 45 or early_election_risk >= 45 or coalition_broken = 1)
 on-arrival: {!
 const pisSeats = Math.max(0, Number(Q.pis_seats) || 0);
 const morawieckiCamp = Math.max(
@@ -1179,6 +1198,7 @@ go-to: constructive_roll_2026
 @constructive_czarnek
 title: Offer wavering partners a written coalition-repair protocol
 subtitle: Nominee count −10 and coalition dissent −4; partner relations +2.
+view-if: left_in_government = 1
 on-arrival: constructive_base -= 10; government_coalition_dissent -= 4; psl_relation += 2; p2050_relation += 2; ko_relation += 1; news_headline = "A written repair protocol closes several routes to the opposition nominee"
 go-to: constructive_roll_2026
 
@@ -1186,9 +1206,14 @@ go-to: constructive_roll_2026
 title: Permit a free Lewica vote and expose the real defectors
 subtitle: The nominee may gain 8% of Lewica's seats; party unity −5.
 on-arrival: {!
-Q.constructive_base += Math.round(
-    (Number(Q.left_seats) || 0) * 0.08
+Q.constructive_left_defections = Math.min(
+    Math.max(0, Math.round(Number(Q.left_seats) || 0)),
+    Math.max(
+        0,
+        Math.round((Number(Q.left_seats) || 0) * 0.08)
+    )
 );
+Q.constructive_base += Q.constructive_left_defections;
 Q.party_unity -= 5;
 Q.public_trust += 1;
 Q.news_headline =
@@ -1199,6 +1224,7 @@ go-to: constructive_roll_2026
 @constructive_defend_2026
 title: Run a full coalition whip against the named nominee
 subtitle: Cost: 1 resource. Nominee count −18 and coalition dissent −6.
+view-if: left_in_government = 1
 choose-if: resources >= 1
 unavailable-subtitle: The whip operation lacks capacity.
 on-arrival: resources -= 1; constructive_base -= 18; government_coalition_dissent -= 6; party_unity += 2; ko_relation += 2; psl_relation += 2; p2050_relation += 2; news_headline = "The governing clubs turn the named replacement vote into defensive unity"
@@ -1250,19 +1276,92 @@ Q.confidence_no = Math.max(
 );
 Q.confidence_candidate = Q.constructive_candidate;
 Q.confidence_mode = "Constructive no confidence";
+Q.confidence_present = 460;
+Q.confidence_threshold = 231;
 if (Q.constructive_passed) {
     Q.prime_minister = Q.constructive_candidate;
     Q.government_name = Q.constructive_candidate + " replacement cabinet";
+    Q.government_party = "pis";
+    Q.government_owner = "PiS and its governing partners";
     Q.left_in_government = 0;
+    Q.left_cabinet_committed = 0;
+    Q.left_cabinet_model = "Opposition";
+    Q.ministries_finalized = 1;
+    Q.ministry_allocation_mode = "settled";
+    Q.ministry_return_mode = "event_queue";
     Q.budget = 0;
+    Q.budget_authority =
+        "Opposition — no state spending authority";
     Q.position = "Parliamentary opposition";
     Q.coalition_status = "Constructive replacement majority";
+    Q.coalition_seats = Q.constructive_yes;
     Q.government_has_confidence = 1;
-    Q.coalition_broken = 1;
+    Q.caretaker_government = 0;
+    Q.formation_in_progress = 0;
+    Q.formation_complete = 1;
+    Q.coalition_broken = 0;
+    Q.snap_election_requested = 0;
+    if ((Number(Q.constructive_left_defections) || 0) > 0) {
+        const durableLeftDefections = Math.min(
+            Math.max(0, Math.round(Number(Q.left_seats) || 0)),
+            Math.max(
+                0,
+                Math.round(
+                    Number(Q.constructive_left_defections) || 0
+                )
+            )
+        );
+        Q.left_seats = Math.max(
+            0,
+            (Number(Q.left_seats) || 0) - durableLeftDefections
+        );
+        Q.left_committed_seats = Math.max(
+            0,
+            (Number(Q.left_committed_seats) || 0) -
+                durableLeftDefections
+        );
+        Q.left_family_seats = Math.max(
+            0,
+            (Number(Q.left_family_seats) || 0) -
+                durableLeftDefections
+        );
+        Q.coalition_democratic_seats = Math.max(
+            0,
+            (Number(Q.coalition_democratic_seats) || 0) -
+                durableLeftDefections
+        );
+        Q.other_seats =
+            Math.max(0, Number(Q.other_seats) || 0) +
+            durableLeftDefections;
+    }
+    const replacementCabinet = {
+        labor: ["PiS", "Dorota Bojemska"],
+        equality: ["PiS", "PiS equality nominee"],
+        housing: ["PiS", "PiS housing nominee"],
+        health: ["PiS", "Ewa Krajewska"],
+        digital: ["PiS", "PiS digital-affairs nominee"],
+        science: ["PiS", "Krzysztof Szczucki"],
+        interior: ["PiS", "Paweł Szefernaker"],
+        finance: ["PiS", "Andrzej Kosztowniak"],
+        economy: ["PiS", "Marlena Maląg"],
+        justice: ["PiS", "Marcin Warchoł"],
+        foreign: ["PiS", "Szymon Szynkowski vel Sęk"],
+        agriculture: ["PiS", "Anna Gembicka"],
+        defence: ["PiS", "Mariusz Błaszczak"]
+    };
+    for (const portfolio of Object.keys(replacementCabinet)) {
+        Q[portfolio + "_minister_party"] =
+            replacementCabinet[portfolio][0];
+        Q[portfolio + "_minister"] =
+            replacementCabinet[portfolio][1];
+    }
+    Q.family_minister_party = Q.labor_minister_party;
+    Q.family_minister = Q.labor_minister;
+    Q.ministry_count = 0;
+    Q.cabinet_roster_government_party = "pis";
     Q.news_headline =
         Q.constructive_candidate + " replaces the prime minister";
 } else {
-    Q.government_has_confidence = 1;
     Q.news_headline =
         "The constructive motion fails with " +
         Q.constructive_yes + " votes";
@@ -1289,58 +1388,683 @@ failure proves only that this named alternative lacked 231.?]
 go-to: poland_event_queue
 
 @snap_election_2026
-title: Scenario horizon — the constitutional route to a snap election
+title: The constitutional route to a snap election
 subtitle: Budget failure creates a choice, not an automatic dissolution
 new-page: true
 tags: poland_event
 priority: 50
 order: 1
-max-visits: 1
-view-if: continuous_campaign = 1 and year = 2026 and month = 12 and snap_election_requested = 1
-on-arrival: news_headline = "Budget and formation failure put an early election within constitutional reach"
+max-visits: 6
+view-if: continuous_campaign = 1 and snap_election_held = 0 and time > snap_event_deferred_time and (snap_election_requested = 1 or (budget_deadline_active = 1 and budget_deadline_time >= 0 and time >= budget_deadline_time))
+on-arrival: {!
+let dissolutionSupport =
+    Math.max(0, Number(Q.left_committed_seats) || 0);
+const oppositionToPiS = Q.government_party == "pis";
+if (
+    (Number(Q.ko_relation) || 0) >= 52 ||
+    oppositionToPiS ||
+    (Number(Q.ko_poll_momentum) || 0) >= 0.6
+) {
+    dissolutionSupport +=
+        Math.max(0, Number(Q.ko_seats) || 0);
+}
+if (
+    (
+        (Number(Q.psl_relation) || 0) >= 55 &&
+        (Number(Q.early_election_risk) || 0) >= 45
+    ) ||
+    (Number(Q.psl_poll_momentum) || 0) >= 0.7
+) {
+    dissolutionSupport +=
+        Math.max(0, Number(Q.psl_seats) || 0);
+}
+if (
+    (
+        (Number(Q.p2050_relation) || 0) >= 50 &&
+        (Number(Q.early_election_risk) || 0) >= 45
+    ) ||
+    (Number(Q.p2050_poll_momentum) || 0) >= 0.7
+) {
+    dissolutionSupport +=
+        Math.max(0, Number(Q.p2050_seats) || 0);
+    if ((Number(Q.centrum_relation) || 0) >= 45) {
+        dissolutionSupport +=
+            Math.max(0, Number(Q.centrum_seats) || 0);
+    }
+}
+if (
+    Q.government_party != "pis" &&
+    (Number(Q.pis_poll_momentum) || 0) >= 0.8
+) {
+    dissolutionSupport +=
+        Math.max(0, Number(Q.pis_seats) || 0);
+}
+if (
+    (Number(Q.konf_poll_momentum) || 0) >= 0.8
+) {
+    dissolutionSupport +=
+        Math.max(0, Number(Q.konf_seats) || 0) +
+        Math.max(0, Number(Q.korona_seats) || 0);
+}
+Q.snap_self_dissolution_support = Math.max(
+    0,
+    Math.min(460, Math.round(dissolutionSupport))
+);
+Q.snap_budget_deadline_ready =
+    Number.isFinite(Number(Q.budget_deadline_time)) &&
+    Number(Q.time) >= Number(Q.budget_deadline_time)
+        ? 1
+        : 0;
+Q.snap_budget_petition_advocacy = 0;
+Q.news_headline = Q.snap_election_requested
+    ? "A snap-election demand reaches its constitutional route"
+    : "The expired budget clock reaches the President";
+!}
 
-= December 2026 — Which legal trigger?
+= Which legal trigger?
 
 This is an **alternative path**, not historical chronology. The Sejm may
 self-dissolve with 307 votes. The President may shorten the term after the
 four-month budget deadline. A third failed formation attempt obliges
 dissolution. A political defeat by itself does none of those things.
 
+[? if snap_election_requested: The election demand was recorded in **[+
+snap_election_request_month +]/[+ snap_election_request_year +]**.?][? if not
+snap_election_requested: No party demand created this event. It appears because
+the recorded four-month budget clock expired.?] Current self-dissolution
+support is **[+ snap_self_dissolution_support +]/460**. [? if
+snap_budget_deadline_ready: The four-month budget clock has expired.?][? if not
+snap_budget_deadline_ready: The recorded budget deadline has not yet expired.?]
+
 - @snap_self_dissolve
 - @snap_budget_deadline
 - @snap_formation_ladder
+- @snap_defer
 - @snap_avoid
+- @snap_waive_deadline
 
 @snap_self_dissolve
 title: Assemble 307 votes for Sejm self-dissolution
-subtitle: Requires combined KO, PSL and Poland 2050 relations of 100; trust +2.
-choose-if: ko_relation + psl_relation + p2050_relation >= 100
-unavailable-subtitle: Too few governing clubs will vote to shorten their own terms.
+subtitle: Requires at least 307 actual supportive seats; trust +2.
+choose-if: snap_self_dissolution_support >= 307
+unavailable-subtitle: The current party-by-party count is below the constitutional two-thirds threshold.
 on-arrival: snap_election_trigger = "Two-thirds Sejm self-dissolution"; snap_election_held = 1; position = "Snap-election campaign"; public_trust += 2; news_headline = "The Sejm shortens its own term with a two-thirds vote"
 go-to: snap_result_2026
 
 @snap_budget_deadline
-title: Ask the President to use the four-month budget deadline
-subtitle: The Palace shortens the term; public trust −2 and Palace relations −2.
-on-arrival: snap_election_trigger = "Presidential shortening after the budget deadline"; snap_election_held = 1; president_relation -= 2; court_user_trust += 1; public_trust -= 2; news_headline = "The President uses the budget deadline to shorten the term"
+title: Petition the President after the four-month budget deadline
+subtitle: The Palace decides independently whether to shorten the term.
+choose-if: snap_budget_deadline_ready = 1
+unavailable-subtitle: Four months have not elapsed since the recorded draft-budget submission.
+on-arrival: snap_election_trigger = "Article 225 petition after the budget deadline"; snap_budget_petition_advocacy = 4; president_relation -= 1; public_trust -= 1; news_headline = "The Article 225 petition reaches the President"
+go-to: snap_budget_palace_decision
+
+@snap_budget_palace_decision
+title: The Palace decides under Article 225
+new-page: true
+on-arrival: {!
+Q.snap_budget_petition_roll =
+    Math.floor((this.random.uint32() / 4294967296) * 11) - 5;
+const hostileToCabinet =
+    (
+        Q.pres_2025_hostile_president &&
+        Q.government_party != "pis"
+    ) ||
+    (
+        Q.president_name == "Andrzej Duda" &&
+        Q.government_party != "pis"
+    ) ||
+    (
+        Q.president_name == "Rafał Trzaskowski" &&
+        Q.government_party == "pis"
+    );
+Q.snap_budget_petition_score = Math.round(
+    (Number(Q.early_election_risk) || 0) * 0.30 +
+    (Number(Q.government_coalition_dissent) || 0) * 0.25 +
+    Math.max(0, 50 - (Number(Q.public_trust) || 0)) * 0.20 +
+    (hostileToCabinet ? 14 : -4) +
+    (Number(Q.snap_budget_petition_advocacy) || 0) +
+    Q.snap_budget_petition_roll
+);
+Q.snap_budget_petition_approved =
+    Q.snap_budget_petition_score >= 35 ? 1 : 0;
+Q.news_headline = Q.snap_budget_petition_approved
+    ? "The President decides to shorten the Sejm term"
+    : "The President declines to shorten the Sejm term";
+!}
+
+The Palace score is **[+ snap_budget_petition_score +]** against **35**:
+political instability, cabinet dissent, public trust, cohabitation and a
+visible **[+ snap_budget_petition_roll +]** decision variance. The constitutional
+power is discretionary; Lewica's petition is not the decision.
+
+[? if snap_budget_petition_approved: The President will shorten the term.?]
+[? if not snap_budget_petition_approved: The President lets the Sejm term
+continue. The failed budget remains a cabinet problem, but this Article 225
+window produces no election.?]
+
+- @snap_budget_approved
+- @snap_budget_declined
+
+@snap_budget_approved
+title: Record the presidential shortening
+view-if: snap_budget_petition_approved = 1
+on-arrival: snap_election_trigger = "Presidential shortening after the budget deadline"; snap_election_held = 1; budget_deadline_active = 0; court_user_trust += 1; public_trust -= 1; news_headline = "The President uses Article 225 to shorten the term"
 go-to: snap_result_2026
 
+@snap_budget_declined
+title: Record the President's refusal
+view-if: snap_budget_petition_approved = 0
+on-arrival: {!
+Q.snap_election_requested = 0;
+Q.budget_deadline_active = 0;
+Q.early_election_risk = Math.max(
+    35,
+    Q.early_election_risk - 15
+);
+Q.president_relation -= 2;
+Q.news_headline =
+    "The Article 225 window closes without an election";
+!}
+go-to: poland_event_queue
+
 @snap_formation_ladder
-title: Resign and exhaust all three constitutional formation attempts
-subtitle: Mandatory dissolution after three failures; restraint +3 and public trust −3.
-on-arrival: snap_election_trigger = "Mandatory dissolution after the third failed cabinet"; snap_election_held = 1; constitutional_restraint += 3; public_trust -= 3; early_election_risk = 100; news_headline = "Three failed cabinet attempts make dissolution mandatory"
-go-to: snap_result_2026
+title: Enter the three constitutional formation attempts
+subtitle: Available to a Lewica cabinet that resigns, or when a caretaker already requires formation.
+view-if: left_in_government = 1 or caretaker_government = 1
+on-arrival: snap_formation_attempt = 1; snap_formation_context = "Pre-election dissolution ladder"; caretaker_government = 1; government_has_confidence = 0; constitutional_restraint += 1; public_trust -= 1; news_headline = "The caretaker period opens the first constitutional formation attempt"
+go-to: snap_formation_attempt_one
+
+@snap_defer
+title: Wait for another legal trigger
+subtitle: Keep the election request alive and review the count next month.
+view-if: snap_election_requested = 1 and snap_budget_deadline_ready = 0
+on-arrival: snap_event_deferred_time = time; public_trust -= 1; news_headline = "The election request remains pending while constitutional clocks run"
+go-to: poland_event_queue
 
 @snap_avoid
 title: Withdraw the election demand and return to a minority budget bargain
-subtitle: No election; caretaker rule and 45 early-election risk, party unity −4.
-on-arrival: snap_election_requested = 0; coalition_broken = 0; caretaker_government = 1; early_election_risk = 45; party_unity -= 4; ko_relation += 2; psl_relation += 3; public_trust -= 2; news_headline = "A minority bargain avoids immediate dissolution"
+subtitle: No election; the cabinet's current confidence status is unchanged, early-election risk 45 and party unity −4.
+view-if: snap_election_requested = 1
+on-arrival: snap_election_requested = 0; early_election_risk = 45; party_unity -= 4; ko_relation += 2; psl_relation += 3; public_trust -= 2; news_headline = "A minority bargain avoids immediate dissolution without changing who holds office"
+go-to: poland_event_queue
+
+@snap_waive_deadline
+title: Submit the case against shortening the term
+subtitle: Lewica may argue for continuity, but the President still decides independently.
+view-if: snap_election_requested = 0 and snap_budget_deadline_ready = 1
+on-arrival: {!
+Q.snap_election_trigger =
+    "Article 225 review after the budget deadline";
+Q.snap_budget_petition_advocacy = -8;
+Q.news_headline =
+    "Lewica asks the Palace not to shorten the term";
+!}
+go-to: snap_budget_palace_decision
+
+@snap_formation_attempt_one
+title: First formation attempt — the President's nominee
+new-page: true
+on-arrival: {!
+const firstRight =
+    Q.government_party == "pis" ||
+    Q.president_name == "Andrzej Duda" ||
+    Boolean(Q.pres_2025_hostile_president);
+Q.snap_formation_candidate = firstRight
+    ? "Mateusz Morawiecki"
+    : (
+        String(Q.prime_minister || "").length &&
+        Q.prime_minister != Q.president_name
+            ? Q.prime_minister
+            : "Donald Tusk"
+    );
+Q.snap_formation_first_right = firstRight ? 1 : 0;
+if (firstRight) {
+    Q.snap_formation_base =
+        Math.max(0, Number(Q.coalition_right_seats) || 0) +
+        Math.round(
+            Math.max(0, Number(Q.psl_seats) || 0) *
+            Math.max(
+                0,
+                Math.min(
+                    0.35,
+                    (Number(Q.pis_relation) || 0) / 200
+                )
+            )
+        );
+} else {
+    Q.snap_formation_base =
+        Math.max(0, Number(Q.ko_seats) || 0) +
+        Math.max(0, Number(Q.psl_seats) || 0) +
+        Math.max(0, Number(Q.p2050_seats) || 0) +
+        (
+            (Number(Q.centrum_relation) || 0) >= 45
+                ? Math.max(0, Number(Q.centrum_seats) || 0)
+                : 0
+        );
+}
+Q.snap_formation_base = Math.max(
+    0,
+    Math.min(460, Math.round(Q.snap_formation_base))
+);
+Q.snap_formation_left_votes = 0;
+Q.news_headline =
+    Q.president_name + " nominates " +
+    Q.snap_formation_candidate + " in the first attempt";
+!}
+
+= An appointment still needs 231
+
+The nominee begins with **[+ snap_formation_base +]** expected votes. Other
+parties supplied that base from their seats and relationships; Lewica controls
+only its own **[+ left_committed_seats +]** committed votes.
+
+- @snap_attempt_one_support
+- @snap_attempt_one_reject
+
+@snap_attempt_one_support
+title: Supply confidence for a time-limited constitutional cabinet
+on-arrival: snap_formation_left_votes = left_committed_seats; party_unity -= 5; public_trust -= 1; pis_relation += 5 if snap_formation_first_right = 1; ko_relation += 3 if snap_formation_first_right = 0; news_headline = "Lewica offers confidence without claiming to control the nominee"
+go-to: snap_attempt_one_vote
+
+@snap_attempt_one_reject
+title: Reject the presidential nominee
+on-arrival: snap_formation_left_votes = 0; party_unity += 2; pis_relation -= 3 if snap_formation_first_right = 1; news_headline = "Lewica withholds confidence from the first attempt"
+go-to: snap_attempt_one_vote
+
+@snap_attempt_one_vote
+title: First-attempt confidence vote
+new-page: true
+on-arrival: {!
+const attemptOneRoll =
+    Math.floor((this.random.uint32() / 4294967296) * 7) - 3;
+Q.snap_formation_variance = attemptOneRoll;
+Q.confidence_candidate = Q.snap_formation_candidate;
+Q.confidence_yes = Math.max(
+    0,
+    Math.min(
+        460,
+        Q.snap_formation_base +
+        (Number(Q.snap_formation_left_votes) || 0) +
+        attemptOneRoll
+    )
+);
+Q.confidence_abstain = Math.max(
+    0,
+    Math.min(24, 460 - Q.confidence_yes)
+);
+Q.confidence_no = Math.max(
+    0,
+    460 - Q.confidence_yes - Q.confidence_abstain
+);
+Q.confidence_present = 460;
+Q.confidence_threshold = 231;
+Q.government_has_confidence =
+    Q.confidence_yes >= 231 ? 1 : 0;
+Q.snap_formation_attempt = 1;
+!}
+
+**[+ confidence_yes +] yes · [+ confidence_no +] no · [+
+confidence_abstain +] abstain.** The first attempt requires 231 yes votes.
+
+- @snap_formation_success
+- @snap_formation_attempt_two
+
+@snap_formation_attempt_two
+title: Second formation attempt — the Sejm's nominee
+new-page: true
+view-if: government_has_confidence = 0
+on-arrival: {!
+const leftCandidate =
+    (Number(Q.ko_relation) || 0) < 34 &&
+    (Number(Q.left_committed_seats) || 0) >= 45;
+Q.snap_formation_candidate = leftCandidate
+    ? (
+        Q.pres_2025_left_candidate &&
+        Q.pres_2025_left_candidate != "Undecided" &&
+        Q.pres_2025_left_candidate != Q.president_name
+            ? Q.pres_2025_left_candidate
+            : "Agnieszka Dziemianowicz-Bąk"
+    )
+    : "Donald Tusk";
+Q.snap_formation_base =
+    Math.max(0, Number(Q.ko_seats) || 0) +
+    Math.max(0, Number(Q.psl_seats) || 0) +
+    Math.max(0, Number(Q.p2050_seats) || 0) +
+    (
+        (Number(Q.centrum_relation) || 0) >= 45
+            ? Math.max(0, Number(Q.centrum_seats) || 0)
+            : 0
+    );
+if (leftCandidate) {
+    Q.snap_formation_base -= Math.round(
+        Math.max(0, Number(Q.ko_seats) || 0) * 0.16
+    );
+}
+Q.snap_formation_base = Math.max(
+    0,
+    Math.min(460, Math.round(Q.snap_formation_base))
+);
+Q.snap_formation_left_votes = 0;
+Q.news_headline =
+    "The Sejm proposes " + Q.snap_formation_candidate +
+    " in the second attempt";
+!}
+
+The Sejm nominee begins with **[+ snap_formation_base +]** votes before Lewica
+commits its caucus. This stage also requires an absolute majority of 231.
+
+- @snap_attempt_two_support
+- @snap_attempt_two_reject
+
+@snap_attempt_two_support
+title: Join the Sejm majority behind the nominee
+on-arrival: snap_formation_left_votes = left_committed_seats; ko_relation += 4; party_unity += 1; news_headline = "Lewica joins the second-attempt majority"
+go-to: snap_attempt_two_vote
+
+@snap_attempt_two_reject
+title: Withhold Lewica's votes and demand the third attempt
+on-arrival: snap_formation_left_votes = 0; ko_relation -= 7; party_unity -= 2; public_trust -= 2; news_headline = "Lewica blocks the Sejm nominee"
+go-to: snap_attempt_two_vote
+
+@snap_attempt_two_vote
+title: Second-attempt confidence vote
+new-page: true
+on-arrival: {!
+const attemptTwoRoll =
+    Math.floor((this.random.uint32() / 4294967296) * 7) - 3;
+Q.snap_formation_variance = attemptTwoRoll;
+Q.confidence_candidate = Q.snap_formation_candidate;
+Q.confidence_yes = Math.max(
+    0,
+    Math.min(
+        460,
+        Q.snap_formation_base +
+        (Number(Q.snap_formation_left_votes) || 0) +
+        attemptTwoRoll
+    )
+);
+Q.confidence_abstain = Math.max(
+    0,
+    Math.min(20, 460 - Q.confidence_yes)
+);
+Q.confidence_no = Math.max(
+    0,
+    460 - Q.confidence_yes - Q.confidence_abstain
+);
+Q.confidence_present = 460;
+Q.confidence_threshold = 231;
+Q.government_has_confidence =
+    Q.confidence_yes >= 231 ? 1 : 0;
+Q.snap_formation_attempt = 2;
+!}
+
+**[+ confidence_yes +] yes · [+ confidence_no +] no · [+
+confidence_abstain +] abstain.**
+
+- @snap_formation_success
+- @snap_formation_attempt_three
+
+@snap_formation_attempt_three
+title: Third formation attempt — simple majority
+new-page: true
+view-if: government_has_confidence = 0
+on-arrival: {!
+const incumbentPresident = String(Q.president_name || "");
+const electedPresidentIsInOffice =
+    incumbentPresident.length > 0 &&
+    incumbentPresident == String(Q.pres_2025_winner || "");
+/*
+ * Before the August 2025 inauguration, the election result describes the
+ * president-elect, not the office-holder exercising Article 155.  Duda and
+ * Nawrocki are right-aligned incumbents; otherwise the election-result flag
+ * matters only once that winner's name is actually in the Palace.
+ */
+const hostileThird =
+    incumbentPresident == "Andrzej Duda" ||
+    incumbentPresident == "Karol Nawrocki" ||
+    (
+        electedPresidentIsInOffice &&
+        Boolean(Q.pres_2025_hostile_president)
+    );
+if (hostileThird) {
+    Q.snap_formation_candidate =
+        Q.pis_split ? "Mateusz Morawiecki" : "Beata Szydło";
+    Q.snap_formation_base =
+        Math.max(0, Number(Q.coalition_right_seats) || 0) +
+        Math.round(
+            Math.max(0, Number(Q.psl_seats) || 0) * 0.18
+        );
+} else {
+    Q.snap_formation_candidate =
+        Q.president_name == "Władysław Kosiniak-Kamysz"
+            ? "Katarzyna Pełczyńska-Nałęcz"
+            : "Władysław Kosiniak-Kamysz";
+    Q.snap_formation_base =
+        Math.max(0, Number(Q.ko_seats) || 0) +
+        Math.max(0, Number(Q.psl_seats) || 0) +
+        Math.max(0, Number(Q.p2050_seats) || 0) +
+        (
+            (Number(Q.centrum_relation) || 0) >= 45
+                ? Math.max(0, Number(Q.centrum_seats) || 0)
+                : 0
+        );
+}
+Q.snap_formation_base = Math.max(
+    0,
+    Math.min(460, Math.round(Q.snap_formation_base))
+);
+Q.snap_formation_left_votes = 0;
+Q.snap_formation_left_abstentions = 0;
+Q.news_headline =
+    Q.president_name + " names " +
+    Q.snap_formation_candidate + " for the third attempt";
+!}
+
+The third nominee begins with **[+ snap_formation_base +]** expected yes votes.
+Unlike the first two stages, this vote uses a simple majority of votes cast
+with at least half of Deputies present. Lewica may support, oppose or abstain.
+
+- @snap_attempt_three_support
+- @snap_attempt_three_reject
+- @snap_attempt_three_abstain
+
+@snap_attempt_three_support
+title: Vote yes on the short governing programme
+on-arrival: snap_formation_left_votes = left_committed_seats; snap_formation_left_abstentions = 0; party_unity -= 3; news_headline = "Lewica supports the third-attempt nominee"
+go-to: snap_attempt_three_vote
+
+@snap_attempt_three_reject
+title: Vote no and accept a mandatory election if the nominee fails
+on-arrival: snap_formation_left_votes = 0; snap_formation_left_abstentions = 0; party_unity += 2; news_headline = "Lewica opposes the final nominee"
+go-to: snap_attempt_three_vote
+
+@snap_attempt_three_abstain
+title: Abstain on a caretaker programme
+on-arrival: snap_formation_left_votes = 0; snap_formation_left_abstentions = left_committed_seats; party_unity -= 1; public_trust -= 1; news_headline = "Lewica withholds yes votes but lowers the third-attempt majority"
+go-to: snap_attempt_three_vote
+
+@snap_attempt_three_vote
+title: Third-attempt confidence vote
+new-page: true
+on-arrival: {!
+const attemptThreeRoll =
+    Math.floor((this.random.uint32() / 4294967296) * 9) - 4;
+Q.snap_formation_variance = attemptThreeRoll;
+Q.confidence_candidate = Q.snap_formation_candidate;
+Q.confidence_yes = Math.max(
+    0,
+    Math.min(
+        460,
+        Q.snap_formation_base +
+        (Number(Q.snap_formation_left_votes) || 0) +
+        attemptThreeRoll
+    )
+);
+Q.confidence_abstain = Math.max(
+    0,
+    Math.min(
+        160,
+        8 + (Number(Q.snap_formation_left_abstentions) || 0)
+    )
+);
+Q.confidence_no = Math.max(
+    0,
+    460 - Q.confidence_yes - Q.confidence_abstain
+);
+Q.confidence_present = 460;
+Q.confidence_threshold =
+    Math.floor(
+        (Q.confidence_yes + Q.confidence_no) / 2
+    ) + 1;
+Q.government_has_confidence =
+    Q.confidence_yes > Q.confidence_no ? 1 : 0;
+Q.snap_formation_attempt = 3;
+!}
+
+**[+ confidence_yes +] yes · [+ confidence_no +] no · [+
+confidence_abstain +] abstain.** The simple-majority threshold is **[+
+confidence_threshold +]**.
+
+- @snap_formation_success
+- @snap_formation_mandatory_election
+
+@snap_formation_success
+title: A cabinet wins confidence
+view-if: government_has_confidence = 1
+on-arrival: {!
+Q.prime_minister = Q.confidence_candidate;
+Q.government_name =
+    Q.confidence_candidate + " constitutional formation cabinet";
+const leftPrimeMinister =
+    Q.confidence_candidate == Q.pres_2025_left_candidate ||
+    Q.confidence_candidate == "Agnieszka Dziemianowicz-Bąk";
+const leftCabinetParticipation =
+    leftPrimeMinister &&
+    (Number(Q.snap_formation_left_votes) || 0) > 0;
+Q.left_in_government = leftCabinetParticipation ? 1 : 0;
+const rightPrimeMinister = [
+    "Mateusz Morawiecki",
+    "Beata Szydło",
+    "Przemysław Czarnek"
+].includes(Q.confidence_candidate);
+if (leftCabinetParticipation) {
+    Q.government_party = "lewica";
+    Q.government_owner = Q.left_party_name;
+} else if (rightPrimeMinister) {
+    Q.government_party = "pis";
+    Q.government_owner = "PiS-led constitutional cabinet";
+} else if (
+    Q.confidence_candidate == "Władysław Kosiniak-Kamysz"
+) {
+    Q.government_party = "psl";
+    Q.government_owner = "PSL-led constitutional cabinet";
+} else if (
+    Q.confidence_candidate == "Katarzyna Pełczyńska-Nałęcz"
+) {
+    Q.government_party = "p2050";
+    Q.government_owner = "Poland 2050-led constitutional cabinet";
+} else if (leftPrimeMinister) {
+    Q.government_party = "other";
+    Q.government_owner =
+        "Independent Left-led constitutional cabinet";
+} else {
+    Q.government_party = "ko";
+    Q.government_owner = "KO-led constitutional cabinet";
+}
+Q.position = Q.left_in_government
+    ? "Governing coalition"
+    : (
+        (Number(Q.snap_formation_left_votes) || 0) > 0
+            ? "Confidence-and-supply opposition"
+            : "Parliamentary opposition"
+    );
+Q.coalition_status =
+    "Cabinet formed on constitutional attempt " +
+    Q.snap_formation_attempt;
+Q.coalition_seats = Q.confidence_yes;
+Q.caretaker_government = 0;
+Q.snap_election_requested = 0;
+Q.snap_election_held =
+    Q.snap_formation_context == "Post-election formation"
+        ? 1
+        : 0;
+Q.coalition_broken = 0;
+Q.formation_complete = 1;
+Q.formation_in_progress = 0;
+Q.budget = Q.left_in_government ? 2 : 0;
+Q.budget_authority = Q.left_in_government
+    ? "Formation reserve"
+    : "Opposition — no state spending authority";
+Q.left_cabinet_committed = Q.left_in_government ? 1 : 0;
+Q.left_cabinet_model = Q.left_in_government
+    ? "Programme-bound cooperating Left entry"
+    : (
+        (Number(Q.snap_formation_left_votes) || 0) > 0
+            ? "Confidence and supply from opposition"
+            : (
+                leftPrimeMinister
+                    ? "Opposition to an independently elected Left nominee"
+                    : "Opposition"
+            )
+    );
+Q.ministries_finalized = Q.left_in_government ? 0 : 1;
+Q.ministry_allocation_mode = Q.left_in_government
+    ? "formation"
+    : "settled";
+Q.ministry_return_mode = "event_queue";
+Q.news_headline =
+    Q.confidence_candidate + " wins confidence on attempt " +
+    Q.snap_formation_attempt;
+!}
+go-to: poland_ministries if left_in_government = 1; poland_event_queue if left_in_government = 0
+
+@snap_formation_mandatory_election
+title: The third attempt fails
+view-if: government_has_confidence = 0
+on-arrival: snap_election_trigger = "Mandatory dissolution after the third failed cabinet"; snap_election_held = 1; constitutional_restraint += 3; public_trust -= 3; early_election_risk = 100; news_headline = "Failure of the third cabinet attempt makes another election mandatory"
+go-to: snap_result_2026 if snap_election_cycle < 2; snap_repeated_deadlock_ending if snap_election_cycle >= 2
+
+@snap_repeated_deadlock_ending
+title: Two elections, no investiture
+new-page: true
+on-arrival: {!
+Q.snap_repeated_deadlock = 1;
+Q.snap_election_requested = 0;
+Q.snap_election_held = 1;
+Q.snap_election_complete = 1;
+Q.caretaker_government = 1;
+Q.government_has_confidence = 0;
+Q.formation_complete = 0;
+Q.formation_in_progress = 1;
+Q.position = "Opposition during constitutional deadlock";
+Q.coalition_status =
+    "Two elections and two failed formation ladders";
+Q.budget = 0;
+Q.budget_authority =
+    "Caretaker period — no state spending authority";
+Q.ending_name = "Constitutional deadlock";
+Q.ending_score -= 8;
+Q.news_headline =
+    "A second election still produces no investiture majority";
+!}
+
+The game does not silently rerun the same election forever. A second campaign
+has produced a fresh seat result, yet all three constitutional attempts have
+failed again. The outgoing cabinet remains caretaker while the unresolved
+constitutional crisis moves beyond this scenario's political horizon.
+
+- @snap_repeated_deadlock_return: Record the unresolved outcome
+
+@snap_repeated_deadlock_return
 go-to: poland_event_queue
 
 @snap_result_2026
 title: Alternative parliamentary election
 new-page: true
 on-arrival: {!
+Q.snap_election_cycle =
+    Math.max(0, Math.round(Number(Q.snap_election_cycle) || 0)) + 1;
 const ids = [
     "pis", "ko", "p2050", "psl", "left", "konf", "other",
     "sld_breakaway", "spring_breakaway", "labor_left", "young_left",
@@ -1362,6 +2086,28 @@ for (const id of ids) {
             Math.round(Number(Q[seatQuality(id)]) || 0)
         );
     total += rawSeats[id];
+}
+if (Q.snap_election_cycle > 1) {
+    const campaignIndex = Math.floor(
+        (this.random.uint32() / 4294967296) * 20
+    );
+    const campaignSwing = campaignIndex < 10
+        ? -(campaignIndex + 3)
+        : campaignIndex - 7;
+    Q.snap_repeat_campaign_roll = campaignSwing;
+    if (campaignSwing > 0) {
+        const transfer = Math.min(campaignSwing, rawSeats.pis);
+        rawSeats.pis -= transfer;
+        rawSeats.ko += transfer;
+    } else {
+        const transfer = Math.min(-campaignSwing, rawSeats.ko);
+        rawSeats.ko -= transfer;
+        rawSeats.pis += transfer;
+    }
+    total = 0;
+    for (const id of ids) total += rawSeats[id];
+} else {
+    Q.snap_repeat_campaign_roll = 0;
 }
 if (total <= 0) {
     rawSeats.pis = 180;
@@ -1390,18 +2136,43 @@ Q.left_splinter_seats =
     Q.labor_left_seats + Q.young_left_seats +
     Q.razem_party_seats + Q.pps_party_seats;
 Q.left_family_seats = Q.left_seats + Q.left_splinter_seats;
+Q.left_splinter_support_votes =
+    (Q.barons_party_relation >= 45 ? Q.sld_breakaway_seats : 0) +
+    (Q.spring_party_relation >= 45 ? Q.spring_breakaway_seats : 0) +
+    (Q.labor_party_relation >= 45 ? Q.labor_left_seats : 0) +
+    (
+        Q.progressives_party_relation >= 45
+            ? Q.young_left_seats
+            : 0
+    ) +
+    (Q.razem_party_relation >= 45 ? Q.razem_party_seats : 0) +
+    (Q.pps_party_relation >= 45 ? Q.pps_party_seats : 0);
+Q.left_committed_seats =
+    Q.left_seats + Q.left_splinter_support_votes;
+const snapCentrumCommitted =
+    Q.centrum_relation >= 45 ? Q.centrum_seats : 0;
 Q.coalition_democratic_seats =
     Q.ko_seats + Q.psl_seats + Q.p2050_seats +
-    Q.centrum_seats + Q.left_family_seats;
+    snapCentrumCommitted + Q.left_committed_seats;
 Q.coalition_right_seats =
     Q.pis_seats + Q.konf_seats + Q.rozwoj_seats + Q.korona_seats;
 Q.seat_subvention_seats = Q.left_seats;
 Q.snap_election_complete = 1;
+Q.caretaker_government = 1;
+Q.government_has_confidence = 0;
 Q.news_headline =
-    "The alternative election returns a fragmented Sejm";
+    Q.snap_election_cycle > 1
+        ? "A fresh second campaign shifts the balance but again fragments the Sejm"
+        : "The alternative election returns a fragmented Sejm";
 !}
 
 = Alternative Sejm result
+
+[? if snap_election_cycle > 1: This is election **[+ snap_election_cycle
++]** in the constitutional sequence. The intervening campaign moved **[+
+snap_repeat_campaign_roll +] seats** between the two largest blocs before
+proportional normalisation; it is not an identical reroll of the old
+projection.?]
 
 <div class="election-table">
 <div class="election-table-head"><span>Party</span><span></span><span>Seats</span><span></span></div>
@@ -1428,7 +2199,9 @@ Q.news_headline =
 title: The President receives the first move
 new-page: true
 on-arrival: {!
-const hostilePalace = Boolean(Q.pres_2025_hostile_president);
+const hostilePalace =
+    Boolean(Q.pres_2025_hostile_president) ||
+    Q.president_name == "Andrzej Duda";
 const pisSeats = Math.max(0, Number(Q.pis_seats) || 0);
 const pslSeats = Math.max(0, Number(Q.psl_seats) || 0);
 const centristSeats = Math.max(
@@ -1443,8 +2216,35 @@ const morawieckiCamp = Math.max(
     0,
     Number(Q.pis_morawiecki_camp) || 0
 );
-if (Q.pis_split || morawieckiCamp >= 25) {
+const democraticClaim = Math.max(
+    0,
+    Number(Q.coalition_democratic_seats) || 0
+);
+const democraticCore = Math.max(
+    0,
+    democraticClaim -
+        Math.max(0, Number(Q.left_committed_seats) || 0)
+);
+const rightClaim = Math.max(
+    0,
+    Number(Q.coalition_right_seats) || 0
+);
+Q.snap_left_cabinet_commitment = 0;
+if (
+    !hostilePalace &&
+    democraticClaim >= 231 &&
+    democraticClaim > rightClaim
+) {
+    Q.snap_pm_candidate = "Donald Tusk";
+    Q.snap_pm_party = "ko";
+    Q.snap_pm_is_right = 0;
+    Q.snap_pm_base = democraticCore;
+    Q.snap_nomination_reason =
+        "A non-hostile Palace recognises the bloc that can demonstrate a clear democratic majority.";
+} else if (Q.pis_split || morawieckiCamp >= 25) {
     Q.snap_pm_candidate = "Mateusz Morawiecki";
+    Q.snap_pm_party = "pis";
+    Q.snap_pm_is_right = 1;
     Q.snap_pm_base =
         pisSeats +
         (Q.pis_split ? (Number(Q.rozwoj_seats) || 0) : 0) +
@@ -1457,6 +2257,8 @@ if (Q.pis_split || morawieckiCamp >= 25) {
     (Number(Q.far_right_agenda) || 0) >= 45
 ) {
     Q.snap_pm_candidate = "Przemysław Czarnek";
+    Q.snap_pm_party = "pis";
+    Q.snap_pm_is_right = 1;
     Q.snap_pm_base =
         pisSeats + Math.round(konfSeats * 0.62);
     Q.snap_nomination_reason =
@@ -1464,6 +2266,8 @@ if (Q.pis_split || morawieckiCamp >= 25) {
     Q.far_right_agenda += 3;
 } else if (hostilePalace) {
     Q.snap_pm_candidate = "Beata Szydło";
+    Q.snap_pm_party = "pis";
+    Q.snap_pm_is_right = 1;
     Q.snap_pm_base =
         pisSeats + Math.round(pslSeats * 0.28);
     Q.snap_nomination_reason =
@@ -1471,6 +2275,8 @@ if (Q.pis_split || morawieckiCamp >= 25) {
     Q.pis_solidarist_share += 4;
 } else {
     Q.snap_pm_candidate = "Mateusz Morawiecki";
+    Q.snap_pm_party = "pis";
+    Q.snap_pm_is_right = 1;
     Q.snap_pm_base =
         pisSeats +
         Math.round(centristSeats * 0.20) +
@@ -1488,8 +2294,9 @@ Q.news_headline =
 President **[+ president_name +]**, not Lewica, designates **[+
 snap_pm_candidate +]**. [+ snap_nomination_reason +]
 
-The nominee begins with **[+ snap_pm_base +]** expected votes and still needs
-231. Lewica now decides only how to respond.
+The nominee begins with **[+ snap_pm_base +]** expected votes outside Lewica
+and still needs 231. Lewica now decides whether its votes also entail cabinet
+responsibility.
 
 - @snap_left_offer: Receive the nominee's approach
 
@@ -1497,7 +2304,7 @@ The nominee begins with **[+ snap_pm_base +]** expected votes and still needs
 title: The Palace nominee courts the Left
 new-page: true
 
-= A price designed to split the caucuses
+= Confidence is not the same thing as office
 
 **[+ snap_pm_candidate +]** begins with **[+ snap_pm_base +]** expected votes.
 A confidence vote needs 231 yes votes; abstaining does not add yes votes.
@@ -1505,16 +2312,21 @@ A confidence vote needs 231 yes votes; abstaining does not add yes votes.
 - @snap_left_reject
 - @snap_left_welfare
 - @snap_left_abstain
+- @snap_left_join_democratic
+- @snap_left_supply_democratic
+- @snap_left_reject_democratic
 
 @snap_left_reject
 title: Reject the offer as a right-wing restoration
 subtitle: No Lewica votes or abstentions; party unity +3 and KO relations +3.
+view-if: snap_pm_is_right = 1
 on-arrival: snap_left_transfer = 0; snap_left_abstentions = 0; party_unity += 3; ko_relation += 3; razem_cooperation += 2; news_headline = "The Left closes the first-attempt auction"
 go-to: snap_first_vote
 
 @snap_left_welfare
 title: Demand labour law, public housing and a constitutional restraint pact
 subtitle: 22% of Lewica MPs vote yes; unity −7, KO relations −10 and Razem dissent +10.
+view-if: snap_pm_is_right = 1
 on-arrival: {!
 Q.snap_left_transfer = Math.round(Number(Q.left_seats) * 0.22);
 Q.snap_left_abstentions = 0;
@@ -1532,6 +2344,7 @@ go-to: snap_first_vote
 @snap_left_abstain
 title: Abstain in exchange for a short caretaker programme
 subtitle: All Lewica MPs abstain; unity −3 and KO relations −5, but no yes votes.
+view-if: snap_pm_is_right = 1
 on-arrival: {!
 Q.snap_left_transfer = 0;
 Q.snap_left_abstentions = Math.max(
@@ -1544,6 +2357,55 @@ Q.pis_relation += 3;
 Q.early_election_risk -= 5;
 Q.news_headline =
     "The Left withholds confidence votes while negotiating caretaker limits";
+!}
+go-to: snap_first_vote
+
+@snap_left_join_democratic
+title: Enter the democratic cabinet under a written coalition agreement
+subtitle: Lewica votes yes, takes collective responsibility and receives governing capacity.
+view-if: snap_pm_is_right = 0
+on-arrival: {!
+Q.snap_left_transfer =
+    Math.max(0, Number(Q.left_committed_seats) || 0);
+Q.snap_left_abstentions = 0;
+Q.snap_left_cabinet_commitment = 1;
+Q.party_unity += 2;
+Q.ko_relation += 4;
+Q.psl_relation -= 1;
+Q.news_headline =
+    "Lewica signs a cabinet agreement before the first-attempt vote";
+!}
+go-to: snap_first_vote
+
+@snap_left_supply_democratic
+title: Supply confidence from outside the cabinet
+subtitle: The same yes votes, but no ministries and no state-budget authority.
+view-if: snap_pm_is_right = 0
+on-arrival: {!
+Q.snap_left_transfer =
+    Math.max(0, Number(Q.left_committed_seats) || 0);
+Q.snap_left_abstentions = 0;
+Q.snap_left_cabinet_commitment = 0;
+Q.razem_dissent -= 4;
+Q.barons_dissent += 3;
+Q.ko_relation += 1;
+Q.news_headline =
+    "Lewica offers confidence and supply without entering cabinet";
+!}
+go-to: snap_first_vote
+
+@snap_left_reject_democratic
+title: Withhold confidence and remain full opposition
+subtitle: No Lewica votes are added to the nominee's base.
+view-if: snap_pm_is_right = 0
+on-arrival: {!
+Q.snap_left_transfer = 0;
+Q.snap_left_abstentions = 0;
+Q.snap_left_cabinet_commitment = 0;
+Q.party_unity += 1;
+Q.ko_relation -= 6;
+Q.news_headline =
+    "Lewica withholds confidence from the democratic nominee";
 !}
 go-to: snap_first_vote
 
@@ -1601,15 +2463,46 @@ view-if: government_has_confidence = 1
 on-arrival: {!
 Q.prime_minister = Q.snap_pm_candidate;
 Q.government_name = Q.snap_pm_candidate + " cabinet";
-Q.left_in_government = 0;
-Q.budget = 0;
-Q.position = "Parliamentary opposition";
+Q.government_party = Q.snap_pm_party;
+Q.government_owner = Q.snap_pm_is_right
+    ? "PiS-led presidential nominee"
+    : "KO-led democratic coalition";
+Q.left_in_government =
+    Q.snap_left_cabinet_commitment ? 1 : 0;
+Q.budget = Q.left_in_government ? 3 : 0;
+Q.budget_authority = Q.left_in_government
+    ? "Post-election coalition reserve"
+    : "Opposition — no state spending authority";
+Q.position = Q.left_in_government
+    ? "Governing coalition"
+    : (
+        (Number(Q.snap_left_transfer) || 0) > 0
+            ? "Confidence-and-supply opposition"
+            : "Parliamentary opposition"
+    );
 Q.coalition_status = "Presidential nominee won confidence";
+Q.coalition_seats = Q.confidence_yes;
 Q.caretaker_government = 0;
+Q.formation_complete = 1;
+Q.formation_in_progress = 0;
+Q.snap_election_requested = 0;
+Q.left_cabinet_committed = Q.left_in_government ? 1 : 0;
+Q.left_cabinet_model = Q.left_in_government
+    ? "New Left ministers · Razem external support"
+    : (
+        (Number(Q.snap_left_transfer) || 0) > 0
+            ? "Confidence and supply from opposition"
+            : "Opposition"
+    );
+Q.ministries_finalized = Q.left_in_government ? 0 : 1;
+Q.ministry_allocation_mode = Q.left_in_government
+    ? "formation"
+    : "settled";
+Q.ministry_return_mode = "event_queue";
 Q.news_headline =
     Q.snap_pm_candidate + " forms the post-election government";
 !}
-go-to: poland_event_queue
+go-to: poland_ministries if left_in_government = 1; poland_event_queue if left_in_government = 0
 
 @snap_sejm_candidate
 title: The Sejm receives the second attempt
@@ -1630,40 +2523,139 @@ coalition assembled around that person.
 
 @snap_sejm_tusk
 title: Donald Tusk
-subtitle: Starts with every democratic-coalition seat; KO relations +2.
-on-arrival: snap_dem_candidate = "Donald Tusk"; snap_dem_base = coalition_democratic_seats; ko_relation += 2
-go-to: snap_dem_vote
+subtitle: Starts with the democratic core outside Lewica; KO relations +2.
+on-arrival: {!
+Q.snap_dem_candidate = "Donald Tusk";
+Q.snap_dem_candidate_left = 0;
+Q.snap_dem_base = Math.max(
+    0,
+    Q.coalition_democratic_seats - Q.left_committed_seats
+);
+Q.ko_relation += 2;
+!}
+go-to: snap_democratic_role
 
 @snap_sejm_trzaskowski
 title: Rafał Trzaskowski
 subtitle: Only if he is not President; democratic base −2, KO +3 and PSL −1.
 view-if: president_name != "Rafał Trzaskowski"
-on-arrival: snap_dem_candidate = "Rafał Trzaskowski"; snap_dem_base = coalition_democratic_seats - 2; ko_relation += 3; psl_relation -= 1
-go-to: snap_dem_vote
+on-arrival: {!
+Q.snap_dem_candidate = "Rafał Trzaskowski";
+Q.snap_dem_candidate_left = 0;
+Q.snap_dem_base = Math.max(
+    0,
+    Q.coalition_democratic_seats - Q.left_committed_seats - 2
+);
+Q.ko_relation += 3;
+Q.psl_relation -= 1;
+!}
+go-to: snap_democratic_role
 
 @snap_sejm_nowacka
 title: Barbara Nowacka
 subtitle: Democratic base −4; progressive dissent −2 and PSL relations −3.
-on-arrival: snap_dem_candidate = "Barbara Nowacka"; snap_dem_base = coalition_democratic_seats - 4; progressives_dissent -= 2; psl_relation -= 3
-go-to: snap_dem_vote
+on-arrival: {!
+Q.snap_dem_candidate = "Barbara Nowacka";
+Q.snap_dem_candidate_left = 0;
+Q.snap_dem_base = Math.max(
+    0,
+    Q.coalition_democratic_seats - Q.left_committed_seats - 4
+);
+Q.progressives_dissent -= 2;
+Q.psl_relation -= 3;
+!}
+go-to: snap_democratic_role
 
 @snap_sejm_sikorski
 title: Radosław Sikorski
 subtitle: Democratic base −3; military trust +2 and PSL relations +1.
-on-arrival: snap_dem_candidate = "Radosław Sikorski"; snap_dem_base = coalition_democratic_seats - 3; military_trust += 2; psl_relation += 1
-go-to: snap_dem_vote
+on-arrival: {!
+Q.snap_dem_candidate = "Radosław Sikorski";
+Q.snap_dem_candidate_left = 0;
+Q.snap_dem_base = Math.max(
+    0,
+    Q.coalition_democratic_seats - Q.left_committed_seats - 3
+);
+Q.military_trust += 2;
+Q.psl_relation += 1;
+!}
+go-to: snap_democratic_role
 
 @snap_sejm_left
 title: A Left compromise candidate
 subtitle: Gains 20% of other seats but loses about 8% of KO; unity +4 and KO −5.
 on-arrival: {!
-Q.snap_dem_candidate = Q.pres_2025_left_candidate;
+Q.snap_dem_candidate =
+    Q.pres_2025_left_candidate &&
+    Q.pres_2025_left_candidate != "Undecided" &&
+    Q.pres_2025_left_candidate != Q.president_name
+        ? Q.pres_2025_left_candidate
+        : "Agnieszka Dziemianowicz-Bąk";
+Q.snap_dem_candidate_left = 1;
 Q.snap_dem_base =
     Number(Q.coalition_democratic_seats) -
     Math.round(Number(Q.ko_seats) * 0.08) +
     Math.round(Number(Q.other_seats) * 0.20);
 Q.party_unity += 4;
 Q.ko_relation -= 5;
+Q.snap_left_cabinet_commitment = 1;
+Q.snap_dem_left_support = 1;
+!}
+go-to: snap_dem_vote
+
+@snap_democratic_role
+title: Define Lewica's relationship to the nominee
+new-page: true
+on-arrival: snap_left_cabinet_commitment = 0; snap_dem_left_support = 0
+
+**[+ snap_dem_candidate +]** has **[+ snap_dem_base +]** expected votes
+outside Lewica. Supporting the investiture does not by itself put Lewica in
+government; cabinet entry requires a separate coalition agreement.
+
+- @snap_dem_join
+- @snap_dem_supply
+- @snap_dem_oppose
+
+@snap_dem_join
+title: Join the cabinet and accept collective responsibility
+subtitle: Adds every committed Lewica vote and grants governing capacity only if the cabinet wins.
+on-arrival: {!
+Q.snap_dem_base +=
+    Math.max(0, Number(Q.left_committed_seats) || 0);
+Q.snap_left_cabinet_commitment = 1;
+Q.snap_dem_left_support = 1;
+Q.party_unity += 2;
+Q.ko_relation += 3;
+Q.news_headline =
+    "Lewica signs a coalition agreement with the Sejm nominee";
+!}
+go-to: snap_dem_vote
+
+@snap_dem_supply
+title: Vote confidence from opposition under a written supply pact
+subtitle: Adds the same votes, but grants no ministries or state-budget capacity.
+on-arrival: {!
+Q.snap_dem_base +=
+    Math.max(0, Number(Q.left_committed_seats) || 0);
+Q.snap_left_cabinet_commitment = 0;
+Q.snap_dem_left_support = 1;
+Q.razem_dissent -= 4;
+Q.barons_dissent += 3;
+Q.news_headline =
+    "Lewica offers confidence and supply without cabinet entry";
+!}
+go-to: snap_dem_vote
+
+@snap_dem_oppose
+title: Withhold Lewica's votes
+subtitle: The nominee must find 231 without the Left.
+on-arrival: {!
+Q.snap_left_cabinet_commitment = 0;
+Q.snap_dem_left_support = 0;
+Q.party_unity += 1;
+Q.ko_relation -= 5;
+Q.news_headline =
+    "Lewica withholds its votes from the Sejm nominee";
 !}
 go-to: snap_dem_vote
 
@@ -1699,13 +2691,51 @@ Q.confidence_mode = "Post-snap Sejm second attempt";
 if (Q.government_has_confidence) {
     Q.prime_minister = Q.snap_dem_candidate;
     Q.government_name = Q.snap_dem_candidate + " democratic cabinet";
-    Q.left_in_government = 1;
-    Q.position = "Governing coalition";
-    Q.coalition_status = "Sejm-elected democratic cabinet";
+    const leftLedSnapCabinet =
+        Number(Q.snap_dem_candidate_left) == 1;
+    Q.government_party = leftLedSnapCabinet ? "lewica" : "ko";
+    Q.government_owner = leftLedSnapCabinet
+        ? Q.left_party_name
+        : "KO-led democratic coalition";
+    Q.left_in_government =
+        Q.snap_left_cabinet_commitment ? 1 : 0;
+    Q.position = Q.left_in_government
+        ? "Governing coalition"
+        : (
+            Q.snap_dem_left_support
+                ? "Confidence-and-supply opposition"
+                : "Parliamentary opposition"
+        );
+    Q.coalition_status = Q.left_in_government
+        ? "Sejm-elected democratic coalition cabinet"
+        : "Sejm-elected cabinet with external Lewica support";
     Q.coalition_seats = Q.confidence_yes;
     Q.caretaker_government = 0;
-    Q.budget += 3;
-    Q.budget_authority = "Post-election coalition reserve";
+    Q.formation_complete = 1;
+    Q.formation_in_progress = 0;
+    Q.budget = Q.left_in_government ? 3 : 0;
+    Q.budget_authority = Q.left_in_government
+        ? "Post-election coalition reserve"
+        : "Opposition — no state spending authority";
+    Q.left_cabinet_committed =
+        Q.left_in_government ? 1 : 0;
+    Q.left_cabinet_model = Q.left_in_government
+        ? (
+            leftLedSnapCabinet
+                ? "Programme-bound cooperating Left entry"
+                : "New Left ministers · Razem external support"
+        )
+        : (
+            Q.snap_dem_left_support
+                ? "Confidence and supply from opposition"
+                : "Opposition"
+        );
+    Q.ministries_finalized =
+        Q.left_in_government ? 0 : 1;
+    Q.ministry_allocation_mode = Q.left_in_government
+        ? "formation"
+        : "settled";
+    Q.ministry_return_mode = "event_queue";
     Q.news_headline =
         Q.snap_dem_candidate + " wins the Sejm's cabinet vote";
 } else {
@@ -1726,12 +2756,20 @@ snap_dem_variance +] roll-call variance**. Threshold: **231**.
 
 [? if government_has_confidence: The Sejm elects its own cabinet after the
 President's nominee fails.?]
-[? if not government_has_confidence: The third stage remains. Failure there
-would require another election; this playable chapter ends with no durable
-government.?]
+[? if not government_has_confidence: The third stage remains. It uses a
+simple majority of votes cast; only failure there requires another election.?]
 
-- @snap_return_2026: Record the alternative outcome
+- @snap_return_2026
+- @snap_post_election_third
 
 @snap_return_2026
+title: Record the formed government
+view-if: government_has_confidence = 1
 on-arrival: snap_election_requested = 0
-go-to: poland_event_queue
+go-to: poland_ministries if left_in_government = 1 and ministries_finalized = 0; poland_event_queue if left_in_government = 0 or ministries_finalized = 1
+
+@snap_post_election_third
+title: Proceed to the President's third attempt
+view-if: government_has_confidence = 0
+on-arrival: snap_formation_context = "Post-election formation"; snap_formation_attempt = 3; news_headline = "The post-election formation enters its final constitutional attempt"
+go-to: snap_formation_attempt_three

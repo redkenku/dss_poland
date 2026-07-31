@@ -55,16 +55,20 @@ mechanics without replaying the earlier campaign.
   parliamentary election, state-derived result presentation and
   constitutional cabinet sequence. The President nominates Mateusz Morawiecki
   first; after his confidence attempt, a Sejm majority can choose another
-  candidate, allocate ministries and test the proposed cabinet. The standalone
-  formation drill retains the historical seat snapshot.
+  candidate, bargain through a thirteen-office ministry round and test the
+  proposed cabinet. KO begins with strong claims on Finance and Foreign Affairs;
+  PSL treats Agriculture as a hard coalition claim. The standalone formation
+  drill retains the historical seat snapshot.
 - Dated events use a mandatory monthly desk. If several crises arrive
   together, the desk shows the most urgent tier, then reveals lower-priority
   files as it is cleared. Resolving one event cannot discard the rest, and the
   next leadership card is unavailable until every pending issue is addressed.
 - Four contextual decks feed one persistent three-card agenda: Party Affairs;
-  Government Affairs while Lewica holds a relevant ministry in a functioning
-  cabinet; Negotiate with Government while Lewica is outside cabinet; and
-  Foreign Affairs throughout the campaign.
+  the sixteen-card Government Affairs deck while Lewica holds office in a
+  functioning cabinet; Negotiate with Government while Lewica is outside
+  cabinet; and Foreign Affairs throughout the campaign. Government Affairs has
+  one card for each of thirteen portfolios plus Cabinet Reshuffle, Coalition
+  Council and Social Welfare.
   PiS is normally hostile, but a costed crisis proposal—especially one mediated
   by a Trzaskowski presidency—can produce a narrow, public bargain. A pinned
   discard action removes one held opportunity without consuming time or

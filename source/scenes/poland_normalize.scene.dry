@@ -319,22 +319,219 @@ if (Q.started) {
         );
     }
 
+    // The active Polish cabinet uses one complete roster for formation,
+    // recurring policy cards and later reshuffles. Migrate older saves, clear
+    // stale Lewica ownership after an exit, and derive the count from the
+    // roster rather than trusting incremental bookkeeping.
+    const democraticCabinetDefaults = {
+        labor: ["KO", "Coalition social-policy nominee"],
+        equality: ["KO", "Coalition equality nominee"],
+        housing: ["KO", "Coalition housing nominee"],
+        health: ["KO", "Izabela Leszczyna"],
+        digital: Number(Q.p2050_seats) > 0
+            ? ["Poland 2050", "Coalition digital nominee"]
+            : ["KO", "Coalition digital nominee"],
+        science: ["KO", "Coalition science nominee"],
+        interior: ["KO", "Marcin Kierwiński"],
+        finance: ["KO", "Andrzej Domański"],
+        economy:
+            Q.coalition_broken || Number(Q.psl_seats) <= 0
+            ? ["KO", "Coalition development nominee"]
+            : ["PSL", "Krzysztof Hetman"],
+        justice: ["KO", "Adam Bodnar"],
+        foreign: ["KO", "Radosław Sikorski"],
+        agriculture:
+            Q.coalition_broken || Number(Q.psl_seats) <= 0
+            ? ["KO", "Coalition agriculture nominee"]
+            : ["PSL", "Czesław Siekierski"],
+        defence:
+            Q.coalition_broken || Number(Q.psl_seats) <= 0
+            ? ["KO", "Coalition defence nominee"]
+            : ["PSL", "Władysław Kosiniak-Kamysz"]
+    };
+    let cabinetDefaults = democraticCabinetDefaults;
+    let cabinetAllowedParties = ["KO"];
+    if (Number(Q.p2050_seats) > 0) {
+        cabinetAllowedParties.push("Poland 2050");
+    }
+    if (!Q.coalition_broken && Number(Q.psl_seats) > 0) {
+        cabinetAllowedParties.push("PSL");
+    }
+    if (
+        !Q.left_in_government &&
+        Q.government_party != "ko"
+    ) {
+        const cabinetPartyLabels = {
+            pis: "PiS",
+            psl: "PSL",
+            p2050: "Poland 2050",
+            lewica: "Lewica",
+            other: "Cabinet"
+        };
+        const cabinetParty =
+            cabinetPartyLabels[Q.government_party] || "Cabinet";
+        const cabinetOfficeLabels = {
+            labor: "social-policy",
+            equality: "equality",
+            housing: "housing",
+            health: "health",
+            digital: "digital",
+            science: "science",
+            interior: "interior",
+            finance: "finance",
+            economy: "development",
+            justice: "justice",
+            foreign: "foreign-affairs",
+            agriculture: "agriculture",
+            defence: "defence"
+        };
+        const pisCabinetMinisters = {
+            labor: "Dorota Bojemska",
+            equality: "PiS equality nominee",
+            housing: "PiS housing nominee",
+            health: "Ewa Krajewska",
+            digital: "PiS digital-affairs nominee",
+            science: "Krzysztof Szczucki",
+            interior: "Paweł Szefernaker",
+            finance: "Andrzej Kosztowniak",
+            economy: "Marlena Maląg",
+            justice: "Marcin Warchoł",
+            foreign: "Szymon Szynkowski vel Sęk",
+            agriculture: "Anna Gembicka",
+            defence: "Mariusz Błaszczak"
+        };
+        cabinetDefaults = {};
+        for (
+            const portfolio of Object.keys(
+                democraticCabinetDefaults
+            )
+        ) {
+            cabinetDefaults[portfolio] = [
+                cabinetParty,
+                Q.government_party == "pis"
+                    ? pisCabinetMinisters[portfolio]
+                    : (
+                        cabinetParty + " " +
+                        cabinetOfficeLabels[portfolio] +
+                        " nominee"
+                    )
+            ];
+        }
+        cabinetAllowedParties = [cabinetParty];
+    }
+    const cabinetGovernmentChanged =
+        Q.year >= 2023 &&
+        !Q.left_in_government &&
+        !Q.caretaker_government &&
+        String(Q.cabinet_roster_government_party || "") !=
+            String(Q.government_party || "");
+    const cabinetPortfolios = Object.keys(cabinetDefaults);
+    for (const portfolio of cabinetPortfolios) {
+        const partyKey = portfolio + "_minister_party";
+        const ministerKey = portfolio + "_minister";
+        const partyMissing =
+            typeof Q[partyKey] != "string" ||
+            !Q[partyKey].length;
+        const ministerMissing =
+            typeof Q[ministerKey] != "string" ||
+            !Q[ministerKey].length;
+        const wrongGovernment =
+            Q.year >= 2023 &&
+            !Q.left_in_government &&
+            !Q.caretaker_government &&
+            (
+                cabinetGovernmentChanged ||
+                (
+                    !partyMissing &&
+                    cabinetAllowedParties.indexOf(Q[partyKey]) < 0
+                )
+            );
+        if (partyMissing || wrongGovernment) {
+            Q[partyKey] = Q.year >= 2023
+                ? cabinetDefaults[portfolio][0]
+                : "Unassigned";
+        }
+        if (ministerMissing || wrongGovernment) {
+            Q[ministerKey] = Q.year >= 2023
+                ? cabinetDefaults[portfolio][1]
+                : "Unassigned";
+        }
+    }
+    Q.cabinet_roster_government_party =
+        String(Q.government_party || "other");
+    Q.family_minister_party = Q.labor_minister_party;
+    Q.family_minister = Q.labor_minister;
+    Q.ministry_count = cabinetPortfolios.reduce(
+        function(total, portfolio) {
+            return total + (
+                Q[portfolio + "_minister_party"] == "Lewica"
+                    ? 1
+                    : 0
+            );
+        },
+        0
+    );
+    Q.ministry_leverage = Math.max(
+        0,
+        Number(Q.ministry_leverage) || 0
+    );
+    Q.ministry_base_leverage = Math.max(
+        0,
+        Number(Q.ministry_base_leverage) || 0
+    );
+    Q.ministries_finalized = Q.ministries_finalized ? 1 : 0;
+    Q.ministry_maximal_mandate =
+        Q.ministry_maximal_mandate ? 1 : 0;
+    Q.ministry_whole_left_mandate =
+        Q.ministry_whole_left_mandate ? 1 : 0;
+    Q.ministry_reshuffle_previous_count = Math.max(
+        0,
+        Number(Q.ministry_reshuffle_previous_count) || 0
+    );
+    Q.ministry_reshuffle_changes = Math.max(
+        0,
+        Number(Q.ministry_reshuffle_changes) || 0
+    );
+    Q.psl_agriculture_released =
+        Q.psl_agriculture_released ? 1 : 0;
+    if (
+        typeof Q.ministry_allocation_mode != "string" ||
+        !Q.ministry_allocation_mode.length
+    ) {
+        Q.ministry_allocation_mode = "settled";
+    }
+    if (
+        typeof Q.ministry_return_mode != "string" ||
+        !Q.ministry_return_mode.length
+    ) {
+        Q.ministry_return_mode = "cabinet_program";
+    }
+
     // Budget defeat scenes predate the constitutional scheduler. Record the
     // month in which they first request an election so the later event can
     // enforce the four-month presidential budget clock.
     if (Q.snap_election_requested) {
-        if (!Number.isFinite(Number(Q.snap_election_request_time))) {
+        if (
+            !Number.isFinite(Number(Q.snap_election_request_time)) ||
+            Number(Q.snap_election_request_time) < 0
+        ) {
             Q.snap_election_request_time = Number(Q.time) || 0;
             Q.snap_election_request_year = Number(Q.year) || 0;
             Q.snap_election_request_month = Number(Q.month) || 0;
+            Q.snap_event_deferred_time = -1;
         }
         if (
-            !Number.isFinite(Number(Q.budget_submission_time)) &&
+            (
+                !Number.isFinite(Number(Q.budget_submission_time)) ||
+                Number(Q.budget_submission_time) < 0
+            ) &&
             String(Q.annual_budget_result || "")
                 .toLowerCase()
                 .includes("failed")
         ) {
             Q.budget_submission_time = Number(Q.time) || 0;
+            Q.budget_submission_year = Number(Q.year) || 0;
+            Q.budget_submission_month = Number(Q.month) || 0;
         }
         if (
             Number.isFinite(Number(Q.budget_submission_time))
@@ -344,7 +541,8 @@ if (Q.started) {
         }
     }
     if (Q.caretaker_government) {
-        Q.left_role = Q.left_in_government
+        Q.left_role =
+            Q.left_in_government || Q.ministry_count > 0
             ? "Caretaker cabinet — ministers remain, but new executive action is suspended"
             : "Outside the caretaker cabinet — formation or election talks";
     } else if (Q.left_in_government) {
@@ -1217,6 +1415,29 @@ if (Q.started) {
     Q.advisor_action_timer = Math.max(0, Q.advisor_action_timer || 0);
     Q.leadership_reshuffle_timer =
         Math.max(0, Q.leadership_reshuffle_timer || 0);
+    for (const cabinetTimer of [
+        "poland_labor_inspection_timer",
+        "poland_housing_fund_timer",
+        "poland_equality_bill_timer",
+        "poland_health_compact_timer",
+        "poland_digital_state_timer",
+        "poland_science_compact_timer",
+        "poland_internal_security_timer",
+        "poland_fiscal_policy_timer",
+        "poland_economic_programme_timer",
+        "poland_justice_repair_timer",
+        "poland_foreign_ministry_line_timer",
+        "poland_agricultural_bargain_timer",
+        "poland_defence_policy_timer",
+        "poland_cabinet_reshuffle_timer",
+        "poland_coalition_council_timer",
+        "poland_social_welfare_review_timer"
+    ]) {
+        Q[cabinetTimer] = Math.max(
+            0,
+            Number(Q[cabinetTimer]) || 0
+        );
+    }
     Q.poland_fundraising_timer =
         Math.max(0, Q.poland_fundraising_timer || 0);
     Q.poland_campaigning_timer =

@@ -821,11 +821,42 @@ go-to: left_courting
 
 @psl_free_hand
 title: Do not police PSL's talks
-subtitle: The dangerous bargain: up to 21 deputies may back Morawiecki and five may abstain.
+subtitle: The dangerous bargain: PSL's caucuses decide from their own relations, wings and Third Way cohesion.
 on-arrival: {!
-Q.first_psl_yes = Math.min(21, Q.psl_seats);
+const pslSeats = Math.max(0, Number(Q.psl_seats) || 0);
+const pslConservatives = Math.max(
+    0,
+    Number(Q.psl_conservative_seats) || 0
+);
+const pslRegional = Math.max(0, Number(Q.psl_regional_seats) || 0);
+const offerStrength =
+    (Number(Q.pis_accept_social) || 0) * 0.35 +
+    (Number(Q.pis_accept_order) || 0) * 0.25 +
+    (Number(Q.rival_relation_pis_psl) || 0) * 0.25;
+const allianceShield =
+    (Number(Q.psl_relation) || 0) * 0.30 +
+    (Number(Q.third_way_cohesion) || 0) * 0.35;
+const brokerPool = Math.min(
+    pslSeats,
+    pslConservatives + Math.round(pslRegional * 0.75)
+);
+const pslTemptation = Math.max(
+    0,
+    Math.min(
+        1,
+        0.22 + (offerStrength - allianceShield) / 100 +
+        (this.random.uint32() / 4294967296 - 0.5) * 0.18
+    )
+);
+Q.first_psl_yes = Math.min(
+    pslSeats,
+    Math.round(brokerPool * pslTemptation)
+);
 Q.first_psl_abstain = Math.min(
-    5,
+    Math.max(0, pslSeats - Q.first_psl_yes),
+    Math.round(
+        Math.max(0, brokerPool - Q.first_psl_yes) * 0.45
+    ),
     Math.max(0, Q.psl_seats - Q.first_psl_yes)
 );
 Q.psl_relation -= 10;
@@ -833,7 +864,9 @@ Q.p2050_relation -= 8;
 Q.third_way_cohesion -= 18;
 Q.party_unity -= 2;
 Q.public_trust -= 3;
-Q.news_headline = "Regional PSL brokers keep the PiS offer alive";
+Q.news_headline =
+    Q.first_psl_yes + " PSL deputies accept the PiS offer and " +
+    Q.first_psl_abstain + " abstain";
 !}
 go-to: left_courting
 
@@ -930,17 +963,39 @@ go-to: first_confidence_roll
 
 @konf_let_bid
 title: Let PiS and Konfederacja bid against each other
-subtitle: Eight votes may move to Morawiecki. This becomes fatal if PSL and Left already fractured.
+subtitle: Konfederacja's autonomous wings decide how many votes, if any, PiS can buy.
 on-arrival: {!
-Q.first_konf_yes = Math.min(8, Q.konf_seats);
+const konfSeats = Math.max(0, Number(Q.konf_seats) || 0);
+const pisKonfRelation = Number(Q.rival_relation_pis_konf) || 0;
+const konfDealSpace =
+    pisKonfRelation * 0.40 +
+    (Number(Q.konf_mentzenite_share) || 0) * 0.18 +
+    (Number(Q.konf_nationalist_share) || 0) * 0.12 -
+    (Number(Q.konf_braunist_share) || 0) * 0.20 +
+    (Number(Q.pis_coalition_openness) || 0) * 0.08;
+const konfTransferShare = Math.max(
+    0,
+    Math.min(
+        0.65,
+        0.08 + konfDealSpace / 150 +
+        (this.random.uint32() / 4294967296 - 0.5) * 0.16
+    )
+);
+Q.first_konf_yes = Math.min(
+    konfSeats,
+    Math.round(konfSeats * konfTransferShare)
+);
 Q.first_konf_abstain = Math.min(
-    3,
+    Math.round(
+        Math.max(0, konfSeats - Q.first_konf_yes) * 0.22
+    ),
     Math.max(0, Q.konf_seats - Q.first_konf_yes)
 );
 Q.far_right_agenda += 8;
 Q.minority_safety -= 5;
 Q.public_trust -= 2;
-Q.news_headline = "PiS buys a fragment of Konfederacja's programme";
+Q.news_headline =
+    Q.first_konf_yes + " Konfederacja deputies back the PiS bargain";
 !}
 go-to: first_confidence_roll
 
@@ -1035,9 +1090,15 @@ Q.caretaker_government = 0;
 Q.government_has_confidence = 1;
 Q.prime_minister = "Mateusz Morawiecki";
 Q.government_name = "PiS-led bargain cabinet";
+Q.government_party = "pis";
+Q.government_owner = "PiS and its governing partners";
 Q.position = "Parliamentary opposition";
 Q.coalition_status = "PiS-led confidence pact";
 Q.coalition_seats = Q.confidence_yes;
+Q.left_cabinet_committed = 0;
+Q.left_cabinet_model = "Opposition";
+Q.ministries_finalized = 1;
+Q.ministry_allocation_mode = "settled";
 Q.budget = 0;
 Q.budget_authority = "Opposition — no state spending authority";
 Q.ending_name = "The democratic transfer dissolved before taking office";
@@ -1768,9 +1829,29 @@ Q.caretaker_government = 0;
 Q.government_has_confidence = 1;
 Q.prime_minister = Q.third_candidate;
 Q.government_name = Q.third_candidate + " third-attempt cabinet";
+const thirdCandidateKey =
+    String(Q.third_candidate || "").toLowerCase();
+if (
+    thirdCandidateKey.includes("morawiecki") ||
+    thirdCandidateKey.includes("szydło") ||
+    thirdCandidateKey.includes("szydlo") ||
+    thirdCandidateKey.includes("czarnek")
+) {
+    Q.government_party = "pis";
+    Q.government_owner = "PiS and its governing partners";
+} else if (thirdCandidateKey.includes("kosiniak")) {
+    Q.government_party = "psl";
+    Q.government_owner = "PSL-led coalition";
+} else {
+    Q.government_party = "ko";
+    Q.government_owner = "KO-led democratic coalition";
+}
 Q.coalition_seats = Q.third_yes;
 Q.left_in_government = Q.third_left_cabinet ? 1 : 0;
 if (Q.left_in_government) {
+    Q.left_cabinet_committed = 1;
+    Q.ministries_finalized = 0;
+    Q.ministry_allocation_mode = "formation";
     Q.position = "Coalition government";
     Q.coalition_status = "Third-attempt democratic coalition";
     Q.budget = 5;
@@ -1786,6 +1867,10 @@ if (Q.left_in_government) {
         Q.ending_score = 38;
     }
 } else {
+    Q.left_cabinet_committed = 0;
+    Q.left_cabinet_model = "Opposition";
+    Q.ministries_finalized = 1;
+    Q.ministry_allocation_mode = "settled";
     Q.position = "Parliamentary opposition";
     Q.coalition_status = "PiS minority tolerated by PSL";
     Q.budget = 0;
@@ -2319,7 +2404,34 @@ go-to: campaign_return if formation_continuous = 1; assessment if formation_cont
 title: Accept PSL's resignation and continue as a minority
 subtitle: A legal minority cabinet; every bill now needs abstentions or issue partners.
 view-if: left_in_government = 1
-on-arrival: coalition_broken = 1; coalition_break_threat = 0; psl_coalition_dissent = 100; coalition_seats = ko_seats + p2050_seats + centrum_seats + left_committed_seats; coalition_status = "KO · Poland 2050 · Left minority cabinet"; psl_relation -= 18; government_delivery -= 5; ending_name = "A parliamentary minority"; ending_score += 3; news_headline = "PSL leaves and the cabinet continues without manufacturing a confidence vote"
+on-arrival: {!
+Q.coalition_broken = 1;
+Q.coalition_break_threat = 0;
+Q.psl_coalition_dissent = 100;
+Q.coalition_seats =
+    Q.ko_seats + Q.p2050_seats +
+    Q.centrum_seats + Q.left_committed_seats;
+Q.coalition_status = "KO · Poland 2050 · Left minority cabinet";
+const resignedPSLPortfolios = {
+    economy: ["KO", "Coalition development nominee"],
+    agriculture: ["KO", "Coalition agriculture nominee"],
+    defence: ["KO", "Coalition defence nominee"]
+};
+for (const portfolio of Object.keys(resignedPSLPortfolios)) {
+    if (Q[portfolio + "_minister_party"] == "PSL") {
+        Q[portfolio + "_minister_party"] =
+            resignedPSLPortfolios[portfolio][0];
+        Q[portfolio + "_minister"] =
+            resignedPSLPortfolios[portfolio][1];
+    }
+}
+Q.psl_relation -= 18;
+Q.government_delivery -= 5;
+Q.ending_name = "A parliamentary minority";
+Q.ending_score += 3;
+Q.news_headline =
+    "PSL leaves and the cabinet continues without manufacturing a confidence vote";
+!}
 go-to: campaign_return if formation_continuous = 1; assessment if formation_continuous = 0
 
 @article160_open
@@ -2351,14 +2463,65 @@ go-to: article160_roll
 title: Hold the minority clubs and ask PSL only to abstain
 subtitle: More yes than no can sustain a lawful minority cabinet.
 view-if: left_in_government = 1
-on-arrival: article160_psl_yes = 0; article160_psl_no = 0; article160_psl_abstain = psl_seats; article160_left_yes = left_committed_seats; article160_left_no = 0; coalition_broken = 1; coalition_seats = ko_seats + p2050_seats + centrum_seats + left_committed_seats; confidence_strategy = "Minority confidence with PSL abstention"
+on-arrival: {!
+Q.article160_psl_yes = 0;
+Q.article160_psl_no = 0;
+Q.article160_psl_abstain = Q.psl_seats;
+Q.article160_left_yes = Q.left_committed_seats;
+Q.article160_left_no = 0;
+Q.coalition_broken = 1;
+Q.coalition_seats =
+    Q.ko_seats + Q.p2050_seats +
+    Q.centrum_seats + Q.left_committed_seats;
+const minorityCabinetReplacements = {
+    economy: ["KO", "Coalition development nominee"],
+    agriculture: ["KO", "Coalition agriculture nominee"],
+    defence: ["KO", "Coalition defence nominee"]
+};
+for (const portfolio of Object.keys(minorityCabinetReplacements)) {
+    if (Q[portfolio + "_minister_party"] == "PSL") {
+        Q[portfolio + "_minister_party"] =
+            minorityCabinetReplacements[portfolio][0];
+        Q[portfolio + "_minister"] =
+            minorityCabinetReplacements[portfolio][1];
+    }
+}
+Q.confidence_strategy = "Minority confidence with PSL abstention";
+!}
 go-to: article160_roll
 
 @confidence_left_redline
 title: Make equality and labour law the confidence question
 subtitle: PSL votes no. The Left is unified and the cabinet may fall.
 view-if: left_in_government = 1
-on-arrival: article160_psl_yes = 0; article160_psl_no = psl_seats; article160_psl_abstain = 0; article160_left_yes = left_committed_seats; article160_left_no = 0; coalition_broken = 1; coalition_seats = ko_seats + p2050_seats + centrum_seats + left_committed_seats; party_unity += 6; progressive_credibility += 5; labor_credibility += 5; confidence_strategy = "Left programme confidence"
+on-arrival: {!
+Q.article160_psl_yes = 0;
+Q.article160_psl_no = Q.psl_seats;
+Q.article160_psl_abstain = 0;
+Q.article160_left_yes = Q.left_committed_seats;
+Q.article160_left_no = 0;
+Q.coalition_broken = 1;
+Q.coalition_seats =
+    Q.ko_seats + Q.p2050_seats +
+    Q.centrum_seats + Q.left_committed_seats;
+const redlineCabinetReplacements = {
+    economy: ["KO", "Coalition development nominee"],
+    agriculture: ["KO", "Coalition agriculture nominee"],
+    defence: ["KO", "Coalition defence nominee"]
+};
+for (const portfolio of Object.keys(redlineCabinetReplacements)) {
+    if (Q[portfolio + "_minister_party"] == "PSL") {
+        Q[portfolio + "_minister_party"] =
+            redlineCabinetReplacements[portfolio][0];
+        Q[portfolio + "_minister"] =
+            redlineCabinetReplacements[portfolio][1];
+    }
+}
+Q.party_unity += 6;
+Q.progressive_credibility += 5;
+Q.labor_credibility += 5;
+Q.confidence_strategy = "Left programme confidence";
+!}
 go-to: article160_roll
 
 @article160_roll
@@ -2442,7 +2605,7 @@ actions.
 @constructive_motion
 title: A constructive vote of no confidence
 new-page: true
-view-if: left_in_government = 1
+view-if: left_in_government = 1 and government_has_confidence = 1 and caretaker_government = 0 and formation_in_progress = 0
 
 = Article 158 — 46 signatures, one named successor
 
@@ -2615,7 +2778,7 @@ go-to: constructive_roll
 @constructive_roll
 title: The named replacement
 new-page: true
-view-if: left_in_government = 1
+view-if: left_in_government = 1 and government_has_confidence = 1 and caretaker_government = 0 and formation_in_progress = 0
 on-arrival: {!
 Q.confidence_stage = 6;
 Q.confidence_mode =
@@ -2634,19 +2797,69 @@ if (Q.constructive_passed) {
     Q.prime_minister = Q.constructive_candidate;
     Q.government_name = Q.constructive_candidate + " constructive cabinet";
     Q.government_has_confidence = 1;
+    Q.caretaker_government = 0;
+    Q.formation_in_progress = 0;
+    Q.formation_complete = 1;
+    Q.coalition_broken = 0;
+    Q.coalition_seats = Q.confidence_yes;
     Q.constructive_vonc_cooldown = 0;
     if (Q.constructive_democratic) {
+        const constructiveCandidateKey =
+            String(Q.constructive_candidate || "").toLowerCase();
+        if (constructiveCandidateKey.includes("kosiniak")) {
+            Q.government_party = "psl";
+            Q.government_owner = "PSL-led coalition";
+        } else {
+            Q.government_party = "ko";
+            Q.government_owner = "KO-led democratic coalition";
+        }
         Q.left_in_government = 1;
+        Q.left_cabinet_committed = 1;
         Q.position = "Coalition government";
         Q.coalition_status = "Reconstituted democratic coalition";
         Q.ending_name = "A constructive democratic replacement";
         Q.ending_score += 8;
     } else {
+        Q.government_party = "pis";
+        Q.government_owner = "PiS and its governing partners";
         Q.left_in_government = 0;
+        Q.left_cabinet_committed = 0;
+        Q.left_cabinet_model = "Opposition";
+        Q.ministries_finalized = 1;
+        Q.ministry_allocation_mode = "settled";
         Q.position = "Parliamentary opposition";
         Q.coalition_status = "PiS · Konfederacja · PSL constructive majority";
         Q.budget = 0;
         Q.budget_authority = "Opposition — no state spending authority";
+        const constructiveRightCabinet = {
+            labor: ["PiS", "Dorota Bojemska"],
+            equality: ["PiS", "PiS equality nominee"],
+            housing: ["PiS", "PiS housing nominee"],
+            health: ["PiS", "Ewa Krajewska"],
+            digital: ["PiS", "PiS digital-affairs nominee"],
+            science: ["PiS", "Krzysztof Szczucki"],
+            interior: ["PiS", "Paweł Szefernaker"],
+            finance: ["PiS", "Andrzej Kosztowniak"],
+            economy: ["PiS", "Marlena Maląg"],
+            justice: ["PiS", "Marcin Warchoł"],
+            foreign: ["PiS", "Szymon Szynkowski vel Sęk"],
+            agriculture: ["PiS", "Anna Gembicka"],
+            defence: ["PiS", "Mariusz Błaszczak"]
+        };
+        for (
+            const portfolio of Object.keys(
+                constructiveRightCabinet
+            )
+        ) {
+            Q[portfolio + "_minister_party"] =
+                constructiveRightCabinet[portfolio][0];
+            Q[portfolio + "_minister"] =
+                constructiveRightCabinet[portfolio][1];
+        }
+        Q.family_minister_party = Q.labor_minister_party;
+        Q.family_minister = Q.labor_minister;
+        Q.ministry_count = 0;
+        Q.cabinet_roster_government_party = "pis";
         Q.ending_name = "The coalition crosses right";
         Q.ending_score -= 18;
     }
@@ -2654,7 +2867,6 @@ if (Q.constructive_passed) {
         Q.constructive_candidate + " replaces the prime minister immediately";
 } else {
     Q.constructive_vonc_cooldown = 3;
-    Q.government_has_confidence = 1;
     Q.ending_name = "The constructive motion fails";
     Q.ending_score += 6;
     Q.news_headline =

@@ -73,7 +73,7 @@ The GitHub workflow performs the same broad operation and publishes
 | `source/info.dry` | Game title, author, IFID, and top-level metadata | Yes |
 | `source/scenes/root.scene.dry` | Entry menu and initial state | Yes, carefully |
 | `source/scenes/poland_hub.scene.dry` | Active Polish hand and pinned system cards | Yes |
-| `source/scenes/cards/` | Three live decks: Party, Government and opposition Negotiation cards | Yes |
+| `source/scenes/cards/` | Contextual Party, Government, Negotiation and Foreign cards | Yes |
 | `source/scenes/poland_advisors.scene.dry` | Twelve directly rendered Polish adviser cards | Yes |
 | `source/scenes/poland_advisor_groups.scene.dry` | Compatibility menus for older saves | Yes, carefully |
 | `source/scenes/poland_advance.scene.dry` | Polish monthly update and dated router | Yes |
@@ -83,7 +83,7 @@ The GitHub workflow performs the same broad operation and publishes
 | `source/scenes/poland_polling.scene.dry` | All-party blocs, poll sample and national seat indicator | Yes |
 | `source/scenes/poland_presidential_election.scene.dry` | Two-turn 2020 presidential contest | Yes |
 | `source/scenes/poland_election.scene.dry` | Result, seat-chart, summary and coalition views | Yes |
-| `source/scenes/poland_ministries.scene.dry` | 2023 cabinet portfolio allocation | Yes |
+| `source/scenes/poland_ministries.scene.dry` | Thirteen-office cabinet allocation and reshuffles | Yes |
 | `source/scenes/poland_government_formation.scene.dry` | 2023 coalition and confidence sequence | Yes |
 | `source/scenes/main.scene.dry` | Dormant inherited hand, useful as reference | Reference |
 | `source/scenes/post_event.scene.dry` | Dormant inherited update pass/router | Reference |
@@ -358,8 +358,10 @@ The active Polish hand has four contextual live decks:
 - **Party Affairs** is always available and draws one of sixteen party cards.
 - **Government Affairs** requires government participation, Sejm confidence,
   no caretaker cabinet and at least one relevant Lewica-held ministry whose
-  policy opportunity is currently useful and off cooldown. Each of its four
-  cards repeats the same ownership and cabinet safety conditions.
+  policy opportunity is currently useful and off cooldown. Its sixteen cards
+  comprise one file for each of thirteen portfolios plus Cabinet Reshuffle,
+  Coalition Council and Social Welfare. Portfolio cards repeat the same
+  ownership and cabinet-safety conditions.
 - **Negotiation with Government** appears only while Lewica is outside a
   functioning cabinet. Its crisis compact, oversight bargain and
   presidential-mediation cards publish their score, threshold and likely
@@ -369,6 +371,15 @@ The active Polish hand has four contextual live decks:
   social, eastern and bilateral relationships; five lower-frequency pressure
   cards recur on independent cooldowns. The 2020 and 2024 US election scenes
   set the administration used by later Washington and security cards.
+
+The cabinet round always displays Labour, Equality, Housing, Health, Digital
+Affairs, Science, Interior, Finance, Development and Technology, Justice,
+Foreign Affairs, Agriculture and Defence. A visible office may still be
+unavailable: KO normally protects Finance and Foreign Affairs, while PSL treats
+Agriculture as a hard coalition claim. This preserves the bargaining information
+even when taking a senior portfolio would require a harsher agreement or a
+different coalition. Cabinet Reshuffle later reopens the same roster rather than
+silently replacing minister state.
 
 Party opportunities also carry contextual `view-if` gates. Media-build cards
 wait for the media-system event, the presidential channel requires real Palace

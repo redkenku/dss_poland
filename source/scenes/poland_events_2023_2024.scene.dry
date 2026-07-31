@@ -112,7 +112,7 @@ tags: poland_event
 priority: 25
 order: 20
 max-visits: 1
-view-if: continuous_campaign = 1 and year = 2023 and month = 12 and government_party != "pis" and caretaker_government = 0
+view-if: continuous_campaign = 1 and year = 2023 and month = 12
 on-arrival: far_right_agenda += 3; minority_safety -= 3; news_headline = "A fire extinguisher turns a Sejm ceremony into a far-right rupture"
 
 = December 2023 — Isolation or martyrdom
@@ -151,35 +151,70 @@ tags: poland_event
 priority: 25
 order: 21
 max-visits: 1
-view-if: continuous_campaign = 1 and year = 2023 and month = 12
+view-if: continuous_campaign = 1 and year = 2023 and month = 12 and government_party != "pis" and caretaker_government = 0
 on-arrival: news_headline = "The transfer of public broadcasting opens a constitutional and media war"
 
 = December 2023 — Speed does not settle legality
 
-The new majority can quickly replace management through corporate law and
-liquidation, pursue legislation that the President may veto, or negotiate an
-interim board while partisan broadcasting continues.
+[? if left_in_government: The new majority can quickly replace management
+through corporate law and liquidation, pursue legislation that the President
+may veto, or negotiate an interim board while partisan broadcasting
+continues.?]
+[? if not left_in_government: The KO-led cabinet controls the executive route.
+Lewica can set a legal test, legislate and investigate from confidence-and-
+supply opposition; it cannot replace management or negotiate for the
+government.?]
 
 - @media_fast
 - @media_statute
 - @media_interim
+- @media_opposition_ledger
+- @media_opposition_bill
+- @media_opposition_monitor
 
 @media_fast
 title: Back the rapid corporate route and publish every legal opinion
+view-if: left_in_government = 1
 on-arrival: public_media_transition = "Rapid corporate transition"; media_capacity += 5; government_delivery += 4; government_procedural_restraint -= 5; legal_dualism += 4; president_relation -= 7; republika_capacity += 7; pis_poll_momentum += 0.2; news_headline = "Public media changes hands quickly and the legal challenge begins"
 go-to: poland_event_queue
 
 @media_statute
 title: Insist on a statute, open appointments and a likely veto
+view-if: left_in_government = 1
 on-arrival: public_media_transition = "Statutory reform behind the veto wall"; constitutional_restraint += 6; government_procedural_restraint += 5; media_capacity -= 3; president_relation += 2; pis_relation += 2; republika_capacity += 4; public_trust += 1; news_headline = "The coalition chooses a slower public-media mandate"
 go-to: poland_event_queue
 
 @media_interim
 title: Offer the Palace a time-limited pluralist board
 subtitle: Requires a functioning presidential channel.
-choose-if: president_relation >= 30 or presidential_channel_open = 1
+view-if: left_in_government = 1
+choose-if: left_in_government = 1 and (president_relation >= 30 or presidential_channel_open = 1)
 unavailable-subtitle: The Palace sees no reason to share control.
 on-arrival: public_media_transition = "Interim pluralist board"; president_relation += 7; constitutional_restraint += 4; media_capacity += 1; ko_relation -= 3; progressives_dissent += 3; republika_capacity += 2; news_headline = "A temporary media truce preserves rival voices and postpones the final law"
+go-to: poland_event_queue
+
+@media_opposition_ledger
+title: Publish the legal opinions and appointments ledger
+subtitle: Cost: 1 resource for opposition legal and media staff.
+view-if: left_in_government = 0
+choose-if: resources >= 1
+unavailable-subtitle: The parliamentary team cannot complete the audit.
+on-arrival: resources -= 1; public_media_transition = "KO transition under opposition legal audit"; media_capacity += 4; constitutional_restraint += 3; public_trust += 2; ko_relation -= 2; news_headline = "Lewica audits the media transfer without claiming executive control"
+go-to: poland_event_queue
+
+@media_opposition_bill
+title: Table a pluralist appointments statute
+view-if: left_in_government = 0
+on-arrival: public_media_transition = "Opposition pluralism bill beside the KO transition"; constitutional_restraint += 4; media_capacity += 1; ko_relation += 1; president_relation += 1; news_headline = "Lewica records a statutory alternative from outside cabinet"
+go-to: poland_event_queue
+
+@media_opposition_monitor
+title: Build an independent transition-monitoring desk
+subtitle: Cost: 2 resources.
+view-if: left_in_government = 0
+choose-if: resources >= 2
+unavailable-subtitle: A permanent monitoring desk requires two resources.
+on-arrival: resources -= 2; media_capacity += 6; local_network += 2; public_trust += 2; ko_relation -= 1; news_headline = "An independent desk tracks both public-media management and government procedure"
 go-to: poland_event_queue
 
 @december_public_media_pis
@@ -317,15 +352,27 @@ on-arrival: resources -= 3; media_relationship = "Owned newsroom and federated l
 go-to: poland_event_queue
 
 @farmers_2024
-title: Farmers surround the coalition
-subtitle: Ukraine imports, the Green Deal and PSL credibility collide
+title: Farmers surround Warsaw
+subtitle: Ukraine imports, the Green Deal and party credibility collide
 new-page: true
 tags: poland_event
 priority: 20
 order: 10
 max-visits: 1
 view-if: continuous_campaign = 1 and year = 2024 and month = 2
-on-arrival: psl_coalition_dissent += 6; government_coalition_dissent += 4; news_headline = "Farmer protests turn PSL into the coalition's hinge and hostage"
+on-arrival: {!
+const pslInCabinet =
+    Q.government_party == "ko" &&
+    Q.government_has_confidence &&
+    !Q.caretaker_government;
+if (pslInCabinet) {
+    Q.psl_coalition_dissent += 6;
+    Q.government_coalition_dissent += 4;
+}
+Q.news_headline = pslInCabinet
+    ? "Farmer protests turn PSL into the coalition's hinge and hostage"
+    : "Farmer protests force every parliamentary party to choose a rural line";
+!}
 
 = February 2024 — Who benefits from farm policy?
 
@@ -363,7 +410,7 @@ go-to: poland_event_queue
 
 @farmers_green
 title: Defend climate transition and compensate the smallest farms
-on-arrival: progressive_credibility += 4; rural_support -= 3; psl_relation -= 5; ko_relation += 2; far_right_agenda += 3; government_coalition_dissent += 3; news_headline = "A green transition fund fails to end the blockade"
+on-arrival: progressive_credibility += 4; rural_support -= 3; psl_relation -= 5; ko_relation += 2; far_right_agenda += 3; government_coalition_dissent += 3 if left_in_government = 1; news_headline = "A green transition proposal fails to end the blockade"
 go-to: poland_event_queue
 
 @kanal_zero_launch

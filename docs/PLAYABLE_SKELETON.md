@@ -83,13 +83,15 @@ The campaign deliberately contains two kinds of dated material:
 Every month the player may play **one** strategic dilemma from the engine's
 native persistent hand:
 
-1. **Party Affairs** supplies sixteen cards. **Government Affairs** supplies
-   four cards and appears only when Lewica holds a relevant ministry in a
-   cabinet with confidence. **Negotiation with Government** appears only when
-   Lewica is outside a functioning cabinet and offers crisis cooperation,
-   oversight bargains or presidential mediation. **Foreign Affairs** is the
-   fourth live deck: a staged European campaign appears beside five randomly
-   selected foreign-pressure cards.
+1. **Party Affairs** supplies sixteen cards. **Government Affairs** also
+   supplies sixteen: one card for each of thirteen portfolios, plus Cabinet
+   Reshuffle, Coalition Council and Social Welfare. It appears only for Lewica
+   in a cabinet with confidence and offers portfolio cards for offices it
+   controls. **Negotiation with Government** appears only when Lewica is outside
+   a functioning cabinet and offers crisis cooperation, oversight bargains or
+   presidential mediation. **Foreign Affairs** is the fourth live deck: a
+   staged European campaign appears beside five randomly selected
+   foreign-pressure cards.
 2. Hold at most three cards. Unplayed cards persist between months and can
    become invalid if their conditions stop being true. **Discard an
    opportunity** removes one held card without playing it: no monthly action,
@@ -628,10 +630,21 @@ and seats when the Poland 2050, PiS or Konfederacja split chains create them.
 The standalone formation drill instead uses the historical 2023 snapshot.
 
 If Lewica joins a cabinet, its coalition mandate becomes ministry leverage.
-The player allocates that leverage among Labour, Equality, Housing, Health,
-Digital Affairs and Science; held portfolios unlock the full-spending choice
-on the corresponding Government Affairs cards. Confidence-and-supply leaves
-every ministry with the coalition instead.
+The player sees a full thirteen-office round: Labour, Equality, Housing, Health,
+Digital Affairs, Science, Interior, Finance, Development and Technology,
+Justice, Foreign Affairs, Agriculture and Defence. Every portfolio has a
+corresponding Government Affairs card. KO normally blocks Finance and Foreign
+Affairs or demands a harsh renegotiation; PSL treats Agriculture as a hard
+coalition claim. These blocked offices remain visible so that the player sees
+the whole cabinet bargain. Confidence-and-supply leaves every ministry with the
+coalition instead.
+
+Cabinet Reshuffle reopens the live roster after formation. Coalition Council
+adapts the inherited coalition-management pattern to four-party bargaining, and
+Social Welfare provides a cross-cabinet delivery file that is not tied to one
+minister. Together with the thirteen portfolio cards, these restore the
+government-play breadth of the inherited cabinet without importing its German
+institutions.
 
 The 2023 formation sequence uses three distinct constitutional thresholds:
 
