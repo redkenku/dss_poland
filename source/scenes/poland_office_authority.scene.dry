@@ -28,16 +28,21 @@ if (String(Q.prime_minister || "").includes("succession pending")) {
         other: ["Cross-party caretaker nominee", "Non-partisan Sejm nominee"]
     };
     const slate = successors[Q.government_party] || successors.other;
-    Q.prime_minister = avoidPresident(slate[0], slate[1]);
-    Q.government_name =
-        Q.prime_minister + " constitutional succession cabinet";
+    Q.office_incompatibility_pm_nominee =
+        avoidPresident(slate[0], slate[1]);
+    Q.office_incompatibility_pm_nominee_party =
+        String(Q.government_party || "other");
+    Q.government_name = "Caretaker after prime-ministerial vacancy";
     Q.caretaker_government = 1;
     Q.formation_in_progress = 1;
     Q.office_incompatibility_pm_formation = 1;
     Q.snap_formation_context =
         "Prime-ministerial vacancy after presidential inauguration";
     Q.snap_formation_attempt = 0;
-    filled.push("Prime Minister: " + Q.prime_minister);
+    filled.push(
+        "Prime-ministerial nominee: " +
+        Q.office_incompatibility_pm_nominee
+    );
 }
 
 if (String(Q.sejm_speaker || "").includes("Sejm election pending")) {
@@ -51,16 +56,100 @@ if (String(Q.sejm_speaker || "").includes("Sejm election pending")) {
         other: ["Cross-party Sejm nominee", "Senior Deputy Marshal"]
     };
     const slate = speakerSlates[Q.government_party] || speakerSlates.other;
-    Q.sejm_speaker = avoidPresident(slate[0], slate[1]);
-    filled.push("Sejm Marshal: " + Q.sejm_speaker);
+    Q.office_incompatibility_sejm_nominee =
+        avoidPresident(slate[0], slate[1]);
+    const sejmTotal = Math.max(1, Number(Q.sejm_total) || 460);
+    const leftCabinetVotes = Q.left_in_government
+        ? Math.max(
+            0,
+            Number(Q.ministry_left_cabinet_seats) ||
+                Number(Q.left_seats) || 0
+        )
+        : 0;
+    Q.office_sejm_marshal_yes = Math.min(
+        sejmTotal,
+        Math.max(0, Number(Q.government_support_seats) || 0) +
+            leftCabinetVotes
+    );
+    Q.office_sejm_marshal_absent = Math.min(
+        12,
+        Math.max(0, sejmTotal - Q.office_sejm_marshal_yes)
+    );
+    Q.office_sejm_marshal_no = Math.max(
+        0,
+        sejmTotal - Q.office_sejm_marshal_yes -
+            Q.office_sejm_marshal_absent
+    );
+    Q.office_sejm_marshal_present =
+        Q.office_sejm_marshal_yes + Q.office_sejm_marshal_no;
+    Q.office_sejm_marshal_threshold =
+        Math.floor(Q.office_sejm_marshal_present / 2) + 1;
+    const speakerElected =
+        Q.office_sejm_marshal_present >= Math.ceil(sejmTotal / 2) &&
+        Q.office_sejm_marshal_yes >= Q.office_sejm_marshal_threshold;
+    Q.sejm_speaker = speakerElected
+        ? Q.office_incompatibility_sejm_nominee
+        : "Senior Deputy Marshal (acting after inconclusive vote)";
+    filled.push(
+        speakerElected
+            ? "Sejm vote " + Q.office_sejm_marshal_yes + "–" +
+                Q.office_sejm_marshal_no + " elects: " + Q.sejm_speaker
+            : "Sejm vote " + Q.office_sejm_marshal_yes + "–" +
+                Q.office_sejm_marshal_no +
+                " is inconclusive; acting Marshal remains"
+    );
 }
 
 if (String(Q.senate_marshal || "").includes("Senate election pending")) {
-    Q.senate_marshal = avoidPresident(
-        "Małgorzata Kidawa-Błońska",
-        "Coalition Senate nominee"
+    const senateTotal = Math.max(1, Number(Q.senate_total) || 100);
+    const senateDemocratic = Math.max(
+        0,
+        (Number(Q.senate_ko_seats) || 0) +
+            (Number(Q.senate_p2050_seats) || 0) +
+            (Number(Q.senate_psl_seats) || 0) +
+            (Number(Q.senate_left_seats) || 0) +
+            Math.ceil((Number(Q.senate_independent_seats) || 0) / 2)
     );
-    filled.push("Senate Marshal: " + Q.senate_marshal);
+    const senateRight = Math.max(
+        0,
+        (Number(Q.senate_pis_seats) || 0) +
+            (Number(Q.senate_konf_seats) || 0) +
+            Math.floor((Number(Q.senate_independent_seats) || 0) / 2)
+    );
+    const democraticNominee = avoidPresident(
+        "Małgorzata Kidawa-Błońska",
+        "Democratic Senate nominee"
+    );
+    const rightNominee = avoidPresident(
+        "Stanisław Karczewski",
+        "PiS Senate nominee"
+    );
+    Q.office_senate_marshal_nominee = senateDemocratic >= senateRight
+        ? democraticNominee
+        : rightNominee;
+    Q.office_senate_marshal_yes = Math.min(
+        senateTotal,
+        Math.max(senateDemocratic, senateRight)
+    );
+    Q.office_senate_marshal_no = Math.max(
+        0,
+        senateTotal - Q.office_senate_marshal_yes
+    );
+    Q.office_senate_marshal_threshold =
+        Math.floor(senateTotal / 2) + 1;
+    const senateMarshalElected =
+        Q.office_senate_marshal_yes >=
+            Q.office_senate_marshal_threshold;
+    Q.senate_marshal = senateMarshalElected
+        ? Q.office_senate_marshal_nominee
+        : "Senior Deputy Senate Marshal (acting after inconclusive vote)";
+    filled.push(
+        senateMarshalElected
+            ? "Senate vote " + Q.office_senate_marshal_yes + "–" +
+                Q.office_senate_marshal_no + " elects: " +
+                Q.senate_marshal
+            : "Senate vote is inconclusive; acting Marshal remains"
+    );
 }
 
 if (String(Q.p2050_leader || "").includes("party election pending")) {
@@ -113,12 +202,15 @@ Q.news_headline =
 The presidential mandate cannot be combined with a cabinet portfolio,
 premiership or parliamentary Marshalship. Monthly normalisation vacated the
 incompatible office but appointed nobody. The Sejm, Senate, Prime Minister or
-party rules have now supplied the recorded successor:
+party rules have now held their recorded successor vote or identified the
+prime-ministerial nominee for a confidence vote:
 
 **[+ office_incompatibility_resolution +]**
 
-Lewica can accept the competent institution's act or demand a recorded vote
-and conflict-of-interest file. Neither response appoints the successor.
+Lewica can accept the competent institution's process or demand a recorded
+vote and conflict-of-interest file. Neither response appoints the successor;
+a prime-ministerial nominee still needs the constitutionally required Sejm
+formation vote.
 
 - @accept
 - @record
@@ -127,10 +219,10 @@ and conflict-of-interest file. Neither response appoints the successor.
 title: Recognise the succession and return to substantive politics
 subtitle: Accept the competent authority; public trust +2, constitutional restraint +2.
 on-arrival: public_trust += 2; constitutional_restraint += 2; news_headline = "The succession is recognised without inventing a party appointment power"
-go-to: poland_events_2026.snap_formation_attempt_one if office_incompatibility_pm_formation = 1; poland_event_queue if office_incompatibility_pm_formation = 0
+go-to: poland_events_2026.snap_formation_attempt_one if office_incompatibility_pm_formation = 1; poland_events_2026.snap_senate_marshal_resume if office_incompatibility_pm_formation = 0 and snap_senate_marshal_return = 1; poland_event_queue if office_incompatibility_pm_formation = 0 and snap_senate_marshal_return = 0
 
 @record
 title: Demand the roll call, legal basis and recusals in public
 subtitle: Media capacity +3 and trust +1; coalition dissent +2 from prolonged scrutiny.
 on-arrival: media_capacity += 3; public_trust += 1; government_coalition_dissent += 2; news_headline = "The new office-holder begins under a published authority record"
-go-to: poland_events_2026.snap_formation_attempt_one if office_incompatibility_pm_formation = 1; poland_event_queue if office_incompatibility_pm_formation = 0
+go-to: poland_events_2026.snap_formation_attempt_one if office_incompatibility_pm_formation = 1; poland_events_2026.snap_senate_marshal_resume if office_incompatibility_pm_formation = 0 and snap_senate_marshal_return = 1; poland_event_queue if office_incompatibility_pm_formation = 0 and snap_senate_marshal_return = 0

@@ -5,11 +5,12 @@ call: poland_senate.refresh
 
 = The Senate ledger
 
-The opposition pact controls **[+ senate_opposition_seats +] of 100 seats**, but
-only **[+ senate_working_votes +] votes** can presently be relied upon. Its
-cohesion is **[+ senate_cohesion +]/100**. The two
+The **[+ senate_bloc_label +]** can coordinate **[+ senate_coordinated_seats
++] of 100 seats**, with **[+ senate_working_votes +] working votes**. The
+formal opposition holds **[+ senate_opposition_seats +] seats**. Bloc cohesion
+is **[+ senate_cohesion +]/100**. The **[+ senate_left_seats +]**
 <span class="party party-lewica"><b>Lewica</b></span> senators hold
-**[+ senate_left_leverage +]/100 leverage** inside the pact.
+**[+ senate_left_leverage +]/100 leverage** inside the working bloc.
 
 An ordinary statute can be accepted, amended or rejected. The Sejm may overturn
 the Senate's position with the constitutionally required majority. A budget
@@ -26,7 +27,9 @@ on-arrival: {!
 const senateDefaults = {
     senate_total: 100,
     senate_pis_seats: 48,
+    senate_konf_seats: 0,
     senate_ko_seats: 43,
+    senate_p2050_seats: 0,
     senate_psl_seats: 3,
     senate_left_seats: 2,
     senate_independent_seats: 4,
@@ -45,17 +48,75 @@ if (!Q.senate_control) Q.senate_control = "Fragile opposition pact";
 if (!Number.isFinite(Number(Q.ko_relation))) Q.ko_relation = 40;
 if (!Number.isFinite(Number(Q.psl_relation))) Q.psl_relation = 25;
 
-Q.senate_opposition_seats =
-    Q.senate_ko_seats + Q.senate_psl_seats +
-    Q.senate_left_seats + Q.senate_independent_seats;
+Q.senate_democratic_seats =
+    Q.senate_ko_seats + Q.senate_p2050_seats +
+    Q.senate_psl_seats + Q.senate_left_seats;
+Q.senate_right_seats =
+    Q.senate_pis_seats + Q.senate_konf_seats;
 Q.senate_majority_threshold = Math.floor(Q.senate_total / 2) + 1;
+
+const pisInGovernment = Q.government_party == "pis";
+const koInGovernment =
+    Q.government_party == "ko" || Boolean(Q.ministry_ko_in_cabinet);
+const p2050InGovernment =
+    Q.government_party == "p2050" || Boolean(Q.ministry_p2050_in_cabinet);
+const pslInGovernment =
+    Q.government_party == "psl" || Boolean(Q.ministry_psl_in_cabinet);
+const leftInGovernment =
+    Q.government_party == "lewica" || Boolean(Q.left_in_government);
+Q.senate_government_seats = Math.min(
+    Q.senate_total,
+    (pisInGovernment ? Q.senate_pis_seats : 0) +
+        (koInGovernment ? Q.senate_ko_seats : 0) +
+        (p2050InGovernment ? Q.senate_p2050_seats : 0) +
+        (pslInGovernment ? Q.senate_psl_seats : 0) +
+        (leftInGovernment ? Q.senate_left_seats : 0)
+);
+Q.senate_opposition_seats = Math.max(
+    0,
+    Q.senate_total - Q.senate_government_seats
+);
+
+let coordinatedSeats = Q.senate_left_seats;
+if (leftInGovernment) {
+    coordinatedSeats =
+        Q.senate_government_seats + Q.senate_independent_seats;
+    Q.senate_bloc_label = "governing coalition and aligned independents";
+} else if (pisInGovernment) {
+    coordinatedSeats =
+        Q.senate_democratic_seats + Q.senate_independent_seats;
+    Q.senate_bloc_label = "democratic opposition pact";
+} else {
+    if (Q.ko_relation >= 55) coordinatedSeats += Q.senate_ko_seats;
+    if (Q.psl_relation >= 55) coordinatedSeats += Q.senate_psl_seats;
+    if (Q.p2050_relation >= 55) coordinatedSeats += Q.senate_p2050_seats;
+    if (Q.public_trust >= 45) coordinatedSeats += Q.senate_independent_seats;
+    Q.senate_bloc_label =
+        "Lewica opposition and separately negotiated senators";
+}
+Q.senate_coordinated_seats = Math.max(
+    0,
+    Math.min(Q.senate_total, coordinatedSeats)
+);
 
 let unreliableVotes = 0;
 if (Q.senate_cohesion < 65) unreliableVotes += 1;
 if (Q.senate_cohesion < 45) unreliableVotes += 1;
 if (Q.senate_cohesion < 30) unreliableVotes += 1;
-if (Q.ko_relation < 35) unreliableVotes += 1;
-if (Q.psl_relation < 20) unreliableVotes += 1;
+const koInCoordinatedBloc = pisInGovernment ||
+    (leftInGovernment && koInGovernment) ||
+    (
+        !leftInGovernment && !pisInGovernment &&
+        Q.ko_relation >= 55
+    );
+const pslInCoordinatedBloc = pisInGovernment ||
+    (leftInGovernment && pslInGovernment) ||
+    (
+        !leftInGovernment && !pisInGovernment &&
+        Q.psl_relation >= 55
+    );
+if (koInCoordinatedBloc && Q.ko_relation < 35) unreliableVotes += 1;
+if (pslInCoordinatedBloc && Q.psl_relation < 20) unreliableVotes += 1;
 
 let recoveredVote = 0;
 if (unreliableVotes > 0 && Q.senate_left_leverage >= 35) {
@@ -64,22 +125,28 @@ if (unreliableVotes > 0 && Q.senate_left_leverage >= 35) {
 Q.senate_working_votes = Math.max(
     0,
     Math.min(
-        Q.senate_opposition_seats,
-        Q.senate_opposition_seats - unreliableVotes + recoveredVote
+        Q.senate_coordinated_seats,
+        Q.senate_coordinated_seats - unreliableVotes + recoveredVote
     )
 );
 Q.senate_non_left_opposition =
-    Q.senate_opposition_seats - Q.senate_left_seats;
+    Q.senate_coordinated_seats - Q.senate_left_seats;
 Q.senate_left_is_pivotal =
     Q.senate_non_left_opposition < Q.senate_majority_threshold &&
     Q.senate_working_votes >= Q.senate_majority_threshold ? 1 : 0;
 
 if (Q.senate_working_votes >= Q.senate_majority_threshold) {
-    Q.senate_control = "Working opposition majority";
+    Q.senate_control = leftInGovernment
+        ? "Working government Senate majority"
+        : (pisInGovernment
+            ? "Working democratic opposition majority"
+            : "Lewica-coordinated Senate majority");
 } else if (Q.senate_working_votes == Q.senate_majority_threshold - 1) {
     Q.senate_control = "Deadlocked chamber";
+} else if (Q.senate_right_seats >= Q.senate_majority_threshold) {
+    Q.senate_control = "Right-aligned Senate majority";
 } else {
-    Q.senate_control = "PiS procedural edge";
+    Q.senate_control = "Hung Senate";
 }
 !}
 
@@ -107,12 +174,12 @@ if (!Number.isFinite(Number(Q.senate_docket_ready))) {
 = Ordinary bill — [+ senate_pending_bill +]
 
 The docket concerns **[+ senate_bill_topic +]**. Marshal
-**[+ senate_marshal +]** can give the opposition time to build one position, but
-procedure cannot manufacture a majority. The pact currently has
+**[+ senate_marshal +]** can give the chamber time to build one position, but
+procedure cannot manufacture a majority. The working bloc currently has
 **[+ senate_working_votes +] reliable votes**; **[+ senate_majority_threshold +]**
 are required.
 
-[? if senate_left_is_pivotal: Without the two Left senators, the opposition
+[? if senate_left_is_pivotal: Without the Left senators, the working bloc
 cannot assemble a majority. That creates leverage, not ownership of the
 chamber. ?]
 
@@ -126,24 +193,37 @@ be resolved safely. ?]
 - @ordinary_fallback
 
 @ordinary_left_amendment
-title: Make a Left safeguard the price of the opposition majority
+title: Make a Left safeguard the price of a Senate majority
 subtitle: Spend 8 Senate leverage. A visible amendment, and a visible use of two pivotal votes.
 choose-if: senate_docket_ready = 1 and senate_working_votes >= senate_majority_threshold and senate_left_leverage >= 8
 unavailable-subtitle: Requires a ready docket, a working majority and at least 8 Senate leverage.
-on-arrival: senate_left_leverage -= 8; senate_amendment_credit += 2; senate_cohesion -= 2; labor_credibility += 2; progressive_credibility += 2; public_trust += 1; senate_last_vote = "The opposition adopted a Left-authored safeguard"; news_headline = "Two Left senators put their language into the bill"; senate_pending_bill_type = "none"
+on-arrival: senate_left_leverage -= 8; senate_amendment_credit += 2; senate_cohesion -= 2; labor_credibility += 2; progressive_credibility += 2; public_trust += 1; senate_last_vote = "The Senate adopted a Left-authored safeguard"; news_headline = "Left senators put their language into the bill"; senate_pending_bill_type = "none"
 
-The opposition adopts the safeguard because it needs every vote. PiS can still
-remove it in the Sejm, but must now vote against named protections rather than
+The working bloc adopts the safeguard because it needs every vote. The Sejm can
+still remove it, but must now vote against named protections rather than
 against an abstract Senate objection.
 
 - #poland_card_finish
 
 @ordinary_common_amendment
-title: Broker one common opposition amendment
+title: Broker one common Senate amendment
 subtitle: Build cohesion and leverage by making the upper chamber look serious.
 choose-if: senate_docket_ready = 1 and senate_working_votes >= senate_majority_threshold
 unavailable-subtitle: The negotiating team is unavailable, or the pact cannot currently reach 51.
-on-arrival: senate_cohesion += 5; senate_left_leverage += 4; senate_amendment_credit += 1; ko_relation += 2; psl_relation += 2; constitutional_restraint += 2; public_trust += 1; senate_last_vote = "A common opposition amendment passed"; news_headline = "The Senate majority survives an ordinary bill"; senate_pending_bill_type = "none"
+on-arrival: {!
+Q.senate_cohesion += 5;
+Q.senate_left_leverage += 4;
+Q.senate_amendment_credit += 1;
+Q.ko_relation += 2;
+Q.psl_relation += 2;
+Q.constitutional_restraint += 2;
+Q.public_trust += 1;
+Q.senate_last_vote = Q.left_in_government
+    ? "A common governing amendment passed"
+    : "A common opposition amendment passed";
+Q.news_headline = "The Senate majority survives an ordinary bill";
+Q.senate_pending_bill_type = "none";
+!}
 
 KO supplies most votes, PSL narrows the language, independents insist on a clean
 record and the Left supplies a reason to amend rather than merely delay. The
@@ -460,6 +540,124 @@ if (Q.budget_2020_concession_pending) {
 }
 !}
 go-to: poland_events.budget_consequence
+
+@budget_2021_2022
+title: The government budget reaches the Senate
+subtitle: The upper chamber may amend the bill, not reject it
+new-page: true
+call: poland_senate.refresh
+on-arrival: {!
+Q.senate_budget_year = Number(Q.annual_budget_year) || 0;
+Q.senate_budget_later_done = 0;
+Q.senate_pending_bill_type = "budget";
+Q.senate_pending_bill =
+    "The " + Q.annual_budget_fiscal_year + " state budget";
+Q.opposition_budget_senate_amendment = "No Senate amendment pending";
+Q.opposition_budget_senate_amendment_strength = 0;
+Q.senate_budget_government_label =
+    Q.government_party == "pis"
+        ? "PiS government"
+        : (Q.government_party == "ko"
+            ? "KO-led government"
+            : String(Q.government_owner || "government"));
+Q.news_headline =
+    "The Senate opens the " + Q.annual_budget_fiscal_year + " budget";
+!}
+
+= Senate stage — [+ annual_budget_fiscal_year +] budget
+
+The Sejm passed the government budget. The Senate has twenty days to propose
+amendments; it cannot reject the bill. Lewica's recorded priorities are **[+
+opposition_budget_priority_1 +]** and **[+ opposition_budget_priority_2 +]**.
+
+Reliable votes for Lewica's proposed Senate line: **[+ senate_working_votes
++]**. Senate cohesion:
+**[+ senate_cohesion +]/100**.
+
+- @budget_later_common
+- @budget_later_narrow
+- @budget_later_record
+
+@budget_later_common
+title: Put both recorded priorities into a common Senate slate
+subtitle: Requires 51 reliable senators; the government majority may remove the package.
+choose-if: senate_working_votes >= senate_majority_threshold
+unavailable-subtitle: The opposition pact cannot currently assemble 51 votes.
+on-arrival: {!
+Q.senate_cohesion += 3;
+Q.senate_amendment_credit += 2;
+Q.public_trust += 2;
+Q.labor_credibility += 1;
+Q.opposition_budget_senate_amendment =
+    Q.opposition_budget_priority_1 + " and " +
+    Q.opposition_budget_priority_2;
+Q.opposition_budget_senate_amendment_strength = 2;
+Q.senate_budget_later_result = "Common priority slate passed the Senate";
+Q.senate_last_vote =
+    "The Senate amended the government budget on a common slate";
+Q.last_policy_stage = "Passage in the Senate";
+Q.last_policy_authority = "Senate amendment power";
+Q.last_policy_implementation = 0;
+Q.news_headline = "The Senate returns a common budget slate";
+!}
+go-to: budget_later_return_vote
+
+@budget_later_narrow
+title: Broker one narrow amendment capable of surviving the return vote
+subtitle: Cost: 1 resource. Can recover one missing senator.
+choose-if: resources >= 1 and senate_working_votes >= senate_majority_threshold - 1
+unavailable-subtitle: Requires one resource and at least 50 reliable senators.
+on-arrival: resources -= 1; senate_working_votes = senate_majority_threshold if senate_working_votes < senate_majority_threshold; senate_cohesion += 1; senate_left_leverage += 2; senate_amendment_credit += 1; psl_relation += 2; opposition_budget_senate_amendment = opposition_budget_priority_1; opposition_budget_senate_amendment_strength = 1; senate_budget_later_result = "One narrow priority passed the Senate"; senate_last_vote = "The Senate returned one narrow budget amendment"; last_policy_stage = "Passage in the Senate"; last_policy_authority = "Senate amendment power"; last_policy_implementation = 0; news_headline = "A narrow Senate amendment survives the working bloc"
+go-to: budget_later_return_vote
+
+@budget_later_record
+title: Return the budget without a fictitious common amendment
+subtitle: Always available; the Senate cannot reject a budget bill.
+on-arrival: senate_cohesion -= 2; public_trust -= 1; opposition_budget_senate_amendment = "No common Senate amendment"; opposition_budget_senate_amendment_strength = 0; senate_budget_later_result = "No common Senate amendment"; senate_last_vote = "The budget left the Senate without a common amendment"; news_headline = "The Senate records its division"
+go-to: budget_later_return_vote
+
+@budget_later_return_vote
+title: The Sejm answers the Senate
+new-page: true
+on-arrival: {!
+const governmentRelation = Q.government_party == "pis"
+    ? Number(Q.pis_relation) || 0
+    : (Q.government_party == "ko"
+        ? Number(Q.ko_relation) || 0
+        : (Q.government_party == "psl"
+            ? Number(Q.psl_relation) || 0
+            : Number(Q.p2050_relation) || 0));
+Q.opposition_budget_senate_final_enacted =
+    Q.opposition_budget_senate_amendment_strength == 1 &&
+    (
+        governmentRelation >= 45 ||
+        Number(Q.opposition_budget_government_seats) < 231
+    ) ? 1 : 0;
+if (Q.opposition_budget_senate_final_enacted) {
+    Q.opposition_budget_audit_priority_1_enacted = 1;
+    Q.opposition_budget_audit_enacted = 1;
+    Q.opposition_budget_audit_amendment_1 =
+        Q.opposition_budget_senate_amendment + " — enacted";
+    Q.senate_budget_later_result += " and survived the Sejm";
+} else if (Q.opposition_budget_senate_amendment_strength > 0) {
+    Q.senate_budget_later_result += " but was removed by the Sejm";
+}
+!}
+
+The Senate returned **[+ opposition_budget_senate_amendment +]**. [? if
+opposition_budget_senate_final_enacted: The Sejm accepted the narrow language;
+it enters the next audit, but creates no delivery before implementation.?][? if
+not opposition_budget_senate_final_enacted and
+opposition_budget_senate_amendment_strength > 0: The government majority removed the
+amendment. The roll call remains political evidence, not enacted policy.?][?
+if opposition_budget_senate_amendment_strength = 0: No amendment returned for
+a final lower-chamber vote.?]
+
+- @budget_later_complete: Close the Senate procedure
+
+@budget_later_complete
+on-arrival: senate_budget_later_done = 1; senate_pending_bill_type = "none"; senate_pending_bill = "No bill pending"; senate_budget_year = 0
+go-to: poland_events_2021_2023.december_2021_hub if annual_budget_year = 2021; poland_event_queue if poland_event_phase = 1; poland_hub if annual_budget_year >= 2022
 
 @return_hub
 go-to: poland_hub

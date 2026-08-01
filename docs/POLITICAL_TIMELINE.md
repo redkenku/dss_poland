@@ -851,6 +851,19 @@ removed the dual structure in 2025.
   counterattack.
   ([Commissioner for Human Rights](https://bip.brpo.gov.pl/pl/content/rpo-pg-osoby-transplciowe-uzgodnienie-plci-pozywanie-dzieci-malzonka-sn-uchwala))
 
+- **16 April — Braun confronts a doctor inside the Oleśnica hospital.** During
+  the presidential campaign, Braun and supporters entered the county hospital
+  after a lawful abortion in a high-risk pregnancy. The doctor said he blocked
+  her from leaving an office and treating patients for more than an hour;
+  prosecutors opened a separate investigation into alleged unlawful detention,
+  physical contact and insults.
+  **Adaptation value:** the chain begins before any immunity or detention vote.
+  Evidence preservation, victim representation and clinical continuity can
+  improve the legitimacy of later procedure; indiscriminate campaign framing
+  can instead strengthen Braun's martyr narrative.
+  ([PAP](https://www.pap.pl/en/news/far-right-presidential-runner-faces-prosecution-over-attack-doctor);
+  [National Prosecutor's Office immunity request](https://www.gov.pl/web/prokuratura-krajowa/wniosek-o-uchylenie-immunitetu-grzegorzowi-braunowi2))
+
 - **28 April onward — the labour ministry opens a shorter-working-time pilot.**
   Employers and public institutions could apply to test reduced hours without
   reducing pay, with trials beginning in 2026.
@@ -913,6 +926,19 @@ removed the dual structure in 2025.
   parties rather than three electoral blocs. PSL and Poland 2050 can pursue
   conflicting survival strategies.
   ([PAP](https://www.pap.pl/aktualnosci/kosiniak-kamysz-trzecia-droga-byla-projektem-wyborczym-jest-za-nami))
+
+- **23 July — prosecutors file a seven-count indictment against Braun.** After
+  the European Parliament waived immunity in May and Braun appeared for
+  questioning on 3 July, prosecutors sent alleged offences from 2022–23 to the
+  Warsaw district court. One count concerned the Sejm menorah attack. This was
+  an indictment, not a conviction, and it did not include the separate
+  Oleśnica investigation.
+  **Adaptation value:** publication of a count-by-count calendar and independent
+  support for witnesses can build a durable procedural record. Treating every
+  allegation as one political trial risks erasing legal distinctions and
+  rewarding a single persecution narrative.
+  ([Warsaw Regional Prosecutor's Office](https://www.gov.pl/web/po-warszawa/akt-oskarzenia-przeciwko-grzegorzowi-braunowi);
+  [Polish Radio on the immunity waiver and questioning](https://www.polskieradio.pl/395/7784/artykul/3546579%2Cpolish-farright-mep-grzegorz-braun-charged-with-seven-criminal-offences))
 
 - **23 July — Tusk reshuffles and shrinks the cabinet.** The number of ministers
   fell from 26 to 21. Nowa Lewica retained senior positions including
@@ -1096,8 +1122,8 @@ removed the dual structure in 2025.
   detention and appearance.** Braun had failed five times to answer summonses
   in an investigation covering the alleged unlawful confinement and assault of
   a doctor at an Oleśnica hospital, among other acts.
-  **Adaptation value:** the user's proposed “arrest of Braun” now has a precise
-  factual off-ramp. Voluntary appearance, compelled detention, flight, immunity
+  **Adaptation value:** the broad “arrest of Braun” scenario has a precise
+  factual baseline. Voluntary appearance, compelled detention, flight, immunity
   conflict, acquittal and conviction produce different martyrdom and succession
   paths; detention should not be conflated with pre-trial imprisonment.
   ([PAP](https://www.pap.pl/aktualnosci/rzeczniczka-pg-jest-wniosek-do-pe-o-zgode-na-zatrzymanie-europosla-grzegorza-brauna-1);

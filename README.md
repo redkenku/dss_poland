@@ -35,6 +35,8 @@ Pages workflow still uses Node 16.
 | `npm run build` | Compile `source/` into `out/` |
 | `npm run build -- --force` | Force a complete recompile |
 | `npm run smoke` | Build, replay the original long-form slice, and run extended-system regressions |
+| `npm run smoke:braun` | Build and run the focused Braun legal-chain fixture |
+| `npm run smoke:senate` | Build and run the Senate election and budget-correction fixtures |
 | `npm run smoke:phase7` | Build and run the focused persistent PiS/KO organisation fixtures |
 | `npm run serve` | Serve the existing build without recompiling |
 | `npm run serve -- 3000` | Serve the existing build on port 3000 |
@@ -142,8 +144,13 @@ mechanics without replaying the earlier campaign.
   into budget capacity and the 2026 Labour Inspection milestone tests paper
   compliance against funded enforcement.
 - The 2019 opposition Senate majority and budget-amendment procedure remain
-  playable. The Senate may amend a budget but cannot reject it or participate
-  in a confidence vote. Opposition budgets now run through a six-stage process:
+  playable. In 2023 the three Sejm lists separately decide whether to share a
+  Senate Pact, after which all 100 single-member districts are counted by
+  plurality. The Senate may amend a budget but cannot reject it or participate
+  in a confidence vote. A governing Left must incorporate, negotiate or find
+  an absolute Sejm majority against Senate budget corrections; a failed
+  override can deadlock the coalition. Opposition budgets run through a
+  six-stage process:
   read the government draft, choose two year-specific Left priorities, manage
   a visible faction conference, choose a parliamentary tactic, resolve the
   actual roll call and audit enacted delivery the following year. Shadow
@@ -179,6 +186,7 @@ artifacts. `out/html/index.html`, `out/html/game.js`, and
 - [Media ecosystem and communications minigame](docs/MEDIA_MODEL.md)
 - [First playable skeleton and conversion boundary](docs/PLAYABLE_SKELETON.md)
 - [Card image sources and licenses](docs/CARD_IMAGE_CREDITS.md)
+- [Event image sources and licenses](docs/EVENT_IMAGE_CREDITS.md)
 
 The engine guide explains the file format, scene graph, state model, cards,
 build output, debugging, and a safe conversion order. The political research

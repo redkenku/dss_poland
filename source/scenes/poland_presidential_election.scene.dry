@@ -281,6 +281,29 @@ const raw = {
         0.81 + (Number(Q.pres_bonus_other) || 0)
 };
 
+if (Q.postal_election_stance == "Democratic legal front") {
+    raw.trzaskowski += 0.25;
+    raw.left += 0.10;
+    raw.duda -= 0.15;
+    Q.pres_postal_stance_effect =
+        "The legal front modestly mobilises both democratic campaigns";
+} else if (Q.postal_election_stance == "Gowin postponement bargain") {
+    raw.duda += 0.12;
+    raw.holownia += 0.10;
+    raw.left -= 0.08;
+    Q.pres_postal_stance_effect =
+        "The postponement bargain rewards moderation outside the Left";
+} else if (Q.postal_election_stance == "Boycott") {
+    raw.left -= 0.45;
+    raw.holownia += 0.12;
+    Q.pres_postal_stance_effect =
+        "The abandoned boycott line depresses Left conversion in the restored vote";
+} else if (Q.postal_election_stance == "Compete and litigate") {
+    raw.left += 0.25;
+    Q.pres_postal_stance_effect =
+        "Ballot preparation survives the legal challenge and aids the Left campaign";
+}
+
 if (Q.pres_ko_joint_candidate) {
     const displaced = Math.max(0, raw.trzaskowski);
     const conversion = clampPres(
@@ -475,14 +498,14 @@ if (Q.pres_first_calc_mode == "first_result") {
         : "Between rounds";
 
     if (Q.pres_first_round_majority) {
-        Q.president_name = Q.pres_r1_leader_name;
         Q.pres_runoff_winner_key = Q.pres_r1_leader_key;
         Q.pres_runoff_winner_name = Q.pres_r1_leader_name;
+        Q.pres_2020_president_elect_key = Q.pres_r1_leader_key;
+        Q.pres_2020_president_elect_name = Q.pres_r1_leader_name;
         Q.pres_runoff_complete = 1;
         Q.trzaskowski_won =
             Q.pres_r1_leader_key == "trzaskowski" ? 1 : 0;
-        Q.left_president =
-            Q.pres_r1_leader_key == "left" ? 1 : 0;
+        Q.left_president = 0;
         if (Q.trzaskowski_won) {
             Q.trz_inauguration_status =
                 "President-elect — certification pending";
@@ -637,20 +660,29 @@ if (Q.pres_first_calc_mode == "first_result") {
         }
         Q.pres_feedback_tactical_current =
             Q.pres_feedback_tactical_flight;
+        const holowniaResult = Math.max(
+            0,
+            Number(Q.pres_r1_display_holownia) ||
+                Number(Q.pres_poll_holownia) || 0
+        );
+        const p2050Conversion = Math.max(
+            0.25,
+            Math.min(5, (holowniaResult - 2) * 0.32)
+        );
         Q.p2050_emerged = 1;
         Q.p2050_relation = Math.max(
             Number(Q.p2050_relation) || 0,
-            28
+            Math.round(18 + Math.min(18, holowniaResult * 0.75))
         );
         Q.p2050_leader = "Szymon Hołownia";
         Q.p2050_poll_momentum =
-            (Number(Q.p2050_poll_momentum) || 0) + 8;
+            (Number(Q.p2050_poll_momentum) || 0) + p2050Conversion;
         Q.ko_poll_momentum =
-            (Number(Q.ko_poll_momentum) || 0) - 4.5;
+            (Number(Q.ko_poll_momentum) || 0) - p2050Conversion * 0.55;
         Q.psl_poll_momentum =
-            (Number(Q.psl_poll_momentum) || 0) - 1.2;
+            (Number(Q.psl_poll_momentum) || 0) - p2050Conversion * 0.15;
         Q.other_poll_momentum =
-            (Number(Q.other_poll_momentum) || 0) - 1.8;
+            (Number(Q.other_poll_momentum) || 0) - p2050Conversion * 0.20;
     }
     Q.news_headline = Q.pres_first_round_majority
         ? Q.pres_r1_leader_name +
@@ -669,6 +701,8 @@ call: poland_presidential_election.calculate_first
 
 The poll has a **±1.8 point working margin**. It is sampled from the same party,
 trust, organisation and turnout state used by the wider electorate model.
+
+Postal-election carryover: **[+ pres_postal_stance_effect +]**.
 
 <div class="poll-table">
 <div class="poll-row"><span class="party party-pis"><b>Duda</b></span><span>[+ pres_poll_duda +]%</span><span>PiS</span></div>
@@ -1232,7 +1266,11 @@ view-if: pres_first_round_majority = 1
 on-arrival: {!
 Q.pres_2020_phase = Q.trzaskowski_won
     ? "Certification pending"
-    : "Election complete";
+    : (
+        Q.pres_runoff_winner_key == "duda"
+            ? "Election complete"
+            : "Oath pending"
+    );
 Q.pres_2020_active = 0;
 Q.news_headline = Q.pres_runoff_winner_name + " is elected President";
 !}
@@ -1764,11 +1802,11 @@ if (Q.pres_runoff_calc_mode == "result") {
     Q.pres_runoff_winner_name = winnerName;
     Q.pres_runoff_margin =
         Math.round(Math.abs(shareA - shareB) * 100) / 100;
-    Q.president_name = winnerKey == "trzaskowski"
-        ? "Andrzej Duda"
-        : winnerName;
+    Q.pres_2020_president_elect_key = winnerKey;
+    Q.pres_2020_president_elect_name = winnerName;
+    Q.president_name = "Andrzej Duda";
     Q.trzaskowski_won = winnerKey == "trzaskowski" ? 1 : 0;
-    Q.left_president = winnerKey == "left" ? 1 : 0;
+    Q.left_president = 0;
     if (wasNewRunoff) {
         if (winnerKey == "trzaskowski") {
             Q.president_relation = Math.max(
@@ -1793,7 +1831,7 @@ if (Q.pres_runoff_calc_mode == "result") {
     Q.pres_2020_active = 0;
     Q.pres_2020_phase = winnerKey == "trzaskowski"
         ? "Certification pending"
-        : "Election complete";
+        : (winnerKey == "duda" ? "Election complete" : "Oath pending");
     Q.news_headline = winnerName +
         " wins the presidency by " + Q.pres_runoff_margin + " points";
 }
@@ -1896,3 +1934,31 @@ old democratic-camp arithmetic and accelerates the struggle inside
 Konfederacja.?]
 
 - @poland_hub: Return to the post-election campaign
+
+@challenger_inauguration_2020
+title: The President-elect takes the oath
+new-page: true
+on-arrival: {!
+Q.pres_generic_inauguration_done = 1;
+Q.president_name = Q.pres_2020_president_elect_name ||
+    Q.pres_runoff_winner_name;
+Q.left_president =
+    Q.pres_2020_president_elect_key == "left" ? 1 : 0;
+Q.pres_2020_phase = "Presidency active";
+Q.news_headline = Q.president_name +
+    " takes office after the constitutional oath";
+!}
+
+= August 2020 — Election is not inauguration
+
+Andrzej Duda remains President until the elected successor takes the oath
+before the National Assembly. Only now does **[+ president_name +]** acquire
+the powers of the office. Any incompatible parliamentary or party office is
+vacated through its own competent succession process.
+
+- @challenger_inauguration_record
+
+@challenger_inauguration_record
+title: Record the oath and resolve any resulting vacancy
+call: poland_normalize
+go-to: poland_office_authority.resolve if office_incompatibility_pending = 1; poland_hub

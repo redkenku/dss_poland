@@ -32,7 +32,8 @@ const partyNames = {
 };
 const isFormationEra = Q.scenario_mode == "formation_2023";
 const activeParty = function(id) {
-    return id != "p2050" || !!Q.p2050_emerged;
+    return id != "p2050" ||
+        (!!Q.p2050_emerged && !Q.p2050_joined_left);
 };
 
 // These are societal segments, not mutually exclusive Left constituencies.
@@ -385,13 +386,16 @@ const leftBlocChange = function(groupId) {
         delta("coalition_blur") * 0.030 +
         delta("media_access") * 0.025 +
         delta("list_confidence") * 0.035 +
-        delta("government_delivery") * 0.040 +
+        (Q.left_in_government || Q.government_party == "lewica"
+            ? delta("government_delivery") * 0.040
+            : 0) +
         finitePolling(Q.pres_feedback_consideration_current, 0) *
             presidentialConsiderationWeight(groupId) +
         finitePolling(Q.negotiation_successes, 0) * 0.35 -
         failedNegotiations * 0.12 -
         governingPenalty +
-        leftIssueReception();
+        leftIssueReception() -
+        Math.max(0, finitePolling(Q.internal_dissent, 18) - 18) * 0.04;
     if (groupId == "metropolitan_liberals") {
         return common +
             delta("young_support") * 0.10 +
@@ -448,7 +452,9 @@ const partyBlocChange = function(group, id) {
     }
     if (id == "pis") {
         let change =
-            delta("government_delivery") * 0.045 -
+            (Q.government_party == "pis"
+                ? delta("government_delivery") * 0.045
+                : 0) -
             Math.max(
                 0,
                 finitePolling(Q.inflation, audienceBaseline.inflation) -
@@ -477,20 +483,25 @@ const partyBlocChange = function(group, id) {
                 audienceBaseline.judicial_legitimacy
             )
         ) * 0.055;
-        return [
+        const delivery = Q.government_party == "ko"
+            ? delta("government_delivery") * 0.035
+            : 0;
+        return delivery + ([
             "metropolitan_liberals",
             "liberal_professionals",
             "public_service_families"
-        ].includes(group.id) ? institutionalOpportunity : 0;
+        ].includes(group.id) ? institutionalOpportunity : 0);
     }
     if (id == "psl") {
         const leftRuralCompetition = Math.max(
             0,
             delta("rural_support")
         );
-        return ["rural_localists", "provincial_welfare"].includes(group.id)
+        return (Q.government_party == "psl"
+            ? delta("government_delivery") * 0.025
+            : 0) + (["rural_localists", "provincial_welfare"].includes(group.id)
             ? -leftRuralCompetition * 0.045
-            : 0;
+            : 0);
     }
     if (id == "konf") {
         const agendaChange =
@@ -501,7 +512,10 @@ const partyBlocChange = function(group, id) {
     }
     if (id == "p2050") {
         return Q.p2050_emerged
-            ? Math.min(2.5, finitePolling(Q.p2050_ai_actions, 0) * 0.04)
+            ? Math.min(2.5, finitePolling(Q.p2050_ai_actions, 0) * 0.04) +
+                (Q.government_party == "p2050"
+                    ? delta("government_delivery") * 0.030
+                    : 0)
             : 0;
     }
     return 0;
@@ -550,7 +564,11 @@ for (const group of groupDefinitions) {
             scores[id] = 0;
             continue;
         }
-        let score = group.scores[id];
+        let score = group.scores[id] + (
+            id == "left" && Q.p2050_joined_left
+                ? group.scores.p2050 * 0.90
+                : 0
+        );
         if (id != "other") {
             score += positionFitChange(group, id);
             score += partyBlocChange(group, id);
@@ -773,6 +791,7 @@ const dynamicPartyIds = [
     "young_left",
     "razem",
     "pps",
+    "tak_rozwoj",
     "centrum",
     "rozwoj",
     "korona",
@@ -834,7 +853,12 @@ if (activeLeftBreakaways.length) {
                 ) * 0.004
         );
         breakawayWeights[entry.id] =
-            exitStrength * entry.retention * relationPenalty;
+            exitStrength * entry.retention * relationPenalty *
+            clampPolling(
+                1 + finitePolling(Q[entry.id + "_poll_momentum"], 0) * 0.18,
+                0.55,
+                1.8
+            );
         familyWeight += breakawayWeights[entry.id];
     }
     corrected.left =
@@ -851,33 +875,76 @@ if (activeLeftBreakaways.length) {
     Q.left_fragmentation_loss = 0;
 }
 
-if (Q.unia_centrum_formed) {
-    const centrumShare = clampPolling(
-        0.18 +
-            Math.max(0, finitePolling(Q.centrum_relation, 35) - 35) *
-                0.002,
-        0.15,
-        0.34
+if (Q.tak_dla_rozwoju_party_formed) {
+    const sourceId = Q.razem_party_formed ? "razem" : "left";
+    const sourceVote = Math.max(0, corrected[sourceId]);
+    const takShare = clampPolling(
+        0.08 + finitePolling(Q.matysiak_development_pressure, 0) * 0.0025 +
+            finitePolling(Q.tak_rozwoj_poll_momentum, 0) * 0.015,
+        0.08,
+        0.24
     );
-    corrected.centrum = corrected.p2050 * centrumShare;
-    corrected.p2050 -= corrected.centrum;
+    corrected.tak_rozwoj = sourceVote * takShare;
+    corrected[sourceId] = Math.max(0, sourceVote - corrected.tak_rozwoj);
 }
-if (Q.rozwoj_party_formed) {
+
+if (Q.unia_centrum_formed) {
+    if (Q.p2050_joined_left) {
+        corrected.centrum = Math.max(
+            finitePolling(Q.centrum_independent_vote_base, 0),
+            finitePolling(Q.centrum_seats, 0) * 100 / 460 * 0.72
+        );
+    } else {
+        const centrumShare = clampPolling(
+            0.18 +
+                Math.max(0, finitePolling(Q.centrum_relation, 35) - 35) *
+                    0.002 +
+                finitePolling(Q.centrum_poll_momentum, 0) * 0.015,
+            0.15,
+            0.34
+        );
+        corrected.centrum = corrected.p2050 * centrumShare;
+        corrected.p2050 -= corrected.centrum;
+    }
+}
+if (Q.rozwoj_party_formed && !Q.rozwoj_joined_left) {
     const pisSeatsNow = Math.max(1, finitePolling(Q.pis_seats, 194));
     const rozwojShare = clampPolling(
         finitePolling(Q.pis_morawiecki_camp, 38) /
-            (pisSeatsNow + finitePolling(Q.pis_morawiecki_camp, 38)),
+            (pisSeatsNow + finitePolling(Q.pis_morawiecki_camp, 38)) +
+            finitePolling(Q.rozwoj_poll_momentum, 0) * 0.015,
         0.12,
         0.32
     );
     corrected.rozwoj = corrected.pis * rozwojShare;
     corrected.pis -= corrected.rozwoj;
 }
+if (Q.rozwoj_joined_left) {
+    const joinedRozwojShare = clampPolling(
+        finitePolling(Q.pis_morawiecki_camp, 38) /
+            Math.max(
+                1,
+                finitePolling(Q.pis_seats, 194) +
+                    finitePolling(Q.pis_morawiecki_camp, 38)
+            ),
+        0.08,
+        0.28
+    );
+    const joinedRozwojVote = corrected.pis * joinedRozwojShare * 0.88;
+    corrected.pis -= joinedRozwojVote;
+    corrected.left += joinedRozwojVote;
+}
+if (Q.greens_joined_left) {
+    const joinedGreenVote = corrected.ko * 0.035;
+    corrected.ko -= joinedGreenVote;
+    corrected.left += joinedGreenVote;
+}
 if (Q.far_right_split) {
     const koronaShare = clampPolling(
         0.10 +
             finitePolling(Q.braun_martyrdom, 0) * 0.004 +
-            finitePolling(Q.konf_braunist_share, 18) * 0.003,
+            finitePolling(Q.konf_braunist_share, 18) * 0.003 +
+            finitePolling(Q.korona_poll_momentum, 0) * 0.015,
         0.12,
         0.42
     );
@@ -888,7 +955,8 @@ if (Q.ko_splinter_active) {
     const koSeatsNow = Math.max(1, finitePolling(Q.ko_seats, 157));
     const koSplinterShare = clampPolling(
         finitePolling(Q.ko_splinter_seats, 5) /
-            (koSeatsNow + finitePolling(Q.ko_splinter_seats, 5)),
+            (koSeatsNow + finitePolling(Q.ko_splinter_seats, 5)) +
+            finitePolling(Q.ko_splinter_poll_momentum, 0) * 0.015,
         0.05,
         0.22
     );
@@ -904,7 +972,10 @@ const activeElectionParty = function(id) {
     if (id == "third_way") return thirdWayJoint;
     if (partyIds.includes(id)) return activeParty(id);
     if (id == "centrum") return !!Q.unia_centrum_formed;
-    if (id == "rozwoj") return !!Q.rozwoj_party_formed;
+    if (id == "rozwoj") {
+        return !!Q.rozwoj_party_formed && !Q.rozwoj_joined_left;
+    }
+    if (id == "tak_rozwoj") return !!Q.tak_dla_rozwoju_party_formed;
     if (id == "korona") return !!Q.far_right_split;
     if (id == "ko_splinter") return !!Q.ko_splinter_active;
     return activeLeftBreakaways.some(function(entry) {
@@ -976,6 +1047,7 @@ const thresholds = {
     young_left: 5,
     razem: 5,
     pps: 5,
+    tak_rozwoj: 5,
     centrum: 5,
     rozwoj: 5,
     korona: 5,
@@ -990,18 +1062,18 @@ const seatPartyIds = (
         }).concat(["third_way"])
         : namedPartyIds
 ).concat(dynamicPartyIds);
-const committeeVoteIntent = function(id) {
+const committeePublishedPoll = function(id) {
     return id == "third_way"
-        ? Q.third_way_vote_intent
-        : Q[id + "_vote_intent"];
+        ? (Number(Q.psl_poll) || 0) + (Number(Q.p2050_poll) || 0)
+        : Number(Q[id + "_poll"]) || 0;
 };
 const seatParties = seatPartyIds.filter(function(id) {
     return activeElectionParty(id) &&
-        committeeVoteIntent(id) >= thresholds[id];
+        committeePublishedPoll(id) >= thresholds[id];
 });
 if (!seatParties.length) {
     const fallback = seatPartyIds.filter(activeElectionParty).sort(function(a, b) {
-        return committeeVoteIntent(b) - committeeVoteIntent(a);
+        return committeePublishedPoll(b) - committeePublishedPoll(a);
     })[0];
     seatParties.push(fallback);
 }
@@ -1018,6 +1090,7 @@ const seatProjection = {
     young_left: 0,
     razem: 0,
     pps: 0,
+    tak_rozwoj: 0,
     centrum: 0,
     rozwoj: 0,
     korona: 0,
@@ -1029,7 +1102,7 @@ for (let seat = 0; seat < 460; seat += 1) {
     let bestQuotient = -1;
     for (const id of seatParties) {
         const quotient =
-            committeeVoteIntent(id) /
+            committeePublishedPoll(id) /
             (seatProjection[id] + 1);
         if (quotient > bestQuotient) {
             bestQuotient = quotient;
@@ -1074,19 +1147,19 @@ const activeLeftCommitteeIds = ["left"].concat(
 Q.left_lists_contesting = activeLeftCommitteeIds.length;
 Q.left_lists_above_threshold = activeLeftCommitteeIds.reduce(
     function(total, id) {
-        return total + (Q[id + "_vote_intent"] >= 5 ? 1 : 0);
+        return total + (Q[id + "_poll"] >= 5 ? 1 : 0);
     },
     0
 );
 Q.left_family_vote_intent = Math.round(
     activeLeftCommitteeIds.reduce(function(total, id) {
-        return total + Math.max(0, Number(Q[id + "_vote_intent"]) || 0);
+        return total + Math.max(0, Number(Q[id + "_poll"]) || 0);
     }, 0) * 100
 ) / 100;
 Q.left_threshold_wasted_vote = Math.round(
     activeLeftCommitteeIds.reduce(function(total, id) {
-        const intent = Math.max(0, Number(Q[id + "_vote_intent"]) || 0);
-        return total + (intent < 5 ? intent : 0);
+        const publishedPoll = Math.max(0, Number(Q[id + "_poll"]) || 0);
+        return total + (publishedPoll < 5 ? publishedPoll : 0);
     }, 0) * 100
 ) / 100;
 Q.electoral_viability_status = Q.left_lists_above_threshold > 0
@@ -1309,7 +1382,8 @@ Q.polling_has_dated_route =
         )
     ) ||
     (
-        Q.year == 2020 && Q.month == 9 && !Q.merger_event_done
+        Q.year == 2020 && Q.month == 9 &&
+        (Q.trz_repeat_election_pending || !Q.merger_event_done)
     ) ||
     (
         Q.year == 2020 && Q.month == 10 && !Q.abortion_event_done
@@ -1352,4 +1426,4 @@ Q.polling_has_dated_route =
         Q.year == 2026
     ) ? 1 : 0;
 !}
-go-to: poland_events.candidate if year = 2019 and month = 11 and candidate_event_done = 0 and caucus_crisis_pending = 0; poland_events.budget_2019 if year = 2019 and month = 12 and budget_2019_done = 0 and caucus_crisis_pending = 0; poland_leadership_events.po_handoff_2020 if year = 2020 and month = 1 and po_leadership_2020_done = 0 and caucus_crisis_pending = 0; poland_events.media if year = 2020 and month = 1 and media_event_done = 0 and caucus_crisis_pending = 0; poland_monthly_briefing if year = 2020 and month = 2 and caucus_crisis_pending = 0; poland_events.covid if year = 2020 and month = 3 and covid_event_done = 0 and caucus_crisis_pending = 0; poland_events.postal if year = 2020 and month = 4 and postal_event_done = 0 and caucus_crisis_pending = 0; poland_leadership_events.ko_candidate_replacement_2020 if year = 2020 and month = 5 and ko_candidate_replacement_2020_done = 0 and caucus_crisis_pending = 0; poland_events.shield if year = 2020 and month = 5 and shield_event_done = 0 and caucus_crisis_pending = 0; poland_events.campaign if year = 2020 and month = 6 and election_event_done = 0 and caucus_crisis_pending = 0; poland_events.reckoning if year = 2020 and month = 7 and reckoning_event_done = 0 and caucus_crisis_pending = 0; poland_leadership_events.p2050_foundation_2020 if year = 2020 and month = 8 and p2050_foundation_2020_done = 0 and caucus_crisis_pending = 0; poland_trzaskowski.certification if year = 2020 and month = 8 and trzaskowski_won = 1 and trz_certification_event_done = 0 and caucus_crisis_pending = 0; poland_events.merger if year = 2020 and month = 9 and merger_event_done = 0 and caucus_crisis_pending = 0; poland_trzaskowski.tribunal_showdown if year = 2020 and month = 10 and abortion_event_done = 0 and trz_inaugurated = 1 and caucus_crisis_pending = 0; poland_events.abortion if year = 2020 and month = 10 and abortion_event_done = 0 and trz_inaugurated = 0 and caucus_crisis_pending = 0; poland_events.strike if year = 2020 and month = 11 and strike_event_done = 0 and caucus_crisis_pending = 0; poland_foreign_events.us_election_2020 if year = 2020 and month = 11 and strike_event_done = 1 and us_election_2020_done = 0 and caucus_crisis_pending = 0; poland_events.budget_2020 if year = 2020 and month = 12 and budget_2020_done = 0 and caucus_crisis_pending = 0; poland_events.vaccine if year = 2021 and month = 1 and vaccine_event_done = 0 and caucus_crisis_pending = 0; poland_trzaskowski.judicial_war if year = 2021 and month = 2 and trz_inaugurated = 1 and trz_judicial_war_done = 0 and caucus_crisis_pending = 0; poland_events.rename if year = 2021 and month = 3 and rename_event_done = 0 and caucus_crisis_pending = 0; poland_trzaskowski.palace_offensive if year = 2021 and month = 4 and trz_inaugurated = 1 and trz_palace_offensive_done = 0 and caucus_crisis_pending = 0; poland_events.recovery_fund if year = 2021 and month = 5 and recovery_fund_event_done = 0 and caucus_crisis_pending = 0; poland_trzaskowski.rights_vote if year = 2021 and month = 6 and opposition_reset_event_done = 0 and trz_inaugurated = 1 and caucus_crisis_pending = 0; poland_events.opposition_reset if year = 2021 and month = 6 and opposition_reset_event_done = 0 and trz_inaugurated = 0 and caucus_crisis_pending = 0; poland_leadership_events.tusk_return_2021 if year = 2021 and month = 7 and tusk_return_2021_done = 0 and caucus_crisis_pending = 0; poland_events.left_revolt if year = 2021 and month = 7 and left_revolt_event_done = 0 and caucus_crisis_pending = 0; poland_events_2021_2023.router if ((year = 2021 and month >= 8) or year = 2022 or (year = 2023 and month <= 7)) and caucus_crisis_pending = 0; poland_event_queue if ((year = 2023 and month >= 8) or year = 2024 or year = 2025 or year = 2026) and caucus_crisis_pending = 0; poland_monthly_briefing if ((year = 2020 and month = 8 and p2050_foundation_2020_done = 1 and (trzaskowski_won = 0 or trz_certification_event_done = 1)) or (year = 2021 and month = 2 and (trz_inaugurated = 0 or trz_judicial_war_done = 1)) or (year = 2021 and month = 4 and (trz_inaugurated = 0 or trz_palace_offensive_done = 1))) and caucus_crisis_pending = 0; poland_hub if polling_has_dated_route = 0 and caucus_crisis_pending = 0; poland_caucus_dynamics.router if caucus_crisis_pending = 1
+go-to: poland_events.candidate if year = 2019 and month = 11 and candidate_event_done = 0 and caucus_crisis_pending = 0; poland_events.budget_2019 if year = 2019 and month = 12 and budget_2019_done = 0 and caucus_crisis_pending = 0; poland_leadership_events.po_handoff_2020 if year = 2020 and month = 1 and po_leadership_2020_done = 0 and caucus_crisis_pending = 0; poland_events.media if year = 2020 and month = 1 and media_event_done = 0 and caucus_crisis_pending = 0; poland_events.budget_2019_sejm_vote_2020 if year = 2020 and month = 2 and budget_2019_done = 1 and annual_budget_done_2019 = 0 and caucus_crisis_pending = 0; poland_monthly_briefing if year = 2020 and month = 2 and caucus_crisis_pending = 0; poland_events.covid if year = 2020 and month = 3 and covid_event_done = 0 and caucus_crisis_pending = 0; poland_events.postal if year = 2020 and month = 4 and postal_event_done = 0 and caucus_crisis_pending = 0; poland_leadership_events.ko_candidate_replacement_2020 if year = 2020 and month = 5 and ko_candidate_replacement_2020_done = 0 and caucus_crisis_pending = 0; poland_events.shield if year = 2020 and month = 5 and shield_event_done = 0 and caucus_crisis_pending = 0; poland_events.campaign if year = 2020 and month = 6 and election_event_done = 0 and caucus_crisis_pending = 0; poland_events.reckoning if year = 2020 and month = 7 and reckoning_event_done = 0 and caucus_crisis_pending = 0; poland_leadership_events.p2050_foundation_2020 if year = 2020 and month = 8 and p2050_foundation_2020_done = 0 and caucus_crisis_pending = 0; poland_trzaskowski.certification if year = 2020 and month = 8 and trzaskowski_won = 1 and trz_certification_event_done = 0 and caucus_crisis_pending = 0; poland_trzaskowski.repeat_election_2020 if year = 2020 and month = 9 and trz_repeat_election_pending = 1 and caucus_crisis_pending = 0; poland_events.merger if year = 2020 and month = 9 and merger_event_done = 0 and caucus_crisis_pending = 0; poland_trzaskowski.tribunal_showdown if year = 2020 and month = 10 and abortion_event_done = 0 and trz_inaugurated = 1 and caucus_crisis_pending = 0; poland_events.abortion if year = 2020 and month = 10 and abortion_event_done = 0 and trz_inaugurated = 0 and caucus_crisis_pending = 0; poland_events.strike if year = 2020 and month = 11 and strike_event_done = 0 and caucus_crisis_pending = 0; poland_foreign_events.us_election_2020 if year = 2020 and month = 11 and strike_event_done = 1 and us_election_2020_done = 0 and caucus_crisis_pending = 0; poland_events_2021_2023.independence_2020 if year = 2020 and month = 11 and us_election_2020_done = 1 and independence_march_2020_done = 0 and caucus_crisis_pending = 0; poland_events.budget_2020 if year = 2020 and month = 12 and budget_2020_done = 0 and caucus_crisis_pending = 0; poland_events.vaccine if year = 2021 and month = 1 and vaccine_event_done = 0 and caucus_crisis_pending = 0; poland_trzaskowski.judicial_war if year = 2021 and month = 2 and trz_inaugurated = 1 and trz_judicial_war_done = 0 and caucus_crisis_pending = 0; poland_events.rename if year = 2021 and month = 3 and rename_event_done = 0 and caucus_crisis_pending = 0; poland_trzaskowski.palace_offensive if year = 2021 and month = 4 and trz_inaugurated = 1 and trz_palace_offensive_done = 0 and caucus_crisis_pending = 0; poland_events.recovery_fund if year = 2021 and month = 5 and recovery_fund_event_done = 0 and caucus_crisis_pending = 0; poland_trzaskowski.rights_vote if year = 2021 and month = 6 and opposition_reset_event_done = 0 and trz_inaugurated = 1 and caucus_crisis_pending = 0; poland_events.opposition_reset if year = 2021 and month = 6 and opposition_reset_event_done = 0 and trz_inaugurated = 0 and caucus_crisis_pending = 0; poland_leadership_events.tusk_return_2021 if year = 2021 and month = 7 and tusk_return_2021_done = 0 and caucus_crisis_pending = 0; poland_events.left_revolt if year = 2021 and month = 7 and left_revolt_event_done = 0 and caucus_crisis_pending = 0; poland_events_2021_2023.router if ((year = 2021 and month >= 8) or year = 2022 or (year = 2023 and month <= 7)) and caucus_crisis_pending = 0; poland_event_queue if ((year = 2023 and month >= 8) or year = 2024 or year = 2025 or year = 2026) and caucus_crisis_pending = 0; poland_monthly_briefing if ((year = 2020 and month = 8 and p2050_foundation_2020_done = 1 and (trzaskowski_won = 0 or trz_certification_event_done = 1)) or (year = 2021 and month = 2 and (trz_inaugurated = 0 or trz_judicial_war_done = 1)) or (year = 2021 and month = 4 and (trz_inaugurated = 0 or trz_palace_offensive_done = 1))) and caucus_crisis_pending = 0; poland_hub if polling_has_dated_route = 0 and caucus_crisis_pending = 0; poland_caucus_dynamics.router if caucus_crisis_pending = 1

@@ -148,23 +148,21 @@ go-to: return
 
 @razem_crisis
 title: Razem calls an exit congress
-subtitle: Its autonomous party, organisers and deputies can contest the election alone
+subtitle: [? if razem_merged: Its former organisation can be rebuilt around organisers and deputies?][? if not razem_merged: Its autonomous party, organisers and deputies can contest the election alone?]
 new-page: true
 view-if: razem_active = 1 and razem_escalation_stage = 2 and razem_demand_answered = 0
 
 = Autonomy reaches its red line
 
-**Razem** has reached **[+ razem_dissent +]/100 dissent**. Because it never
-dissolved into Nowa Lewica, its private warnings carry a credible outside
-option. It demands **[+ razem_demand +]** by month **[+ razem_demand_deadline +]**.
+**Razem** has reached **[+ razem_dissent +]/100 dissent**. [? if razem_merged: Its old organisation can be rebuilt, but leaving now requires a break from the single party it once led.?][? if not razem_merged: Because it never dissolved into Nowa Lewica, its private warnings carry a credible outside option.?] It demands **[+ razem_demand +]** by month **[+ razem_demand_deadline +]**.
 
 - @razem_compromise
 - @razem_leave
 - @razem_punish
 
 @razem_compromise
-title: Write enforceable outside-support milestones
-subtitle: Cost: 1 resource and two budget promises. Razem remains autonomous but inside.
+title: Write enforceable programme milestones
+subtitle: Cost: 1 resource and two budget promises. Razem stays inside the common Left.
 choose-if: resources >= 1
 unavailable-subtitle: The guarantee lacks staff and a funded programme.
 on-arrival: resources -= 1; razem_last_crisis_time = time; razem_demand_answered = 1; razem_escalation_stage = 0; razem_grievance_memory -= 22; razem_dissent -= 36; razem_cooperation += 10; budget_promises += 2; party_unity += 4; ko_relation -= 3; barons_dissent += 3; news_headline = "Enforceable milestones answer Razem's deadline"
@@ -277,7 +275,7 @@ on-arrival: caucus_exit_target = "razem"; caucus_exit_mode = "escalated"
 
 = Autonomy becomes electoral competition
 
-Razem's legal outside option makes the final organisational step easy, but it
+[? if razem_merged: Razem's former network must rebuild a legal party before it can contest the common organisation.?][? if not razem_merged: Razem's legal outside option makes the final organisational step easy.?] The decision still
 does not make its estimated caucus a unitary block. Each MP weighs office,
 local organisers, a personal following, ideology and dependence on the common
 list before the **Razem list** is registered.
@@ -478,6 +476,20 @@ if (definition && Q[target + "_active"]) {
         Q.public_trust -= mode == "punitive" ? 3 : 1;
     }
     if (Q.left_in_government) {
+        const externalRazemDeparture =
+            target == "razem" &&
+            (
+                !Q.razem_in_government ||
+                String(Q.left_cabinet_model || "").includes(
+                    "Razem external"
+                )
+            );
+        if (!externalRazemDeparture) {
+            Q.ministry_left_cabinet_seats = Math.max(
+                0,
+                (Number(Q.ministry_left_cabinet_seats) || 0) - exitSeats
+            );
+        }
         // poland_normalize derives coalition_seats once from the live cabinet
         // parties and the already-reduced left_seats value.
         Q.government_coalition_dissent +=

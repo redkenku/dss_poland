@@ -698,8 +698,10 @@ The model publishes:
 
 That last output is for coalition planning, not a claim to reproduce 41
 districts. A full election layer still needs district magnitude, local
-candidates, registered committee versus coalition thresholds, tactical voting
-and a separate first-past-the-post Senate contest.
+candidates, registered committee versus coalition thresholds and tactical
+voting for the Sejm. The Senate is modeled separately: the 2023 campaign can
+coordinate one democratic candidate per district or run competing slates, and
+the election awards each of 100 single-member seats to its district plurality.
 
 ### Playable rival-party layer
 

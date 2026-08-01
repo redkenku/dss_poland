@@ -239,7 +239,7 @@ The inherited currencies are now separated by political role.
 | May 2023 | Solidarna Polska becomes Suwerenna Polska; Lex Tusk, 4 June mobilisation and PiS's 800+ welfare counter-offer |
 | June 2023 | News desk: the 4 June march and renewed “Not one more” protests |
 | July 2023 | Konfederacja's summer surge, competing PiS solidarism and the election-readiness projection |
-| August–September 2023 | Electoral lists, five-current guarantees and the visa scandal |
+| August–September 2023 | Three Sejm lists versus a shared Senate Pact, five-current guarantees and the visa scandal |
 | October–December 2023 | Parliamentary result, Morawiecki's presidential nomination, investiture, Sejm-led cabinet attempt, ministries, transfer of power, Braun's menorah attack, public media, Independence Day and the inherited budget |
 | January–March 2024 | Competing prosecutor commands, Kamiński/Wąsik warrants and pardons, Republika's advertiser crisis, farmers, Kanał Zero, the KRS action plan and the Sejm's Tribunal resolution |
 | April–May 2024 | Local and abortion votes, first KPO payment, Article 7 closure and the coalition fight over European credit |
@@ -247,8 +247,8 @@ The inherited currencies are now separated by political role.
 | August–October 2024 | Widow's pension, movement reckoning, flood reconstruction, migration, Razem's possible exit, Tribunal repair and a negotiated Suwerenna Polska vote that can produce absorption, federation, refusal or individual accessions |
 | November–December 2024 | Variable US presidential election, Independence Day, KO and Left presidential nominations, Christmas Eve labour reform, KPO co-financing and the first full coalition budget |
 | January–March 2025 | Separate Left presidential campaigns, Braun's Konfederacja rupture, religion and health education, asylum suspension, gender-recognition procedure and the spring audit of the movement settlement |
-| April–June 2025 | Shorter-working-time pilot, presidential election, cabinet confidence and Hołownia/Kosiniak-Kamysz's dissolution of Third Way followed by separate PSL bargaining |
-| July–September 2025 | A cabinet reshuffle or post-confidence formation branch, presidential inauguration, Russian drone incursion and Hołownia's announced departure |
+| April–June 2025 | Braun's Oleśnica hospital confrontation, shorter-working-time pilot, presidential election, cabinet confidence and Hołownia/Kosiniak-Kamysz's dissolution of Third Way followed by separate PSL bargaining |
+| July–September 2025 | Braun's separate seven-count indictment, a cabinet reshuffle or post-confidence formation branch, presidential inauguration, Russian drone incursion and Hołownia's announced departure |
 | October–December 2025 | A six-file KO consolidation convention with persistent component parties and multiple outcomes, KPO review, Marshal rotation, Independence Day, EU marriage recognition, collective bargaining, Left leadership, CJEU–Tribunal collision and the post-presidential budget |
 | January–March 2026 | Poland 2050 chooses Hołownia's successor and then splits, a Trump-dependent ambassador–Marshal crisis or alternate Washington review, competing KRS bills, the de-personalised centrist party and six Tribunal vacancies |
 | April–July 2026 | KO component representation, Rozwój+ association-building and PiS's individual loyalty ultimatum, PIP/KPO enforcement, Kanał Zero television, partnership legislation and veto, Tribunal competence, Braun procedure, centrist rupture, hate crime, appointments and the final KPO window |
@@ -442,6 +442,19 @@ The Senate docket distinguishes the procedures:
 - a deadlocked docket always has a no-cost minority-note fallback;
 - cohesion, amendment credit and Left leverage persist into the two annual
   budget stages.
+
+The August 2023 campaign adds the historically distinct choice between three
+Sejm lists and a coordinated Senate Pact. Election night then runs 100 seeded
+single-member district contests: every active committee fields at most one
+candidate in a district, the largest district vote wins, and there is no
+national threshold or proportional top-up. Running three democratic Senate
+slates separately therefore splits votes which a pact would combine.
+
+From the 2024 budget onward, a governing Left cannot skip the elected Senate.
+An unfriendly majority may return corrections. The cabinet may incorporate
+them, negotiate a narrower package, or ask the Sejm to reject them by absolute
+majority. Failure leaves the corrections in force and records a coalition
+deadlock; the Senate still supplies no cabinet-confidence votes.
 
 This follows Constitution Article 121 for ordinary bills and Articles 223–225
 for budgets. The Senate is not included in cabinet-confidence arithmetic.
@@ -784,8 +797,6 @@ limits remain:
 - Sejm elections use a national d'Hondt-style indicator and 460-seat
   apportionment rather than 41 district contests, candidate lists and district
   remainders;
-- the 2023 Senate composition is certified from its historical result rather
-  than generated by a 100-district simulator;
 - only selected cards directly calculate issue reception, while the monthly
   bridge carries older event changes into the public-opinion layer;
 - many ledger ideas remain branches rather than authored scenes, especially

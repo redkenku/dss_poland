@@ -57,7 +57,6 @@ Q.formation_in_progress = 1;
 Q.formation_return_ready = 0;
 Q.formation_complete = 0;
 Q.formation_outcome_score = 0;
-Q.election_2023_certified = 1;
 Q.post_formation_return_pending = 0;
 
 // This entry is deliberately not a new-game setup. Party resources, the
@@ -78,6 +77,7 @@ Q.budget_authority = "Opposition — no state spending authority";
 Q.coalition_broken = 0;
 Q.coalition_status = "No new cabinet has won confidence";
 Q.coalition_seats = 0;
+Q.government_support_seats = 0;
 Q.sejm_total = 460;
 Q.sejm_quorum_floor = 230;
 Q.sejm_statutory_majority = 231;
@@ -85,48 +85,149 @@ Q.sejm_statutory_majority = 231;
 const partyIds = [
     "pis", "ko", "p2050", "psl", "left", "konf", "other",
     "sld_breakaway", "spring_breakaway", "labor_left", "young_left",
-    "razem", "pps", "centrum", "rozwoj", "korona"
+    "razem", "pps", "centrum", "rozwoj", "korona", "ko_splinter"
 ];
-const projectedEntries = partyIds.map(function(id) {
-    return {
-        id: id,
-        weight: finiteFormation(Q[id + "_projected_seats"], 0)
+if (!Q.election_2023_certified) {
+    const thirdWayJoint = Boolean(Q.third_way_joint_list) &&
+        !Boolean(Q.third_way_split);
+    const baseElectionVote = function(id) {
+        if (id == "third_way") {
+            return finiteFormation(Q.psl_vote_intent, 0) +
+                finiteFormation(Q.p2050_vote_intent, 0);
+        }
+        return finiteFormation(
+            Q[id + "_vote_intent"],
+            finiteFormation(Q[id + "_poll"], 0)
+        );
     };
-});
-let projectedTotal = projectedEntries.reduce(function(sum, entry) {
-    return sum + Math.max(0, Math.round(entry.weight));
-}, 0);
-let certified;
-if (projectedTotal > 0) {
-    certified = apportionFormation(Q.sejm_total, projectedEntries);
-} else {
-    certified = apportionFormation(
-        Q.sejm_total,
-        partyIds.map(function(id) {
-            return {
-                id: id,
-                weight: finiteFormation(
-                    Q[id + "_vote_intent"],
-                    finiteFormation(Q[id + "_poll"], 0)
-                )
-            };
-        })
-    );
-}
-for (const id of partyIds) {
-    if (id == "razem") {
-        Q.razem_party_seats = certified[id];
-    } else if (id == "pps") {
-        Q.pps_party_seats = certified[id];
-    } else {
-        Q[id + "_seats"] = certified[id];
+    const countIds = partyIds.filter(function(id) {
+        return id != "other" &&
+            (!thirdWayJoint || (id != "psl" && id != "p2050")) &&
+            baseElectionVote(id) > 0.02;
+    });
+    if (thirdWayJoint && baseElectionVote("third_way") > 0.02) {
+        countIds.push("third_way");
     }
-    Q[id + "_projected_seats"] = certified[id];
-    Q["election_2023_" + id + "_vote"] = finiteFormation(
-        Q[id + "_vote_intent"],
-        finiteFormation(Q[id + "_poll"], 0)
+    if (!countIds.length) countIds.push("pis");
+    const electionVotes = {};
+    const electionShocks = {};
+    for (const id of countIds) {
+        const baseVote = baseElectionVote(id);
+        const shock =
+            (this.random.uint32() / 4294967296 - 0.5) * 2.5;
+        electionShocks[id] = shock;
+        electionVotes[id] = Math.max(0.02, baseVote + shock);
+    }
+    const otherVote = Math.max(
+        0,
+        finiteFormation(Q.other_vote_intent, finiteFormation(Q.other_poll, 0))
     );
+    const voteTotal = otherVote + countIds.reduce(function(total, id) {
+        return total + electionVotes[id];
+    }, 0);
+    for (const id of countIds) {
+        electionVotes[id] = electionVotes[id] * 100 / Math.max(1, voteTotal);
+    }
+    const normalizedOther = otherVote * 100 / Math.max(1, voteTotal);
+    const thresholds = {
+        pis: 5, ko: Q.ko_consolidated ? 5 : 8, p2050: 5, psl: 5,
+        left: 5, konf: 5, sld_breakaway: 5, spring_breakaway: 5,
+        labor_left: 5, young_left: 5, razem: 5, pps: 5,
+        centrum: 5, rozwoj: 5, korona: 5, ko_splinter: 5,
+        third_way: 8
+    };
+    let qualified = countIds.filter(function(id) {
+        return electionVotes[id] >= thresholds[id];
+    });
+    if (!qualified.length) {
+        qualified = countIds.slice().sort(function(a, b) {
+            return electionVotes[b] - electionVotes[a];
+        }).slice(0, 1);
+    }
+    const certified = {};
+    for (const id of partyIds.concat(["third_way"])) certified[id] = 0;
+    for (let seat = 0; seat < Q.sejm_total; seat += 1) {
+        let winner = qualified[0];
+        let best = -1;
+        for (const id of qualified) {
+            const quotient = electionVotes[id] / (certified[id] + 1);
+            if (quotient > best) {
+                best = quotient;
+                winner = id;
+            }
+        }
+        certified[winner] += 1;
+    }
+    if (thirdWayJoint) {
+        const pslVote = Math.max(0.01, finiteFormation(Q.psl_vote_intent, 0));
+        const p2050Vote = Math.max(
+            0.01,
+            finiteFormation(Q.p2050_vote_intent, 0)
+        );
+        const pslExact = certified.third_way * pslVote /
+            (pslVote + p2050Vote);
+        certified.psl = Math.floor(pslExact);
+        certified.p2050 = certified.third_way - certified.psl;
+        Q.election_2023_third_way_vote = electionVotes.third_way;
+    }
+    for (const id of partyIds) {
+        if (id == "razem") {
+            Q.razem_party_seats = certified[id];
+        } else if (id == "pps") {
+            Q.pps_party_seats = certified[id];
+        } else {
+            Q[id + "_seats"] = certified[id];
+        }
+        Q[id + "_projected_seats"] = certified[id];
+        const certifiedVote = thirdWayJoint &&
+            (id == "psl" || id == "p2050")
+                ? electionVotes.third_way *
+                    finiteFormation(Q[id + "_vote_intent"], 0) /
+                    Math.max(
+                        0.01,
+                        finiteFormation(Q.psl_vote_intent, 0) +
+                            finiteFormation(Q.p2050_vote_intent, 0)
+                    )
+                : (id == "other" ? normalizedOther : electionVotes[id] || 0);
+        Q["election_2023_" + id + "_vote"] =
+            Math.round(certifiedVote * 100) / 100;
+    }
+    // Auxiliary caucus ledgers from the previous Sejm cannot survive a new
+    // certification as extra seats. Their voters are already inside the
+    // certified party/list totals above.
+    Q.porozumienie_seats = 0;
+    Q.suwerenna_seats = 0;
+    const largestShock = countIds.slice().sort(function(a, b) {
+        return Math.abs(electionShocks[b]) - Math.abs(electionShocks[a]);
+    })[0];
+    Q.election_2023_day_shock_summary = largestShock + " " +
+        (electionShocks[largestShock] >= 0 ? "+" : "") +
+        (Math.round(electionShocks[largestShock] * 100) / 100) +
+        " points; thresholds and d'Hondt recalculated";
+    Q.election_2023_certified = 1;
 }
+const certifiedLeftLists = [
+    "left", "sld_breakaway", "spring_breakaway", "labor_left",
+    "young_left", "razem", "pps"
+];
+Q.left_family_vote_intent = Math.round(
+    certifiedLeftLists.reduce(function(total, id) {
+        return total + finiteFormation(Q["election_2023_" + id + "_vote"], 0);
+    }, 0) * 100
+) / 100;
+Q.left_lists_above_threshold = certifiedLeftLists.reduce(
+    function(total, id) {
+        const result = finiteFormation(Q["election_2023_" + id + "_vote"], 0);
+        return total + (result >= 5 ? 1 : 0);
+    },
+    0
+);
+Q.left_threshold_wasted_vote = Math.round(
+    certifiedLeftLists.reduce(function(total, id) {
+        const result = finiteFormation(Q["election_2023_" + id + "_vote"], 0);
+        return total + (result > 0 && result < 5 ? result : 0);
+    }, 0) * 100
+) / 100;
 
 const leftCaucusDefinitions = [
     {id: "barons", weight: Q.barons_active ? Q.barons_strength : 0},
@@ -203,84 +304,214 @@ Q.seat_subvention = Q.left_seats > 0
 Q.party_income =
     Math.max(0, finiteFormation(Q.member_dues, 0)) + Q.seat_subvention;
 
-// Model the Senate from the campaign that was actually played. The
-// opposition-pact cohesion score supplies the single-member-district bonus:
-// a coordinated democratic field converts votes into seats much more
-// efficiently than several competing candidates.
-Q.senate_total = 100;
-const senateCohesion = Math.max(
-    0,
-    Math.min(100, finiteFormation(Q.senate_cohesion, 50))
-);
-const senateIndependent = Math.max(
-    2,
-    Math.min(
-        12,
-        Math.round(
-            finiteFormation(Q.other_seats, 0) /
-                Math.max(1, Q.sejm_total) * 45
-        )
-    )
-);
-const democraticLower =
-    Q.ko_seats + Q.p2050_seats + Q.psl_seats +
-    Q.centrum_seats + Q.left_committed_seats;
-const rightLower =
-    Q.pis_seats + Q.konf_seats + Q.rozwoj_seats + Q.korona_seats;
-const competitiveLower = Math.max(1, democraticLower + rightLower);
-const democraticShare = democraticLower / competitiveLower;
-const contestedSenate = Q.senate_total - senateIndependent;
-const democraticSenate = Math.max(
-    0,
-    Math.min(
-        contestedSenate,
-        Math.round(
-            contestedSenate * (
-                0.5 +
-                (democraticShare - 0.5) * 1.0 +
-                (senateCohesion - 50) / 260
+// Certify one winner in each of the Senate's 100 single-member districts.
+// A pact combines the democratic vote behind one district candidate; without
+// it, KO, Third Way and the Left compete separately and may split a plurality.
+if (!Q.senate_election_2023_certified) {
+    Q.senate_total = 100;
+    if (!Q.senate_pact_2023_done) {
+        Q.senate_pact_coordinated = 1;
+        Q.senate_pact_strength = 60;
+        Q.senate_pact_strategy =
+            "Senate Pact with three Sejm lists";
+    }
+    const senateVote = function(id) {
+        return Math.max(
+            0,
+            finiteFormation(
+                Q["election_2023_" + id + "_vote"],
+                finiteFormation(Q[id + "_vote_intent"], 0)
             )
-        )
-    )
-);
-const democraticSenateParts = apportionFormation(
-    democraticSenate,
-    [
-        {
-            id: "ko",
-            weight: Q.ko_seats + Q.p2050_seats + Q.centrum_seats
-        },
-        {id: "psl", weight: Q.psl_seats},
-        {id: "left", weight: Q.left_committed_seats}
-    ]
-);
-Q.senate_pis_seats = contestedSenate - democraticSenate;
-Q.senate_ko_seats = democraticSenateParts.ko || 0;
-Q.senate_psl_seats = democraticSenateParts.psl || 0;
-Q.senate_left_seats = democraticSenateParts.left || 0;
-Q.senate_independent_seats = senateIndependent;
-Q.senate_opposition_seats =
-    democraticSenate + Q.senate_independent_seats;
-Q.senate_working_votes = Math.max(
-    0,
-    Math.min(
-        Q.senate_opposition_seats,
+        );
+    };
+    const senateVotes = {
+        pis: senateVote("pis"),
+        konf: senateVote("konf"),
+        rozwoj: senateVote("rozwoj"),
+        korona: senateVote("korona"),
+        ko: senateVote("ko") + senateVote("ko_splinter") +
+            senateVote("centrum"),
+        p2050: senateVote("p2050"),
+        psl: senateVote("psl"),
+        left: [
+            "left", "sld_breakaway", "spring_breakaway",
+            "labor_left", "young_left", "razem", "pps"
+        ].reduce(function(total, id) {
+            return total + senateVote(id);
+        }, 0),
+        independent: senateVote("other")
+    };
+    const democraticVote =
+        senateVotes.ko + senateVotes.p2050 +
+        senateVotes.psl + senateVotes.left;
+    const pactStrength = Math.max(
+        0,
+        Math.min(100, finiteFormation(Q.senate_pact_strength, 60))
+    );
+    const pactNomineeParts = apportionFormation(
+        Q.senate_total,
+        [
+            {id: "ko", weight: senateVotes.ko},
+            {id: "p2050", weight: senateVotes.p2050},
+            {id: "psl", weight: senateVotes.psl},
+            {id: "left", weight: senateVotes.left}
+        ]
+    );
+    const pactNominees = [];
+    for (const id of ["ko", "p2050", "psl", "left"]) {
+        for (let seat = 0; seat < pactNomineeParts[id]; seat += 1) {
+            pactNominees.push(id);
+        }
+    }
+    for (let i = pactNominees.length - 1; i > 0; i -= 1) {
+        const swap = this.random.uint32() % (i + 1);
+        const current = pactNominees[i];
+        pactNominees[i] = pactNominees[swap];
+        pactNominees[swap] = current;
+    }
+    const thirdNomineeParts = apportionFormation(
+        Q.senate_total,
+        [
+            {id: "p2050", weight: senateVotes.p2050},
+            {id: "psl", weight: senateVotes.psl}
+        ]
+    );
+    const thirdNominees = [];
+    for (const id of ["p2050", "psl"]) {
+        for (let seat = 0; seat < thirdNomineeParts[id]; seat += 1) {
+            thirdNominees.push(id);
+        }
+    }
+    for (let i = thirdNominees.length - 1; i > 0; i -= 1) {
+        const swap = this.random.uint32() % (i + 1);
+        const current = thirdNominees[i];
+        thirdNominees[i] = thirdNominees[swap];
+        thirdNominees[swap] = current;
+    }
+    const senateWinners = {
+        pis: 0,
+        konf: 0,
+        ko: 0,
+        p2050: 0,
+        psl: 0,
+        left: 0,
+        independent: 0
+    };
+    let closestMargin = 100;
+    const randomUnit = function(context) {
+        return context.random.uint32() / 4294967296;
+    };
+    for (let district = 0; district < Q.senate_total; district += 1) {
+        const democraticLean = (randomUnit(this) - 0.5) * 44;
+        const candidates = [];
+        const addCandidate = function(id, score) {
+            if (score > 0) candidates.push({id: id, score: score});
+        };
+        if (Q.senate_pact_coordinated) {
+            const transfer = 0.88 + pactStrength / 1000;
+            addCandidate(
+                pactNominees[district],
+                democraticVote * transfer + democraticLean +
+                    (randomUnit(this) - 0.5) * 8
+            );
+        } else {
+            addCandidate(
+                "ko",
+                senateVotes.ko + democraticLean +
+                    (randomUnit(this) - 0.5) * 12
+            );
+            addCandidate(
+                thirdNominees[district],
+                senateVotes.p2050 + senateVotes.psl + democraticLean * 0.45 +
+                    (randomUnit(this) - 0.5) * 18
+            );
+            addCandidate(
+                "left",
+                senateVotes.left + democraticLean * 0.55 +
+                    (randomUnit(this) - 0.5) * 18
+            );
+        }
+        addCandidate(
+            "pis",
+            senateVotes.pis - democraticLean +
+                (randomUnit(this) - 0.5) * 10
+        );
+        addCandidate(
+            "konf",
+            senateVotes.konf - democraticLean * 0.35 +
+                (randomUnit(this) - 0.5) * 16
+        );
+        addCandidate(
+            "pis",
+            senateVotes.rozwoj - democraticLean * 0.3 +
+                (randomUnit(this) - 0.5) * 18
+        );
+        addCandidate(
+            "konf",
+            senateVotes.korona - democraticLean * 0.25 +
+                (randomUnit(this) - 0.5) * 18
+        );
+        addCandidate(
+            "independent",
+            senateVotes.independent + randomUnit(this) * 42
+        );
+        candidates.sort(function(a, b) {
+            return b.score - a.score;
+        });
+        const winner = candidates[0] || {id: "independent", score: 0};
+        senateWinners[winner.id] += 1;
+        if (candidates.length > 1) {
+            closestMargin = Math.min(
+                closestMargin,
+                winner.score - candidates[1].score
+            );
+        }
+    }
+    Q.senate_pis_seats = senateWinners.pis;
+    Q.senate_konf_seats = senateWinners.konf;
+    Q.senate_ko_seats = senateWinners.ko;
+    Q.senate_p2050_seats = senateWinners.p2050;
+    Q.senate_psl_seats = senateWinners.psl;
+    Q.senate_left_seats = senateWinners.left;
+    Q.senate_independent_seats = senateWinners.independent;
+    Q.senate_democratic_seats =
+        Q.senate_ko_seats + Q.senate_p2050_seats +
+        Q.senate_psl_seats + Q.senate_left_seats;
+    Q.senate_right_seats =
+        Q.senate_pis_seats + Q.senate_konf_seats;
+    Q.senate_opposition_seats =
+        Q.senate_democratic_seats + Q.senate_independent_seats;
+    const senateCohesion = Math.max(
+        0,
+        Math.min(100, finiteFormation(Q.senate_cohesion, 50))
+    );
+    Q.senate_working_votes = Math.min(
+        Q.senate_total,
         Math.round(
-            democraticSenate +
+            Q.senate_democratic_seats +
             Q.senate_independent_seats * senateCohesion / 100
         )
-    )
-);
-Q.senate_marshal = democraticSenate >= 51
-    ? "Małgorzata Kidawa-Błońska"
-    : "Stanisław Karczewski";
-Q.senate_control = democraticSenate >= 51
-    ? "Coordinated democratic majority"
-    : (
-        Q.senate_pis_seats >= 51
-            ? "Right-aligned majority"
-            : "Hung Senate"
     );
+    Q.senate_marshal = Q.senate_democratic_seats >= 51
+        ? "Małgorzata Kidawa-Błońska"
+        : (
+            Q.senate_right_seats >= 51
+                ? "Stanisław Karczewski"
+                : "Senate election pending"
+        );
+    Q.senate_control = Q.senate_democratic_seats >= 51
+        ? "Democratic Senate majority"
+        : (
+            Q.senate_right_seats >= 51
+                ? "Right-aligned Senate majority"
+                : "Hung Senate"
+        );
+    Q.senate_election_rule =
+        "100 single-member districts; the leading candidate wins";
+    Q.senate_election_closest_margin =
+        Math.round(Math.max(0, closestMargin) * 100) / 100;
+    Q.senate_election_2023_certified = 1;
+}
 
 Q.election_summary_seen = 0;
 Q.election_coalition_seen = 0;
@@ -325,6 +556,7 @@ Q.candidate_centrum_votes = 0;
 Q.candidate_vote_passed = 0;
 Q.left_cabinet_committed = 0;
 Q.left_cabinet_model = "Not negotiated";
+Q.formation_psl_cabinet_committed = -1;
 Q.ministry_return_mode = "cabinet_program";
 Q.ministries_finalized = 0;
 Q.ministry_count = 0;
@@ -438,16 +670,27 @@ Q.p2050_independent_seats = 3;
 
 Q.senate_total = 100;
 Q.senate_pis_seats = 34;
+Q.senate_konf_seats = 0;
 Q.senate_ko_seats = 41;
-Q.senate_psl_seats = 11;
+Q.senate_p2050_seats = 5;
+Q.senate_psl_seats = 6;
 Q.senate_left_seats = 9;
 Q.senate_independent_seats = 5;
+Q.senate_democratic_seats = 61;
+Q.senate_right_seats = 34;
 Q.senate_opposition_seats = 66;
 Q.senate_working_votes = 66;
 Q.senate_marshal = "Małgorzata Kidawa-Błońska";
 Q.senate_control = "Democratic coalition majority";
 Q.senate_cohesion = 72;
 Q.senate_left_leverage = 22;
+Q.senate_pact_2023_done = 1;
+Q.senate_pact_coordinated = 1;
+Q.senate_pact_strength = 78;
+Q.senate_pact_strategy = "Senate Pact with three Sejm lists";
+Q.senate_election_2023_certified = 1;
+Q.senate_election_rule =
+    "100 single-member districts; the leading candidate wins";
 
 Q.pis_poll = 35.4;
 Q.ko_poll = 30.7;
@@ -712,6 +955,7 @@ Q.candidate_centrum_votes = 0;
 Q.candidate_vote_passed = 0;
 Q.left_cabinet_committed = 0;
 Q.left_cabinet_model = "Not negotiated";
+Q.formation_psl_cabinet_committed = -1;
 Q.ministry_return_mode = "cabinet_program";
 Q.cabinet_confidence_passed = 0;
 Q.cabinet_program = "Not negotiated";
@@ -1220,6 +1464,7 @@ go-to: democratic_left_mandate
 @nominate_left_compromise
 title: Nominate Agnieszka Dziemianowicz-Bąk
 subtitle: A generational Left bid. Admired by activists; not automatically accepted by KO or Third Way.
+view-if: president_name != "Agnieszka Dziemianowicz-Bąk"
 on-arrival: {!
 Q.democratic_candidate = "Agnieszka Dziemianowicz-Bąk";
 Q.candidate_ko_votes = Math.max(
@@ -1271,33 +1516,74 @@ authority. Voting confidence from outside does not.
 @left_new_left_cabinet
 title: Put New Left in cabinet; let Razem support from outside
 subtitle: Historical architecture: New Left governs while Razem votes under a written social floor.
-on-arrival: candidate_left_votes = left_seats + left_splinter_support_votes; left_cabinet_committed = 1; left_cabinet_model = "New Left ministers · Razem external support"; democratic_pact = "Proposed coalition cabinet with outside Left support"; barons_dissent -= 4; progressives_dissent -= 3; razem_dissent += 5; news_headline = "New Left proposes ministers while autonomous Left parties remain outside"
+on-arrival: candidate_left_votes = left_seats + left_splinter_support_votes; left_cabinet_committed = 1; left_cabinet_model = "New Left ministers · Razem external support"; razem_in_government = 0; razem_government_role = "Confidence and supply"; razem_budget_support_pact = 1; democratic_pact = "Proposed coalition cabinet with outside Left support"; barons_dissent -= 4; progressives_dissent -= 3; razem_dissent += 5; news_headline = "New Left proposes ministers while autonomous Left parties remain outside"
 go-to: democratic_psl_mandate
 
 @left_whole_cabinet
-title: Require the whole Left to enter and own the cabinet
-subtitle: Cost: 1 party resource. Strong collective responsibility, difficult Razem ratification.
+title: Put cabinet entry to a Razem membership vote
+subtitle: Cost: 1 party resource. High cooperation, a social-liberal KO or pivotal seats make entry easier; otherwise Razem supplies confidence from outside.
 choose-if: resources >= 1 and left_splinter_support_votes = left_splinter_seats
 unavailable-subtitle: [? if resources < 1: A joint programme convention and ministerial vetting cost one resource. ?][? if left_splinter_support_votes < left_splinter_seats: One or more breakaway Left parties refuse collective cabinet responsibility. Rebuild relations first. ?]
-on-arrival: resources -= 1; candidate_left_votes = left_committed_seats; left_cabinet_committed = 1; left_cabinet_model = "Whole cooperating Left coalition delegation"; democratic_pact = "Proposed Whole-Left cabinet entry"; party_unity += 5; razem_dissent += 8; barons_dissent += 3; news_headline = "Every cooperating Left party offers to assume cabinet responsibility"
+on-arrival: {!
+Q.resources -= 1;
+const razemSeats = Math.max(0, Number(Q.razem_seats) || 0);
+const socialLiberalKO =
+    (Number(Q.ko_social_liberal_share) || 0) >=
+    (Number(Q.ko_classical_liberal_share) || 0);
+Q.razem_pivotal_to_coalition =
+    razemSeats > 0 &&
+    (Number(Q.coalition_democratic_seats) || 0) - razemSeats <
+        (Number(Q.sejm_statutory_majority) || 231) ? 1 : 0;
+Q.razem_join_vote_score = Math.round(
+    (Number(Q.razem_cooperation) || 0) * 0.70 +
+    (Number(Q.ko_social_liberal_share) || 0) * 0.30 -
+    Math.max(0, (Number(Q.razem_dissent) || 0) - 40) * 0.20 +
+    (Q.razem_pivotal_to_coalition ? 20 : 0)
+);
+Q.razem_in_government =
+    razemSeats > 0 && (
+        Q.razem_pivotal_to_coalition ||
+        (Number(Q.razem_cooperation) || 0) >= 65 ||
+        socialLiberalKO
+    ) ? 1 : 0;
+Q.razem_budget_support_pact = 1;
+Q.razem_join_vote_result = Q.razem_in_government
+    ? "Razem ratifies cabinet entry"
+    : "Razem chooses confidence and supply";
+Q.razem_government_role = Q.razem_in_government
+    ? "Coalition party with a red-line protocol"
+    : "Confidence and supply";
+Q.candidate_left_votes = Q.left_committed_seats;
+Q.left_cabinet_committed = 1;
+Q.left_cabinet_model = Q.razem_in_government
+    ? "Whole cooperating Left coalition delegation"
+    : "New Left ministers · Razem confidence and supply";
+Q.democratic_pact = Q.razem_in_government
+    ? "Ratified Whole-Left cabinet entry"
+    : "New Left cabinet with Razem confidence and supply";
+Q.party_unity += Q.razem_in_government ? 5 : 3;
+Q.razem_dissent += Q.razem_in_government ? -6 : -3;
+Q.barons_dissent += Q.razem_in_government ? 3 : 1;
+Q.news_headline = Q.razem_join_vote_result;
+!}
 go-to: democratic_psl_mandate
 
 @left_supply_only
 title: Keep every Left current outside on confidence and supply
 subtitle: The whole club votes yes, with no ministers and no government budget authority.
-on-arrival: candidate_left_votes = left_seats + left_splinter_support_votes; left_cabinet_committed = 0; left_cabinet_model = "Confidence and supply from opposition"; democratic_pact = "External Left support"; razem_dissent -= 8; barons_dissent += 8; government_delivery -= 2; news_headline = "The main and cooperating Left lists offer votes without ministries"
+on-arrival: candidate_left_votes = left_seats + left_splinter_support_votes; left_cabinet_committed = 0; left_cabinet_model = "Confidence and supply from opposition"; razem_in_government = 0; razem_government_role = "Confidence and supply"; razem_budget_support_pact = 1; democratic_pact = "External Left support"; razem_dissent -= 8; barons_dissent += 8; government_delivery -= 2; news_headline = "The main and cooperating Left lists offer votes without ministries"
 go-to: democratic_psl_mandate
 
 @left_maximal_terms
 title: Demand binding abortion, housing and labour deadlines
 subtitle: The Left offers its whole club and cabinet service; PSL begins the next meeting near the exit.
-on-arrival: candidate_left_votes = left_committed_seats; left_cabinet_committed = 1; left_cabinet_model = "Programme-bound cooperating Left entry"; democratic_pact = "Maximal social and rights timetable proposal"; party_unity += 7; razem_dissent -= 8; progressives_dissent -= 5; psl_coalition_dissent += 18; psl_relation -= 9; news_headline = "The cooperating Left parties make their proposed votes conditional"
+on-arrival: candidate_left_votes = left_committed_seats; left_cabinet_committed = 1; left_cabinet_model = "Programme-bound cooperating Left entry"; razem_in_government = 1; razem_government_role = "Coalition party with binding red lines"; razem_budget_support_pact = 1; democratic_pact = "Maximal social and rights timetable proposal"; party_unity += 7; razem_dissent -= 8; progressives_dissent -= 5; psl_coalition_dissent += 18; psl_relation -= 9; news_headline = "The cooperating Left parties make their proposed votes conditional"
 go-to: democratic_psl_mandate
 
 @left_withhold
 title: Withhold every Left vote
 subtitle: Preserve opposition purity and force the coalition to find a majority it does not have.
-on-arrival: candidate_left_votes = 0; left_cabinet_committed = 0; left_cabinet_model = "Opposition"; democratic_pact = "No Left confidence votes"; razem_dissent -= 4; barons_dissent += 12; ko_relation -= 15; p2050_relation -= 10; psl_relation -= 8; party_unity -= 4; news_headline = "The democratic nominee loses the Left before the vote"
+on-arrival: candidate_left_votes = 0; left_cabinet_committed = 0; left_cabinet_model = "Opposition"; razem_in_government = 0; razem_government_role = "Opposition"; razem_budget_support_pact = 0; democratic_pact = "No Left confidence votes"; razem_dissent -= 4; barons_dissent += 12; ko_relation -= 15; p2050_relation -= 10; psl_relation -= 8; party_unity -= 4; news_headline = "The democratic nominee loses the Left before the vote"
 go-to: democratic_psl_mandate
 
 @democratic_psl_mandate
@@ -1323,13 +1609,13 @@ title: Sign rural delivery and a cabinet dispute protocol
 subtitle: Cost: 1 party resource. Full PSL delegation, but annual budgets get their own veto stage.
 choose-if: resources >= 1 and psl_relation >= 25
 unavailable-subtitle: Requires one resource and a PSL relationship of at least 25.
-on-arrival: resources -= 1; candidate_psl_votes = candidate_psl_cap; psl_relation += 7; third_way_cohesion += 5; psl_coalition_dissent -= 5; coalition_dispute_protocol = 1; news_headline = "PSL signs after securing a separate dispute procedure"
+on-arrival: resources -= 1; candidate_psl_votes = candidate_psl_cap; formation_psl_cabinet_committed = 1; psl_relation += 7; third_way_cohesion += 5; psl_coalition_dissent -= 5; coalition_dispute_protocol = 1; news_headline = "PSL signs after securing a separate dispute procedure"
 go-to: democratic_candidate_roll
 
 @psl_conscience_clause
 title: Accept a conscience clause on cultural bills
 subtitle: Most or all PSL votes return; progressive trust pays the price.
-on-arrival: candidate_psl_votes = candidate_psl_cap; psl_relation += 5; psl_coalition_dissent -= 3; progressive_credibility -= 4; feminist_trust -= 5; razem_dissent += 5; coalition_conscience_clause = 1; news_headline = "A conscience clause keeps PSL at the table"
+on-arrival: candidate_psl_votes = candidate_psl_cap; formation_psl_cabinet_committed = 1; psl_relation += 5; psl_coalition_dissent -= 3; progressive_credibility -= 4; feminist_trust -= 5; razem_dissent += 5; coalition_conscience_clause = 1; news_headline = "A conscience clause keeps PSL at the table"
 go-to: democratic_candidate_roll
 
 @psl_free_vote
@@ -1337,6 +1623,7 @@ title: Let PSL whip only its core and regional majority
 subtitle: Eight of its possible votes withhold support.
 on-arrival: {!
 Q.candidate_psl_votes = Math.max(0, Q.candidate_psl_cap - 8);
+Q.formation_psl_cabinet_committed = 1;
 Q.psl_relation += 1;
 Q.third_way_cohesion -= 4;
 Q.psl_coalition_dissent += 6;
@@ -1349,6 +1636,7 @@ title: Tell PSL that the other democratic parties will govern around it
 subtitle: It is a bluff: without PSL, the democratic parties hold [+ coalition_democratic_seats - psl_seats +] seats.
 on-arrival: {!
 Q.candidate_psl_votes = Math.max(0, Q.candidate_psl_cap - 14);
+Q.formation_psl_cabinet_committed = 0;
 Q.psl_relation -= 12;
 Q.psl_coalition_dissent += 14;
 Q.public_trust -= 3;
@@ -1623,17 +1911,44 @@ if (Q.democratic_candidate == "Donald Tusk") {
     Q.government_party = "other";
     Q.government_owner = Q.democratic_candidate + " parliamentary cabinet";
 }
-Q.coalition_status = "KO · Poland 2050 · PSL · negotiated Left support";
 Q.left_in_government = Q.left_cabinet_committed ? 1 : 0;
+const cabinetPartyLabels = [];
+if (Q.ministry_ko_in_cabinet) cabinetPartyLabels.push("KO");
+if (Q.ministry_p2050_in_cabinet) cabinetPartyLabels.push("Poland 2050");
+if (Q.ministry_psl_in_cabinet) cabinetPartyLabels.push("PSL");
+if (Q.left_in_government) cabinetPartyLabels.push("Lewica");
+Q.coalition_status = cabinetPartyLabels.join(" · ") + " cabinet";
 Q.coalition_seats = Math.min(
     Number(Q.sejm_total) || 460,
-    Math.max(0, Number(Q.ko_seats) || 0) +
-    Math.max(0, Number(Q.p2050_seats) || 0) +
-    Math.max(0, Number(Q.psl_seats) || 0) +
+    (Q.ministry_ko_in_cabinet
+        ? Math.max(0, Number(Q.ko_seats) || 0)
+        : 0) +
+    (Q.ministry_p2050_in_cabinet
+        ? Math.max(0, Number(Q.p2050_seats) || 0)
+        : 0) +
+    (Q.ministry_psl_in_cabinet
+        ? Math.max(0, Number(Q.psl_seats) || 0)
+        : 0) +
     (Q.left_in_government
-        ? Math.max(0, Number(Q.left_seats) || 0)
+        ? Math.max(0, Number(Q.ministry_left_cabinet_seats) || 0)
         : 0)
 );
+const nonLeftCabinetSeats = Math.max(
+    0,
+    Q.coalition_seats -
+        (Q.left_in_government
+            ? Math.max(0, Number(Q.ministry_left_cabinet_seats) || 0)
+            : 0)
+);
+Q.government_support_seats = Math.max(
+    nonLeftCabinetSeats,
+    Math.max(
+        0,
+        (Number(Q.democratic_votes) || 0) -
+            (Number(Q.candidate_left_votes) || 0)
+    )
+);
+Q.cabinet_roster_government_party = Q.government_party;
 if (Q.left_in_government) {
     Q.position = "Coalition government";
     Q.budget = 6;
@@ -1974,6 +2289,23 @@ if (Q.formation_continuous) {
 }
 Q.public_trust -= 6;
 Q.early_election_risk = 100;
+Q.snap_election_trigger =
+    "Mandatory dissolution after failed Article 155 third attempt";
+if (Q.formation_continuous) {
+    const electionReturnYear = 2023;
+    const electionReturnMonth = 12;
+    const electionSkippedMonths = Math.max(
+        0,
+        (electionReturnYear - (Number(Q.year) || electionReturnYear)) * 12 +
+            electionReturnMonth -
+            (Number(Q.month) || electionReturnMonth)
+    );
+    Q.time = Math.max(0, Number(Q.time) || 0) + electionSkippedMonths;
+    Q.year = electionReturnYear;
+    Q.month = electionReturnMonth;
+    Q.month_name = "December";
+    Q.date_label = "December 2023";
+}
 !}
 
 = No fourth attempt
@@ -1983,7 +2315,10 @@ of the Sejm and order an election. This is not a discretionary threat and not a
 presidential cabinet system: there is simply no government with parliamentary
 confidence.
 
-- @formation_exit: Enter the campaign
+- @early_election_campaign: Enter the mandatory election campaign
+
+@early_election_campaign
+go-to: poland_events_2026.snap_campaign_launch if formation_continuous = 1; formation_exit if formation_continuous = 0
 
 @governing_agreement
 title: Write rules for an impossible coalition
@@ -2454,7 +2789,7 @@ subtitle: Spend 2 governing capacity. Stability now, a larger conservative veto 
 view-if: left_in_government = 1
 choose-if: left_in_government = 1 and budget >= 2
 unavailable-subtitle: Requires two remaining governing-capacity points.
-on-arrival: budget -= 2; coalition_break_threat = 0; coalition_broken = 0; psl_coalition_dissent -= 15; psl_relation += 8; progressive_credibility -= 5; feminist_trust -= 5; razem_dissent += 7; coalition_status = "Four-party coalition with PSL annex"; ending_name = "The coalition survives its first budget"; ending_score += 15; news_headline = "PSL stays after winning a new coalition annex"
+on-arrival: budget -= 2; coalition_break_threat = 0; coalition_broken = 0; ministry_psl_in_cabinet = 1; psl_coalition_dissent -= 15; psl_relation += 8; progressive_credibility -= 5; feminist_trust -= 5; razem_dissent += 7; coalition_status = "Four-party coalition with PSL annex"; ending_name = "The coalition survives its first budget"; ending_score += 15; news_headline = "PSL stays after winning a new coalition annex"
 go-to: campaign_return if formation_continuous = 1; assessment if formation_continuous = 0
 
 @coalition_minority
@@ -2464,6 +2799,7 @@ view-if: left_in_government = 1
 on-arrival: {!
 Q.coalition_broken = 1;
 Q.coalition_break_threat = 0;
+Q.ministry_psl_in_cabinet = 0;
 Q.psl_coalition_dissent = 100;
 Q.coalition_seats =
     Q.ko_seats + Q.p2050_seats +
@@ -2521,6 +2857,7 @@ Q.article160_psl_abstain = 0;
 Q.article160_left_yes = Q.left_committed_seats;
 Q.article160_left_no = 0;
 Q.coalition_broken = 0;
+Q.ministry_psl_in_cabinet = 1;
 const restoredPSLPortfolios = {
     economy: ["PSL", "Krzysztof Hetman"],
     agriculture: ["PSL", "Czesław Siekierski"],
@@ -2553,6 +2890,7 @@ Q.article160_psl_abstain = Q.psl_seats;
 Q.article160_left_yes = Q.left_committed_seats;
 Q.article160_left_no = 0;
 Q.coalition_broken = 1;
+Q.ministry_psl_in_cabinet = 0;
 Q.coalition_seats =
     Q.ko_seats + Q.p2050_seats +
     Q.left_seats;
@@ -2584,6 +2922,7 @@ Q.article160_psl_abstain = 0;
 Q.article160_left_yes = Q.left_committed_seats;
 Q.article160_left_no = 0;
 Q.coalition_broken = 1;
+Q.ministry_psl_in_cabinet = 0;
 Q.coalition_seats =
     Q.ko_seats + Q.p2050_seats +
     Q.left_seats;
@@ -2955,6 +3294,18 @@ if (Q.constructive_passed) {
                 ? Math.max(0, Number(Q.left_seats) || 0)
                 : 0)
         );
+    const constructiveYes = Math.max(
+        0,
+        Math.round(Number(Q.constructive_yes) || 0)
+    );
+    const constructiveLeftVotes = Q.constructive_democratic
+        ? Math.min(
+            constructiveYes,
+            Math.max(0, Math.round(Number(Q.left_committed_seats) || 0))
+        )
+        : 0;
+    Q.government_support_seats =
+        constructiveYes - constructiveLeftVotes;
     Q.news_headline =
         Q.constructive_candidate + " replaces the prime minister immediately";
 } else {
@@ -2998,6 +3349,15 @@ title: Return to the monthly campaign
 new-page: true
 view-if: formation_continuous = 1
 on-arrival: {!
+const returnYear = 2023;
+const returnMonth = 12;
+const currentYear = Number(Q.year) || returnYear;
+const currentMonth = Number(Q.month) || returnMonth;
+const skippedMonths = Math.max(
+    0,
+    (returnYear - currentYear) * 12 + returnMonth - currentMonth
+);
+Q.time = Math.max(0, Number(Q.time) || 0) + skippedMonths;
 Q.formation_in_progress = 0;
 Q.formation_return_ready = 1;
 Q.formation_requested = 0;
@@ -3005,8 +3365,8 @@ Q.formation_complete = 1;
 Q.election_2023_certified = 1;
 Q.post_formation_return_pending = 0;
 Q.prototype_complete = 0;
-Q.year = 2023;
-Q.month = 12;
+Q.year = returnYear;
+Q.month = returnMonth;
 Q.month_name = "December";
 Q.date_label = "December 2023";
 if (!Q.left_in_government) {

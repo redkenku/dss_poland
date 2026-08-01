@@ -245,7 +245,8 @@ for (const bloc of electorateBlocs) {
     }
 }
 
-if (Q.p2050_emerged && !Q.p2050_ai_active) {
+const p2050Independent = Q.p2050_emerged && !Q.p2050_joined_left;
+if (p2050Independent && !Q.p2050_ai_active) {
     Q.p2050_ai_active = 1;
     Q.p2050_org_resources = Math.max(Q.p2050_org_resources, 6);
     Q.p2050_org_income = Math.max(Q.p2050_org_income, 4);
@@ -262,6 +263,13 @@ if (Q.p2050_emerged && !Q.p2050_ai_active) {
         Q.rival_relation_psl_p2050,
         isFormationEra ? 82 : 56
     );
+    /* The opening calibration hides a party that does not yet exist.  Once
+     * Poland 2050 launches, keeping that offset would erase its electorate
+     * and leave PiS with the displaced votes indefinitely. */
+    if (!Q.p2050_poll_launch_applied) {
+        Q.poll_calibration_p2050 = 0;
+        Q.p2050_poll_launch_applied = 1;
+    }
 }
 
 const incomeYear = finiteAI(Q.rival_income_last_year, Q.year);
@@ -518,7 +526,7 @@ shiftWingAI("psl_conservative_share", pslConservativeDelta);
 shiftWingAI("psl_agrarian_pragmatist_share", pslPragmatistDelta);
 shiftWingAI("psl_coalition_manager_share", pslManagerDelta);
 
-if (Q.p2050_emerged) {
+if (p2050Independent) {
     const p2050StateDelta = clampAI(
         -Q.party_system_pendulum * 0.012 +
             (Q.institutional_issue_salience >= 55 ? 0.15 : 0),
@@ -716,7 +724,7 @@ Q.konf_right_score = moveTowardAI(
     konfRightTarget,
     1.2
 );
-if (Q.p2050_emerged) {
+if (p2050Independent) {
     Q.p2050_right_score = moveTowardAI(
         Q.p2050_right_score,
         p2050RightTarget,
@@ -890,7 +898,7 @@ Q.konf_cultural_position = moveTowardAI(
     konfCulturalTarget,
     2.4
 );
-if (Q.p2050_emerged) {
+if (p2050Independent) {
     Q.p2050_economic_position = moveTowardAI(
         Q.p2050_economic_position,
         p2050EconomicTarget,
@@ -1116,7 +1124,7 @@ if (randomAI() <= actChance("ko")) {
                     Q.ko_cultural_position + 0.8
                 );
                 adjustRelationAI("ko", "psl", 0.8);
-                if (Q.p2050_emerged) {
+                if (p2050Independent) {
                     adjustRelationAI("ko", "p2050", 0.5);
                 }
             }
@@ -1133,7 +1141,7 @@ if (randomAI() <= actChance("ko")) {
                 shiftBlocAI("liberal_professionals", "ko", 1.2);
                 shiftBlocAI("public_service_families", "ko", 0.6);
                 adjustRelationAI("ko", "psl", 1);
-                if (Q.p2050_emerged) {
+                if (p2050Independent) {
                     adjustRelationAI("ko", "p2050", 1);
                 }
                 adjustRelationAI("pis", "ko", -1);
@@ -1224,7 +1232,7 @@ if (randomAI() <= actChance("psl")) {
                 shiftBlocAI("rural_localists", "psl", 1.2);
                 shiftBlocAI("provincial_welfare", "psl", 0.8);
                 adjustRelationAI("ko", "psl", 0.5);
-                if (Q.p2050_emerged) {
+                if (p2050Independent) {
                     adjustRelationAI("psl", "p2050", 0.6);
                 }
             }
@@ -1253,7 +1261,7 @@ if (randomAI() <= actChance("konf")) {
                 adjustRelationAI("pis", "konf", -1.2);
                 adjustRelationAI("ko", "konf", -0.8);
                 adjustRelationAI("psl", "konf", -0.8);
-                if (Q.p2050_emerged) {
+                if (p2050Independent) {
                     adjustRelationAI("konf", "p2050", -0.8);
                 }
             }
@@ -1301,7 +1309,7 @@ if (randomAI() <= actChance("konf")) {
         "Konfederacja lets its factions compete without national spending";
 }
 
-if (Q.p2050_emerged) {
+if (p2050Independent) {
     if (randomAI() <= actChance("p2050")) {
         if (Q.institutional_issue_salience >= 48) {
             takeActionAI(
@@ -1372,9 +1380,15 @@ const successorParties = [
     },
     {
         id: "rozwoj",
-        active: !!Q.rozwoj_party_formed,
+        active: !!Q.rozwoj_party_formed && !Q.rozwoj_joined_left,
         parent: "pis",
         label: "Rozwój"
+    },
+    {
+        id: "tak_rozwoj",
+        active: !!Q.tak_dla_rozwoju_party_formed,
+        parent: Q.razem_party_formed ? "razem" : "left",
+        label: "Tak! Dla Rozwoju"
     },
     {
         id: "korona",

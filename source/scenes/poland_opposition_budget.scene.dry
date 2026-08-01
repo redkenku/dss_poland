@@ -94,7 +94,10 @@ const leftSeats = Math.max(
     0,
     Math.min(chamberTotal, Math.round(Number(Q.left_seats) || 0))
 );
-let governmentSeats = Math.round(Number(Q.coalition_seats) || 0);
+let governmentSeats = Math.round(
+    Number(Q.government_support_seats) ||
+    Number(Q.coalition_seats) || 0
+);
 const storedGovernmentPreview =
     Math.round(Number(Q.annual_budget_preview_government_yes) || 0) +
     Math.round(Number(Q.annual_budget_preview_government_abstain) || 0);
@@ -113,6 +116,10 @@ if (governmentSeats <= 0) {
         governmentSeats = Math.round(Number(Q.psl_seats) || 0);
     } else if (Q.government_party == "p2050") {
         governmentSeats = Math.round(Number(Q.p2050_seats) || 0);
+    } else {
+        governmentSeats = Math.round(
+            Number(Q.government_support_seats) || 0
+        );
     }
 }
 governmentSeats = Math.max(
@@ -125,13 +132,92 @@ Q.opposition_budget_other_opposition_seats = Math.max(
     0,
     chamberTotal - governmentSeats - leftSeats
 );
+let previewExternalYes = 0;
+let previewExternalAbstain = 0;
+const governmentAgreementYes = Q.government_party == "pis"
+    ? Math.min(
+        Q.opposition_budget_other_opposition_seats,
+        oppositionYear >= 2022 ? 3 : 5
+    )
+    : 0;
+const governmentAgreementAbstain = Q.government_party == "pis"
+    ? Math.min(
+        Math.max(
+            0,
+            Q.opposition_budget_other_opposition_seats -
+                governmentAgreementYes
+        ),
+        2
+    )
+    : 0;
+previewExternalYes += governmentAgreementYes;
+previewExternalAbstain += governmentAgreementAbstain;
+Q.opposition_budget_government_agreement_yes = governmentAgreementYes;
+Q.opposition_budget_government_agreement_abstain =
+    governmentAgreementAbstain;
+if (
+    Q.government_party != "pis" &&
+    (Number(Q.centrum_relation) || 0) >= 55 &&
+    (Number(Q.rival_relation_ko_p2050) || 0) >= 50
+) {
+    previewExternalYes += Math.max(0, Number(Q.centrum_seats) || 0);
+}
+const previewAlignedSplinters = Math.min(
+    Q.opposition_budget_other_opposition_seats,
+    Math.max(0, Math.round(Number(Q.left_splinter_support_votes) || 0))
+);
+previewExternalYes = Math.min(
+    Q.opposition_budget_other_opposition_seats - previewAlignedSplinters,
+    Math.max(0, Math.round(previewExternalYes))
+);
+previewExternalAbstain = Math.min(
+    Q.opposition_budget_other_opposition_seats -
+        previewAlignedSplinters - previewExternalYes,
+    Math.max(0, Math.round(previewExternalAbstain))
+);
+Q.opposition_budget_preview_aligned_splinters = previewAlignedSplinters;
+Q.opposition_budget_preview_external_yes = previewExternalYes;
+Q.opposition_budget_preview_external_abstain = previewExternalAbstain;
+Q.opposition_budget_preview_external_no = Math.max(
+    0,
+    Q.opposition_budget_other_opposition_seats -
+        previewExternalYes - previewExternalAbstain
+);
 Q.opposition_budget_government_margin = governmentSeats -
-    Q.opposition_budget_other_opposition_seats;
+    Q.opposition_budget_preview_external_no;
 Q.opposition_budget_left_is_pivotal =
-    governmentSeats <= Q.opposition_budget_other_opposition_seats ? 1 : 0;
+    governmentSeats + previewExternalYes <=
+        Q.opposition_budget_preview_external_no + leftSeats &&
+    governmentSeats + previewExternalYes + previewAlignedSplinters +
+        leftSeats >
+        Q.opposition_budget_preview_external_no - previewAlignedSplinters
+        ? 1 : 0;
 Q.opposition_budget_legal_influence = oppositionYear <= 2020
     ? "Sejm amendments, a recorded vote and Senate amendments; no executive spending authority"
     : "Sejm amendments, bargaining and a recorded vote; no executive spending authority";
+if (
+    !Number.isFinite(Number(Q.budget_submission_time)) ||
+    Number(Q.budget_submission_year) != oppositionYear
+) {
+    // This scene is the December vote.  The constitutional clock starts with
+    // the government's normal end-of-September submission, not tonight.
+    Q.budget_submission_time = Math.max(0, (Number(Q.time) || 0) - 3);
+    Q.budget_submission_year = oppositionYear;
+    Q.budget_submission_month = 9;
+    Q.budget_deadline_time = Q.budget_submission_time + 4;
+    const deadlineIndex =
+        oppositionYear * 12 + Q.budget_submission_month - 1 + 4;
+    Q.budget_deadline_year = Math.floor(deadlineIndex / 12);
+    Q.budget_deadline_month = deadlineIndex % 12 + 1;
+    const deadlineMonths = [
+        "January", "February", "March", "April", "May", "June",
+        "July", "August", "September", "October", "November", "December"
+    ];
+    Q.budget_deadline_label =
+        deadlineMonths[Q.budget_deadline_month - 1] + " " +
+        Q.budget_deadline_year;
+}
+Q.budget_deadline_active = 1;
 !}
 go-to: audit if opposition_budget_audit_pending = 1 and opposition_budget_audit_year < annual_budget_year; read_draft if opposition_budget_audit_pending = 0 or opposition_budget_audit_year >= annual_budget_year
 
@@ -491,47 +577,86 @@ title: The conference instruction
 new-page: true
 on-arrival: {!
 const leftDelegation = Math.max(0, Math.round(Number(Q.left_seats) || 0));
-if (Q.opposition_budget_conference_code == 1) {
-    Q.opposition_budget_rebel_count = Q.party_unity < 28 ? 1 : 0;
-} else if (Q.opposition_budget_conference_code == 2) {
-    Q.opposition_budget_rebel_count = leftDelegation > 0 ? 1 : 0;
-} else if (Q.opposition_budget_conference_code == 3) {
-    Q.opposition_budget_rebel_count = Math.min(
-        3,
-        Math.max(1, Math.round(leftDelegation * 0.08))
-    );
-} else {
-    Q.opposition_budget_rebel_count =
-        (Number(Q.razem_dissent) || 0) >= 55 ? 1 : 0;
-}
-Q.opposition_budget_rebel_count = Math.min(
-    leftDelegation,
-    Q.opposition_budget_rebel_count
-);
+const selectedPriorities = [
+    Number(Q.opposition_budget_priority_1_code) || 0,
+    Number(Q.opposition_budget_priority_2_code) || 0
+];
+const budgetFactions = [
+    {id: "barons", seats: "left_barons_seats", name: Q.barons_name,
+        representative: "Tomasz Trela", priorities: [2, 5, 9, 11, 14]},
+    {id: "spring", seats: "left_spring_seats", name: Q.spring_name,
+        representative: "Krzysztof Śmiszek", priorities: [4, 7, 10, 15]},
+    {id: "labor", seats: "left_labor_seats", name: Q.labor_name,
+        representative: "Agnieszka Dziemianowicz-Bąk",
+        priorities: [1, 2, 7, 12, 13, 14]},
+    {id: "progressives", seats: "left_progressives_seats",
+        name: Q.progressives_name, representative: "Katarzyna Kotula",
+        priorities: [3, 4, 8, 10, 15]},
+    {id: "razem", seats: "razem_seats", name: "Razem",
+        representative: "Adrian Zandberg", priorities: [1, 2, 3, 12, 13]},
+    {id: "pps", seats: "left_pps_seats", name: "PPS",
+        representative: "Joanna Senyszyn", priorities: [1, 2, 5, 7, 11, 14]}
+];
+const activeBudgetFactions = budgetFactions.filter(function(faction) {
+    return Q[faction.id + "_active"] && Q[faction.id + "_in_left"];
+});
+const strengthTotal = activeBudgetFactions.reduce(function(total, faction) {
+    return total + Math.max(0, Number(Q[faction.id + "_strength"]) || 0);
+}, 0);
+let calculatedRebels = 0;
 const rebelNames = [];
-if (Q.opposition_budget_rebel_count > 0 && Q.razem_active) {
-    rebelNames.push("Adrian Zandberg");
+const mismatchNames = [];
+for (const faction of activeBudgetFactions) {
+    const represented = selectedPriorities.some(function(priority) {
+        return faction.priorities.includes(priority);
+    });
+    const dissent = Math.max(0, Number(Q[faction.id + "_dissent"]) || 0);
+    let factionSeats = Math.max(0, Math.round(Number(Q[faction.seats]) || 0));
+    if (factionSeats <= 0 && strengthTotal > 0) {
+        factionSeats = Math.round(
+            leftDelegation *
+            Math.max(0, Number(Q[faction.id + "_strength"]) || 0) /
+            strengthTotal
+        );
+    }
+    let rebelRate = represented ? 0 : 0.08;
+    if (Q.opposition_budget_conference_code == 2) rebelRate += 0.08;
+    if (Q.opposition_budget_conference_code == 3) rebelRate +=
+        represented ? 0.10 : 0.28;
+    if (Q.opposition_budget_conference_code == 4 && !represented) {
+        rebelRate += 0.12;
+    }
+    rebelRate += Math.max(0, dissent - 50) / 220;
+    if (Q.opposition_budget_conference_code == 1) rebelRate *= 0.45;
+    const factionRebels = Math.min(
+        factionSeats,
+        Math.max(0, Math.round(factionSeats * rebelRate))
+    );
+    if (!represented) mismatchNames.push(faction.name);
+    if (factionRebels > 0) {
+        rebelNames.push(faction.representative);
+        if (factionRebels > 1) {
+            rebelNames.push(
+                (factionRebels - 1) + " other " + faction.name + " MPs"
+            );
+        }
+        calculatedRebels += factionRebels;
+    }
 }
-if (Q.opposition_budget_rebel_count > 1 && Q.razem_active) {
-    rebelNames.push("Marcelina Zawisza");
-}
-if (Q.opposition_budget_rebel_count > rebelNames.length && Q.pps_active) {
-    rebelNames.push("Joanna Senyszyn");
-}
-if (Q.opposition_budget_rebel_count > rebelNames.length && Q.spring_active) {
-    rebelNames.push("Krzysztof Śmiszek");
-}
-if (Q.opposition_budget_rebel_count > rebelNames.length) {
-    rebelNames.push("Tomasz Trela");
-}
+Q.opposition_budget_rebel_count = Math.min(leftDelegation, calculatedRebels);
+Q.opposition_budget_priority_mismatch = mismatchNames.length
+    ? mismatchNames.join(", ") + " lack a preferred priority"
+    : "Every active current sees one preferred priority";
 Q.opposition_budget_named_rebels = rebelNames.length
-    ? rebelNames.slice(0, Q.opposition_budget_rebel_count).join(", ")
+    ? rebelNames.join(", ")
     : "None";
 !}
 
 **[+ opposition_budget_conference_management +]** becomes the club rule.
 Reserved dissenters: **[+ opposition_budget_rebel_count +]**. Named deputies:
 **[+ opposition_budget_named_rebels +]**.
+
+Priority fit: **[+ opposition_budget_priority_mismatch +]**.
 
 These are possible deviations from the line, not a fictional internal vote.
 Their actual yes, no or abstention will appear in the Sejm roll call.
@@ -565,7 +690,7 @@ go-to: resolve
 
 @tactic_amendments
 title: Submit two named amendments and vote on the government's answer
-subtitle: Cost: 1 party resource. Each amendment gets its own recorded result.
+subtitle: Cost: 1 party resource. Each amendment gets a separate cabinet answer before the recorded budget vote.
 choose-if: resources >= 1
 unavailable-subtitle: Drafting and whipping two amendments requires one party resource.
 on-arrival: resources -= 1; opposition_budget_tactic_code = 2; opposition_budget_tactic = "Two named Sejm amendments"; annual_budget_posture = "Vote no after amendments"
@@ -592,7 +717,7 @@ on-arrival: opposition_budget_tactic_code = 5; opposition_budget_tactic = "Strai
 go-to: resolve
 
 @resolve
-title: Result — Amendments and the real Sejm vote
+title: Result — Cabinet answers and the real Sejm budget vote
 new-page: true
 call: poland_normalize
 on-arrival: {!
@@ -650,14 +775,14 @@ Q.opposition_budget_amendments_passed =
     Number(Q.opposition_budget_amendment_1_passed) +
     Number(Q.opposition_budget_amendment_2_passed);
 if (!Q.opposition_budget_amendment_1_passed) {
-    Q.opposition_budget_amendment_1 += " — rejected";
+    Q.opposition_budget_amendment_1 += " — cabinet refused";
 } else {
-    Q.opposition_budget_amendment_1 += " — adopted into the bill";
+    Q.opposition_budget_amendment_1 += " — cabinet accepted into the bill";
 }
 if (!Q.opposition_budget_amendment_2_passed) {
-    Q.opposition_budget_amendment_2 += " — rejected";
+    Q.opposition_budget_amendment_2 += " — cabinet refused";
 } else {
-    Q.opposition_budget_amendment_2 += " — adopted into the bill";
+    Q.opposition_budget_amendment_2 += " — cabinet accepted into the bill";
 }
 if (Q.opposition_budget_tactic_code != 2 &&
     Q.opposition_budget_tactic_code != 3) {
@@ -702,12 +827,61 @@ if (Q.annual_budget_posture == "Conditional support") {
     Q.annual_budget_left_no = leftSeats - rebels;
     Q.annual_budget_left_abstain = rebels;
 }
+let externalYes = Math.max(
+    0,
+    Number(Q.opposition_budget_preview_external_yes) || 0
+);
+let externalAbstain = Math.max(
+    0,
+    Number(Q.opposition_budget_preview_external_abstain) || 0
+);
+const alignedLeftSplinters = Math.min(
+    Q.opposition_budget_other_opposition_seats,
+    Math.max(
+        0,
+        Math.round(
+            Number(Q.opposition_budget_preview_aligned_splinters) || 0
+        )
+    )
+);
+if (Q.annual_budget_posture == "Conditional support") {
+    externalYes += alignedLeftSplinters;
+} else if (
+    Q.annual_budget_posture == "Abstain" ||
+    Q.annual_budget_posture == "Abstain on named concession"
+) {
+    externalAbstain += alignedLeftSplinters;
+}
+externalYes = Math.min(
+    Q.opposition_budget_other_opposition_seats,
+    externalYes
+);
+externalAbstain = Math.min(
+    Q.opposition_budget_other_opposition_seats - externalYes,
+    externalAbstain
+);
+Q.annual_budget_external_yes = externalYes;
+Q.annual_budget_external_abstain = externalAbstain;
+Q.annual_budget_external_no = Math.max(
+    0,
+    Q.opposition_budget_other_opposition_seats -
+        externalYes - externalAbstain
+);
+Q.opposition_budget_external_support_basis = externalYes > 0
+    ? (Q.opposition_budget_government_agreement_yes > 0
+        ? "Kukiz-aligned agreement votes plus any named splinter or supply pact"
+        : "Named splinters and an explicit supply pact")
+    : (externalAbstain > 0
+        ? "Recorded absences and abstentions outside Lewica"
+        : "No support outside the cabinet and Lewica");
 Q.annual_budget_yes =
-    Q.annual_budget_government_yes + Q.annual_budget_left_yes;
+    Q.annual_budget_government_yes + Q.annual_budget_left_yes +
+        Q.annual_budget_external_yes;
 Q.annual_budget_no =
-    Q.opposition_budget_other_opposition_seats + Q.annual_budget_left_no;
+    Q.annual_budget_external_no + Q.annual_budget_left_no;
 Q.annual_budget_abstain =
-    Q.annual_budget_government_abstain + Q.annual_budget_left_abstain;
+    Q.annual_budget_government_abstain + Q.annual_budget_left_abstain +
+        Q.annual_budget_external_abstain;
 Q.annual_budget_present =
     Q.annual_budget_yes + Q.annual_budget_no + Q.annual_budget_abstain;
 Q.annual_budget_threshold = Q.annual_budget_no + 1;
@@ -740,8 +914,7 @@ Q.annual_budget_result = Q.annual_budget_passed
 Q["annual_budget_done_" + Q.annual_budget_year] = 1;
 Q["annual_budget_passed_" + Q.annual_budget_year] =
     Q.annual_budget_passed;
-Q.budget_deadline_active =
-    Q.annual_budget_year >= 2023 && !Q.annual_budget_passed ? 1 : 0;
+Q.budget_deadline_active = Q.annual_budget_passed ? 0 : 1;
 
 if (Q.opposition_budget_tactic_code == 1) {
     Q.opposition_budget_issue_ownership += 5;
@@ -816,10 +989,12 @@ Q.news_headline = Q.annual_budget_passed
 <div class="ledger-row"><span>Lewica line</span><b>[+ annual_budget_posture +]</b></div>
 <div class="ledger-row"><span>Named rebels</span><b>[+ opposition_budget_named_rebels +]</b></div>
 <div class="ledger-row"><span>Lewica split</span><b>[+ annual_budget_left_yes +] yes · [+ annual_budget_left_no +] no · [+ annual_budget_left_abstain +] abstain</b></div>
+<div class="ledger-row"><span>Other clubs</span><b>[+ annual_budget_external_yes +] yes · [+ annual_budget_external_no +] no · [+ annual_budget_external_abstain +] abstain</b></div>
+<div class="ledger-subrow">[+ opposition_budget_external_support_basis +].</div>
 <div class="ledger-row"><span>Whole chamber</span><b>[+ annual_budget_yes +] yes · [+ annual_budget_no +] no · [+ annual_budget_abstain +] abstain</b></div>
 <div class="ledger-row"><span>Required</span><b>[+ annual_budget_threshold +] yes</b></div></div>
 
-<div class="ledger-section"><div class="ledger-title">What actually passed</div>
+<div class="ledger-section"><div class="ledger-title">What the cabinet accepted before the vote</div>
 <div class="ledger-row"><span>Government acceptance score</span><b>[+ opposition_budget_negotiation_score +] / [+ opposition_budget_negotiation_threshold +]</b></div>
 <div class="ledger-row"><span>Priority one</span><b>[+ opposition_budget_amendment_1 +]</b></div>
 <div class="ledger-row"><span>Priority two</span><b>[+ opposition_budget_amendment_2 +]</b></div>
@@ -836,10 +1011,13 @@ improves today.?]
 Amendments attached to a defeated bill are not enacted and will score no
 capacity at audit.?]
 
-[? if annual_budget_year <= 2020: The budget now enters the retained Senate
+[? if annual_budget_year <= 2020 and annual_budget_passed: The budget now enters the retained Senate
 stage. The upper chamber may propose amendments but may not reject the budget.?]
+[? if annual_budget_year <= 2022 and not annual_budget_passed: A rejected bill
+does not enter the Senate. The cabinet keeps office, may revise the bill and
+remains subject to the recorded four-month Article 225 clock.?]
 
 - @complete: Record the vote
 
 @complete
-go-to: poland_senate.budget_2019 if annual_budget_year = 2019; poland_senate.budget_2020 if annual_budget_year = 2020; poland_events_2021_2023.december_2021_hub if annual_budget_year = 2021; poland_hub if annual_budget_year = 2022; poland_budget_2023_2026.opposition_budget_failed if annual_budget_year >= 2023 and annual_budget_passed = 0; poland_budget_2023_2026.return_queue if annual_budget_year >= 2023 and annual_budget_passed = 1
+go-to: poland_budget_2023_2026.opposition_budget_failed if annual_budget_passed = 0; poland_senate.budget_2019 if annual_budget_year = 2019 and annual_budget_passed = 1; poland_senate.budget_2020 if annual_budget_year = 2020 and annual_budget_passed = 1; poland_senate.budget_2021_2022 if annual_budget_year >= 2021 and annual_budget_passed = 1

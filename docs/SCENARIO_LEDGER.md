@@ -377,11 +377,17 @@ apparatus, former Sovereign Poland figures and President Nawrocki.
 ## Konfederacja, KKP and the radical-right market
 
 Braun's January 2025 presidential challenge and exclusion from Konfederacja are
-historical. So are his legal cases. On 14 July 2026 prosecutors asked the
+historical. So are the distinct legal files now connected by the playable
+chain: the December 2023 menorah attack; the April 2025 Oleśnica hospital
+confrontation; the July 2025 seven-count indictment for earlier alleged acts;
+and the separate Oleśnica investigation. On 14 July 2026 prosecutors asked the
 European Parliament for consent to detain and forcibly bring him to questioning
-after five missed appearances. That is not the same as an order for pre-trial
-imprisonment.
+in the latter case after five missed appearances. That is not the same as an
+order for pre-trial imprisonment, and the separate files must not be collapsed
+into one catch-all prosecution.
 ([PAP on the split](https://www.pap.pl/aktualnosci/grzegorz-braun-zostanie-usuniety-z-konfederacji-bosak-za-bledy-polityczne-ponosi-sie);
+[PAP on Oleśnica](https://www.pap.pl/en/news/far-right-presidential-runner-faces-prosecution-over-attack-doctor);
+[National Prosecutor's Office on the indictment](https://www.gov.pl/web/po-warszawa/akt-oskarzenia-przeciwko-grzegorzowi-braunowi);
 [PAP on the detention request](https://www.pap.pl/aktualnosci/rzeczniczka-pg-jest-wniosek-do-pe-o-zgode-na-zatrzymanie-europosla-grzegorza-brauna-1))
 
 | ID | Label | Trigger and branches | Follow-ups |

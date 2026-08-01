@@ -117,7 +117,7 @@ President's powers after Duda's term expires. ?]
 @begin_cohabitation
 title: Enter cohabitation
 view-if: trz_inaugurated = 1
-go-to: poland_hub
+go-to: certification_continue
 
 @force_oath
 title: Force a new sitting through the courts and Senate
@@ -126,21 +126,128 @@ view-if: trz_inaugurated = 0
 choose-if: resources >= 2
 unavailable-subtitle: The exhausted opposition cannot finance the legal and parliamentary operation.
 on-arrival: resources -= 2; trz_inaugurated = 1; trz_blocked = 0; president_name = "Rafał Trzaskowski"; pres_2020_phase = "Cohabitation"; trz_inauguration_status = "Sworn in after constitutional standoff"; trz_cohabitation_temperature += 24; trz_right_fragmentation += 10; trz_right_backlash += 8; judicial_legitimacy += 5; ko_relation += 5; pis_relation -= 8; rival_relation_pis_ko -= 8; news_headline = "A second joint sitting ends the interregnum"
-go-to: poland_hub
+go-to: certification_continue
 
 @mobilised_oath
 title: Break the delay with a permanent civic assembly
 subtitle: The oath succeeds amid protests; the radical right leaves with a founding myth.
 view-if: trz_inaugurated = 0
 on-arrival: trz_inaugurated = 1; trz_blocked = 0; president_name = "Rafał Trzaskowski"; pres_2020_phase = "Cohabitation"; trz_inauguration_status = "Sworn in during civic mobilisation"; trz_cohabitation_temperature += 28; trz_right_fragmentation += 7; trz_right_backlash += 15; turnout_readiness += 5; far_right_agenda += 7; konf_poll_momentum += 0.7; pis_poll_momentum += 0.25; minority_safety -= 3; news_headline = "Continuous demonstrations force the National Assembly to meet"
-go-to: poland_hub
+go-to: certification_continue
 
 @accept_repeat
 title: Accept a repeat election to avoid a rupture
 subtitle: PiS succeeds in keeping the certified winner from office.
 view-if: trz_inaugurated = 0
-on-arrival: trz_blocked = 1; trz_inaugurated = 0; president_name = "Elżbieta Witek (acting)"; pres_2020_phase = "Presidency blocked"; trz_inauguration_status = "Blocked — repeat election conceded"; party_unity -= 10; public_trust -= 8; constitutional_restraint -= 12; judicial_legitimacy -= 8; pis_relation += 6; ko_relation -= 10; trz_right_backlash += 12; pis_poll_momentum += 0.8; news_headline = "The opposition concedes a repeat presidential election"
-go-to: poland_hub
+on-arrival: trz_blocked = 1; trz_inaugurated = 0; trz_repeat_election_pending = 1; president_name = "Elżbieta Witek (acting)"; pres_2020_phase = "Repeat election pending"; trz_inauguration_status = "Blocked — repeat election conceded"; party_unity -= 10; public_trust -= 8; constitutional_restraint -= 12; judicial_legitimacy -= 8; pis_relation += 6; ko_relation -= 10; trz_right_backlash += 12; pis_poll_momentum += 0.8; news_headline = "The opposition concedes a repeat presidential election"
+go-to: certification_continue
+
+@certification_continue
+go-to: poland_leadership_events.p2050_foundation_2020 if p2050_foundation_2020_done = 0; poland_hub
+
+@repeat_election_2020
+title: The conceded presidential rerun
+subtitle: Acting presidential powers end when the repeat ballot produces an office-holder
+new-page: true
+tags: poland_event
+priority: 38
+order: 10
+max-visits: 1
+view-if: continuous_campaign = 1 and year = 2020 and month = 9 and trz_repeat_election_pending = 1
+on-arrival: {!
+Q.trz_repeat_campaign_score =
+    44 +
+    (Number(Q.media_capacity) || 0) * 0.08 +
+    (Number(Q.turnout_readiness) || 0) * 0.06 +
+    (Number(Q.ko_relation) || 0) * 0.04 -
+    (Number(Q.trz_right_backlash) || 0) * 0.08;
+Q.trz_repeat_right_score =
+    45 +
+    (Number(Q.pis_poll_momentum) || 0) * 2 +
+    (Number(Q.trz_right_backlash) || 0) * 0.10 +
+    Math.max(0, 45 - (Number(Q.public_trust) || 0)) * 0.08;
+Q.news_headline =
+    "Witek's acting presidency reaches the promised repeat ballot";
+!}
+
+= September 2020 — A second ballot cannot be an interregnum
+
+The first certified result was blocked and the opposition conceded a rerun.
+Witek may exercise acting powers only until that process produces a President;
+she does not inherit a term. Trzaskowski must choose whether to defend the
+stolen result, rebuild the wider coalition or withdraw from a contest he says
+should never have existed.
+
+- @repeat_defend
+- @repeat_broaden
+- @repeat_withdraw
+
+@repeat_defend
+title: Campaign on the certified result and constitutional theft
+subtitle: Democratic score +5; right backlash +3.
+on-arrival: trz_repeat_campaign_score += 5; trz_right_backlash += 3; constitutional_restraint += 3; news_headline = "Trzaskowski makes the blocked oath the rerun's central issue"
+go-to: repeat_election_count
+
+@repeat_broaden
+title: Rebuild the Senate pact into a broad rerun campaign
+subtitle: Cost: 1 resource. Democratic score +8 and coalition relations +2.
+choose-if: resources >= 1
+unavailable-subtitle: A national rerun operation requires one party resource.
+on-arrival: resources -= 1; trz_repeat_campaign_score += 8; ko_relation += 2; psl_relation += 2; turnout_readiness += 2; news_headline = "The democratic parties rebuild a common rerun operation"
+go-to: repeat_election_count
+
+@repeat_withdraw
+title: Withdraw rather than legitimise the rerun
+subtitle: Duda wins; constitutional protest rises while democratic trust collapses.
+on-arrival: trz_repeat_campaign_score = 0; constitutional_restraint += 2; party_unity -= 5; public_trust -= 4; news_headline = "Trzaskowski withdraws from the repeat ballot"
+go-to: repeat_election_count
+
+@repeat_election_count
+title: The repeat ballot ends the acting presidency
+new-page: true
+on-arrival: {!
+const repeatVariance =
+    Math.floor((this.random.uint32() / 4294967296) * 7) - 3;
+const democraticRaw = Math.max(
+    0,
+    Number(Q.trz_repeat_campaign_score) + repeatVariance
+);
+const rightRaw = Math.max(1, Number(Q.trz_repeat_right_score));
+Q.trz_repeat_result = Math.round(
+    democraticRaw / Math.max(1, democraticRaw + rightRaw) * 1000
+) / 10;
+Q.trz_repeat_winner = Q.trz_repeat_result >= 50
+    ? "Rafał Trzaskowski"
+    : "Andrzej Duda";
+Q.president_name = Q.trz_repeat_winner;
+Q.trz_repeat_election_pending = 0;
+if (Q.trz_repeat_winner == "Rafał Trzaskowski") {
+    Q.trz_inaugurated = 1;
+    Q.trz_blocked = 0;
+    Q.pres_2020_phase = "Cohabitation after repeat election";
+    Q.trz_inauguration_status = "Sworn in after winning the conceded rerun";
+    Q.ko_relation += 4;
+    Q.news_headline = "Trzaskowski wins again and the acting presidency ends";
+} else {
+    Q.trz_inaugurated = 0;
+    Q.trz_blocked = 1;
+    Q.pres_2020_phase = "Duda presidency after repeat election";
+    Q.trz_inauguration_status = "Blocked winner loses the conceded rerun";
+    Q.pis_relation += 4;
+    Q.news_headline = "Duda wins the rerun and the acting presidency ends";
+}
+!}
+
+**Rafał Trzaskowski: [+ trz_repeat_result +]% · Andrzej Duda: [+
+100 - trz_repeat_result +]%.**
+
+[? if trz_repeat_winner = "Rafał Trzaskowski": Trzaskowski takes the oath;
+the attempted interregnum becomes the founding conflict of cohabitation.?]
+[? if trz_repeat_winner = "Andrzej Duda": Duda begins the term after a new
+ballot. The first certified result remains a democratic trauma, but Witek no
+longer exercises presidential powers.?]
+
+- @poland_hub: Continue with an elected President
 
 @tribunal_showdown
 title: War of the Powers II — the Tribunal
@@ -260,7 +367,7 @@ go-to: poland_hub
 @palace_institutions
 title: Keep the Palace focused on courts, media and clean elections
 subtitle: The broadest opposition line; no promise on marriage equality.
-on-arrival: trz_palace_strategy = "Institutional presidency"; trz_marriage_signature = 0; trz_marriage_veto_policy = "No advance commitment"; trz_vetoes += 1; president_relation += 6; ko_relation += 5; psl_relation += 4; p2050_relation += 4; judicial_legitimacy += 6; constitutional_restraint += 6; trz_right_fragmentation += 5; trz_right_backlash += 4; news_headline = "The Palace keeps its offensive on institutions"
+on-arrival: trz_palace_strategy = "Institutional presidency"; trz_marriage_signature = 0; trz_marriage_veto_policy = "No advance commitment"; president_relation += 6; ko_relation += 5; psl_relation += 4; p2050_relation += 4; judicial_legitimacy += 6; constitutional_restraint += 6; trz_right_fragmentation += 5; trz_right_backlash += 4; news_headline = "The Palace keeps its offensive on institutions"
 go-to: poland_hub
 
 @palace_social
@@ -380,7 +487,49 @@ go-to: rights_result
 @rights_vote_institutions
 title: Send another judicial-repair law instead
 subtitle: A broader coalition and a safer presidential signature.
-on-arrival: trz_rights_bill = "Judicial repair"; trz_rights_bill_votes = 244; trz_rights_bill_outcome = "Passed and signed"; trz_vetoes += 1; judicial_legitimacy += 10; constitutional_restraint += 7; president_relation += 5; ko_relation += 4; psl_relation += 3; p2050_relation += 3; progressive_credibility -= 2; trz_right_backlash += 5; news_headline = "Trzaskowski signs a narrow judicial-repair law"
+on-arrival: {!
+Q.trz_rights_bill = "Judicial repair";
+const democraticRepairVotes =
+    Math.max(0, Number(Q.left_seats) || 0) +
+    Math.max(0, Number(Q.ko_seats) || 0) +
+    Math.max(0, Number(Q.psl_seats) || 0) +
+    Math.max(0, Number(Q.p2050_seats) || 0) +
+    Math.max(0, Number(Q.other_seats) || 0);
+const repairDefectors = Math.round(
+    Math.max(0, Number(Q.trz_right_fragmentation) || 0) * 0.45 +
+    Math.max(
+        0,
+        (Number(Q.government_coalition_dissent) || 16) - 16
+    ) * 0.30
+);
+Q.trz_rights_bill_votes = Math.max(
+    0,
+    Math.min(
+        Number(Q.sejm_total) || 460,
+        Math.round(democraticRepairVotes + repairDefectors)
+    )
+);
+if (Q.trz_rights_bill_votes >= 231) {
+    Q.trz_rights_bill_outcome = "Passed and signed";
+    Q.judicial_legitimacy += 10;
+    Q.constitutional_restraint += 7;
+    Q.president_relation += 5;
+    Q.ko_relation += 4;
+    Q.psl_relation += 3;
+    Q.p2050_relation += 3;
+    Q.progressive_credibility -= 2;
+    Q.trz_right_backlash += 5;
+    Q.news_headline =
+        "Trzaskowski signs a narrow judicial-repair law";
+} else {
+    Q.trz_rights_bill_outcome = "Defeated in the Sejm";
+    Q.judicial_repair_mandate += 3;
+    Q.public_trust -= 1;
+    Q.trz_right_backlash += 2;
+    Q.news_headline =
+        "The judicial-repair bill falls before reaching the President";
+}
+!}
 go-to: rights_result
 
 @rights_result

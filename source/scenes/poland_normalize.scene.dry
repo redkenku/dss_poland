@@ -48,7 +48,25 @@ if (Q.started) {
         rozwoj_last_departure_batch: 0,
         rozwoj_club_formed: 0,
         rozwoj_party_formed: 0,
-        rozwoj_chain_stage: 0
+        rozwoj_chain_stage: 0,
+        left_realign_formed: 0,
+        left_realign_invite_p2050: 0,
+        left_realign_invite_greens: 0,
+        left_realign_invite_rozwoj: 0,
+        p2050_joined_left: 0,
+        greens_joined_left: 0,
+        rozwoj_joined_left: 0,
+        p2050_poll_launch_applied: 0,
+        tak_dla_rozwoju_launched: 0,
+        matysiak_development_pressure: 0,
+        matysiak_development_score: 0,
+        matysiak_resolution_done: 0,
+        razem_right_score: 18,
+        tak_dla_rozwoju_party_formed: 0,
+        tak_rozwoj_poll: 0,
+        tak_rozwoj_vote_intent: 0,
+        tak_rozwoj_projected_seats: 0,
+        tak_rozwoj_seats: 0
     };
     for (const key of Object.keys(rivalNumericDefaults)) {
         if (!Number.isFinite(Number(Q[key]))) {
@@ -75,6 +93,16 @@ if (Q.started) {
     }
     if (typeof Q.rozwoj_party_result != "string") {
         Q.rozwoj_party_result = "No party decision";
+    }
+    if (typeof Q.left_realign_name != "string") Q.left_realign_name = "";
+    if (typeof Q.left_realign_targets != "string") {
+        Q.left_realign_targets = "None";
+    }
+    if (typeof Q.matysiak_status != "string") Q.matysiak_status = "Razem MP";
+    if (typeof Q.matysiak_party != "string") Q.matysiak_party = "Razem";
+    if (typeof Q.razem_ideology != "string") Q.razem_ideology = "Socialist left";
+    if (typeof Q.razem_leadership_result != "string") {
+        Q.razem_leadership_result = "Adrian Zandberg leads Razem";
     }
 
     const rivalGroupDefaults = [
@@ -252,12 +280,26 @@ if (Q.started) {
     }
     const rozwojRecord = rivalGroup("rozwoj_plus");
     if (Q.rozwoj_association_active) {
+        const morawieckiRecord = rivalGroup("morawiecki");
+        if (morawieckiRecord) {
+            morawieckiRecord.active = 0;
+            morawieckiRecord.mp_count = 0;
+            morawieckiRecord.sejm_mps = 0;
+            morawieckiRecord.legal_status = "absorbed into Rozwój+";
+        }
         rozwojRecord.active = 1;
         rozwojRecord.legal_status = Q.rozwoj_party_formed
             ? "registered party"
             : (Q.rozwoj_club_formed
                 ? "association with parliamentary club"
                 : "political association");
+    }
+    if (Q.rozwoj_joined_left) {
+        rozwojRecord.bloc = "left";
+        rozwojRecord.kind = "current";
+        rozwojRecord.parent = Q.left_realign_name || "Nowa Solidarność";
+        rozwojRecord.legal_status = "internal developmental current";
+        rozwojRecord.exclusive_seats = 0;
     }
     rozwojRecord.mp_count = Math.max(
         Number(Q.rozwoj_association_members) || 0,
@@ -273,6 +315,11 @@ if (Q.started) {
             (Number(Q.rozwoj_pending_seats) || 0)
         )
     );
+    if (Q.rozwoj_party_formed && !Q.rozwoj_joined_left) {
+        rozwojRecord.bloc = "rozwoj";
+        rozwojRecord.parent = "Rozwój+";
+        rozwojRecord.allied = 0;
+    }
     const koPartyRecord = rivalGroup("ko_party");
     if (Q.ko_consolidated) {
         koPartyRecord.active = 1;
@@ -281,12 +328,33 @@ if (Q.started) {
             koPartyRecord.organisation,
             76
         );
+        for (const id of ["po", "nowoczesna", "ipl"]) {
+            const current = rivalGroup(id);
+            if (current) {
+                current.active = 1;
+                current.allied = 1;
+                current.kind = "current";
+                current.parent = "Koalicja Obywatelska";
+                current.legal_status = "internal KO current";
+                current.exclusive_seats = 0;
+            }
+        }
     }
     const koSplinterRecord = rivalGroup("ko_splinter");
     koSplinterRecord.active = Q.ko_splinter_active ? 1 : 0;
     if (Q.ko_splinter_active) {
         koSplinterRecord.name = Q.ko_splinter_type + " KO splinter";
         koSplinterRecord.legal_status = "independent organisation";
+    }
+    if (Q.greens_joined_left) {
+        const greensRecord = rivalGroup("greens");
+        if (greensRecord) {
+            greensRecord.bloc = "left";
+            greensRecord.kind = "current";
+            greensRecord.parent = Q.left_realign_name || "Wspólna Polska";
+            greensRecord.legal_status = "internal green current";
+            greensRecord.exclusive_seats = 0;
+        }
     }
 
     const caucusDefaults = {
@@ -494,6 +562,28 @@ if (Q.started) {
         return Q[caucus + "_active"] &&
             Q[caucus + "_in_left"];
     });
+    Q.razem_merged = Q.razem_merged ? 1 : 0;
+    if (Q.nowa_lewica_merger_agreed === undefined) {
+        Q.nowa_lewica_merger_agreed =
+            Q.merger_event_done &&
+            String(Q.left_project || "") != "Lewica parliamentary alliance"
+                ? 1 : 0;
+    }
+    if (
+        typeof Q.merger_leader != "string" ||
+        (Q.merger_leader == "No merger" && Q.nowa_lewica_merger_agreed)
+    ) {
+        const mergerProject = String(Q.left_project || "").toLowerCase();
+        Q.merger_leader = mergerProject.includes("razem-led")
+            ? "Razem"
+            : (mergerProject.includes("centralised") ||
+                mergerProject.includes("asset-led")
+                ? "Włodzimierz Czarzasty"
+                : (mergerProject.includes("member") ||
+                    mergerProject.includes("convention")
+                    ? "Membership convention"
+                    : "Dual chairs"));
+    }
     Q.razem_in_left_club = Q.razem_active ? 1 : 0;
 
     if (Q.spring_merged) {
@@ -509,16 +599,80 @@ if (Q.started) {
                 Q[caucus + "_in_left"];
         });
     }
-    if (Q.rename_event_done || Q.spring_merged) {
-        Q.left_party_name = Q.barons_active
-            ? "Nowa Lewica"
-            : "New Left Renewal";
-    } else {
-        Q.left_party_name = "Lewica";
+    const activeLeftCaucuses = caucusIds.filter(function(caucus) {
+        return Q[caucus + "_active"] && Q[caucus + "_in_left"];
+    });
+    let strongestLeftCaucus = activeLeftCaucuses[0] || "";
+    for (const caucus of activeLeftCaucuses) {
+        if (
+            Number(Q[caucus + "_strength"]) >
+            Number(Q[strongestLeftCaucus + "_strength"])
+        ) {
+            strongestLeftCaucus = caucus;
+        }
+    }
+    const caucusLeadsBureau = {
+        barons: Q.czarzasty_advisor || Q.wieczorek_advisor,
+        spring: Q.spring_active && Q.biedron_advisor,
+        labor: Q.dziemianowicz_bak_advisor,
+        progressives:
+            Q.zukowska_advisor || Q.kotula_advisor ||
+            Q.gawkowski_advisor || Q.nowicka_advisor ||
+            (!Q.spring_active && Q.biedron_advisor),
+        razem:
+            Q.zandberg_advisor || Q.biejat_advisor ||
+            Q.zawisza_advisor || Q.matysiak_advisor,
+        pps: false
+    };
+    Q.left_party_name = Q.left_realign_formed
+        ? String(Q.left_realign_name || "Nowa Solidarność")
+        : "";
+    if (!Q.left_party_name && !activeLeftCaucuses.length) {
+        Q.left_party_name = "Lewica w Rozsypce";
+    } else if (
+        !Q.left_party_name &&
+        Number(Q.organised_left_splits) >= 3 &&
+        Number(Q.party_unity) < 20
+    ) {
+        Q.left_party_name = "Lewica Lewic";
+    } else if (!Q.left_party_name && Q.nowa_lewica_merger_agreed) {
+        Q.left_party_name =
+            Q.merger_leader == "Razem"
+                ? "Lewica Razem"
+                : (
+                    Q.merger_leader == "Constituent convention"
+                        ? "Federacja Lewicy"
+                        : "Nowa Lewica"
+                );
+    } else if (
+        !Q.left_party_name && caucusLeadsBureau[strongestLeftCaucus]
+    ) {
+        const factionBrands = {
+            razem: "Lewica Razem",
+            labor: "Partia Pracy",
+            progressives: "Wspólne Jutro",
+            spring: "Wiosna-SLD"
+        };
+        Q.left_party_name = factionBrands[strongestLeftCaucus] || "";
+    }
+    if (!Q.left_party_name) {
+        if (!Q.barons_active) {
+            Q.left_party_name = "Nowa Lewica – Odnowa";
+        } else if (!Q.spring_active && !Q.spring_merged) {
+            Q.left_party_name = "SLD";
+        } else if (Q.rename_event_done || Q.spring_merged) {
+            Q.left_party_name = "Nowa Lewica";
+        } else {
+            Q.left_party_name = "Zjednoczona Lewica";
+        }
     }
     const autonomousPartners = [];
-    if (Q.razem_active) autonomousPartners.push("Razem");
-    if (Q.pps_active) autonomousPartners.push("PPS");
+    if (
+        Q.razem_active &&
+        !Q.razem_merged &&
+        !Q.left_party_name.includes("Razem")
+    ) autonomousPartners.push("Razem");
+    if (Q.pps_active && !Q.razem_merged) autonomousPartners.push("PPS");
     Q.left_family_name = autonomousPartners.length
         ? Q.left_party_name + " · " + autonomousPartners.join(" · ")
         : Q.left_party_name;
@@ -709,38 +863,52 @@ if (Q.started) {
     // recurring policy cards and later reshuffles. Migrate older saves, clear
     // stale Lewica ownership after an exit, and derive the count from the
     // roster rather than trusting incremental bookkeeping.
+    const snapRosterRecorded = Boolean(Q.snap_cabinet_commitments_recorded);
+    const p2050CabinetEligible = Number(Q.p2050_seats) > 0 &&
+        (
+            !snapRosterRecorded ||
+            Q.government_party == "p2050" ||
+            Boolean(Q.snap_p2050_cabinet_committed)
+        );
+    const pslCabinetEligible = Number(Q.psl_seats) > 0 &&
+        !Q.coalition_broken &&
+        (
+            !snapRosterRecorded ||
+            Q.government_party == "psl" ||
+            Boolean(Q.snap_psl_cabinet_committed)
+        );
     const democraticCabinetDefaults = {
         labor: ["KO", "Coalition social-policy nominee"],
         equality: ["KO", "Coalition equality nominee"],
         housing: ["KO", "Coalition housing nominee"],
         health: ["KO", "Izabela Leszczyna"],
-        digital: Number(Q.p2050_seats) > 0
+        digital: p2050CabinetEligible
             ? ["Poland 2050", "Coalition digital nominee"]
             : ["KO", "Coalition digital nominee"],
         science: ["KO", "Coalition science nominee"],
         interior: ["KO", "Marcin Kierwiński"],
         finance: ["KO", "Andrzej Domański"],
         economy:
-            Q.coalition_broken || Number(Q.psl_seats) <= 0
+            !pslCabinetEligible
             ? ["KO", "Coalition development nominee"]
             : ["PSL", "Krzysztof Hetman"],
         justice: ["KO", "Adam Bodnar"],
         foreign: ["KO", "Radosław Sikorski"],
         agriculture:
-            Q.coalition_broken || Number(Q.psl_seats) <= 0
+            !pslCabinetEligible
             ? ["KO", "Coalition agriculture nominee"]
             : ["PSL", "Czesław Siekierski"],
         defence:
-            Q.coalition_broken || Number(Q.psl_seats) <= 0
+            !pslCabinetEligible
             ? ["KO", "Coalition defence nominee"]
             : ["PSL", "Władysław Kosiniak-Kamysz"]
     };
     let cabinetDefaults = democraticCabinetDefaults;
     let cabinetAllowedParties = ["KO"];
-    if (Number(Q.p2050_seats) > 0) {
+    if (p2050CabinetEligible) {
         cabinetAllowedParties.push("Poland 2050");
     }
-    if (!Q.coalition_broken && Number(Q.psl_seats) > 0) {
+    if (pslCabinetEligible) {
         cabinetAllowedParties.push("PSL");
     }
     if (
@@ -887,10 +1055,43 @@ if (Q.started) {
     // least one Council of Ministers portfolio. It is not the last confidence
     // yes count, a projected alliance, or outside confidence-and-supply votes.
     // Exact roll calls remain in confidence_yes/no/abstain.
+    const sejmSeatTotal = Math.max(
+        1,
+        Math.round(Number(Q.sejm_total) || 460)
+    );
+    const mainLeftSeats = Math.min(
+        sejmSeatTotal,
+        Math.max(0, Math.round(Number(Q.left_seats) || 0))
+    );
+    const liveCommittedSeparateLeftSeats = [
+        ["sld_breakaway_seats", "barons_party_relation"],
+        ["spring_breakaway_seats", "spring_party_relation"],
+        ["labor_left_seats", "labor_party_relation"],
+        ["young_left_seats", "progressives_party_relation"],
+        ["razem_party_seats", "razem_party_relation"],
+        ["pps_party_seats", "pps_party_relation"]
+    ].reduce(function(total, entry) {
+        return total + (
+            Number(Q[entry[1]]) >= 45
+                ? Math.max(0, Math.round(Number(Q[entry[0]]) || 0))
+                : 0
+        );
+    }, 0);
+    const validCommittedLeftSeats = Math.min(
+        sejmSeatTotal,
+        mainLeftSeats + liveCommittedSeparateLeftSeats
+    );
+    const recordedLeftCabinetSeats = Math.min(
+        validCommittedLeftSeats,
+        Math.max(
+            0,
+            Math.round(Number(Q.ministry_left_cabinet_seats) || 0)
+        )
+    );
     const cabinetSeatByParty = {
         PiS: Math.max(0, Math.round(Number(Q.pis_seats) || 0)),
         KO: Math.max(0, Math.round(Number(Q.ko_seats) || 0)),
-        Lewica: Math.max(0, Math.round(Number(Q.left_seats) || 0)),
+        Lewica: recordedLeftCabinetSeats,
         PSL: Math.max(0, Math.round(Number(Q.psl_seats) || 0)),
         "Poland 2050": Math.max(
             0,
@@ -907,6 +1108,26 @@ if (Q.started) {
             cabinetParties.push(party);
         }
     }
+    if (!Q.caretaker_government && !cabinetGovernmentChanged) {
+        const recordedCabinetMembership = [
+            ["KO", Q.ministry_ko_in_cabinet, Q.ko_seats],
+            ["Poland 2050", Q.ministry_p2050_in_cabinet, Q.p2050_seats],
+            ["PSL", Q.ministry_psl_in_cabinet, Q.psl_seats],
+            ["Lewica", Q.left_in_government, recordedLeftCabinetSeats]
+        ];
+        for (const membership of recordedCabinetMembership) {
+            if (
+                membership[1] && Number(membership[2]) > 0 &&
+                cabinetParties.indexOf(membership[0]) < 0
+            ) {
+                cabinetParties.push(membership[0]);
+            }
+        }
+    }
+    const recordedGovernmentSupport = Math.max(
+        0,
+        Math.round(Number(Q.government_support_seats) || 0)
+    );
     if (!Q.caretaker_government) {
         Q.coalition_seats = Math.min(
             Number(Q.sejm_total) || 460,
@@ -914,11 +1135,38 @@ if (Q.started) {
                 return total + cabinetSeatByParty[party];
             }, 0)
         );
+        const nonLeftCabinetSeats = cabinetParties.reduce(
+            function(total, party) {
+                return total + (
+                    party == "Lewica" ? 0 : cabinetSeatByParty[party]
+                );
+            },
+            0
+        );
+        const nonLeftMaximum = Math.max(
+            0,
+            sejmSeatTotal - validCommittedLeftSeats
+        );
+        Q.government_support_seats = Math.min(
+            nonLeftMaximum,
+            cabinetGovernmentChanged
+                ? nonLeftCabinetSeats
+                : Math.max(
+                    nonLeftCabinetSeats,
+                    recordedGovernmentSupport
+                )
+        );
     } else if (Q.caretaker_government) {
         Q.coalition_seats = 0;
+        Q.government_support_seats = 0;
+        Q.ministry_ko_in_cabinet = 0;
+        Q.ministry_p2050_in_cabinet = 0;
+        Q.ministry_psl_in_cabinet = 0;
     }
     Q.coalition_seats_basis =
         "MPs of parties holding Council of Ministers portfolios";
+    Q.government_support_basis =
+        "Dependable non-Lewica government votes; Lewica is recorded separately";
     Q.coalition_cabinet_parties = cabinetParties.length
         ? cabinetParties.join(" · ")
         : "None recorded";
@@ -947,6 +1195,23 @@ if (Q.started) {
         Q.ministry_maximal_mandate ? 1 : 0;
     Q.ministry_whole_left_mandate =
         Q.ministry_whole_left_mandate ? 1 : 0;
+    Q.ministry_left_cabinet_seats = recordedLeftCabinetSeats;
+    Q.ministry_coalition_seats = Math.max(
+        0,
+        Number(Q.ministry_coalition_seats) || 0
+    );
+    Q.ministry_ko_in_cabinet = Q.ministry_ko_in_cabinet ? 1 : 0;
+    Q.ministry_p2050_in_cabinet =
+        Q.ministry_p2050_in_cabinet ? 1 : 0;
+    Q.ministry_psl_in_cabinet = Q.ministry_psl_in_cabinet ? 1 : 0;
+    Q.formation_psl_cabinet_committed = Number.isFinite(
+        Number(Q.formation_psl_cabinet_committed)
+    )
+        ? Math.max(
+            -1,
+            Math.min(1, Math.round(Q.formation_psl_cabinet_committed))
+        )
+        : -1;
     Q.ministry_reshuffle_previous_count = Math.max(
         0,
         Number(Q.ministry_reshuffle_previous_count) || 0
@@ -968,6 +1233,99 @@ if (Q.started) {
         !Q.ministry_return_mode.length
     ) {
         Q.ministry_return_mode = "cabinet_program";
+    }
+
+    const governmentBurdenDefaults = {
+        government_achievements: 0,
+        government_burden_active: 0,
+        government_burden_timer: 0,
+        government_burden_cycle: 0,
+        government_burden_required: 2,
+        government_burden_completed: 0,
+        government_burden_breached: 0,
+        government_burden_review_pending: 0,
+        government_burden_failures: 0,
+        government_burden_last_completed: 0,
+        government_burden_last_breached: 0,
+        government_goal_health: 0,
+        government_goal_housing: 0,
+        government_goal_labor: 0,
+        government_goal_welfare: 0,
+        government_goal_equality: 0,
+        government_burden_health_market_seen: 0,
+        government_burden_social_delay_seen: 0,
+        government_burden_tenant_seen: 0
+    };
+    for (const quality of Object.keys(governmentBurdenDefaults)) {
+        if (!Number.isFinite(Number(Q[quality]))) {
+            Q[quality] = governmentBurdenDefaults[quality];
+        }
+    }
+    Q.government_burden_required = 2;
+    Q.government_burden_timer = Math.max(
+        0,
+        Math.round(Number(Q.government_burden_timer) || 0)
+    );
+    for (const quality of [
+        "government_burden_active",
+        "government_burden_breached",
+        "government_burden_review_pending",
+        "government_burden_last_breached",
+        "government_goal_health",
+        "government_goal_housing",
+        "government_goal_labor",
+        "government_goal_welfare",
+        "government_goal_equality",
+        "government_burden_health_market_seen",
+        "government_burden_social_delay_seen",
+        "government_burden_tenant_seen"
+    ]) {
+        Q[quality] = Q[quality] ? 1 : 0;
+    }
+    Q.government_burden_completed = [
+        "government_goal_health",
+        "government_goal_housing",
+        "government_goal_labor",
+        "government_goal_welfare",
+        "government_goal_equality"
+    ].reduce(function(total, quality) {
+        return total + Q[quality];
+    }, 0);
+    if (typeof Q.government_burden_last_result != "string") {
+        Q.government_burden_last_result = "No government record yet";
+    }
+    if (typeof Q.government_burden_last_goals != "string") {
+        Q.government_burden_last_goals = "None";
+    }
+    if (
+        !Q.left_in_government ||
+        !Q.government_has_confidence ||
+        Q.caretaker_government
+    ) {
+        Q.government_burden_active = 0;
+        Q.government_burden_timer = 0;
+        Q.government_burden_completed = 0;
+        Q.government_burden_breached = 0;
+        Q.government_burden_review_pending = 0;
+        Q.government_goal_health = 0;
+        Q.government_goal_housing = 0;
+        Q.government_goal_labor = 0;
+        Q.government_goal_welfare = 0;
+        Q.government_goal_equality = 0;
+    }
+
+    Q.snap_campaign_active = Q.snap_campaign_active ? 1 : 0;
+    if (!Number.isFinite(Number(Q.snap_campaign_start_time))) {
+        Q.snap_campaign_start_time = -1;
+    }
+    if (!Number.isFinite(Number(Q.snap_campaign_due_time))) {
+        Q.snap_campaign_due_time = -1;
+    }
+    if (!Number.isFinite(Number(Q.snap_campaign_left_bonus))) {
+        Q.snap_campaign_left_bonus = 0;
+    }
+    if (typeof Q.snap_campaign_strategy != "string") {
+        Q.snap_campaign_strategy = "No snap campaign";
     }
 
     // Budget defeat scenes predate the constitutional scheduler. Record the
@@ -1073,9 +1431,8 @@ if (Q.started) {
     if (Q.foreign_left_presidential_channel) {
         Q.foreign_authority_label += " · Left President";
         Q.foreign_authority_scope +=
-            "; the Palace also has representation, ratification, appointment and convening powers";
+            "; the Palace separately adds representation, ratification, appointments and convening, but no cabinet command";
     }
-
     // A compact crisis score opens pragmatic bargaining without making a PiS
     // cabinet generally friendly. The displayed forecast below is the same
     // arithmetic used by the negotiation cards.
@@ -2302,6 +2659,17 @@ if (Q.started) {
     Q.internal_dissent = Q.factions.length > 0 ?
         Math.round(weightedDissent / 100) : 100;
     Q.faction_vetoes = activeVetoes;
+    Q.party_action_effectiveness = Math.round(clamp(
+        100 - Math.max(0, Q.internal_dissent - 20) * 0.80,
+        35,
+        100
+    ));
+    Q.message_discipline = Math.round(clamp(
+        100 - Math.max(0, Q.internal_dissent - 20) -
+            Q.faction_vetoes * 5,
+        20,
+        100
+    ));
     Q.caucus_split_pending = Q.factions.some(function(caucus) {
         return Number(Q[caucus + "_escalation_stage"]) >= 7;
     }) ? 1 : 0;
@@ -2449,10 +2817,14 @@ if (Q.started) {
     const chamberNumbers = [
         "senate_total",
         "senate_pis_seats",
+        "senate_konf_seats",
         "senate_ko_seats",
+        "senate_p2050_seats",
         "senate_psl_seats",
         "senate_left_seats",
         "senate_independent_seats",
+        "senate_democratic_seats",
+        "senate_right_seats",
         "senate_opposition_seats",
         "senate_working_votes",
         "senate_amendment_credit",

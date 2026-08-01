@@ -82,6 +82,9 @@ const apparatusGlue = Math.max(
     0.10,
     1 - advisorRepresentation.barons * 0.30
 );
+const dissentRecovery = Number(Q.party_unity) >= 60
+    ? 1.25
+    : (Number(Q.party_unity) >= 45 ? 0.75 : 0.35);
 for (const faction of Q.factions) {
     const represented = advisorRepresentation[faction] || 0;
     let structuralDrift = 0;
@@ -92,6 +95,9 @@ for (const faction of Q.factions) {
     } else if (represented >= 3) {
         structuralDrift = -0.50;
     }
+    if ((Number(Q[faction + "_dissent"]) || 0) > 20) {
+        structuralDrift -= dissentRecovery;
+    }
     Q[faction + "_dissent"] += structuralDrift;
     Q[faction + "_strength"] += represented * 0.50;
 }
@@ -99,11 +105,15 @@ for (const faction of Q.factions) {
 // Disunity is operational damage, not a game-over trigger. It erodes the
 // common campaign while leaving the player in charge of the coordinating
 // centre or whatever rump survives.
-if (Q.party_unity < 35 && Q.factions.length > 0) {
+if (
+    (Q.party_unity < 35 || Q.internal_dissent >= 40) &&
+    Q.factions.length > 0
+) {
     const mostDissenting = Q.factions.slice().sort(function(a, b) {
         return Number(Q[b + "_dissent"]) - Number(Q[a + "_dissent"]);
     })[0];
-    const capacityLoss = Q.party_unity < 15 ? 1 : 0.5;
+    const capacityLoss =
+        Q.party_unity < 15 || Q.internal_dissent >= 65 ? 1 : 0.5;
     Q.campaign_capacity_loss += capacityLoss;
     Q.media_capacity -= capacityLoss * 0.55;
     Q.local_network -= capacityLoss * 0.35;
@@ -174,6 +184,73 @@ const monthlyTimers = [
 for (const timer of monthlyTimers) {
     if (Q[timer] !== undefined) {
         Q[timer] = Math.max(0, Q[timer] - 1);
+    }
+}
+
+const burdenGovernmentFunctioning =
+    Q.left_in_government &&
+    Q.government_has_confidence &&
+    !Q.caretaker_government;
+if (
+    burdenGovernmentFunctioning &&
+    Q.government_burden_active &&
+    !Q.government_burden_review_pending
+) {
+    const burdenGoals = [
+        ["government_goal_health", "public health"],
+        ["government_goal_housing", "housing and tenant security"],
+        ["government_goal_labor", "labour rights"],
+        ["government_goal_welfare", "social welfare"],
+        ["government_goal_equality", "equality"]
+    ];
+    Q.government_burden_completed = burdenGoals.reduce(
+        function(total, goal) {
+            return total + (Number(Q[goal[0]]) >= 1 ? 1 : 0);
+        },
+        0
+    );
+    Q.government_burden_timer = Math.max(
+        0,
+        (Number(Q.government_burden_timer) || 0) - 1
+    );
+    if (Q.government_burden_timer === 0) {
+        Q.government_burden_last_completed =
+            Q.government_burden_completed;
+        Q.government_burden_last_breached =
+            Q.government_burden_breached ? 1 : 0;
+        Q.government_burden_last_goals = burdenGoals
+            .filter(function(goal) {
+                return Number(Q[goal[0]]) >= 1;
+            })
+            .map(function(goal) {
+                return goal[1];
+            })
+            .join(" · ") || "None";
+        const burdenPassed =
+            !Q.government_burden_last_breached &&
+            Q.government_burden_last_completed >=
+                (Number(Q.government_burden_required) || 2);
+        if (burdenPassed) {
+            Q.government_achievements += 1;
+            Q.party_unity += 1;
+            Q.coalition_blur -= 1;
+            Q.government_burden_last_result =
+                "Lewica meets its six-month government burden";
+        } else {
+            Q.government_burden_failures += 1;
+            Q.left_poll -= 0.7;
+            Q.public_trust -= 3;
+            Q.government_delivery -= 2;
+            Q.coalition_blur += 5;
+            Q.labor_dissent += 4;
+            Q.progressives_dissent += 3;
+            Q.razem_dissent += 5;
+            Q.government_burden_last_result =
+                Q.government_burden_last_breached
+                    ? "A conservative coalition settlement fails Lewica's government burden"
+                    : "Lewica misses its six-month government burden";
+        }
+        Q.government_burden_review_pending = 1;
     }
 }
 
@@ -303,6 +380,15 @@ Q.internal_dissent = totalFactionStrength > 0
     ? Math.round(weightedDissent / totalFactionStrength)
     : 100;
 Q.faction_vetoes = activeVetoes;
+Q.party_action_effectiveness = Math.round(Math.max(
+    35,
+    100 - Math.max(0, Q.internal_dissent - 20) * 0.80
+));
+Q.message_discipline = Math.round(Math.max(
+    20,
+    100 - Math.max(0, Q.internal_dissent - 20) -
+        Q.faction_vetoes * 5
+));
 
 if (Q.internal_dissent >= 35) {
     Q.party_unity -= 1;
@@ -389,7 +475,9 @@ for (const faction of Q.factions.slice()) {
     const waitingForDemandDeadline =
         currentStage == 2 &&
         !Q[faction + "_demand_answered"] &&
-        Number(Q.time) < Number(Q[faction + "_demand_deadline"]);
+        // The month counter has already advanced above.  Preserve stage two
+        // through the turn that began on the stated deadline.
+        Number(Q.time) <= Number(Q[faction + "_demand_deadline"]) + 1;
     if (
         targetStage > currentStage &&
         !waitingForDemandDeadline &&
@@ -508,10 +596,25 @@ for (const faction of Q.factions.slice()) {
                 Math.round(Number(Q[seatRecord.separate]) || 0)
             ) + defectors;
             if (Q.left_in_government) {
-                Q.coalition_seats = Math.max(
-                    0,
-                    (Number(Q.coalition_seats) || 0) - defectors
-                );
+                const externalRazemDeparture =
+                    faction == "razem" &&
+                    (
+                        !Q.razem_in_government ||
+                        String(Q.left_cabinet_model || "").includes(
+                            "Razem external"
+                        )
+                    );
+                if (!externalRazemDeparture) {
+                    Q.ministry_left_cabinet_seats = Math.max(
+                        0,
+                        (Number(Q.ministry_left_cabinet_seats) || 0) -
+                            defectors
+                    );
+                    Q.coalition_seats = Math.max(
+                        0,
+                        (Number(Q.coalition_seats) || 0) - defectors
+                    );
+                }
                 Q.government_coalition_dissent += 2;
             }
             Q.party_unity -= defectors > 0 ? 1 : 0;
@@ -907,13 +1010,20 @@ for (const story of queuedStories) {
     const messageCredibility = direction < 0
         ? clampMood(100 - leftCredibility * 0.5, 0, 100)
         : leftCredibility;
+    const dissentEffectiveness = direction > 0
+        ? (
+            clampMood(Q.party_action_effectiveness, 35, 100) +
+            clampMood(Q.message_discipline, 20, 100)
+        ) / 200
+        : 1;
     const storySignal = 100 * direction *
         (reach / 100) *
         (audienceTrust / 100) *
         (Math.abs(frame) / 100) *
         (messengerCredibility / 100) *
         (issueSalience / 100) *
-        (messageCredibility / 100);
+        (messageCredibility / 100) *
+        dissentEffectiveness;
     let receptivity = clampMood(Q.change_appetite, 0, 100);
     let resistance = 45;
     if (["social_spending", "vaccination"].includes(issue)) {
@@ -1166,13 +1276,19 @@ if (Q.recovery_fund_event_done && !Q.historical_recovery_bargain_applied) {
     Q.historical_recovery_bargain_applied = 1;
 }
 if (Q.left_revolt_event_done && !Q.historical_merger_conflict_applied) {
-    if (Q.merger_resolution == "Executive suspensions") {
+    if (Q.merger_resolution == "No merger, no revolt") {
+        Q.historical_pressure_last =
+            "No merger leadership existed to produce the 2021 revolt";
+    } else if (
+        Q.merger_resolution == "Executive suspensions" ||
+        Q.merger_resolution == "Razem discipline"
+    ) {
         applyHistoryShift({
             leadership_authority: -9,
             winner_reputation: -4,
             list_confidence: -7,
             media_access: -2
-        }, "Merger conflict and executive suspensions damage renewal and authority");
+        }, "Merger conflict and leadership discipline damage renewal and authority");
     } else if (Q.merger_resolution == "Membership ballot") {
         applyHistoryShift({
             leadership_authority: 4,

@@ -102,25 +102,25 @@ choose-if: resources >= 1
 unavailable-subtitle: The party cannot organise it safely.
 on-arrival: resources -= 1; independence_march_strategy = "Civic tradition"; civic_independence_years += 1; civic_patriotism += 5; public_trust += 3; health_policy_pressure += 1; local_network += 2; news_headline = "A restrained civic commemoration contests both monopoly and impunity"
 
-- @poland_foreign_events.us_election_2020: Continue
+- @poland_hub: Continue
 
 @ind20_consistent
 title: Defend one assembly standard for nationalists and the Women's Strike
 on-arrival: independence_march_strategy = "Legal consistency"; constitutional_restraint += 5; feminist_trust += 2; public_trust += 2; far_right_agenda += 1; barons_dissent += 2; news_headline = "The Left applies one pandemic and protest standard"
 
-- @poland_foreign_events.us_election_2020: Continue
+- @poland_hub: Continue
 
 @ind20_monitor
 title: Expand the legal-observer and safety network
 on-arrival: independence_march_strategy = "Legal monitoring"; independence_monitor_years += 1; police_trust += 2; minority_safety += 4; movement_autonomy += 2; media_capacity += 2; news_headline = "One safety network watches both protest policing and nationalist violence"
 
-- @poland_foreign_events.us_election_2020: Continue
+- @poland_hub: Continue
 
 @ind20_ignore
 title: Keep every organiser focused on the abortion revolt
 on-arrival: independence_march_strategy = "Ignore the march"; independence_ignored_years += 1; feminist_trust += 3; far_right_street_capacity += 4; far_right_agenda += 3; civic_patriotism -= 1; news_headline = "The Left leaves Independence Day to the radical right"
 
-- @poland_foreign_events.us_election_2020: Continue
+- @poland_hub: Continue
 
 @router
 title: The dated news desk
@@ -263,18 +263,30 @@ const rivalGroup = function(id) {
     });
 };
 const porozumienie = rivalGroup("porozumienie");
+const porozumienieTransfer = Math.min(
+    6,
+    Math.max(0, Math.round(Number(Q.pis_seats) || 0))
+);
 Q.porozumienie_exit_done = 1;
-Q.porozumienie_active = 1;
-Q.porozumienie_seats = 6;
-Q.pis_seats = Math.max(0, (Number(Q.pis_seats) || 0) - 6);
-Q.other_seats = Math.max(0, Number(Q.other_seats) || 0) + 6;
+Q.porozumienie_active = porozumienieTransfer > 0 ? 1 : 0;
+Q.porozumienie_seats = porozumienieTransfer;
+Q.pis_seats = Math.max(
+    0,
+    (Number(Q.pis_seats) || 0) - porozumienieTransfer
+);
+Q.government_support_seats = Math.max(
+    0,
+    (Number(Q.government_support_seats) || 0) - porozumienieTransfer
+);
+Q.other_seats = Math.max(0, Number(Q.other_seats) || 0) +
+    porozumienieTransfer;
 if (porozumienie) {
-    porozumienie.active = 1;
+    porozumienie.active = porozumienieTransfer > 0 ? 1 : 0;
     porozumienie.allied = 0;
     porozumienie.legal_status = "independent parliamentary party";
-    porozumienie.mp_count = 6;
-    porozumienie.sejm_mps = 6;
-    porozumienie.exclusive_seats = 6;
+    porozumienie.mp_count = porozumienieTransfer;
+    porozumienie.sejm_mps = porozumienieTransfer;
+    porozumienie.exclusive_seats = porozumienieTransfer;
     porozumienie.cohesion = 63;
     porozumienie.defection_readiness = 100;
     porozumienie.electoral_outside_option =
@@ -342,7 +354,7 @@ defectors and bill-by-bill majorities.
 **Outgoing → incoming:** Gowin, deputy premier and internal coalition veto →
 Gowin, leader of an opposition parliamentary circle; Kaczyński remains leader
 of a smaller governing camp.
-**Supporting bloc:** Agreement's market liberals and institutional
+**Supporting bloc:** Porozumienie's market liberals and institutional
 conservatives reject important Polish Deal tax provisions after their earlier
 rebellion over the postal election. Six MPs form a real Porozumienie circle;
 former party colleagues who stay with PiS do not follow automatically.
@@ -353,10 +365,238 @@ possible no-confidence count, but every selective deal can again be framed as
 rescuing the government. At the same time, Konfederacja recruits from
 anti-restriction anger.
 
+- @aug21_constructive
 - @aug21_health
 - @aug21_majority
 - @aug21_workers
 - @aug21_liberty
+
+@aug21_constructive
+title: Force a constructive vote of no confidence
+subtitle: Article 158 is available under any President, but a named successor still needs 231 deputies.
+new-page: true
+on-arrival: {!
+const storedLeftCommitted = Number(Q.left_committed_seats);
+const leftCommitted = Math.max(0, Math.round(
+    Number.isFinite(storedLeftCommitted)
+        ? storedLeftCommitted
+        : (Number(Q.left_seats) || 0)
+));
+const democraticBase =
+    Math.max(0, Math.round(Number(Q.ko_seats) || 0)) +
+    Math.max(0, Math.round(Number(Q.psl_seats) || 0)) +
+    Math.max(0, Math.round(Number(Q.p2050_seats) || 0)) +
+    leftCommitted;
+const porozumienieSupport = Math.min(
+    Math.max(0, Math.round(Number(Q.other_seats) || 0)),
+    Math.max(0, Math.round(Number(Q.porozumienie_seats) || 0))
+);
+Q.aug21_vonc_left_can_sponsor = leftCommitted >= 46 ? 1 : 0;
+Q.aug21_vonc_left_sponsors = leftCommitted;
+Q.aug21_vonc_left_votes = leftCommitted;
+Q.aug21_vonc_democratic_base = democraticBase;
+Q.aug21_vonc_porozumienie_support = porozumienieSupport;
+Q.aug21_vonc_other_support = Math.max(
+    0,
+    Math.round(Number(Q.other_seats) || 0) - porozumienieSupport
+);
+const konfSeats = Math.max(0, Math.round(Number(Q.konf_seats) || 0));
+Q.aug21_vonc_konf_support = Math.min(
+    konfSeats,
+    Math.max(
+        0,
+        Math.round(konfSeats * 0.25) +
+            (Number(Q.far_right_agenda) >= 60 ? 1 : 0)
+    )
+);
+Q.aug21_technical_cabinet = 0;
+!}
+
+= Article 158 — dismissal requires a successor
+
+President **[+ president_name +]** cannot file, vote on or order a Sejm
+motion. Under Article 158 the Palace must appoint a successor only if at least
+46 deputies sponsor one named candidate and 231 deputies actually elect that
+person.
+
+The democratic clubs and Porozumienie currently declare **[+
+aug21_vonc_democratic_base +] + [+ aug21_vonc_porozumienie_support +] + [+
+aug21_vonc_other_support +]** votes. Konfederacja's **[+
+aug21_vonc_konf_support +]** potentially available deputies are a bounded
+free-vote estimate, not the whole caucus assigned to a PSL prime minister.
+
+[? if aug21_vonc_left_can_sponsor: Lewica still controls the 46 signatures
+needed to force its own motion.?]
+[? if not aug21_vonc_left_can_sponsor: Lewica's divided parliamentary family
+cannot supply 46 signatures. KO will file the motion instead.?]
+
+- @aug21_vonc_file
+- @aug21_vonc_compact
+- @aug21_vonc_ai
+
+@aug21_vonc_file
+title: Use Lewica's signatures and name Kosiniak-Kamysz
+subtitle: Force the vote now on the democratic and Porozumienie declarations already secured.
+view-if: aug21_vonc_left_can_sponsor = 1
+on-arrival: {!
+Q.constructive_candidate = "Władysław Kosiniak-Kamysz";
+Q.constructive_sponsors = Math.min(
+    115,
+    Q.aug21_vonc_left_sponsors
+);
+Q.constructive_yes = Math.min(
+    Math.max(
+        0,
+        (Number(Q.sejm_total) || 460) -
+            Math.max(0, Math.round(Number(Q.pis_seats) || 0))
+    ),
+    Q.aug21_vonc_democratic_base +
+        Q.aug21_vonc_porozumienie_support +
+        Q.aug21_vonc_other_support
+);
+Q.constructive_no = Math.max(0, Math.round(Number(Q.pis_seats) || 0));
+Q.constructive_abstain = Math.max(
+    0,
+    (Number(Q.sejm_total) || 460) -
+        Q.constructive_yes - Q.constructive_no
+);
+Q.aug21_vonc_initiator = "Lewica";
+Q.aug21_vonc_strategy = "Immediate opposition count";
+Q.ko_relation += 3;
+Q.psl_relation += 4;
+Q.pis_relation -= 6;
+Q.constitutional_restraint += 3;
+Q.news_headline = "Lewica files a constructive motion against Morawiecki";
+!}
+go-to: aug21_constructive_roll
+
+@aug21_vonc_compact
+title: Seek a limited cross-opposition free vote
+subtitle: Cost: 1 resource. No whole Konfederacja caucus is assigned to Kosiniak-Kamysz.
+view-if: aug21_vonc_left_can_sponsor = 1
+choose-if: resources >= 1
+unavailable-subtitle: The cross-party whip operation requires one organisational resource.
+on-arrival: {!
+Q.resources -= 1;
+Q.constructive_candidate = "Władysław Kosiniak-Kamysz";
+Q.constructive_sponsors = Math.min(
+    115,
+    Q.aug21_vonc_left_sponsors
+);
+Q.constructive_yes = Math.min(
+    Math.max(
+        0,
+        (Number(Q.sejm_total) || 460) -
+            Math.max(0, Math.round(Number(Q.pis_seats) || 0))
+    ),
+    Q.aug21_vonc_democratic_base +
+        Q.aug21_vonc_porozumienie_support +
+        Q.aug21_vonc_other_support +
+        Q.aug21_vonc_konf_support
+);
+Q.constructive_no = Math.max(0, Math.round(Number(Q.pis_seats) || 0));
+Q.constructive_abstain = Math.max(
+    0,
+    (Number(Q.sejm_total) || 460) -
+        Q.constructive_yes - Q.constructive_no
+);
+Q.aug21_vonc_initiator = "Lewica";
+Q.aug21_vonc_strategy = "All-opposition technical compact";
+Q.ko_relation += 5;
+Q.psl_relation += 6;
+Q.pis_relation -= 8;
+Q.party_unity -= 4;
+Q.razem_dissent += 7;
+Q.progressive_credibility -= 3;
+Q.far_right_agenda += 4;
+Q.constitutional_restraint += 6;
+Q.news_headline =
+    "Lewica tests a technical nominee without inventing a Konfederacja pact";
+!}
+go-to: aug21_constructive_roll
+
+@aug21_vonc_ai
+title: Refuse to sponsor the replacement and let KO file
+subtitle: The AI opposition still forces a vote, but cannot promise Lewica's organisational control of the count.
+on-arrival: {!
+Q.constructive_candidate = "Władysław Kosiniak-Kamysz";
+Q.constructive_sponsors = Math.min(
+    115,
+    Math.max(0, Math.round(Number(Q.ko_seats) || 0))
+);
+Q.constructive_yes = Math.min(
+    Math.max(
+        0,
+        (Number(Q.sejm_total) || 460) -
+            Math.max(0, Math.round(Number(Q.pis_seats) || 0))
+    ),
+    Q.aug21_vonc_democratic_base +
+        Q.aug21_vonc_porozumienie_support +
+        Q.aug21_vonc_other_support
+);
+Q.constructive_no = Math.max(0, Math.round(Number(Q.pis_seats) || 0));
+Q.constructive_abstain = Math.max(
+    0,
+    (Number(Q.sejm_total) || 460) -
+        Q.constructive_yes - Q.constructive_no
+);
+Q.aug21_vonc_initiator = "KO parliamentary AI";
+Q.aug21_vonc_strategy = "AI-filed opposition count";
+Q.ko_relation -= 2;
+Q.party_unity += 1;
+Q.news_headline = "KO files the constructive motion that Lewica declined";
+!}
+go-to: aug21_constructive_roll
+
+@aug21_constructive_roll
+title: The named replacement
+new-page: true
+on-arrival: {!
+Q.confidence_stage = 6;
+Q.confidence_mode =
+    "Article 158 constructive no confidence — statutory majority";
+Q.confidence_candidate = Q.constructive_candidate;
+Q.confidence_yes = Q.constructive_yes;
+Q.confidence_no = Q.constructive_no;
+Q.confidence_abstain = Q.constructive_abstain;
+Q.confidence_present =
+    Q.confidence_yes + Q.confidence_no + Q.confidence_abstain;
+Q.confidence_threshold = 231;
+// The live 2019 chamber can supply at most 224 votes on this route. No
+// additional PiS defector pool is modelled, so the replacement cannot pass.
+Q.constructive_passed = 0;
+Q.aug21_technical_cabinet = 0;
+Q.constructive_vonc_cooldown = 3;
+Q.government_name = "PiS–United Right minority";
+Q.coalition_status =
+    "PiS minority government after a failed constructive vote";
+Q.news_headline =
+    "Morawiecki survives the constructive vote with " +
+    Q.constructive_yes + " deputies for the alternative";
+!}
+
+= Constructive roll call
+
+**Initiator:** [+ aug21_vonc_initiator +]
+
+**Strategy:** [+ aug21_vonc_strategy +]
+
+<div class="ledger-section ledger-section-first"><div class="ledger-title">Roll
+call</div>
+<div class="ledger-row"><span>Named successor</span><b>[+ confidence_candidate +]</b></div>
+<div class="ledger-row"><span>Sponsors</span><b>[+ constructive_sponsors +]</b></div>
+<div class="ledger-row"><span>Yes</span><b>[+ confidence_yes +]</b></div>
+<div class="ledger-row"><span>No</span><b>[+ confidence_no +]</b></div>
+<div class="ledger-row"><span>Abstain</span><b>[+ confidence_abstain +]</b></div>
+<div class="ledger-row"><span>Required</span><b>231</b></div></div>
+
+Morawiecki remains prime minister. The failed motion proves that a hostile
+President cannot manufacture a Sejm majority.
+
+- @aug21_constructive_return: Record the vote
+
+@aug21_constructive_return
+go-to: poland_hub
 
 @aug21_health
 title: Build a cross-party public-health front without PiS control
@@ -391,7 +631,7 @@ on-arrival: government_favors += 1; pis_relation += 5; ko_relation -= 5; razem_d
 
 @aug21_liberty
 title: Oppose coercion while rejecting anti-vaccine fantasy
-on-arrival: constitutional_restraint += 4; public_trust += 1; health_capacity -= 2; covid_anti_system_pressure += 2; konf_poll_momentum += 0.25; young_support += 1; news_headline = "The Left tries to separate civil liberty from denial"
+on-arrival: constitutional_restraint += 4; public_trust += 1; pandemic_deaths_pressure += 2; covid_anti_system_pressure += 2; konf_poll_momentum += 0.25; young_support += 1; news_headline = "The Left tries to separate civil liberty from denial"
 
 **Result:** [+ news_headline +].
 
@@ -400,6 +640,7 @@ on-arrival: constitutional_restraint += 4; public_trust += 1; health_capacity -=
 
 @september_2021
 title: The border state of emergency
+face-image: img/poland/events/belarus-border-2021.webp
 new-page: true
 on-arrival: {!
 const finiteBorder = function(value, fallback) {
@@ -539,10 +780,12 @@ on-arrival: border_doctrine = "Defer to KO"; ko_relation += 2; public_trust -= 3
 @october_2021_hub
 title: Congress and constitutional collision
 new-page: true
+on-arrival: october_2021_congress_done = 1 if nowa_lewica_merger_agreed = 0
 
 = October 2021
 
-Two decisions compete for the same leadership table.
+[? if nowa_lewica_merger_agreed: Two decisions compete for the same leadership table.?]
+[? if not nowa_lewica_merger_agreed: With no Nowa Lewica merger to ratify, only the constitutional collision reaches the table.?]
 
 - @oct21_congress
 - @oct21_eu
@@ -551,21 +794,60 @@ Two decisions compete for the same leadership table.
 @oct21_congress
 title: The Nowa Lewica congress
 new-page: true
-view-if: october_2021_congress_done = 0
+view-if: october_2021_congress_done = 0 and nowa_lewica_merger_agreed = 1
 on-arrival: october_2021_congress_done = 1
 
-= One party, two chairs
+[? if merger_leader = "Dual chairs": = One party, two chairs?]
+[? if merger_leader = "Razem": = One party under Razem's lead?]
+[? if merger_leader = "Włodzimierz Czarzasty": = One party, one executive?]
+[? if merger_leader != "Dual chairs" and merger_leader != "Razem" and merger_leader != "Włodzimierz Czarzasty": = One party, member arbitration?]
 
-SLD and Wiosna complete their formal merger. The rules can stabilise parallel
-organisations or convert the congress into another test of executive control.
+SLD and Wiosna complete their formal merger. [? if razem_merged: Razem has also surrendered its separate legal route, so the congress must decide whether its lead survives formal ratification.?][? if not razem_merged: Razem remains legally autonomous outside the new party.?] The rules can preserve the existing leader, stabilise parallel organisations or put members above every component.
 
+- @oct21_razem
 - @oct21_dual
 - @oct21_members
 - @oct21_machine
 
+@oct21_razem
+title: Ratify Razem's lead with protected internal currents
+subtitle: Available only while Razem still commands the merger and holds a bureau seat.
+view-if: razem_merged = 1
+choose-if: merger_leader = "Razem" and (zandberg_advisor = 1 or biejat_advisor = 1 or zawisza_advisor = 1 or matysiak_advisor = 1)
+unavailable-subtitle: Razem no longer has both the mandate and bureau control needed to force ratification.
+on-arrival: {!
+Q.merger_leader = "Razem";
+Q.left_project = "Ratified Razem-led Nowa Lewica";
+Q.razem_dissent -= 8;
+Q.party_unity += 5;
+Q.barons_dissent += 6;
+Q.spring_dissent -= 3;
+if (Q.spring_active) {
+    const springTransfer = Math.max(0, Number(Q.spring_strength) || 0);
+    Q.labor_strength += springTransfer * 0.40;
+    Q.progressives_strength += springTransfer * 0.60;
+    Q.spring_exit_strength = springTransfer;
+    Q.spring_strength = 0;
+    Q.spring_active = 0;
+    Q.spring_in_left = 0;
+    Q.spring_merged = 1;
+    Q.factions = Q.factions.filter(function(caucus) {
+        return caucus !== "spring";
+    });
+}
+Q.barons_name = "Nowa Lewica establishment";
+Q.labor_name = "Social-democratic labour";
+Q.progressives_name = "New Left progressives";
+Q.left_party_name = "Lewica Razem";
+Q.news_headline =
+    "Congress ratifies Razem's lead over one party with protected currents";
+!}
+go-to: october_2021_hub
+
 @oct21_dual
 title: Ratify dual leadership and protected component rights
 on-arrival: {!
+Q.merger_leader = "Dual chairs";
 Q.left_project = "Nowa Lewica dual leadership";
 Q.spring_dissent -= 7;
 Q.barons_dissent -= 5;
@@ -600,6 +882,7 @@ choose-if: resources >= 1
 unavailable-subtitle: The convention cannot be organised.
 on-arrival: {!
 Q.resources -= 1;
+Q.merger_leader = "Membership convention";
 Q.left_project = "Nowa Lewica with member arbitration";
 Q.party_unity += 6;
 Q.organiser_energy += 3;
@@ -631,6 +914,7 @@ go-to: october_2021_hub
 @oct21_machine
 title: Confirm the executive settlement and close the revolt
 on-arrival: {!
+Q.merger_leader = "Włodzimierz Czarzasty";
 Q.left_project = "Centralised Nowa Lewica";
 Q.barons_strength += 4;
 Q.barons_dissent -= 8;
@@ -863,15 +1147,45 @@ vote.
 title: The PPS circle
 new-page: true
 view-if: december_2021_pps_done = 0
-on-arrival: december_2021_pps_done = 1
+on-arrival: {!
+Q.december_2021_pps_done = 1;
+const inclusiveMergerSettlements = [
+    "Five-current truce",
+    "Membership ballot",
+    "Razem-led current pact",
+    "No merger, no revolt"
+];
+Q.pps_breakaway_pressure = Math.max(
+    0,
+    (Number(Q.pps_dissent) || 0) +
+        (inclusiveMergerSettlements.includes(Q.merger_resolution) ? -18 : 12)
+);
+Q.pps_defector_names =
+    "Andrzej Rozenek, Robert Kwiatkowski and Joanna Senyszyn";
+!}
 
 = Dissent forms a parliamentary circle
 
-Suspended and former Nowa Lewica MPs prepare a PPS parliamentary circle.
+[? if pps_breakaway_pressure >= 28: **Andrzej Rozenek, Robert Kwiatkowski and
+Joanna Senyszyn**, joined in the Senate by **Wojciech Konieczny and Gabriela
+Morawska-Stanecka**, prepare a PPS parliamentary circle after the merger
+settlement fails to protect them.?]
+[? if pps_breakaway_pressure < 28: The earlier **[+ merger_resolution +]**
+gave the small PPS current a credible internal appeal. Its three MPs and two
+senators can remain inside the common Left, but only if that settlement is
+honoured now.?]
 
+- @dec21_honour_settlement
 - @dec21_amnesty
 - @dec21_accept
 - @dec21_punish
+
+@dec21_honour_settlement
+title: Honour the merger settlement and keep PPS as an internal current
+subtitle: No seats move; unity +4 and PPS dissent −10.
+view-if: pps_breakaway_pressure < 28
+on-arrival: pps_active = 1; pps_in_left = 1; pps_party_formed = 0; pps_dissent -= 10; party_unity += 4; public_trust += 1; news_headline = "The inclusive merger settlement survives its first enforcement test"
+go-to: december_2021_hub
 
 @dec21_amnesty
 title: Offer an amnesty and a binding internal appeal
@@ -884,16 +1198,37 @@ go-to: december_2021_hub
 @dec21_accept
 title: Accept the circle and negotiate parliamentary cooperation
 on-arrival: {!
-const ppsStrength = Math.max(1, Number(Q.pps_strength) || 2);
-const ppsSeats = Math.min(
-    Math.max(0, Number(Q.left_seats) || 0),
-    Math.max(1, Math.round((Number(Q.left_seats) || 0) * ppsStrength / 100))
+const ppsSeatTarget = Math.min(
+    Math.max(0, Number(Q.left_seats) || 0), 3
+);
+let ppsSeats = Math.min(
+    ppsSeatTarget,
+    Math.max(0, Number(Q.left_pps_seats) || 0)
+);
+Q.left_pps_seats = Math.max(
+    0,
+    (Number(Q.left_pps_seats) || 0) - ppsSeats
+);
+for (const seatKey of [
+    "left_barons_seats", "left_labor_seats",
+    "left_progressives_seats", "left_spring_seats", "razem_seats"
+]) {
+    const transfer = Math.min(
+        ppsSeatTarget - ppsSeats,
+        Math.max(0, Number(Q[seatKey]) || 0)
+    );
+    Q[seatKey] = Math.max(0, (Number(Q[seatKey]) || 0) - transfer);
+    ppsSeats += transfer;
+}
+const ppsSenators = Math.min(
+    2,
+    Math.max(0, Number(Q.senate_left_seats) || 0)
 );
 Q.party_unity -= 3;
 Q.labor_credibility += 2;
 Q.pps_circle_relation = 55;
 Q.pps_party_relation = 55;
-Q.pps_exit_strength = ppsStrength;
+Q.pps_exit_strength = Math.max(1, Number(Q.pps_strength) || 2);
 Q.pps_active = 0;
 Q.pps_in_left = 0;
 Q.pps_party_formed = 1;
@@ -902,7 +1237,22 @@ Q.pps_dissent = 100;
 Q.left_seats = Math.max(0, Number(Q.left_seats) - ppsSeats);
 Q.pps_party_seats =
     Math.max(0, Number(Q.pps_party_seats) || 0) + ppsSeats;
+Q.senate_left_seats = Math.max(
+    0,
+    Number(Q.senate_left_seats) - ppsSenators
+);
+Q.senate_independent_seats =
+    Math.max(0, Number(Q.senate_independent_seats) || 0) + ppsSenators;
+Q.pps_senate_seats = ppsSenators;
 Q.seat_subvention_seats = Q.left_seats;
+Q.left_new_generation_seats =
+    (Number(Q.left_labor_seats) || 0) +
+    (Number(Q.left_progressives_seats) || 0);
+Q.nowa_lewica_seats =
+    (Number(Q.left_barons_seats) || 0) +
+    (Number(Q.left_spring_seats) || 0) +
+    (Number(Q.left_labor_seats) || 0) +
+    (Number(Q.left_progressives_seats) || 0);
 Q.barons_dissent -= 2;
 Q.public_trust += 1;
 Q.news_headline =
@@ -913,10 +1263,31 @@ go-to: december_2021_hub
 @dec21_punish
 title: Remove the rebels from common structures
 on-arrival: {!
-const ppsStrength = Math.max(1, Number(Q.pps_strength) || 2);
-const ppsSeats = Math.min(
-    Math.max(0, Number(Q.left_seats) || 0),
-    Math.max(1, Math.round((Number(Q.left_seats) || 0) * ppsStrength / 100))
+const ppsSeatTarget = Math.min(
+    Math.max(0, Number(Q.left_seats) || 0), 3
+);
+let ppsSeats = Math.min(
+    ppsSeatTarget,
+    Math.max(0, Number(Q.left_pps_seats) || 0)
+);
+Q.left_pps_seats = Math.max(
+    0,
+    (Number(Q.left_pps_seats) || 0) - ppsSeats
+);
+for (const seatKey of [
+    "left_barons_seats", "left_labor_seats",
+    "left_progressives_seats", "left_spring_seats", "razem_seats"
+]) {
+    const transfer = Math.min(
+        ppsSeatTarget - ppsSeats,
+        Math.max(0, Number(Q[seatKey]) || 0)
+    );
+    Q[seatKey] = Math.max(0, (Number(Q[seatKey]) || 0) - transfer);
+    ppsSeats += transfer;
+}
+const ppsSenators = Math.min(
+    2,
+    Math.max(0, Number(Q.senate_left_seats) || 0)
 );
 Q.party_unity -= 7;
 Q.barons_strength += 2;
@@ -925,7 +1296,7 @@ Q.labor_dissent += 7;
 Q.progressives_dissent += 6;
 Q.pps_circle_relation = 12;
 Q.pps_party_relation = 12;
-Q.pps_exit_strength = ppsStrength;
+Q.pps_exit_strength = Math.max(1, Number(Q.pps_strength) || 2);
 Q.pps_active = 0;
 Q.pps_in_left = 0;
 Q.pps_party_formed = 1;
@@ -934,7 +1305,22 @@ Q.pps_dissent = 100;
 Q.left_seats = Math.max(0, Number(Q.left_seats) - ppsSeats);
 Q.pps_party_seats =
     Math.max(0, Number(Q.pps_party_seats) || 0) + ppsSeats;
+Q.senate_left_seats = Math.max(
+    0,
+    Number(Q.senate_left_seats) - ppsSenators
+);
+Q.senate_independent_seats =
+    Math.max(0, Number(Q.senate_independent_seats) || 0) + ppsSenators;
+Q.pps_senate_seats = ppsSenators;
 Q.seat_subvention_seats = Q.left_seats;
+Q.left_new_generation_seats =
+    (Number(Q.left_labor_seats) || 0) +
+    (Number(Q.left_progressives_seats) || 0);
+Q.nowa_lewica_seats =
+    (Number(Q.left_barons_seats) || 0) +
+    (Number(Q.left_spring_seats) || 0) +
+    (Number(Q.left_labor_seats) || 0) +
+    (Number(Q.left_progressives_seats) || 0);
 Q.labor_credibility -= 3;
 Q.public_trust -= 2;
 Q.news_headline =
@@ -1307,6 +1693,7 @@ on-arrival: ukraine_solidarity -= 6; military_trust -= 8; public_trust -= 5; raz
 
 @march_2022
 title: A country of hosts
+face-image: img/poland/events/ukraine-refugees-2022.webp
 new-page: true
 on-arrival: {!
 Q.ukraine_refugees_done = 1;
@@ -1335,11 +1722,11 @@ communities through the next year.
 - @mar22_screen
 
 @mar22_services
-title: Finance local housing, schools and health access
+title: Organise a funded local housing, schools and health amendment
 subtitle: Cost: 2 resources.
 choose-if: resources >= 2
 unavailable-subtitle: The policy team cannot assemble the package.
-on-arrival: resources -= 2; refugee_settlement = "Funded local services proposal"; refugee_service_capacity += 3; local_network += 4; health_policy_pressure += 3; household_policy_pressure += 2; psl_relation += 2; budget_promises += 1; last_policy_stage = "Proposal"; last_policy_authority = "Opposition and local-government network"; last_policy_implementation = 0; news_headline = "Emergency welcome becomes a local-service plan"
+on-arrival: resources -= 2; refugee_settlement = "Funded local services proposal"; local_network += 4; health_policy_pressure += 3; household_policy_pressure += 2; psl_relation += 2; budget_promises += 1; last_policy_stage = "Proposal"; last_policy_authority = "Opposition and local-government network"; last_policy_implementation = 0; news_headline = "Emergency welcome becomes a local-service amendment"
 
 **Result:** [+ news_headline +].
 
@@ -1365,8 +1752,8 @@ on-arrival: refugee_settlement = "One humanitarian standard"; minority_safety +=
 
 
 @mar22_screen
-title: Put registration and security screening first
-on-arrival: refugee_settlement = "Registration and screening first"; border_security_confidence += 5; military_trust += 2; refugee_service_capacity += 1; minority_safety -= 3; psl_relation += 2; progressives_dissent += 4; news_headline = "Security screening defines the refugee response"
+title: Campaign for registration and security screening first
+on-arrival: refugee_settlement = "Registration and screening proposal"; border_security_confidence += 5; military_trust += 2; minority_safety -= 3; psl_relation += 2; progressives_dissent += 4; last_policy_stage = "Proposal"; last_policy_authority = "Parliamentary opposition"; last_policy_implementation = 0; news_headline = "Security screening defines the Left's refugee proposal"
 
 **Result:** [+ news_headline +].
 
@@ -1397,7 +1784,7 @@ it and what replaces Russian energy.
 
 @apr22_windfall
 title: Pair the embargo with a windfall levy and household shield
-on-arrival: household_policy_pressure += 5; labor_credibility += 4; energy_security += 2; left_economic_position -= 3; ko_relation -= 1; konf_poll_momentum += 0.1; last_policy_stage = "Proposal"; last_policy_authority = "Parliamentary opposition"; last_policy_implementation = 0; news_headline = "The Left assigns the war-energy bill to excess profits"
+on-arrival: household_policy_pressure += 5; climate_policy_pressure += 2; labor_credibility += 4; left_economic_position -= 3; ko_relation -= 1; konf_poll_momentum += 0.1; last_policy_stage = "Proposal"; last_policy_authority = "Parliamentary opposition"; last_policy_implementation = 0; news_headline = "The Left assigns the war-energy bill to excess profits"
 
 **Result:** [+ news_headline +].
 
@@ -1409,7 +1796,7 @@ title: Make public energy and rapid transition the replacement
 subtitle: Cost: 1 resource.
 choose-if: resources >= 1
 unavailable-subtitle: No organisational capacity for the programme.
-on-arrival: resources -= 1; energy_security += 2; administrative_reform_pressure += 4; public_trust += 2; labor_dissent += 2; rural_support -= 1; last_policy_stage = "Proposal"; last_policy_authority = "Parliamentary opposition"; last_policy_implementation = 0; news_headline = "Public investment becomes the answer to Russian energy"
+on-arrival: resources -= 1; climate_policy_pressure += 3; administrative_reform_pressure += 4; public_trust += 2; labor_dissent += 2; rural_support -= 1; last_policy_stage = "Proposal"; last_policy_authority = "Parliamentary opposition"; last_policy_implementation = 0; news_headline = "Public investment becomes the answer to Russian energy"
 
 **Result:** [+ news_headline +].
 
@@ -1418,7 +1805,7 @@ on-arrival: resources -= 1; energy_security += 2; administrative_reform_pressure
 
 @apr22_coal
 title: Protect coal regions and accept a temporary retreat
-on-arrival: energy_security += 3; industrial_logistics_left_affinity += 2; rural_support += 2; climate_state_capacity -= 4; progressive_credibility -= 3; labor_credibility += 2; news_headline = "Coal security buys time and reopens the transition fight"
+on-arrival: climate_policy_pressure -= 4; industrial_logistics_left_affinity += 2; rural_support += 2; progressive_credibility -= 3; labor_credibility += 2; last_policy_stage = "Proposal"; last_policy_authority = "Parliamentary opposition"; last_policy_implementation = 0; news_headline = "A coal retreat reopens the Left's transition fight"
 
 **Result:** [+ news_headline +].
 
@@ -1426,7 +1813,7 @@ on-arrival: energy_security += 3; industrial_logistics_left_affinity += 2; rural
 
 
 @may_2022
-title: Mortgages and one opposition list
+title: The one-list squeeze
 new-page: true
 on-arrival: rates_lists_2022_done = 1; opposition_list_pressure += 5; household_security -= 3; economic_issue_salience += 5; news_headline = "Rate rises and Tusk's list demand squeeze smaller parties"
 
@@ -1499,7 +1886,11 @@ Q.kpo_government_relation_payoff = Math.max(
     Math.min(5, Math.round((kpoGovernmentFit - 18) / 7))
 );
 Q.kpo_2022_done = 1;
-Q.kpo_milestones += 2;
+if (Q.recovery_fund_ratified) {
+    Q.kpo_milestones += 2;
+} else {
+    Q.kpo_deadline_pressure += 8;
+}
 Q.institutional_issue_salience += 7;
 Q.news_headline =
     "Europe approves Poland's plan but attaches judicial milestones";
@@ -1508,7 +1899,12 @@ Q.news_headline =
 = June 2022 — Approval is not payment
 
 The recovery plan clears its European decision. Payments still depend on
-judicial changes, reopening the bargain the Left made in 2021.
+judicial changes. [? if recovery_fund_ratified: The domestic ratification
+route was **[+ recovery_fund_vote_basis +]**; the 2021 strategy was **[+
+recovery_fund_strategy +]**.?][? if not recovery_fund_ratified: The 2021
+strategy produced no ratification majority. Approval therefore exposes an
+additional domestic legal and timing failure rather than reopening a bargain
+that never passed.?]
 
 - @jun22_enforce
 - @jun22_opposition
@@ -1516,7 +1912,7 @@ judicial changes, reopening the bargain the Left made in 2021.
 - @jun22_refuse
 
 @jun22_enforce
-title: Audit every promise in the Left's 2021 bargain
+title: Audit every promise in the Left's 2021 strategy
 on-arrival: kpo_scrutiny += 3; public_trust += 3; labor_credibility += 2; pis_relation -= 2; ko_relation -= 1; barons_dissent += 2; last_policy_stage = "Audit"; last_policy_authority = "Parliamentary opposition"; last_policy_implementation = 0; news_headline = "The Left publishes a recovery-fund promise ledger"
 
 **Result:** [+ news_headline +].
@@ -1600,7 +1996,7 @@ administrative trust nor KPO money arrives automatically.
 
 @jul22_index
 title: Demand indexed wages, pensions and public contracts
-on-arrival: household_policy_pressure += 5; labor_credibility += 5; public_sector_support += 3; budget_promises += 2; left_economic_position -= 4; inflation += 0.3; last_policy_stage = "Proposal"; last_policy_authority = "Parliamentary opposition"; last_policy_implementation = 0; news_headline = "The Left makes indexation the answer to inflation"
+on-arrival: household_policy_pressure += 5; labor_credibility += 5; public_sector_support += 3; budget_promises += 2; left_economic_position -= 4; economic_issue_salience += 2; last_policy_stage = "Proposal"; last_policy_authority = "Parliamentary opposition"; last_policy_implementation = 0; news_headline = "The Left makes indexation the answer to inflation"
 
 **Result:** [+ news_headline +].
 
@@ -1627,6 +2023,7 @@ on-arrival: kpo_scrutiny += 2; judicial_legitimacy += 3; ko_relation += 3; house
 
 @august_2022
 title: Mass fish deaths in the Oder
+face-image: img/poland/events/oder-disaster-2022.webp
 new-page: true
 on-arrival: odra_2022_done = 1; climate_state_capacity -= 4; public_trust -= 2; news_headline = "Mass fish deaths expose a failure of warning and response"
 
@@ -1669,7 +2066,7 @@ on-arrival: administrative_reform_pressure += 5; ko_relation += 3; p2050_relatio
 
 @aug22_attack
 title: Make ministerial incompetence the whole story
-on-arrival: public_trust += 1; media_capacity += 2; climate_state_capacity -= 1; ko_relation += 1; konf_poll_momentum += 0.1; news_headline = "The scandal lands before a durable river policy"
+on-arrival: public_trust += 1; media_capacity += 2; administrative_reform_pressure -= 2; ko_relation += 1; konf_poll_momentum += 0.1; news_headline = "The scandal lands before a durable river policy"
 
 **Result:** [+ news_headline +].
 
@@ -1713,7 +2110,7 @@ title: Pair short relief with public-energy investment
 subtitle: Cost: 2 resources.
 choose-if: resources >= 2
 unavailable-subtitle: The programme cannot be assembled.
-on-arrival: resources -= 2; household_policy_pressure += 3; energy_security += 3; administrative_reform_pressure += 5; public_trust += 3; last_policy_stage = "Proposal"; last_policy_authority = "Parliamentary opposition"; last_policy_implementation = 0; news_headline = "Relief and transition enter one costed programme"
+on-arrival: resources -= 2; household_policy_pressure += 3; climate_policy_pressure += 3; administrative_reform_pressure += 5; public_trust += 3; last_policy_stage = "Proposal"; last_policy_authority = "Parliamentary opposition"; last_policy_implementation = 0; news_headline = "Relief and transition enter one costed programme"
 
 **Result:** [+ news_headline +].
 
@@ -1731,7 +2128,7 @@ on-arrival: household_policy_pressure += 4; health_policy_pressure += 2; public_
 
 @sep22_deregulate
 title: Suspend climate rules and cut energy taxes
-on-arrival: energy_security += 2; climate_state_capacity -= 6; left_economic_position += 5; konf_poll_momentum += 0.2; rural_support += 1; progressives_dissent += 7; news_headline = "Emergency deregulation moves the debate onto Konfederacja's ground"
+on-arrival: climate_policy_pressure -= 6; left_economic_position += 5; konf_poll_momentum += 0.2; rural_support += 1; progressives_dissent += 7; last_policy_stage = "Proposal"; last_policy_authority = "Parliamentary opposition"; last_policy_implementation = 0; news_headline = "Emergency deregulation moves the debate onto Konfederacja's ground"
 
 **Result:** [+ news_headline +].
 
@@ -1881,7 +2278,7 @@ go-to: november_2022_hub
 @nov22_przewodow
 title: Przewodów
 new-page: true
-view-if: przewodow_2022_done = 0
+view-if: przewodow_2022_done = 0 and independence_2022_done = 1
 on-arrival: przewodow_2022_done = 1; war_escalation_risk += 10
 
 = Two people are dead
@@ -2000,7 +2397,6 @@ Q.budget_2022_package_code = 3;
 Q.government_favors += 1;
 Q.pis_relation += Q.budget22_pis_relation_payoff;
 Q.ko_relation -= 6;
-Q.refugee_service_capacity += 4;
 Q.budget_2022_concession_pending = 1;
 Q.household_policy_pressure += 3;
 Q.razem_dissent += 7;
@@ -2113,6 +2509,7 @@ Q.kpo_bill_2023_done = 1;
 Q.institutional_issue_salience += 6;
 if (Q.budget_2022_concession_pending && Q.budget_2022_ratified) {
     Q.household_security += 3;
+    Q.refugee_service_capacity += 4;
     Q.budget_2022_concession_implemented = 1;
     Q.last_policy_stage = "Implementation";
     Q.last_policy_authority = "PiS Council of Ministers";
@@ -2272,17 +2669,12 @@ Q.razem_cooperation += 7;
 Q.razem_dissent -= 6;
 Q.barons_dissent += 3;
 Q.public_trust += 2;
-Q.pps_active = 1;
-Q.pps_in_left = 1;
-Q.pps_party_formed = 0;
 Q.pps_strength = Math.max(2, Number(Q.pps_exit_strength) || 2);
 Q.pps_dissent = Math.min(30, Number(Q.pps_dissent) || 30);
-Q.left_seats += Math.max(0, Number(Q.pps_party_seats) || 0);
-Q.pps_party_seats = 0;
 Q.news_headline =
     "Four Left parties sign with autonomy guarantees and PPS returns as a tiny caucus";
 !}
-go-to: february_2023_hub
+go-to: feb23_restore_pps
 
 @feb23_lead
 title: Put Nowa Lewica in command of one campaign
@@ -2295,16 +2687,11 @@ Q.barons_dissent -= 5;
 Q.razem_dissent += 7;
 Q.pps_dissent += 5;
 Q.party_unity += 1;
-Q.pps_active = 1;
-Q.pps_in_left = 1;
-Q.pps_party_formed = 0;
 Q.pps_strength = Math.max(1.5, Number(Q.pps_exit_strength) || 2);
-Q.left_seats += Math.max(0, Number(Q.pps_party_seats) || 0);
-Q.pps_party_seats = 0;
 Q.news_headline =
     "Nowa Lewica leads a list that retains a very small PPS caucus";
 !}
-go-to: february_2023_hub
+go-to: feb23_restore_pps
 
 @feb23_social
 title: Write a PPS–Razem social floor above the branding
@@ -2317,14 +2704,33 @@ Q.pps_dissent -= 12;
 Q.barons_dissent += 4;
 Q.budget_promises += 1;
 Q.party_unity += 3;
+Q.pps_strength = Math.max(3, Number(Q.pps_exit_strength) || 2);
+Q.news_headline =
+    "A PPS–Razem social floor reunites the parliamentary Left";
+!}
+go-to: feb23_restore_pps
+
+@feb23_restore_pps
+on-arrival: {!
+const returningPpsMps = Math.max(0, Number(Q.pps_party_seats) || 0);
+const returningPpsSenators = Math.min(
+    Math.max(0, Number(Q.pps_senate_seats) || 0),
+    Math.max(0, Number(Q.senate_independent_seats) || 0)
+);
 Q.pps_active = 1;
 Q.pps_in_left = 1;
 Q.pps_party_formed = 0;
-Q.pps_strength = Math.max(3, Number(Q.pps_exit_strength) || 2);
-Q.left_seats += Math.max(0, Number(Q.pps_party_seats) || 0);
+Q.left_seats = Math.max(0, Number(Q.left_seats) || 0) + returningPpsMps;
+Q.left_pps_seats =
+    Math.max(0, Number(Q.left_pps_seats) || 0) + returningPpsMps;
 Q.pps_party_seats = 0;
-Q.news_headline =
-    "A PPS–Razem social floor reunites the parliamentary Left";
+Q.senate_independent_seats =
+    Math.max(0, Number(Q.senate_independent_seats) || 0) -
+        returningPpsSenators;
+Q.senate_left_seats =
+    Math.max(0, Number(Q.senate_left_seats) || 0) + returningPpsSenators;
+Q.pps_senate_seats = 0;
+Q.seat_subvention_seats = Q.left_seats;
 !}
 go-to: february_2023_hub
 

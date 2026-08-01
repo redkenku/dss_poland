@@ -12,8 +12,14 @@
   var main = function(dendryUI) {
     ui = dendryUI;
     game = ui.game;
-
-    // Add your custom code here.
+    var engineAudio = ui.audio.bind(ui);
+    ui.audio = function(audio) {
+      var startScene = game.scenes['root.new_game'];
+      if (ui.currentAudio && startScene && audio === startScene.audio) {
+        return;
+      }
+      engineAudio(audio);
+    };
   };
 
   var TITLE = "Polish Red Autumn" + '_' + "redkenku";
@@ -112,6 +118,38 @@
   };
 
   var observedRadioAudio = null;
+  var radioVolume = 0.2;
+
+  try {
+    var savedRadioVolume = window.localStorage.getItem(
+      TITLE + '_radio_volume'
+    );
+    var parsedRadioVolume = Number(savedRadioVolume);
+    if (savedRadioVolume !== null && Number.isFinite(parsedRadioVolume)) {
+      radioVolume = Math.max(0, Math.min(1, parsedRadioVolume));
+    }
+  } catch (_error) {
+    // Storage can be unavailable for local files or locked-down browsers.
+  }
+
+  var applyRadioVolume = function(audio) {
+    if (!audio) {
+      return;
+    }
+    window.jQuery(audio).stop(true);
+    audio.volume = radioVolume;
+  };
+
+  window.setRadioVolume = function(percent) {
+    radioVolume = Math.max(0, Math.min(1, Number(percent) / 100));
+    try {
+      window.localStorage.setItem(TITLE + '_radio_volume', radioVolume);
+    } catch (_error) {
+      // Volume still works for this session when storage is unavailable.
+    }
+    applyRadioVolume(window.dendryUI.currentAudio);
+    window.updateRadio();
+  };
 
   var radioTrackTitle = function(url) {
     var path = decodeURIComponent(String(url || '').split(/[?#]/)[0]);
@@ -128,16 +166,31 @@
     }
     var audio = window.dendryUI.currentAudio;
     var playlist = window.dendryUI.audioPlaylist || [];
-    radio.hidden = !audio;
+    var startScene = window.dendryUI.game.scenes['root.new_game'];
+    document.getElementById('radio-volume').value =
+      Math.round(radioVolume * 100);
+    document.getElementById('radio-volume-value').textContent =
+      Math.round(radioVolume * 100) + '%';
+    radio.hidden = !audio && !(startScene && startScene.audio);
     if (!audio) {
+      document.getElementById('radio-toggle').textContent = 'Play';
+      document.getElementById('radio-next').disabled = true;
+      document.getElementById('radio-track').textContent = 'Radio ready';
       return;
     }
     if (observedRadioAudio !== audio) {
       observedRadioAudio = audio;
-      ['play', 'pause', 'ended'].forEach(function(eventName) {
+      ['pause', 'ended'].forEach(function(eventName) {
         audio.addEventListener(eventName, window.updateRadio);
       });
+      audio.addEventListener('play', function() {
+        window.setTimeout(function() {
+          applyRadioVolume(audio);
+          window.updateRadio();
+        }, 0);
+      });
     }
+    applyRadioVolume(audio);
     document.getElementById('radio-toggle').textContent =
       audio.paused ? 'Play' : 'Pause';
     document.getElementById('radio-next').disabled = playlist.length < 2;
@@ -148,6 +201,7 @@
   window.toggleRadio = function() {
     var audio = window.dendryUI.currentAudio;
     if (!audio) {
+      window.enableAudio();
       return;
     }
     window.dendryUI.toggle_audio(audio.paused);
@@ -258,6 +312,8 @@ window.disableGrayMode = function() {
       className: 'party-nowa-lewica',
       explanation: 'New Left — the social-democratic party formed from SLD and Wiosna.',
       aliases: [
+        ['Nowa Lewica – Odnowa', 'Nowa Lewica – Odnowa'],
+        ['New Left Renewal', 'Nowa Lewica – Odnowa'],
         ['New Left', 'Nowa Lewica'],
         ['Nowa Lewica', 'Nowa Lewica']
       ]
@@ -267,6 +323,13 @@ window.disableGrayMode = function() {
       className: 'party-lewica',
       explanation: 'The Left — Poland’s broad left-wing electoral alliance.',
       aliases: [
+        ['Zjednoczona Lewica', 'Zjednoczona Lewica'],
+        ['Lewica w Rozsypce', 'Lewica w Rozsypce'],
+        ['Wiosna-SLD', 'Wiosna-SLD'],
+        ['Lewica Razem', 'Lewica Razem'],
+        ['Wspólne Jutro', 'Wspólne Jutro'],
+        ['Partia Pracy', 'Partia Pracy'],
+        ['Lewica Lewic', 'Lewica Lewic'],
         ['The Left', 'Lewica'],
         ['the Left', 'Lewica'],
         ['Left', 'Lewica'],
@@ -287,7 +350,11 @@ window.disableGrayMode = function() {
       id: 'wiosna',
       className: 'party-wiosna',
       explanation: 'Spring — the progressive party founded by Robert Biedroń.',
-      aliases: [['Wiosna', 'Wiosna']]
+      aliases: [
+        ['Wiosna / Spring', 'Wiosna'],
+        ['Spring', 'Wiosna'],
+        ['Wiosna', 'Wiosna']
+      ]
     },
     {
       id: 'razem',
@@ -295,6 +362,7 @@ window.disableGrayMode = function() {
       explanation: 'Together (Razem) — a democratic-socialist party.',
       aliases: [
         ['Together Party', 'Razem'],
+        ['Together', 'Razem'],
         ['Partia Razem', 'Partia Razem'],
         ['Razem', 'Razem']
       ]
@@ -316,6 +384,24 @@ window.disableGrayMode = function() {
       aliases: [
         ['Labour Union', 'Unia Pracy'],
         ['Unia Pracy', 'Unia Pracy']
+      ]
+    },
+    {
+      id: 'left-labor',
+      className: 'party-left-labor',
+      explanation: 'Lewica Pracy (Labour Left) — a possible labour-led splinter in the scenario.',
+      aliases: [
+        ['Labour Left', 'Lewica Pracy'],
+        ['Lewica Pracy', 'Lewica Pracy']
+      ]
+    },
+    {
+      id: 'young-left',
+      className: 'party-progressive',
+      explanation: 'Młoda Lewica (Young Left) — a possible progressive splinter in the scenario.',
+      aliases: [
+        ['Young Left', 'Młoda Lewica'],
+        ['Młoda Lewica', 'Młoda Lewica']
       ]
     },
     {
@@ -371,6 +457,7 @@ window.disableGrayMode = function() {
       className: 'party-pis',
       explanation: 'Law and Justice (PiS) — a national-conservative party.',
       aliases: [
+        ['Law & Justice', 'Prawo i Sprawiedliwość'],
         ['Law and Justice', 'Prawo i Sprawiedliwość'],
         ['Prawo i Sprawiedliwość', 'Prawo i Sprawiedliwość'],
         ['PiS', 'PiS']
@@ -484,10 +571,12 @@ window.disableGrayMode = function() {
     {
       id: 'kkp',
       className: 'party-kkp',
+      classAliases: ['party-korona'],
       explanation: 'Confederation of the Polish Crown (KKP) — Grzegorz Braun’s monarchist party.',
       aliases: [
         ['Confederation of the Polish Crown', 'Konfederacja Korony Polskiej'],
         ['Konfederacja Korony Polskiej', 'Konfederacja Korony Polskiej'],
+        ['Korona', 'Korona'],
         ['KKP', 'KKP']
       ]
     },
@@ -512,8 +601,15 @@ window.disableGrayMode = function() {
     {
       id: 'unia-centrum',
       className: 'party-unia-centrum',
+      classAliases: ['party-centrum'],
       explanation: 'Centre Union — a fictional centrist party in the scenario horizon.',
       aliases: [['Unia Centrum', 'Unia Centrum']]
+    },
+    {
+      id: 'rozwoj-plus',
+      className: 'party-rozwoj',
+      explanation: 'Rozwój Plus — a possible developmentalist split from PiS in the scenario.',
+      aliases: [['Rozwój Plus', 'Rozwój Plus']]
     },
     {
       id: 'german-minority',
@@ -551,6 +647,9 @@ window.disableGrayMode = function() {
 
   partyDefinitions.forEach(function(definition) {
     partyDefinitionsByClass[definition.className] = definition;
+    (definition.classAliases || []).forEach(function(className) {
+      partyDefinitionsByClass[className] = definition;
+    });
     definition.aliases.forEach(function(alias) {
       partyAliases[alias[0]] = {
         definition: definition,
@@ -569,6 +668,28 @@ window.disableGrayMode = function() {
     'g'
   );
 
+  var genericLeftAliases = {
+    'The Left': true,
+    'the Left': true,
+    'Left': true,
+    'Lewica': true
+  };
+  var currentLeftName = function() {
+    var engine = window.dendryUI && window.dendryUI.dendryEngine;
+    var qualities = engine && engine.state && engine.state.qualities;
+    var name = qualities && qualities.left_party_name;
+    return typeof name === 'string' && name.trim()
+      ? name
+      : 'Zjednoczona Lewica';
+  };
+  var partyLabel = function(alias) {
+    var match = partyAliases[alias];
+    return match && match.definition.id === 'lewica' &&
+      genericLeftAliases[alias]
+      ? currentLeftName()
+      : match.label;
+  };
+
   var partyMarkup = function(alias) {
     var match = partyAliases[alias];
     if (!match) {
@@ -577,7 +698,7 @@ window.disableGrayMode = function() {
     return '<span class="party ' + match.definition.className +
       '" title="' + escapeAttribute(match.definition.explanation) +
       '" data-party="' + match.definition.id + '">' +
-      match.label + '</span>';
+      partyLabel(alias) + '</span>';
   };
 
   var replacePartyAliases = function(text, addMarkup) {
@@ -592,7 +713,7 @@ window.disableGrayMode = function() {
         }
         var replacement = addMarkup
           ? partyMarkup(alias)
-          : partyAliases[alias].label;
+          : partyLabel(alias);
         return prefix + replacement;
       }
     );
@@ -623,9 +744,18 @@ window.disableGrayMode = function() {
     );
   };
 
+  var isPolishCampaignScene = function() {
+    var engine = window.dendryUI && window.dendryUI.dendryEngine;
+    var sceneId = engine && engine.state && engine.state.sceneId;
+    return typeof sceneId === 'string' &&
+      /^(root(?:\.|$)|poland_|status(?:\.|$)|library(?:\.|$)|modinfo(?:\.|$))/.test(
+        sceneId
+      );
+  };
+
   // This function is called for narrative text, headings, inserts and choices.
   window.displayText = function(text) {
-    if (typeof text !== 'string' || !text) {
+    if (typeof text !== 'string' || !text || !isPolishCampaignScene()) {
       return text;
     }
 
@@ -1108,7 +1238,17 @@ window.disableGrayMode = function() {
   window.onDisplayContent = function() {
       window.updateSidebar();
       window.updateSidebarRight();
-      window.enhancePartyElements(document.getElementById('content'));
+      var content = document.getElementById('content');
+      window.enhancePartyElements(content);
+      if (content) {
+        var heading = content.querySelector('h1, h2');
+        var sceneImages = content.querySelectorAll('.face-img:not([alt])');
+        for (var imageIndex = 0; imageIndex < sceneImages.length; imageIndex++) {
+          sceneImages[imageIndex].alt = heading
+            ? 'Illustration for ' + heading.textContent.trim()
+            : 'Event illustration';
+        }
+      }
       window.updateRadio();
       window.setTimeout(window.updateRadio, 0);
   };

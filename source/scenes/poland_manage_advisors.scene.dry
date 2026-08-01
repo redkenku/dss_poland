@@ -120,11 +120,11 @@ view-if: razem_active = 1 and (zandberg_advisor = 1 or biejat_advisor = 1 or zaw
 
 @remove_czarzasty
 title: Remove Włodzimierz Czarzasty
-subtitle: The SLD apparatus loses weight and becomes more restless.
+subtitle: The SLD apparatus treats the removal as a direct purge.
 view-if: czarzasty_advisor = 1
 choose-if: leadership_reshuffle_timer <= 0 and n_advisors > 0
 unavailable-subtitle: The bureau cannot be changed now.
-on-arrival: czarzasty_advisor = 0; n_advisors -= 1; advisor_reshuffle_removed_czarzasty = 1; removed_advisor = "Włodzimierz Czarzasty"; barons_strength -= 2; barons_dissent += 4
+on-arrival: czarzasty_advisor = 0; n_advisors -= 1; advisor_reshuffle_removed_czarzasty = 1; removed_advisor = "Włodzimierz Czarzasty"; barons_strength -= 2; barons_dissent += 12
 go-to: poland_manage_advisors
 
 @remove_biedron
@@ -425,7 +425,7 @@ go-to: poland_manage_advisors
 
 @finish
 title: Finish the reshuffle
-subtitle: Confirm the final slate and return to the leadership table.
+subtitle: A caucus taking most seats inflicts 10 dissent on every unrepresented wing.
 on-arrival: {!
 const advisorKeys = [
     "czarzasty",
@@ -453,7 +453,40 @@ const openingSignature =
         : finalSignature;
 if (finalSignature !== openingSignature) {
     Q.leadership_reshuffle_timer = 6;
-    Q.news_headline = "The leadership confirms a new three-seat bureau";
+    const advisorCaucuses = {
+        barons: ["czarzasty", "wieczorek"],
+        spring: Q.spring_active ? ["biedron"] : [],
+        labor: ["dziemianowicz_bak"],
+        progressives: [
+            "zukowska", "kotula", "gawkowski", "nowicka"
+        ].concat(Q.spring_active ? [] : ["biedron"]),
+        razem: ["zandberg", "biejat", "zawisza", "matysiak"]
+    };
+    const representation = {};
+    for (const faction of Object.keys(advisorCaucuses)) {
+        representation[faction] = advisorCaucuses[faction].reduce(
+            function(total, advisor) {
+                return total +
+                    (Number(Q[advisor + "_advisor"]) === 1 ? 1 : 0);
+            },
+            0
+        );
+        Q[faction + "_advisor_count"] = representation[faction];
+    }
+    const dominantFaction = Object.keys(representation).find(function(faction) {
+        return representation[faction] >= 2;
+    });
+    const hurtFactions = dominantFaction
+        ? Object.keys(representation).filter(function(faction) {
+            return Q[faction + "_active"] && representation[faction] === 0;
+        })
+        : [];
+    for (const faction of hurtFactions) {
+        Q[faction + "_dissent"] += 10;
+    }
+    Q.news_headline = hurtFactions.length
+        ? "A lopsided bureau shuts whole wings out of the leadership"
+        : "The leadership confirms a new three-seat bureau";
 }
 Q.advisor_reshuffle_before = finalSignature;
 Q.advisor_reshuffle_active = 0;
