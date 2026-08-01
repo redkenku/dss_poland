@@ -220,6 +220,25 @@ coordinating centre or rump. National election calculations apply each list's
 threshold separately, and the December 2026 assessment scores lists, wasted
 sub-threshold votes and family seats.
 
+Rightward change is also organisational. Welfare-conservative, sovereignty
+and order choices accumulate support for a cross-cutting Social-Patriot
+caucus; capitalist, credit and lower-tax choices can produce a Market Left
+caucus. These affinities overlap the ancestry caucuses and do not manufacture
+MPs. Sustained movement right raises dissent and grievance outside the SLD
+establishment—especially among Wiosna, labour, progressives, Razem and PPS—so
+those organisations can reach the existing defection and split stages.
+
+The August 2023 list negotiation then turns organisational exits into explicit
+electoral bargaining rather than automatic reunification. The player chooses
+a target and terms; partner relations, ideological fit, coalition openness,
+internal dissent and vetoes determine acceptance. Coalition committees use an
+8% threshold and preserve legal identity plus subsidy claims. A host-party
+list uses 5%, but the host controls nominations and money, so autonomous
+partners demand stronger guarantees. Compatible Wiosna, labour and progressive
+breakaways accept or reject Razem individually according to that arithmetic.
+An SLD breakaway does not return through Razem, and PPS always remains on its
+own committee.
+
 ### Initial caucus map
 
 This is an illustrative research map, not a fixed roster.

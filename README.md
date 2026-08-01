@@ -36,6 +36,7 @@ Pages workflow still uses Node 16.
 | `npm run build -- --force` | Force a complete recompile |
 | `npm run smoke` | Build, replay the original long-form slice, and run extended-system regressions |
 | `npm run smoke:braun` | Build and run the focused Braun legal-chain fixture |
+| `npm run smoke:lists` | Build and test right-turn caucuses plus the 2023 list negotiation |
 | `npm run smoke:senate` | Build and run the Senate election and budget-correction fixtures |
 | `npm run smoke:phase7` | Build and run the focused persistent PiS/KO organisation fixtures |
 | `npm run serve` | Serve the existing build without recompiling |
@@ -72,8 +73,9 @@ mechanics without replaying the earlier campaign.
   cabinet; and Foreign Affairs throughout the campaign. Government Affairs has
   one card for each of thirteen portfolios plus Cabinet Reshuffle, Coalition
   Council and Social Welfare.
-  PiS is normally hostile, but a costed crisis proposal—especially one mediated
-  by a Trzaskowski presidency—can produce a narrow, public bargain. A pinned
+  PiS is normally hostile, but social channels and internal fault-line tactics
+  can strengthen its solidarists, while a costed crisis proposal—especially
+  one mediated by a Trzaskowski presidency—can produce a narrow, public bargain. A pinned
   discard action removes one held opportunity without consuming time or
   changing political state.
 - Foreign Affairs adapts the inherited Weimar relationship ladder. Four
@@ -94,11 +96,20 @@ mechanics without replaying the earlier campaign.
   leaks, deadline demands, public criticism, failed whips, individual
   defections and parliamentary clubs before a separately polled list appears.
   MPs weigh offices, local organisation, personal following, ideology and list
-  dependence, so a split never assumes the whole estimated bloc leaves. Low
-  unity damages dues and campaign capacity without ending play; elections and
-  the final assessment judge any threshold losses. PSL and the centrist
-  parties behave as similarly divided coalition partners rather than fixed
-  vote blocks.
+  dependence, so a split never assumes the whole estimated bloc leaves.
+  Cultural or economic moves far enough to the right can also organise overlapping
+  Social-Patriot and Market Left caucuses while accelerating dissent among
+  Wiosna, labour, progressives, Razem and PPS. Before the 2023 election, a
+  list-negotiation minigame can pursue Lewica, Razem, KO, Third Way, PSL,
+  Poland 2050 or PiS arrangements. Coalition committees preserve party and
+  subsidy autonomy behind an 8% threshold; a 5% host list is safer but gives
+  the host nominations and money. Every partner can refuse. Compatible minor
+  breakaways join Razem only after accepting its offer; SLD and PPS stay
+  separate. Low unity damages dues and campaign capacity without ending play, but an
+  election that leaves the player-controlled list outside the Sejm ends the
+  run. The final assessment judges threshold losses among surviving lists.
+  PSL and the centrist parties behave as similarly divided coalition partners
+  rather than fixed vote blocks.
 - Persistent PiS/United Right and KO records separately track rival apparatus,
   component parties, currents, named loyalties and exclusive seat transfers.
   Lewica can bargain, attack, concede policy or recruit individuals, but it

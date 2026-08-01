@@ -85,34 +85,86 @@ Q.sejm_statutory_majority = 231;
 const partyIds = [
     "pis", "ko", "p2050", "psl", "left", "konf", "other",
     "sld_breakaway", "spring_breakaway", "labor_left", "young_left",
-    "razem", "pps", "centrum", "rozwoj", "korona", "ko_splinter"
+    "razem", "pps", "centrum", "rozwoj", "korona", "ko_splinter",
+    "left_coalition", "democratic_list", "third_way"
 ];
 if (!Q.election_2023_certified) {
     const thirdWayJoint = Boolean(Q.third_way_joint_list) &&
         !Boolean(Q.third_way_split);
-    const baseElectionVote = function(id) {
-        if (id == "third_way") {
-            return finiteFormation(Q.psl_vote_intent, 0) +
-                finiteFormation(Q.p2050_vote_intent, 0);
-        }
-        return finiteFormation(
-            Q[id + "_vote_intent"],
-            finiteFormation(Q[id + "_poll"], 0)
-        );
-    };
-    const countIds = partyIds.filter(function(id) {
-        return id != "other" &&
-            (!thirdWayJoint || (id != "psl" && id != "p2050")) &&
-            baseElectionVote(id) > 0.02;
+    const sourcePartyIds = partyIds.filter(function(id) {
+        return !["left_coalition", "democratic_list", "third_way"].includes(id);
     });
-    if (thirdWayJoint && baseElectionVote("third_way") > 0.02) {
-        countIds.push("third_way");
+    const committeeForFormation = {};
+    for (const id of sourcePartyIds) committeeForFormation[id] = id;
+    if (thirdWayJoint) {
+        committeeForFormation.psl = "third_way";
+        committeeForFormation.p2050 = "third_way";
     }
+    const breakawayCommittees = {
+        spring_breakaway: String(Q.spring_list_committee || "spring_breakaway"),
+        labor_left: String(Q.labor_list_committee || "labor_left"),
+        young_left: String(Q.progressives_list_committee || "young_left"),
+        razem: String(Q.razem_list_committee || "razem")
+    };
+    for (const id of Object.keys(breakawayCommittees)) {
+        if (["left", "razem", "left_coalition"].includes(
+            breakawayCommittees[id]
+        )) {
+            committeeForFormation[id] = breakawayCommittees[id];
+        }
+    }
+    const listOutcome = String(Q.sejm_list_outcome || "left_5");
+    if (listOutcome == "left_coalition_8") {
+        committeeForFormation.left = "left_coalition";
+    } else if (listOutcome == "razem_5" && Q.razem_party_formed) {
+        committeeForFormation.left = "razem";
+    } else if (listOutcome == "democratic_8") {
+        committeeForFormation.left = "democratic_list";
+        committeeForFormation.ko = "democratic_list";
+        committeeForFormation.psl = "democratic_list";
+        if (Q.p2050_emerged) committeeForFormation.p2050 = "democratic_list";
+    } else if (listOutcome == "ko_5") {
+        committeeForFormation.left = "ko";
+    } else if (listOutcome == "third_way_8") {
+        committeeForFormation.left = "third_way";
+        committeeForFormation.psl = "third_way";
+        if (Q.p2050_emerged) committeeForFormation.p2050 = "third_way";
+    } else if (listOutcome == "third_host_5") {
+        committeeForFormation.left = ["psl", "p2050"].includes(Q.sejm_list_host)
+            ? Q.sejm_list_host
+            : "psl";
+        committeeForFormation.psl = "psl";
+        committeeForFormation.p2050 = "p2050";
+    } else if (listOutcome == "pis_5") {
+        committeeForFormation.left = "pis";
+    }
+    const componentBaseVotes = {};
+    const committeeBaseVotes = {};
+    for (const id of sourcePartyIds) {
+        const committee = committeeForFormation[id] || id;
+        const mapped = committee != id;
+        const componentVote = mapped
+            ? Math.max(
+                finiteFormation(Q[id + "_component_vote_intent"], 0),
+                finiteFormation(Q[id + "_vote_intent"], 0)
+            )
+            : finiteFormation(
+                Q[id + "_vote_intent"],
+                finiteFormation(Q[id + "_poll"], 0)
+            );
+        componentBaseVotes[id] = Math.max(0, componentVote);
+        committeeBaseVotes[committee] =
+            Math.max(0, committeeBaseVotes[committee] || 0) +
+            componentBaseVotes[id];
+    }
+    const countIds = Object.keys(committeeBaseVotes).filter(function(id) {
+        return id != "other" && committeeBaseVotes[id] > 0.02;
+    });
     if (!countIds.length) countIds.push("pis");
     const electionVotes = {};
     const electionShocks = {};
     for (const id of countIds) {
-        const baseVote = baseElectionVote(id);
+        const baseVote = committeeBaseVotes[id] || 0;
         const shock =
             (this.random.uint32() / 4294967296 - 0.5) * 2.5;
         electionShocks[id] = shock;
@@ -130,11 +182,12 @@ if (!Q.election_2023_certified) {
     }
     const normalizedOther = otherVote * 100 / Math.max(1, voteTotal);
     const thresholds = {
-        pis: 5, ko: Q.ko_consolidated ? 5 : 8, p2050: 5, psl: 5,
+        pis: 5, ko: Q.ko_consolidated || listOutcome == "ko_5" ? 5 : 8,
+        p2050: 5, psl: 5,
         left: 5, konf: 5, sld_breakaway: 5, spring_breakaway: 5,
         labor_left: 5, young_left: 5, razem: 5, pps: 5,
         centrum: 5, rozwoj: 5, korona: 5, ko_splinter: 5,
-        third_way: 8
+        left_coalition: 8, democratic_list: 8, third_way: 8
     };
     let qualified = countIds.filter(function(id) {
         return electionVotes[id] >= thresholds[id];
@@ -158,40 +211,54 @@ if (!Q.election_2023_certified) {
         }
         certified[winner] += 1;
     }
-    if (thirdWayJoint) {
-        const pslVote = Math.max(0.01, finiteFormation(Q.psl_vote_intent, 0));
-        const p2050Vote = Math.max(
-            0.01,
-            finiteFormation(Q.p2050_vote_intent, 0)
+    const certifiedComponents = {};
+    for (const id of sourcePartyIds) certifiedComponents[id] = 0;
+    for (const committee of countIds) {
+        const members = sourcePartyIds.filter(function(id) {
+            return componentBaseVotes[id] > 0 &&
+                (committeeForFormation[id] || id) == committee;
+        });
+        const allocations = apportionFormation(
+            certified[committee] || 0,
+            members.map(function(id) {
+                return {id: id, weight: componentBaseVotes[id]};
+            })
         );
-        const pslExact = certified.third_way * pslVote /
-            (pslVote + p2050Vote);
-        certified.psl = Math.floor(pslExact);
-        certified.p2050 = certified.third_way - certified.psl;
-        Q.election_2023_third_way_vote = electionVotes.third_way;
-    }
-    for (const id of partyIds) {
-        if (id == "razem") {
-            Q.razem_party_seats = certified[id];
-        } else if (id == "pps") {
-            Q.pps_party_seats = certified[id];
-        } else {
-            Q[id + "_seats"] = certified[id];
+        for (const id of members) {
+            certifiedComponents[id] = allocations[id] || 0;
         }
-        Q[id + "_projected_seats"] = certified[id];
-        const certifiedVote = thirdWayJoint &&
-            (id == "psl" || id == "p2050")
-                ? electionVotes.third_way *
-                    finiteFormation(Q[id + "_vote_intent"], 0) /
-                    Math.max(
-                        0.01,
-                        finiteFormation(Q.psl_vote_intent, 0) +
-                            finiteFormation(Q.p2050_vote_intent, 0)
-                    )
-                : (id == "other" ? normalizedOther : electionVotes[id] || 0);
+        Q[committee + "_committee_seats"] = certified[committee] || 0;
+        Q["election_2023_" + committee + "_committee_vote"] =
+            Math.round((electionVotes[committee] || 0) * 100) / 100;
+        Q["election_2023_" + committee + "_vote"] =
+            Math.round((electionVotes[committee] || 0) * 100) / 100;
+    }
+    for (const id of sourcePartyIds) {
+        if (id == "razem") {
+            Q.razem_party_seats = certifiedComponents[id];
+        } else if (id == "pps") {
+            Q.pps_party_seats = certifiedComponents[id];
+        } else {
+            Q[id + "_seats"] = certifiedComponents[id];
+        }
+        Q[id + "_projected_seats"] = certifiedComponents[id];
+        const committee = committeeForFormation[id] || id;
+        const committeeMembers = sourcePartyIds.filter(function(member) {
+            return componentBaseVotes[member] > 0 &&
+                (committeeForFormation[member] || member) == committee;
+        });
+        const committeeWeight = committeeMembers.reduce(function(total, member) {
+            return total + componentBaseVotes[member];
+        }, 0);
+        const certifiedVote = id == "other"
+            ? normalizedOther
+            : (electionVotes[committee] || 0) *
+                componentBaseVotes[id] / Math.max(0.01, committeeWeight);
         Q["election_2023_" + id + "_vote"] =
             Math.round(certifiedVote * 100) / 100;
     }
+    Q.election_2023_third_way_vote =
+        Math.round((electionVotes.third_way || 0) * 100) / 100;
     // Auxiliary caucus ledgers from the previous Sejm cannot survive a new
     // certification as extra seats. Their voters are already inside the
     // certified party/list totals above.
@@ -209,23 +276,87 @@ if (!Q.election_2023_certified) {
 const certifiedLeftLists = [
     "left", "sld_breakaway", "spring_breakaway", "labor_left",
     "young_left", "razem", "pps"
-];
+].filter(function(id) {
+    if (id == "left") return true;
+    const activeQualities = {
+        sld_breakaway: Q.barons_party_formed,
+        spring_breakaway: Q.spring_party_formed,
+        labor_left: Q.labor_party_formed,
+        young_left: Q.progressives_party_formed,
+        razem: Q.razem_party_formed,
+        pps: Q.pps_party_formed
+    };
+    return !!activeQualities[id];
+});
+const certifiedMainCommittee = {
+    left_coalition_8: "left_coalition",
+    razem_5: "razem",
+    democratic_8: "democratic_list",
+    ko_5: "ko",
+    third_way_8: "third_way",
+    third_host_5: String(Q.sejm_list_host || "psl"),
+    pis_5: "pis"
+}[String(Q.sejm_list_outcome || "left_5")] || "left";
+const certifiedLeftCommitteeFor = {
+    left: certifiedMainCommittee,
+    sld_breakaway: "sld_breakaway",
+    spring_breakaway: String(Q.spring_list_committee || "spring_breakaway"),
+    labor_left: String(Q.labor_list_committee || "labor_left"),
+    young_left: String(Q.progressives_list_committee || "young_left"),
+    razem: String(Q.razem_list_committee || "razem"),
+    pps: "pps"
+};
+const certifiedLeftCommitteeIds = [];
+for (const id of certifiedLeftLists) {
+    const committee = certifiedLeftCommitteeFor[id] || id;
+    if (!certifiedLeftCommitteeIds.includes(committee)) {
+        certifiedLeftCommitteeIds.push(committee);
+    }
+}
+const certifiedThresholds = {
+    left_coalition: 8,
+    democratic_list: 8,
+    third_way: 8
+};
+const certifiedCommitteeVote = function(id) {
+    return finiteFormation(
+        Q["election_2023_" + id + "_committee_vote"],
+        finiteFormation(Q["election_2023_" + id + "_vote"], 0)
+    );
+};
+Q.election_2023_filed_committee_vote =
+    Math.round(certifiedCommitteeVote(certifiedMainCommittee) * 100) / 100;
+Q.election_2023_filed_committee_seats = finiteFormation(
+    Q[certifiedMainCommittee + "_committee_seats"],
+    0
+);
 Q.left_family_vote_intent = Math.round(
     certifiedLeftLists.reduce(function(total, id) {
         return total + finiteFormation(Q["election_2023_" + id + "_vote"], 0);
     }, 0) * 100
 ) / 100;
-Q.left_lists_above_threshold = certifiedLeftLists.reduce(
+Q.left_lists_contesting = certifiedLeftCommitteeIds.length;
+Q.left_lists_above_threshold = certifiedLeftCommitteeIds.reduce(
     function(total, id) {
-        const result = finiteFormation(Q["election_2023_" + id + "_vote"], 0);
-        return total + (result >= 5 ? 1 : 0);
+        const result = certifiedCommitteeVote(id);
+        return total + (result >= (certifiedThresholds[id] || 5) ? 1 : 0);
     },
     0
 );
 Q.left_threshold_wasted_vote = Math.round(
     certifiedLeftLists.reduce(function(total, id) {
-        const result = finiteFormation(Q["election_2023_" + id + "_vote"], 0);
-        return total + (result > 0 && result < 5 ? result : 0);
+        const committee = certifiedLeftCommitteeFor[id] || id;
+        const committeeResult = certifiedCommitteeVote(committee);
+        const componentResult = finiteFormation(
+            Q["election_2023_" + id + "_vote"],
+            0
+        );
+        return total + (
+            committeeResult > 0 &&
+            committeeResult < (certifiedThresholds[committee] || 5)
+                ? componentResult
+                : 0
+        );
     }, 0) * 100
 ) / 100;
 
@@ -982,6 +1113,7 @@ Q.news_headline = "The election produces 248 democratic seats and no incumbent m
 go-to: poland_election.results_2023
 
 @first_sitting
+# prose-audit: Grade B — Strong branching scene; trim seat-ledger exposition and let negotiators, factions, and concessions carry the arithmetic.
 title: The first sitting
 new-page: true
 
@@ -2321,6 +2453,7 @@ confidence.
 go-to: poland_events_2026.snap_campaign_launch if formation_continuous = 1; formation_exit if formation_continuous = 0
 
 @governing_agreement
+# prose-audit: Grade B — Strong branching scene; trim seat-ledger exposition and let negotiators, factions, and concessions carry the arithmetic.
 title: Write rules for an impossible coalition
 new-page: true
 view-if: left_in_government = 1
@@ -2372,6 +2505,7 @@ on-arrival: year = 2024; month = 12; month_name = "December"; date_label = "Dece
 go-to: annual_budget if left_in_government = 1; opposition_assessment if left_in_government = 0
 
 @annual_budget
+# prose-audit: Grade B — Strong branching scene; trim seat-ledger exposition and let negotiators, factions, and concessions carry the arithmetic.
 title: The 2025 state budget
 new-page: true
 view-if: left_in_government = 1
@@ -2645,6 +2779,7 @@ Q.coalition_budget_bargain = "KO fiscal rewrite";
 go-to: budget_sejm_roll
 
 @budget_sejm_roll
+# prose-audit: Grade B — Strong branching scene; trim seat-ledger exposition and let negotiators, factions, and concessions carry the arithmetic.
 title: The annual budget vote
 new-page: true
 view-if: left_in_government = 1

@@ -34,3 +34,16 @@ changes should be grouped in an optional bulletin, but no monthly normalizer may
 silently change a party leader. The `poland_leadership_events` scenes establish
 the current full-event pattern: outgoing and incoming holder, incoming bloc,
 reason for timing, and at least two defensible Lewica responses.
+
+## Prose audit grades
+
+Every dated event carries a source comment in the form
+`# prose-audit: Grade C — ...`. The generated manifest collects the grade and
+note so the prose backlog can be sorted without moving or renaming live scenes.
+
+- **A:** immersive and structurally complete; copy-edit only.
+- **B:** sound scene and aftermath; improve voice, focus or concision.
+- **C:** usable material needing a partial prose rewrite.
+- **D:** skeletal or database-led; needs a concrete scene and authored results.
+- **F:** placeholder prose that should be rewritten from the factual baseline.
+- **R:** routing entry only; audit its destination rather than duplicating prose.

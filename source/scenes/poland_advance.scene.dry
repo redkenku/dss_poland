@@ -102,6 +102,42 @@ for (const faction of Q.factions) {
     Q[faction + "_strength"] += represented * 0.50;
 }
 
+// A durable conservative or capitalist turn creates its own organisation and
+// pushes the non-establishment Left toward the existing split ladder.
+const culturalRightPressure =
+    Math.max(0, (Number(Q.left_right_score) || 0) - 42) * 0.18 +
+    Math.max(0, (Number(Q.left_cultural_position) || 0) - 58) * 0.10;
+const marketRightPressure =
+    Math.max(0, (Number(Q.left_economic_position) || 0) - 57) * 0.16;
+const rightTurnDissentWeights = {
+    spring: [0.65, 0.15],
+    labor: [0.30, 0.75],
+    progressives: [1.00, 0.35],
+    razem: [0.85, 0.85],
+    pps: [0.40, 0.60]
+};
+for (const faction of Object.keys(rightTurnDissentWeights)) {
+    if (!Q[faction + "_active"] || !Q[faction + "_in_left"]) continue;
+    const weights = rightTurnDissentWeights[faction];
+    const dissentGain =
+        culturalRightPressure * weights[0] +
+        marketRightPressure * weights[1];
+    Q[faction + "_dissent"] += dissentGain;
+    if (dissentGain >= 2.5) {
+        Q[faction + "_grievance_memory"] += 0.5;
+    }
+}
+if (culturalRightPressure > 0) {
+    Q.social_patriot_support += Math.min(2, culturalRightPressure * 0.16);
+    Q.barons_dissent -= Math.min(1.5, culturalRightPressure * 0.12);
+}
+if (marketRightPressure > 0) {
+    Q.market_liberal_support += Math.min(2, marketRightPressure * 0.18);
+}
+if (culturalRightPressure + marketRightPressure >= 4) {
+    Q.party_unity -= 1;
+}
+
 // Disunity is operational damage, not a game-over trigger. It erodes the
 // common campaign while leaving the player in charge of the coordinating
 // centre or whatever rump survives.
@@ -141,6 +177,8 @@ const monthlyTimers = [
     "poland_programme_convention_timer",
     "poland_opposition_coordination_timer",
     "poland_rival_organisations_timer",
+    "poland_picking_enemies_timer",
+    "poland_inter_party_relations_timer",
     "poland_rural_hinge_timer",
     "poland_presidential_channel_timer",
     "poland_rapid_response_timer",
@@ -172,6 +210,8 @@ const monthlyTimers = [
     "poland_crisis_compact_timer",
     "poland_oversight_bargain_timer",
     "poland_palace_mediation_timer",
+    "poland_pis_social_channel_timer",
+    "poland_pis_right_faultline_timer",
     "poland_european_campaign_timer",
     "poland_brussels_pressure_timer",
     "poland_berlin_pressure_timer",
@@ -439,6 +479,35 @@ const escalationThresholds = [0, 48, 58, 67, 74, 81, 88, 94];
 for (const faction of Q.factions.slice()) {
     if (!Q[faction + "_active"] || !Q[faction + "_in_left"]) continue;
     const dissent = Math.max(0, Number(Q[faction + "_dissent"]) || 0);
+    const currentStage = Math.max(
+        0,
+        Math.min(7, Math.round(
+            Number(Q[faction + "_escalation_stage"]) || 0
+        ))
+    );
+    const protectedRazem =
+        faction == "razem" &&
+        (
+            (Q.razem_merged && Q.merger_leader == "Razem") ||
+            (
+                Number(Q.razem_cooperation) >= 60 &&
+                dissent < 35
+            )
+        );
+    if (protectedRazem) {
+        if (currentStage > 0) {
+            const deescalatedStage = currentStage - 1;
+            Q.razem_escalation_stage = deescalatedStage;
+            Q.razem_defection_readiness = Math.min(
+                Number(Q.razem_defection_readiness) || 0,
+                deescalatedStage * 14
+            );
+            if (deescalatedStage < 2) {
+                Q.razem_demand_answered = 1;
+            }
+        }
+        continue;
+    }
     const grievance = Math.max(
         0,
         Number(Q[faction + "_grievance_memory"]) || 0
@@ -466,12 +535,6 @@ for (const faction of Q.factions.slice()) {
             targetStage = stage;
         }
     }
-    const currentStage = Math.max(
-        0,
-        Math.min(7, Math.round(
-            Number(Q[faction + "_escalation_stage"]) || 0
-        ))
-    );
     const waitingForDemandDeadline =
         currentStage == 2 &&
         !Q[faction + "_demand_answered"] &&

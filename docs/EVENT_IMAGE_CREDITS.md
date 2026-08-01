@@ -19,4 +19,6 @@ by the repository's MIT license. Source and license metadata was checked on
 | `oder-disaster-2022.webp` | [Fish deaths on the Oder, 2022](https://commons.wikimedia.org/wiki/File:Fischsterben-Oder-2.jpg) | Hanno Böck | CC0 |
 | `sejm-menorah.webp` | [Hanukkah in the Sejm, 2015](https://commons.wikimedia.org/wiki/File:Chanuka_Sejm_2015_01.JPG) | Adrian Grycuk | CC BY-SA 3.0 PL |
 | `ukraine-refugees-2022.webp` | [Ukrainian refugees at Przemyśl station, 2022](https://commons.wikimedia.org/wiki/File:Ukrainian_refugees_at_Przemy%C5%9Bl_returning_home.jpg) | 梁柏堅 Pakkin Leung | CC BY 4.0 |
+| `umamusume-global-train.webp` | [JR West 323 series train with *Umamusume: Pretty Derby* wrapping](https://commons.wikimedia.org/wiki/File:JR-West323_Umamusume.jpg) | Mr.ちゅらさん | CC BY-SA 4.0 |
+| `umamusume-rice-shower.webp` | [Rice Shower character art from *Umamusume: Pretty Derby*](https://commons.wikimedia.org/wiki/File:Riceshower-Umamusume.png) | Cygames | CC BY 4.0 |
 | `womens-strike-2020.webp` | [All-Poland Women's Strike in Warsaw, 30 October 2020](https://commons.wikimedia.org/wiki/File:Protest_of_All-Poland_Women%27s_Strike_in_Warsaw_(October_30,_2020)_07.jpg) | RoodyAlien | CC BY 4.0 |

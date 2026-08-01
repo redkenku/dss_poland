@@ -1,6 +1,7 @@
 title: Fragmentation before the next election
 
 @p2050_leadership_2026
+# prose-audit: Grade D — The factual premise is usable, but the scene is skeletal; add named actors, Lewica viewpoint, and a bespoke aftermath for each exit.
 title: Poland 2050 chooses a successor
 subtitle: The winner follows the party's evolved wings rather than a fixed historical tally
 new-page: true
@@ -44,7 +45,7 @@ Q.news_headline =
     Q.p2050_leader + " wins the Poland 2050 leadership";
 !}
 
-= January 2026 — A successor without a safe list
+= January 2026 — A successor and an unsettled electoral pact
 
 The succession ballot replaces founder **Szymon Hołownia** with **[+
 p2050_leader +]**. Pełczyńska-Nałęcz scores **[+
@@ -64,9 +65,8 @@ Speakership while Third Way's legal form remains unsettled?]; a party near
 the threshold needs a leader who controls programme, ministers and candidate
 strategy rather than only a personal following.
 
-Lewica is not a neutral observer. When Third Way ended it chose **[+
-third_way_response +]**; its substantive settlement with PSL became **[+
-psl_protocol_2025 +]**. For Lewica, the winner changes which policy bargain is
+Lewica is not a neutral observer. At Third Way's June reckoning it chose **[+
+third_way_response +]**. For Lewica, the winner changes which policy bargain is
 credible, while the narrow margin leaves a large losing camp. Both sides read
 Lewica's earlier decisions as evidence of whether it sees them as allies, a
 burden, or potential defectors.
@@ -76,9 +76,9 @@ burden, or potential defectors.
 - @p2050_exploit
 
 @p2050_accept
-title: Recognise the winner and negotiate a bilateral coalition protocol
+title: Recognise the winner and negotiate a delivery protocol
 subtitle: +5 Poland 2050 relations and −2 partner dissent; +1 coalition dissent.
-on-arrival: p2050_relation += 5; p2050_coalition_dissent -= 2; public_trust += 1; government_coalition_dissent += 1; news_headline = "The Left treats Poland 2050's result as valid and fragile"
+on-arrival: p2050_relation += 5; p2050_coalition_dissent -= 2; third_way_cohesion += 2 if third_way_active = 1; public_trust += 1; government_coalition_dissent += 1; news_headline = "The Left treats Poland 2050's result as valid and fragile"
 go-to: poland_event_queue
 
 @p2050_mediate
@@ -86,16 +86,123 @@ title: Offer both camps a neutral coalition mediation
 subtitle: Cost: 1 resource.
 choose-if: resources >= 1
 unavailable-subtitle: The party cannot staff another partner's reconciliation.
-on-arrival: resources -= 1; p2050_relation += 4; p2050_coalition_dissent -= 5; ko_relation -= 1; public_trust += 2; news_headline = "A coalition mediation postpones the centrist rupture"
+on-arrival: resources -= 1; p2050_relation += 4; p2050_coalition_dissent -= 5; third_way_cohesion += 4 if third_way_active = 1; ko_relation -= 1; public_trust += 2; news_headline = "A coalition mediation postpones the centrist rupture"
 go-to: poland_event_queue
 
 @p2050_exploit
 title: Recruit local and parliamentary defectors before the split
 subtitle: +3 local network; −9 Poland 2050 relations and +7 partner dissent.
-on-arrival: local_network += 3; p2050_relation -= 9; p2050_coalition_dissent += 7; party_unity += 1; public_trust -= 2; news_headline = "The Left treats a coalition partner's weakness as an organisational opening"
+on-arrival: local_network += 3; p2050_relation -= 9; p2050_coalition_dissent += 7; third_way_cohesion -= 8 if third_way_active = 1; party_unity += 1; public_trust -= 2; news_headline = "The Left treats a coalition partner's weakness as an organisational opening"
+go-to: poland_event_queue
+
+@third_way_future_2026
+# prose-audit: Grade D — The factual premise is usable, but the scene is skeletal; add named actors, Lewica viewpoint, and a bespoke aftermath for each exit.
+title: Third Way faces a second survival test
+subtitle: Cohesion, leadership conflict, partner relations and list arithmetic decide the pact
+new-page: true
+tags: poland_event
+priority: 27
+order: 11
+max-visits: 1
+view-if: continuous_campaign = 1 and year = 2026 and month = 1 and third_way_active = 1 and p2050_leader != "Szymon Hołownia"
+on-arrival: {!
+const thirdWayFutureRoll =
+    Math.floor((this.random.uint32() / 4294967296) * 13) - 6;
+const thirdWayCombinedVote =
+    Math.max(0, Number(Q.psl_vote_intent) || 0) +
+    Math.max(0, Number(Q.p2050_vote_intent) || 0);
+let futurePressure =
+    40 +
+    Math.max(0, 58 - (Number(Q.third_way_cohesion) || 0)) * 0.90 -
+    Math.max(0, (Number(Q.third_way_cohesion) || 0) - 58) * 0.35 +
+    (Number(Q.p2050_coalition_dissent) || 0) * 0.24 +
+    (Number(Q.psl_coalition_dissent) || 0) * 0.22 +
+    Math.max(
+        0,
+        45 - (Number(Q.rival_relation_psl_p2050) || 0)
+    ) * 0.18 +
+    Math.max(0, 10 - (Number(Q.p2050_leadership_margin) || 0)) * 0.45 +
+    thirdWayFutureRoll;
+if (Q.third_way_response == "Renewed joint list with a written social protocol") {
+    futurePressure -= 5;
+}
+if (Q.third_way_response == "Separate channels under a loose electoral pact") {
+    futurePressure += 5;
+}
+if (thirdWayCombinedVote < 8) {
+    futurePressure -= Math.min(6, (8 - thirdWayCombinedVote) * 1.5);
+}
+if (
+    (Number(Q.psl_vote_intent) || 0) >= 5 &&
+    (Number(Q.p2050_vote_intent) || 0) >= 5
+) {
+    futurePressure += 4;
+}
+Q.third_way_2026_pressure = Math.max(
+    0,
+    Math.min(100, Math.round(futurePressure))
+);
+Q.third_way_split = Q.third_way_2026_pressure > 55 ? 1 : 0;
+Q.third_way_active = Q.third_way_split ? 0 : 1;
+Q.third_way_joint_list = Q.third_way_active ? 1 : 0;
+Q.third_way_cohesion += Q.third_way_split ? -20 : 8;
+Q.third_way_future = Q.third_way_split
+    ? "PSL and Poland 2050 separate after the succession"
+    : "Third Way renews its common-list pact through 2027";
+Q.news_headline = Q.third_way_split
+    ? "Third Way breaks after leadership and coalition pressure overwhelm the pact"
+    : "Third Way survives a second internal reckoning";
+!}
+
+= January 2026 — Survival is an outcome, not a script
+
+The June pact survived, but it has since absorbed Hołownia's cross-party
+talks, the Marshal rotation and Poland 2050's close succession. The new
+split-pressure score is **[+ third_way_2026_pressure +]/100**.
+
+[? if third_way_split: The accumulated pressure now breaks the alliance into
+PSL and Poland 2050. Each keeps its organisation and seats; only the shared
+electoral settlement ends.?][? if third_way_active: Threshold risk and the
+benefits of shared organisation still outweigh the disputes. Third Way remains
+a joint list of two autonomous parties.?]
+
+- @td2026_bilateral
+- @td2026_p2050_shelter
+- @td2026_joint_platform
+- @td2026_loose_list
+
+@td2026_bilateral
+title: Write equal agreements with the two successor parties
+subtitle: Both relationships +3; governing-coalition dissent +2 where applicable.
+view-if: third_way_split = 1
+on-arrival: third_way_future = "Separate parties under equal parliamentary agreements"; psl_relation += 3; p2050_relation += 3; government_coalition_dissent += 2 if government_party != "pis"; public_trust += 1; news_headline = "The former Third Way parties receive separate written agreements"
+go-to: poland_event_queue
+
+@td2026_p2050_shelter
+title: Offer Poland 2050 a list shelter before PSL
+subtitle: Poland 2050 relations +6 and dissent −3; PSL relations −4.
+view-if: third_way_split = 1
+on-arrival: third_way_future = "Poland 2050 offered a separate electoral shelter"; p2050_relation += 6; p2050_coalition_dissent -= 3; psl_relation -= 4; ko_relation -= 2; news_headline = "The new leader receives an electoral offer outside Third Way"
+go-to: poland_event_queue
+
+@td2026_joint_platform
+title: Finance a joint programme and binding list rules
+subtitle: Cost: 1 resource. Cohesion +6 and both parties' dissent −3.
+view-if: third_way_active = 1
+choose-if: resources >= 1
+unavailable-subtitle: The joint policy and list secretariat cannot be staffed.
+on-arrival: resources -= 1; third_way_future = "Binding Third Way programme and 2027 list rules"; third_way_cohesion += 6; p2050_coalition_dissent -= 3; psl_coalition_dissent -= 3; rival_relation_psl_p2050 += 5; public_trust += 2; news_headline = "Third Way turns survival into a written 2027 pact"
+go-to: poland_event_queue
+
+@td2026_loose_list
+title: Keep only the shared threshold and campaign label
+subtitle: Both relationships +2; cohesion −2 and partner autonomy rises.
+view-if: third_way_active = 1
+on-arrival: third_way_future = "Loose Third Way electoral cartel"; p2050_relation += 2; psl_relation += 2; third_way_cohesion -= 2; p2050_coalition_dissent -= 1; psl_coalition_dissent -= 1; public_trust -= 1; news_headline = "Third Way survives as an electoral pact rather than a common programme"
 go-to: poland_event_queue
 
 @ambassador_crisis_2026
+# prose-audit: Grade D — The factual premise is usable, but the scene is skeletal; add named actors, Lewica viewpoint, and a bespoke aftermath for each exit.
 title: The ambassador cuts contact with the Marshal
 subtitle: One personal rupture inside a much larger alliance
 new-page: true
@@ -160,6 +267,7 @@ on-arrival: us_ambassador_channel += 18; us_defence_channel += 3; party_unity -=
 go-to: poland_event_queue
 
 @p2050_split_2026
+# prose-audit: Grade D — The factual premise is usable, but the scene is skeletal; add named actors, Lewica viewpoint, and a bespoke aftermath for each exit.
 title: Poland 2050's parliamentary club fractures
 subtitle: A separate centrist club forms; Lewica chooses how to respond
 new-page: true
@@ -167,7 +275,7 @@ tags: poland_event
 priority: 34
 order: 11
 max-visits: 1
-view-if: continuous_campaign = 1 and year = 2026 and month = 2 and p2050_split = 0 and p2050_seats >= 3 and (p2050_coalition_dissent >= 28 or p2050_relation <= 30)
+view-if: continuous_campaign = 1 and year = 2026 and month = 2 and third_way_split = 1 and p2050_split = 0 and p2050_seats >= 3 and (p2050_coalition_dissent >= 28 or p2050_relation <= 30)
 on-arrival: {!
 Q.p2050_split = 1;
 Q.p2050_split_occurred = 1;
@@ -290,6 +398,7 @@ Q.news_headline =
 go-to: poland_event_queue
 
 @p2050_name_2026
+# prose-audit: Grade D — The factual premise is usable, but the scene is skeletal; add named actors, Lewica viewpoint, and a bespoke aftermath for each exit.
 title: Poland 2050 removes Hołownia's name
 subtitle: The party must prove that it can survive its founder
 new-page: true
@@ -303,11 +412,13 @@ on-arrival: p2050_ideology = "Centrist institutionalism · post-founder survival
 = March 2026 — A party after the personality
 
 Removing Hołownia's name confirms that Poland 2050 intends to continue as an
-independent party. Lewica can respect the transition or exploit the weak brand
-by opening talks about a common electoral list.
+independent party. [? if third_way_active: It remains one half of a surviving
+Third Way list.?][? if third_way_split: It now faces the electoral threshold
+without PSL.?] Lewica can respect the transition or reopen its list strategy.
 
 - @name_respect
 - @name_lists
+- @name_third_way
 - @name_left_union
 
 @name_respect
@@ -319,7 +430,15 @@ go-to: poland_event_queue
 @name_lists
 title: Open 2027 common-list talks while the brand is weak
 subtitle: Local network +2 and Poland 2050 relations +2; KO relations −2.
+view-if: third_way_split = 1
 on-arrival: p2050_relation += 2; ko_relation -= 2; local_network += 2; public_trust -= 1; news_headline = "Threshold arithmetic enters the coalition two years early"
+go-to: poland_event_queue
+
+@name_third_way
+title: Publish the surviving Third Way's 2027 list rules
+subtitle: Third Way cohesion +5 and PSL relations +3.
+view-if: third_way_active = 1
+on-arrival: third_way_future = "Named 2027 Third Way candidates and list rules"; third_way_cohesion += 5; psl_relation += 3; p2050_relation += 2; local_network += 1; public_trust += 1; news_headline = "The post-founder party binds itself to Third Way's next joint list"
 go-to: poland_event_queue
 
 @name_left_union
@@ -331,6 +450,7 @@ on-arrival: left_realign_invite_p2050 = 1; p2050_relation += 6; ko_relation -= 4
 go-to: poland_event_queue
 
 @rozwoj_association_2026
+# prose-audit: Grade D — The factual premise is usable, but the scene is skeletal; add named actors, Lewica viewpoint, and a bespoke aftermath for each exit.
 title: Morawiecki builds the Rozwój+ association
 subtitle: An internal network gains members and structures without becoming a party
 new-page: true
@@ -411,6 +531,7 @@ on-arrival: rozwoj_departure_pressure -= 3; rozwoj_party_readiness -= 2; governm
 go-to: poland_event_queue
 
 @ko_leadership_2026
+# prose-audit: Grade D — The factual premise is usable, but the scene is skeletal; add named actors, Lewica viewpoint, and a bespoke aftermath for each exit.
 title: KO settles national representation after its 2025 convention
 subtitle: The legal form changes which organisations allocate the offices
 new-page: true
@@ -472,6 +593,7 @@ on-arrival: ko_channel_target = "Formal KO leadership only"; ko_relation += 4; k
 go-to: poland_event_queue
 
 @zero_television_2026
+# prose-audit: Grade D — The factual premise is usable, but the scene is skeletal; add named actors, Lewica viewpoint, and a bespoke aftermath for each exit.
 title: Kanał Zero becomes a television channel
 subtitle: Stanowski, Duda and the creator-led political gate
 new-page: true
@@ -519,6 +641,7 @@ on-arrival: media_relationship = "Boycott of the creator-right ecosystem"; progr
 go-to: poland_event_queue
 
 @partnership_passes_2026
+# prose-audit: Grade D — The factual premise is usable, but the scene is skeletal; add named actors, Lewica viewpoint, and a bespoke aftermath for each exit.
 title: The partnership compromise reaches a Sejm vote
 subtitle: Seats, PSL relations and the accumulated bargaining strategy determine passage
 new-page: true
@@ -681,6 +804,7 @@ on-arrival: partnership_strategy = "Movement rebuild for marriage equality"; pro
 go-to: poland_event_queue
 
 @tribunal_competence_2026
+# prose-audit: Grade D — The factual premise is usable, but the scene is skeletal; add named actors, Lewica viewpoint, and a bespoke aftermath for each exit.
 title: The Tribunal expands presidential judicial power
 subtitle: State institutions disagree over whether the ruling has legal effect
 new-page: true
@@ -761,6 +885,7 @@ on-arrival: constitutional_restraint += 1; judicial_repair_mandate += 1; news_he
 go-to: poland_event_queue
 
 @partnership_veto_2026
+# prose-audit: Grade D — The factual premise is usable, but the scene is skeletal; add named actors, Lewica viewpoint, and a bespoke aftermath for each exit.
 title: The President decides the partnership compromise
 subtitle: Relations, lobbying and presidential alignment shift an uncertain signature test; passage alone does not enact the law.
 new-page: true
@@ -873,6 +998,7 @@ on-arrival: psl_relation += 4; president_relation += 4; public_trust += 2; progr
 go-to: poland_event_queue
 
 @partnership_revision_2026
+# prose-audit: Grade D — The factual premise is usable, but the scene is skeletal; add named actors, Lewica viewpoint, and a bespoke aftermath for each exit.
 title: The narrower partnership bill returns
 subtitle: The promised follow-up receives a fresh Sejm and presidential test
 new-page: true
@@ -944,6 +1070,7 @@ on-arrival: progressive_credibility += 3 if partnership_revision_enacted = 1; pr
 go-to: poland_event_queue
 
 @braun_detention_2026
+# prose-audit: Grade D — The factual premise is usable, but the scene is skeletal; add named actors, Lewica viewpoint, and a bespoke aftermath for each exit.
 title: Prosecutors seek Braun's forced appearance
 subtitle: Detention for questioning is not pre-trial imprisonment
 face-image: img/poland/events/grzegorz-braun-2025.webp
@@ -1020,6 +1147,7 @@ on-arrival: braun_compulsion_strategy = "Pre-trial detention and one broad extre
 go-to: poland_event_queue
 
 @unia_centrum_2026
+# prose-audit: Grade D — The factual premise is usable, but the scene is skeletal; add named actors, Lewica viewpoint, and a bespoke aftermath for each exit.
 title: Unia Centrum becomes a political party
 subtitle: A centrist parliamentary caucus prepares an independent electoral claim
 new-page: true
@@ -1086,6 +1214,7 @@ Q.news_headline = centrumWasSupporting
 go-to: poland_event_queue
 
 @centrum_club_settlement_2026
+# prose-audit: Grade D — The factual premise is usable, but the scene is skeletal; add named actors, Lewica viewpoint, and a bespoke aftermath for each exit.
 title: Unia Centrum stalls at parliamentary-club stage
 subtitle: February's settlement denied the splinter an automatic party machine
 new-page: true
@@ -1141,6 +1270,7 @@ on-arrival: centrum_relation += 4; government_coalition_dissent += 2 if centrum_
 go-to: poland_event_queue
 
 @hate_crime_2026
+# prose-audit: Grade D — The factual premise is usable, but the scene is skeletal; add named actors, Lewica viewpoint, and a bespoke aftermath for each exit.
 title: Reported anti-Ukrainian hate incidents rise
 subtitle: Police data show harm beyond opinion polling
 new-page: true
@@ -1256,6 +1386,7 @@ on-arrival: border_response_2026 = "Denial of the reported trend"; anti_ukrainia
 go-to: poland_event_queue
 
 @pis_rupture_2026
+# prose-audit: Grade C — Fold the dossier labels into continuous narrative, replace +/- forecasts with political stakes, and strengthen the aftermaths.
 title: PiS issues its loyalty ultimatum to Rozwój+
 subtitle: Claimed supporters and cases are capped by the live PiS caucus
 new-page: true
@@ -1438,6 +1569,7 @@ title: Carry the unresolved cases into August
 go-to: poland_event_queue
 
 @pis_hearings_2026
+# prose-audit: Grade D — The factual premise is usable, but the scene is skeletal; add named actors, Lewica viewpoint, and a bespoke aftermath for each exit.
 title: PiS disciplinary hearings proceed case by case
 subtitle: A second bounded batch resolves; neither leadership moves everyone at once
 new-page: true
@@ -1538,6 +1670,7 @@ on-arrival: local_network += 2; coalition_opportunity_pis += 4; rozwoj_departure
 go-to: poland_event_queue
 
 @pis_club_2026
+# prose-audit: Grade F — This is mostly a state transition; write a factual scene, a Lewica dilemma, and consequences before the return route.
 title: Rozwój+ tests whether it can form a Sejm club
 subtitle: The club follows the recorded departures, not a Lewica menu choice
 new-page: true
@@ -1600,6 +1733,7 @@ on-arrival: labor_credibility += 3; pis_relation -= 2; rozwoj_party_readiness +=
 go-to: poland_event_queue
 
 @pis_party_2026
+# prose-audit: Grade D — The factual premise is usable, but the scene is skeletal; add named actors, Lewica viewpoint, and a bespoke aftermath for each exit.
 title: Rozwój+ decides whether to register a party
 subtitle: Organisation, cohesion and a real club determine the result
 new-page: true
@@ -1716,6 +1850,7 @@ on-arrival: local_network += 3; coalition_opportunity_pis += 2; news_headline = 
 go-to: poland_event_queue
 
 @women_boards_2026
+# prose-audit: Grade D — The factual premise is usable, but the scene is skeletal; add named actors, Lewica viewpoint, and a bespoke aftermath for each exit.
 title: Gender-balance rules for company boards
 subtitle: Representation, economic power and EU implementation
 new-page: true
@@ -1797,6 +1932,7 @@ Q.news_headline = Q.boards_law_enacted
 go-to: poland_event_queue
 
 @september_budget_horizon
+# prose-audit: Grade D — Keep the scenario-horizon label, but replace the outline-like setup and bare exits with concrete actors and conditional aftermaths.
 title: Scenario horizon — the 2027 budget is drafted
 subtitle: Fictional continuation after the July 2026 research cutoff
 new-page: true
@@ -1886,6 +2022,7 @@ Q.news_headline = Q.horizon_budget_authority
 go-to: poland_event_queue
 
 @october_judiciary_horizon
+# prose-audit: Grade D — Keep the scenario-horizon label, but replace the outline-like setup and bare exits with concrete actors and conditional aftermaths.
 title: Scenario horizon — the judicial-status bill reaches the Palace
 subtitle: Fictional continuation after the July 2026 research cutoff
 new-page: true
@@ -2011,6 +2148,7 @@ on-arrival: government_procedural_restraint += 2; court_backlog += 2; judicial_v
 go-to: poland_event_queue
 
 @left_realign_2026
+# prose-audit: Grade B — Sound scene and consequence structure; tighten the briefing voice and use a consistent first-person Lewica perspective.
 title: A strong Left convenes the realignment congress
 subtitle: Invited centrists, Greens and developmental conservatives decide whether one party is viable
 new-page: true
@@ -2329,6 +2467,7 @@ title: Open the new party's first congress
 go-to: poland_event_queue
 
 @independence_2026
+# prose-audit: Grade D — Keep the scenario-horizon label, but replace the outline-like setup and bare exits with concrete actors and conditional aftermaths.
 title: Scenario horizon — the 2026 Independence Day March
 subtitle: PiS, Konfederacja, Braun and a possible Morawiecki bloc compete
 new-page: true
@@ -2375,6 +2514,7 @@ on-arrival: independence_march_strategy = "Exploit right fragmentation"; indepen
 go-to: poland_event_queue
 
 @constructive_motion_2026
+# prose-audit: Grade C — Keep the branching structure; move +/- scores out of subtitles and let party voice carry the coalition and faction stakes.
 title: Scenario horizon — a constructive no-confidence motion
 subtitle: The opposition tests a constructive no-confidence motion
 new-page: true
@@ -2634,6 +2774,7 @@ failure proves only that this named alternative lacked 231.?]
 go-to: poland_event_queue
 
 @snap_election_2026
+# prose-audit: Grade B — Sound chain; reduce model and score language and narrate voter, campaign, and faction reactions more directly.
 title: The constitutional route to a snap election
 subtitle: Budget failure creates a choice, not an automatic dissolution
 new-page: true
@@ -2885,6 +3026,7 @@ on-arrival: snap_campaign_strategy = "Independent Left"; snap_campaign_left_bonu
 go-to: poland_event_queue
 
 @snap_campaign_result_due_2026
+# prose-audit: Grade B — Sound scene and consequence structure; tighten the briefing voice and use a consistent first-person Lewica perspective.
 title: The snap-election campaign reaches polling day
 subtitle: One month has passed since dissolution
 new-page: true
@@ -4313,12 +4455,13 @@ independent. **[+ senate_control +]** under 100 single-member district results.
 [? if rozwoj_seats > 0: <div class="election-table-row"><span class="party party-rozwoj">Rozwój Plus</span><span></span><b>[+ rozwoj_seats +]</b><span>PiS split</span></div>?]
 </div>
 
+- @poland_election.sejm_threshold_defeat: Concede the election
 - @snap_resolve_senate_marshal
 - @snap_palace_pick
 
 @snap_resolve_senate_marshal
 title: Hold the Senate Marshal vote before cabinet formation
-view-if: snap_senate_marshal_return = 1 and office_incompatibility_pending = 1
+view-if: left_seats > 0 and snap_senate_marshal_return = 1 and office_incompatibility_pending = 1
 go-to: poland_office_authority.resolve
 
 @snap_senate_marshal_resume
@@ -4327,7 +4470,7 @@ go-to: snap_palace_pick
 
 @snap_palace_pick
 title: The President receives the first move
-view-if: snap_senate_marshal_return = 0
+view-if: left_seats > 0 and snap_senate_marshal_return = 0
 new-page: true
 on-arrival: {!
 Q.snap_senate_marshal_return = 0;

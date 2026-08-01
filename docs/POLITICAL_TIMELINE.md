@@ -924,7 +924,10 @@ removed the dual structure in 2025.
   alliance while both remained in government.
   **Adaptation value:** coalition management now has four autonomous governing
   parties rather than three electoral blocs. PSL and Poland 2050 can pursue
-  conflicting survival strategies.
+  conflicting survival strategies. The counterfactual survival route must
+  still absorb Hołownia's later PiS talks, the Marshal rotation and Poland
+  2050's succession; those pressures can break the pact later without making
+  either breakup automatic.
   ([PAP](https://www.pap.pl/aktualnosci/kosiniak-kamysz-trzecia-droga-byla-projektem-wyborczym-jest-za-nami))
 
 - **23 July — prosecutors file a seven-count indictment against Braun.** After

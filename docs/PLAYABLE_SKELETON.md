@@ -83,13 +83,13 @@ The campaign deliberately contains two kinds of dated material:
 Every month the player may play **one** strategic dilemma from the engine's
 native persistent hand:
 
-1. **Party Affairs** supplies seventeen cards. **Government Affairs** also
+1. **Party Affairs** supplies nineteen cards. **Government Affairs** also
    supplies sixteen: one card for each of thirteen portfolios, plus Cabinet
    Reshuffle, Coalition Council and Social Welfare. It appears only for Lewica
    in a cabinet with confidence and offers portfolio cards for offices it
    controls. **Negotiation with Government** appears only when Lewica is outside
-   a functioning cabinet and offers crisis cooperation, oversight bargains or
-   presidential mediation. The **External affairs dossier** is the fourth live
+   a functioning cabinet and offers PiS social channels and fault-line tactics,
+   crisis cooperation, oversight bargains or presidential mediation. The **External affairs dossier** is the fourth live
    deck: a staged European campaign appears beside five randomly selected
    foreign-pressure files.
 2. Hold at most three cards. Unplayed cards persist between months and can
@@ -247,10 +247,10 @@ The inherited currencies are now separated by political role.
 | August–October 2024 | Widow's pension, movement reckoning, flood reconstruction, migration, Razem's possible exit, Tribunal repair and a negotiated Suwerenna Polska vote that can produce absorption, federation, refusal or individual accessions |
 | November–December 2024 | Variable US presidential election, Independence Day, KO and Left presidential nominations, Christmas Eve labour reform, KPO co-financing and the first full coalition budget |
 | January–March 2025 | Separate Left presidential campaigns, Braun's Konfederacja rupture, religion and health education, asylum suspension, gender-recognition procedure and the spring audit of the movement settlement |
-| April–June 2025 | Braun's Oleśnica hospital confrontation, shorter-working-time pilot, presidential election, cabinet confidence and Hołownia/Kosiniak-Kamysz's dissolution of Third Way followed by separate PSL bargaining |
-| July–September 2025 | Braun's separate seven-count indictment, a cabinet reshuffle or post-confidence formation branch, presidential inauguration, Russian drone incursion and Hołownia's announced departure |
+| April–June 2025 | Braun's Oleśnica hospital confrontation, shorter-working-time pilot, presidential election, cabinet confidence and a gameplay-driven Third Way survival test |
+| July–September 2025 | Hołownia's PiS talks under either a surviving joint council or two separate parties, Braun's separate seven-count indictment, a cabinet reshuffle or post-confidence formation branch, presidential inauguration, Russian drone incursion and Hołownia's announced departure |
 | October–December 2025 | A six-file KO consolidation convention with persistent component parties and multiple outcomes, KPO review, Marshal rotation, Independence Day, EU marriage recognition, collective bargaining, Left leadership, CJEU–Tribunal collision and the post-presidential budget |
-| January–March 2026 | Poland 2050 chooses Hołownia's successor and then splits, a Trump-dependent ambassador–Marshal crisis or alternate Washington review, competing KRS bills, the de-personalised centrist party and six Tribunal vacancies |
+| January–March 2026 | Poland 2050 chooses Hołownia's successor; a surviving Third Way faces a second gameplay-driven test, while a separated Poland 2050 can itself split; a Trump-dependent ambassador–Marshal crisis or alternate Washington review, competing KRS bills, the de-personalised centrist party and six Tribunal vacancies |
 | April–July 2026 | KO component representation, Rozwój+ association-building and PiS's individual loyalty ultimatum, PIP/KPO enforcement, Kanał Zero television, partnership legislation and veto, Tribunal competence, Braun procedure, centrist rupture, hate crime, appointments and the final KPO window |
 | August–October 2026 | Individual Rozwój+ hearings followed by a conditional club and possible party; **Scenario horizon:** 2027 budget red lines and a possible judicial-status bill at the Palace |
 | November–December 2026 | **Scenario horizon:** Independence Day, a conditional constructive no-confidence motion, final budget, and a conditional snap election followed by presidential and Sejm cabinet attempts |
@@ -605,10 +605,19 @@ individual defections; a parliamentary club; and an organised competing list.
 The caucus-specific deadline crisis offers a bespoke settlement, a free-vote
 concession or rejection. Sustained pressure determines what follows.
 
+Two additional cross-cutting tendencies can organise without replacing that
+six-caucus ancestry map. Repeated welfare-conservative and sovereignty choices
+build a Social-Patriot caucus; capitalist and lower-tax choices build a Market
+Left caucus. Their affinity overlaps the organisational strengths rather than
+adding phantom MPs. Moving far enough right also adds persistent dissent and
+grievance to Wiosna, labour, progressives, Razem and PPS, which can carry those
+existing caucuses through the normal breakaway ladder.
+
 Structural events use the same machinery. The Wiosna merger removes `spring`
 and transfers its complete live strength between the labour and younger
-progressive successors. Razem and PPS can sit inside the Left, leave with
-their MPs or later return through a pact. Barons, labour and progressive
+progressive successors. Razem can sit inside the Left, leave with its MPs or
+later return through an explicit pact. PPS can leave or use its own reunion
+route, but never attaches to a Razem list. Barons, labour and progressive
 currents can also form their own named parties. MPs move individually before
 and during a split, so officeholders and list-dependent deputies can remain in
 the coordinating-centre caucus. The departed organisation no longer appears
@@ -698,13 +707,23 @@ capacity before enactment and the following-year audit.
 
 The presentation layer adapted from the inherited election flow is now active
 in Polish scenes. July 2023 displays a projected Sejm semicircle, coalition
-worksheet and readiness assessment, then returns to the campaign. In October
+worksheet and readiness assessment, then returns to the campaign. August adds
+a list-negotiation sequence covering an independent Lewica list, an autonomous
+Left coalition, a Razem-hosted list, KO, a broad democratic committee, Third
+Way or one of its parties, and PiS. Relations, ideological distance, internal
+ratification and the offered terms determine each answer. An 8% coalition
+committee preserves each party's subsidy claim and autonomy; a 5% party list
+gives the host nominations and money, making autonomous partners hesitant.
+Minor breakaways decide individually whether to join Razem or a Left
+coalition. SLD and PPS remain separate. In October
 the continuous route apportions 460 certified seats from the campaign's stored
-projection, divides the main Left mandate only among its currently active
-caucuses, and presents a result table, Sejm chart and viable coalition
-arrangements. Departed Left caucuses contest under their own names and
-thresholds; Unia Centrum, Rozwój and Korona likewise receive separate votes
-and seats when the Poland 2050, PiS or Konfederacja split chains create them.
+projection, carries the negotiated committee and its 5% or 8% threshold into
+the count, divides shared-list seats back among their component parties, and
+presents a result table, Sejm chart and viable coalition arrangements.
+Departed Left caucuses contest under their own names and thresholds unless
+they accepted a negotiated shared list; Unia Centrum, Rozwój and Korona
+likewise receive separate votes and seats when the Poland 2050, PiS or
+Konfederacja split chains create them.
 The standalone formation drill instead uses the historical 2023 snapshot.
 
 If Lewica joins a cabinet, its coalition mandate becomes ministry leverage.
@@ -775,13 +794,14 @@ cooldown; leadership reshuffles require six months. These limits prevent one
 meeting, personality or media format from becoming an infinitely repeatable
 source of unity or attention.
 
-Low unity and sustained sub-threshold intention do not end the campaign. They
-reduce dues and campaign capacity, produce contradictory media lines, failed
-whips, adviser resignations and individual defections, and can eventually
-create parliamentary clubs and competing lists. The player remains the
-strategic coordinating centre or rump. Elections apply the five-percent
-threshold to each separate Left list; the final assessment scores competing
-lists, wasted votes and the seats won by the wider electoral family.
+Low unity and sustained sub-threshold intention reduce dues and campaign
+capacity, produce contradictory media lines, failed whips, adviser
+resignations and individual defections, and can eventually create
+parliamentary clubs and competing lists. The player remains the strategic
+coordinating centre or rump until an election: failing to return the
+player-controlled list to the Sejm ends the run. Elections apply the legal
+threshold to each Left list; surviving campaigns still score competing lists,
+wasted votes and the seats won by the wider electoral family.
 
 ## Conversion boundary and next work
 

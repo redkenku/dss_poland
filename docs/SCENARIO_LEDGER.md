@@ -412,7 +412,10 @@ founder's leadership, split in February 2026 and removed his name in March.
 The most reusable counterfactual is the rotation agreement: Hołownia was to
 resign on 13 November 2025 and Czarzasty was elected on 18 November. Before
 that, Hołownia sought a coalition renegotiation, met PiS leaders and alleged
-that people had urged him to delay Nawrocki's oath.
+that people had urged him to delay Nawrocki's oath. In play, Third Way's June
+decision and a second post-succession test therefore read accumulated cohesion,
+partner dissent, relations and list arithmetic rather than enforcing the
+historical breakup.
 
 | ID | Label | Trigger and branches | Follow-ups |
 | --- | --- | --- | --- |

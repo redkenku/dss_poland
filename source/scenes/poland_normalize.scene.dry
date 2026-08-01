@@ -357,6 +357,119 @@ if (Q.started) {
         }
     }
 
+    const sejmListTextDefaults = {
+        sejm_list_target: "Left host list",
+        sejm_list_outcome: "left_5",
+        sejm_list_structure: "Host-party list",
+        sejm_list_host: "left",
+        sejm_list_members: "Lewica and its internal partners",
+        sejm_list_control: "Lewica controls nominations and subsidy",
+        sejm_list_terms: "No cross-party bargain",
+        sejm_list_acceptances: "No external talks held",
+        sejm_list_result: "The Left plans its own 5% party list"
+    };
+    for (const quality of Object.keys(sejmListTextDefaults)) {
+        if (typeof Q[quality] != "string" || !Q[quality].length) {
+            Q[quality] = sejmListTextDefaults[quality];
+        }
+    }
+    Q.sejm_list_negotiation_done = Q.sejm_list_negotiation_done ? 1 : 0;
+    Q.sejm_list_has_partners = Q.sejm_list_has_partners ? 1 : 0;
+    Q.sejm_list_threshold = Number(Q.sejm_list_threshold) == 8 ? 8 : 5;
+    Q.sejm_list_partner_score = clamp(
+        Number(Q.sejm_list_partner_score) || 0,
+        0,
+        100
+    );
+    Q.sejm_list_internal_score = clamp(
+        Number(Q.sejm_list_internal_score) || 0,
+        0,
+        100
+    );
+    const leftListCommitteeDefaults = {
+        spring: "spring_breakaway",
+        labor: "labor_left",
+        progressives: "young_left",
+        razem: "razem",
+        pps: "pps"
+    };
+    for (const caucus of Object.keys(leftListCommitteeDefaults)) {
+        const quality = caucus + "_list_committee";
+        if (typeof Q[quality] != "string" || !Q[quality].length) {
+            Q[quality] = leftListCommitteeDefaults[caucus];
+        }
+    }
+
+    for (const quality of [
+        "social_patriot_support", "market_liberal_support",
+        "social_patriot_strength", "market_liberal_strength",
+        "social_patriot_dissent", "market_liberal_dissent"
+    ]) {
+        Q[quality] = clamp(Number(Q[quality]) || 0, 0, 100);
+    }
+    Q.social_patriot_active = Q.social_patriot_active ? 1 : 0;
+    Q.market_liberal_active = Q.market_liberal_active ? 1 : 0;
+    if (
+        !Q.social_patriot_active &&
+        Q.social_patriot_support >= 18 &&
+        Number(Q.left_right_score) >= 44
+    ) {
+        Q.social_patriot_active = 1;
+        Q.social_patriot_emerged_time = Number(Q.time) || 0;
+        Q.news_headline =
+            "A Social-Patriot caucus organises inside the Left";
+    }
+    if (
+        !Q.market_liberal_active &&
+        Q.market_liberal_support >= 18 &&
+        Number(Q.left_economic_position) >= 58
+    ) {
+        Q.market_liberal_active = 1;
+        Q.market_liberal_emerged_time = Number(Q.time) || 0;
+        Q.news_headline =
+            "Market liberals establish a caucus inside the Left";
+    }
+    if (Q.social_patriot_active) {
+        Q.social_patriot_strength = clamp(
+            6 + (Q.social_patriot_support - 18) * 0.45,
+            6,
+            28
+        );
+        Q.social_patriot_dissent = clamp(
+            28 + (44 - Number(Q.left_right_score || 0)) * 2,
+            0,
+            100
+        );
+    }
+    if (Q.market_liberal_active) {
+        Q.market_liberal_strength = clamp(
+            6 + (Q.market_liberal_support - 18) * 0.45,
+            6,
+            28
+        );
+        Q.market_liberal_dissent = clamp(
+            28 + (58 - Number(Q.left_economic_position || 0)) * 2,
+            0,
+            100
+        );
+    }
+    Q.social_patriot_name = "Social-Patriot caucus";
+    Q.market_liberal_name = "Market Left caucus";
+    Q.right_turn_caucuses = [];
+    if (Q.social_patriot_active) {
+        Q.right_turn_caucuses.push("social_patriot");
+    }
+    if (Q.market_liberal_active) {
+        Q.right_turn_caucuses.push("market_liberal");
+    }
+    Q.right_turn_caucus_label = Q.right_turn_caucuses.length
+        ? Q.right_turn_caucuses.map(function(caucus) {
+            return caucus == "social_patriot"
+                ? Q.social_patriot_name
+                : Q.market_liberal_name;
+        }).join(" · ")
+        : "No organised right caucus";
+
     const caucusDefaults = {
         barons: {
             strength: 27,
@@ -585,6 +698,37 @@ if (Q.started) {
                     : "Dual chairs"));
     }
     Q.razem_in_left_club = Q.razem_active ? 1 : 0;
+    Q.razem_breakaway_protected =
+        Q.razem_active &&
+        Q.razem_in_left &&
+        (
+            (Q.razem_merged && Q.merger_leader == "Razem") ||
+            (
+                Number(Q.razem_cooperation) >= 60 &&
+                Number(Q.razem_dissent) < 35
+            )
+        ) ? 1 : 0;
+
+    const razemAllianceParties = [
+        ["spring", "Wiosna"],
+        ["labor", Q.labor_party_name || "Labour Left"],
+        ["progressives", Q.progressives_party_name || "Young Left"]
+    ];
+    Q.pps_joined_razem = 0;
+    const razemAllianceMembers = ["Razem"];
+    for (const party of razemAllianceParties) {
+        const joinedQuality = party[0] + "_joined_razem";
+        if (!Q.razem_party_formed || !Q[party[0] + "_party_formed"]) {
+            Q[joinedQuality] = 0;
+        } else {
+            Q[joinedQuality] = Q[joinedQuality] ? 1 : 0;
+        }
+        if (Q[joinedQuality]) razemAllianceMembers.push(party[1]);
+    }
+    Q.razem_alliance_members = razemAllianceMembers.join(" · ");
+    if (razemAllianceMembers.length == 1) {
+        Q.razem_alliance_arithmetic = "No independent Razem alliance";
+    }
 
     if (Q.spring_merged) {
         Q.spring_active = 0;
@@ -1470,11 +1614,22 @@ if (Q.started) {
         (Q.government_party == "ko" ? 36 :
         (Q.government_party == "psl" ? 43 :
         (Q.government_party == "p2050" ? 40 : 50)));
+    const enemyFocusHostility =
+        Q.poland_enemy_focus == "PiS" ? 6 :
+        (Q.poland_enemy_focus == "the anti-democratic right" ? 3 :
+        (Q.poland_enemy_focus == "the radical right" ? -2 :
+        (Q.poland_enemy_focus == "the capitalist parties" ? -3 : 0)));
     Q.government_negotiation_hostility = Math.round(
         clamp(
             hostilityBase +
                 cohabitationPenalty -
-                finitePolitical(Q.negotiation_successes, 0) * 2,
+                (Q.government_party == "pis"
+                    ? clamp(finitePolitical(
+                        Q.pis_negotiation_hostility_relief, 0
+                    ), 0, 40)
+                    : 0) -
+                finitePolitical(Q.negotiation_successes, 0) * 2 +
+                (Q.government_party == "pis" ? enemyFocusHostility : 0),
             10,
             95
         )
@@ -2505,6 +2660,20 @@ if (Q.started) {
         Math.max(0, Q.poland_oversight_bargain_timer || 0);
     Q.poland_palace_mediation_timer =
         Math.max(0, Q.poland_palace_mediation_timer || 0);
+    Q.poland_pis_social_channel_timer =
+        Math.max(0, Q.poland_pis_social_channel_timer || 0);
+    Q.poland_pis_right_faultline_timer =
+        Math.max(0, Q.poland_pis_right_faultline_timer || 0);
+    Q.poland_picking_enemies_timer =
+        Math.max(0, Q.poland_picking_enemies_timer || 0);
+    Q.poland_inter_party_relations_timer =
+        Math.max(0, Q.poland_inter_party_relations_timer || 0);
+    if (typeof Q.poland_enemy_focus != "string") {
+        Q.poland_enemy_focus = "No fixed enemy";
+    }
+    if (typeof Q.poland_inter_party_focus != "string") {
+        Q.poland_inter_party_focus = "No special relationship";
+    }
     Q.poland_european_campaign_timer =
         Math.max(0, Q.poland_european_campaign_timer || 0);
     Q.poland_brussels_pressure_timer =
@@ -2522,6 +2691,9 @@ if (Q.started) {
     Q.negotiation_capital = Number.isFinite(Number(Q.negotiation_capital))
         ? clamp(Q.negotiation_capital, -20, 30)
         : 0;
+    Q.pis_negotiation_hostility_relief = Number.isFinite(
+        Number(Q.pis_negotiation_hostility_relief)
+    ) ? clamp(Q.pis_negotiation_hostility_relief, 0, 40) : 0;
     Q.negotiation_attempts =
         Math.max(0, Math.round(Number(Q.negotiation_attempts) || 0));
     Q.negotiation_successes =
@@ -2671,9 +2843,13 @@ if (Q.started) {
         100
     ));
     Q.caucus_split_pending = Q.factions.some(function(caucus) {
-        return Number(Q[caucus + "_escalation_stage"]) >= 7;
+        return Number(Q[caucus + "_escalation_stage"]) >= 7 &&
+            !(caucus == "razem" && Q.razem_breakaway_protected);
     }) ? 1 : 0;
     Q.caucus_crisis_pending = Q.factions.some(function(caucus) {
+        if (caucus == "razem" && Q.razem_breakaway_protected) {
+            return false;
+        }
         const stage = Number(Q[caucus + "_escalation_stage"]) || 0;
         return (
             stage == 2 &&

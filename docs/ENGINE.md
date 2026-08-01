@@ -355,7 +355,7 @@ This is the system that must be converted, not just the opening scene.
 
 The active Polish hand has four contextual live decks:
 
-- **Party Affairs** is always available and draws one of seventeen party cards.
+- **Party Affairs** is always available and draws one of nineteen party cards.
 - **Government Affairs** requires government participation, Sejm confidence,
   no caretaker cabinet and at least one relevant Lewica-held ministry whose
   policy opportunity is currently useful and off cooldown. Its sixteen cards
@@ -363,7 +363,8 @@ The active Polish hand has four contextual live decks:
   Coalition Council and Social Welfare. Portfolio cards repeat the same
   ownership and cabinet-safety conditions.
 - **Negotiation with Government** appears only while Lewica is outside a
-  functioning cabinet. Its crisis compact, oversight bargain and
+  functioning cabinet. Two PiS-only cards can cultivate its solidarists or
+  deepen the United Right's social fault line; crisis compact, oversight and
   presidential-mediation cards publish their score, threshold and likely
   effect before the player chooses.
 - **Foreign Affairs** remains available in and out of government. A
@@ -468,7 +469,7 @@ As of 30 July 2026:
 | Party resources | Uncapped; annual dues plus actual-seat subvention, no monthly refill, shared emergency-fundraising lock |
 | Polling | All-party voter-bloc model, rival AI, sampled headlines and national d'Hondt indicator |
 | Election and government formation | Separate October–December 2023 historical-result prototype with coalition arrangements, confidence, ministries and budget |
-| Endings | Four scored final outcomes; disunity and sub-threshold polling escalate through persistent faction consequences instead of early game-over scenes |
+| Endings | Four scored final outcomes plus game over when the player-controlled list fails to return to the Sejm; sub-threshold polling otherwise escalates through persistent faction consequences |
 | Crowded-month routing | Same-turn news desks in late 2021, November 2022, February 2023 and June 2023 |
 | Beyond July 2023 and district-level elections | Research/design only |
 

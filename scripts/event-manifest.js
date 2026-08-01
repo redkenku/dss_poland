@@ -33,6 +33,11 @@ function readProperty(block, name) {
   return match ? oneLine(match[1]) : '';
 }
 
+function readProseAudit(block) {
+  const match = block.match(/^# prose-audit:\s*Grade\s+([A-FR])\s+—\s+(.+)$/m);
+  return match ? { grade: match[1], note: oneLine(match[2]) } : null;
+}
+
 function readArrival(block) {
   const match = block.match(/^on-arrival:\s*(.*)$/m);
   if (!match) return '';
@@ -102,6 +107,7 @@ function baselineFor(section) {
     .replace(/\{![\s\S]*?!\}/g, ' ')
     .replace(/^@[A-Za-z0-9_]+\s*$/gm, ' ')
     .replace(/^(title|subtitle|new-page|tags|priority|order|max-visits|view-if|choose-if|unavailable-subtitle|on-arrival|go-to|call):.*$/gm, ' ')
+    .replace(/^# prose-audit:.*$/gm, ' ')
     .replace(/^=\s+.*$/gm, ' ')
     .replace(/^-\s+[@#].*$/gm, ' ')
     .replace(/\[\?[\s\S]*?\?\]/g, ' ')
@@ -222,6 +228,7 @@ const majorEventIds = new Set([
 function eventRecord(section) {
   const view = readProperty(section.source, 'view-if');
   const authority = authorityFor(view);
+  const proseAudit = readProseAudit(section.source);
   const localChoiceIds = Array.from(
     section.source.matchAll(/^- @([A-Za-z0-9_]+)/gm),
     function(match) { return match[1]; }
@@ -283,6 +290,8 @@ function eventRecord(section) {
   return {
     id: section.id,
     source: path.relative(projectRoot, section.file) + ':' + section.line,
+    proseGrade: proseAudit ? proseAudit.grade : '',
+    proseAudit: proseAudit ? proseAudit.note : '',
     historicalDate: dateFor(section),
     factualBaseline: baselineFor(section),
     peopleIntroduced: mentions({ source: combinedSource }, knownPeople),
@@ -334,6 +343,10 @@ function validateArchitecture() {
   );
   const ids = new Set();
   for (const event of manifest.events) {
+    assert(/^[A-FR]$/.test(event.proseGrade),
+      'Missing prose audit grade: ' + event.id);
+    assert(event.proseAudit,
+      'Missing prose audit note: ' + event.id);
     assert(!ids.has(event.id), 'Duplicate manifest event: ' + event.id);
     ids.add(event.id);
     for (const field of [
