@@ -97,15 +97,19 @@ mechanics without replaying the earlier campaign.
   defections and parliamentary clubs before a separately polled list appears.
   MPs weigh offices, local organisation, personal following, ideology and list
   dependence, so a split never assumes the whole estimated bloc leaves.
-  Cultural or economic moves far enough to the right can also organise overlapping
-  Social-Patriot and Market Left caucuses while accelerating dissent among
-  Wiosna, labour, progressives, Razem and PPS. Before the 2023 election, a
+  Cultural moves far enough to the right can found Lewica Patriotyczna as a
+  seventh organisation with its own referrals, leadership, actions, crises
+  and electoral route. Market moves can still organise a cross-cutting Market
+  Left affinity. Both accelerate dissent among Wiosna, labour, progressives,
+  Razem and PPS. Before the 2023
+  election, a
   list-negotiation minigame can pursue Lewica, Razem, KO, Third Way, PSL,
   Poland 2050 or PiS arrangements. Coalition committees preserve party and
   subsidy autonomy behind an 8% threshold; a 5% host list is safer but gives
   the host nominations and money. Every partner can refuse. Compatible minor
   breakaways join Razem only after accepting its offer; SLD and PPS stay
-  separate. Low unity damages dues and campaign capacity without ending play, but an
+  separate. Low unity damages dues and campaign capacity without ending play,
+  but an
   election that leaves the player-controlled list outside the Sejm ends the
   run. The final assessment judges threshold losses among surviving lists.
   PSL and the centrist parties behave as similarly divided coalition partners

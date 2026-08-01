@@ -5,25 +5,9 @@ max-cards: 3
 call: poland_normalize
 go-to: poland_events_2026.snap_election_2026 if continuous_campaign = 1 and year <= 2022 and snap_election_held = 0 and time > snap_event_deferred_time and (snap_election_requested = 1 or (budget_deadline_active = 1 and budget_deadline_time >= 0 and time >= budget_deadline_time))
 on-arrival: {!
-Q.deckDescription = "Draw an opportunity";
-Q.handDescription = "On the leadership table";
-if (Q.advisor_action_timer <= 0) {
-    Q.pinnedCardsDescription =
-        "Advisers are ready.";
-} else if (Q.advisor_action_timer == 1) {
-    Q.pinnedCardsDescription =
-        "Advisers return next month.";
-} else {
-    Q.pinnedCardsDescription =
-        "Advisers return in " +
-        Q.advisor_action_timer + " months.";
-}
-if (Q.leadership_reshuffle_timer <= 0) {
-    Q.pinnedCardsDescription += " The leadership team can be reshuffled.";
-} else {
-    Q.pinnedCardsDescription += " The next reshuffle is available in " +
-        Q.leadership_reshuffle_timer + " months.";
-}
+Q.deckDescription = "Bring a question to the table";
+Q.handDescription = "Open questions";
+Q.pinnedCardsDescription = "Leadership bureau and standing actions";
 const hubHand =
     (this.state.currentHands &&
         this.state.currentHands["poland_hub"]) || [];
@@ -39,46 +23,49 @@ Q.poland_discard_available =
     Number(Q.month_actions) < Number(Q.max_month_actions)
         ? 1
         : 0;
-Q.pinnedCardsDescription +=
-    " Ending the month without acting carries a political cost.";
 !}
 
 = [+ date_label +] — Leadership Table
 
-**[+ news_headline +]**
+<div class="leadership-board">
+<div class="hub-briefing">
+<div class="hub-briefing-kicker">Before the bureau</div>
+<div class="hub-headline">[+ news_headline +]</div>
 
-**Government:** [+ government_name +], led by **[+ prime_minister +]**.
-**President:** **[+ president_name +]**.
-**Lewica:** [+ left_role +].
+<p>[? if not left_in_government and government_has_confidence and not
+caretaker_government: The government whips can still pass ordinary business
+without us. Around our table, the argument is therefore about leverage: a
+public confrontation, a narrow channel across the aisle, or patient work
+outside Parliament that will outlast today's story.?][? if not
+left_in_government and not government_has_confidence and not
+caretaker_government: The cabinet no longer trusts its own count. Every
+conversation across the aisle may become a negotiation over survival, and
+every opposition party wants to decide what follows before the government
+does.?][? if caretaker_government: Cabinet papers arrive from an administration
+living on borrowed time. We must decide what can still be forced now and what
+must wait for a government with a mandate.?][? if left_in_government and not
+caretaker_government: Our
+ministers arrive with folders thick enough to consume the morning. A promise
+made here must still survive coalition partners, the Sejm and the offices
+expected to carry it out.?]</p>
 
-**Party resources:** **[+ resources +]** available. **[+ party_income +]** more
-arrive each January. [? if emergency_fundraising_timer > 0: Another emergency
-appeal can be made in **[+ emergency_fundraising_timer +] months**.?]
+<p>[? if resources <= 1: The treasurer has circled every discretionary line in
+red. One expensive gesture would empty the reserve, so whatever leaves this
+room must justify the organisation it consumes.?][? if resources > 1 and
+resources <= 4: The treasury can sustain one serious intervention, not every
+request pushed under the door. Choosing the month also means choosing what we
+will leave unanswered.?][? if resources >= 5: For once, the treasurer is not
+the loudest person in the room. We can choose between immediate pressure and
+the slower work of building a party able to apply it again.?] [? if party_unity
+< 40: The factions arrive expecting somebody else to set the trap; even a good
+decision may split on who is asked to carry it.?][? if party_unity >= 40 and
+party_unity < 65: The alliance will carry a clear decision, but an ambiguous
+bargain will reopen every old suspicion.?][? if party_unity >= 65: The
+leadership can spend less time writing guarantees for itself and more time on
+the consequences outside this room.?]</p>
+</div>
 
-[? if left_in_government: **Government programme:** **[+ budget +] budget
-points** remain for new commitments. ?]
-
-[? if not left_in_government and government_has_confidence and not caretaker_government:
-**Across the aisle:** [+ negotiation_forecast +]. ?]
-
-[? if president_name = "Rafał Trzaskowski" and government_party = "pis":
-**Palace–cabinet conflict:** [+ pis_cohabitation_state +]. ?]
-
-**Abroad:** [+ eu_campaign_stage +]. **Washington:** [+ us_president +].
-
-Draw up to three opportunities onto the table. Play one to act and move
-to the next month. The others stay for later. Discarding one costs **1 party
-resource** and also ends the month.
-
-[? if poland_hand_count = 0: **The table is clear.** Draw your first
-opportunity below.?]
-[? if poland_hand_full = 1: **The table is full.** Play an opportunity,
-discard one, or end the month.?]
-[? if poland_hand_count > 0 and poland_discard_used_this_month = 1:
-**You have already discarded this month.**?]
-[? if poland_hand_count > 0 and poland_discard_used_this_month = 0 and
-resources < 1: **The party cannot afford a discard.** Play a card or end the
-month.?]
+</div>
 
 - @poland_party_deck
 - @poland_government_deck
@@ -87,9 +74,6 @@ month.?]
 - #poland_advisor
 - @poland_manage_advisors
 - @poland_political_bulletin
-- @poland_discard_card
-- @end_month
-- @dossier
 
 @end_month
 title: End month

@@ -9,21 +9,28 @@ card-image: img/poland/cards/government-affairs.webp
 
 = The Coalition Council
 
-KO has a veto list, PSL has several red lines and Poland 2050 has circulated a
-diagram. Lewica's ministers have deadlines of their own. The council can
-concentrate on shared delivery, exchange priorities or let the public see
-where agreement ends.
+[? if government_party = "pis": Kaczyński arrives with the votes counted and
+the senior ministries already marked **not negotiable**. Morawiecki wants the
+social side of the agreement to produce visible results; Ziobro wants every
+concession to Lewica described as surrender. Our ministers have deadlines of
+their own, and Razem is waiting outside the room to explain what we traded
+away.?]
+[? if government_party != "pis": KO has a veto list, PSL has several red
+lines and Poland 2050 has circulated a diagram. Lewica's ministers have
+deadlines of their own. The council can concentrate on shared delivery,
+exchange priorities or let the public see where agreement ends.?]
 
 - @delivery_cell
 - @exchange_deadlines
 - @publish_minutes
+- @leave_pis_cabinet
 
 @delivery_cell
 title: Staff a joint delivery cell
 subtitle: Cost: 1 resource. Move disputes from leaders' offices into accountable work.
 choose-if: resources >= 1
 unavailable-subtitle: A joint delivery team requires one resource.
-on-arrival: resources -= 1; government_coalition_dissent -= 6; ko_coalition_dissent -= 2; psl_coalition_dissent -= 2; p2050_coalition_dissent -= 2; government_delivery += 3; public_trust += 1; news_headline = "The coalition creates a joint delivery cell with published deadlines"
+on-arrival: resources -= 1; government_coalition_dissent -= 6; ko_coalition_dissent -= 2 if government_party != "pis"; psl_coalition_dissent -= 2 if government_party != "pis"; p2050_coalition_dissent -= 2 if government_party != "pis"; pis_relation += 2 if government_party = "pis"; government_delivery += 3; public_trust += 1; news_headline = "The coalition creates a joint delivery cell with published deadlines"
 
 Officials receive named decisions, deadlines and escalation rules. The council
 does not become friendlier, but it loses the ability to rediscover the same
@@ -35,7 +42,7 @@ disagreement every fortnight.
 @exchange_deadlines
 title: Exchange one Left deadline for one coalition concession
 subtitle: Reduce cabinet tension by narrowing the immediate programme.
-on-arrival: government_coalition_dissent -= 5; ko_relation += 2; psl_relation += 2; p2050_relation += 2; progressive_credibility -= 2; progressives_dissent += 4; government_delivery += 1; news_headline = "Coalition leaders trade deadlines and recover a working calendar"
+on-arrival: government_coalition_dissent -= 5; ko_relation += 2 if government_party != "pis"; psl_relation += 2 if government_party != "pis"; p2050_relation += 2 if government_party != "pis"; pis_relation += 3 if government_party = "pis"; progressive_credibility -= 2; progressives_dissent += 4; government_delivery += 1; news_headline = "Coalition leaders trade deadlines and recover a working calendar"
 
 One reform moves back and one material commitment moves forward. Ministers
 leave with a calendar they can pass; activists leave with another reason to
@@ -47,10 +54,73 @@ ask whether governability always sends them the invoice.
 @publish_minutes
 title: Publish the disagreements and keep negotiating
 subtitle: No resource or budget cost. Transparency is not harmony, but it is a floor.
-on-arrival: public_trust += 3; constitutional_restraint += 2; party_unity += 1; government_coalition_dissent -= 1; ko_coalition_dissent += 1; psl_coalition_dissent += 1; p2050_coalition_dissent += 1; news_headline = "The coalition publishes its unresolved disputes instead of staging unanimity"
+on-arrival: public_trust += 3; constitutional_restraint += 2; party_unity += 1; government_coalition_dissent -= 1; ko_coalition_dissent += 1 if government_party != "pis"; psl_coalition_dissent += 1 if government_party != "pis"; p2050_coalition_dissent += 1 if government_party != "pis"; pis_relation -= 2 if government_party = "pis"; news_headline = "The coalition publishes its unresolved disputes instead of staging unanimity"
 
 The minutes distinguish blocked policy from unfinished administration and
 name which partner objects. The atmosphere worsens for an afternoon and the
 public record improves for longer.
+
+- #poland_card_finish
+
+
+@leave_pis_cabinet
+title: Withdraw every Lewica minister
+subtitle: End the coalition, lose cabinet authority and leave Morawiecki to govern as a PiS minority.
+view-if: government_party = "pis"
+new-page: true
+on-arrival: {!
+const portfolios = [
+    "labor", "equality", "housing", "health", "digital", "science",
+    "interior", "finance", "economy", "justice", "foreign",
+    "agriculture", "defence"
+];
+for (const portfolio of portfolios) {
+    if (Q[portfolio + "_minister_party"] == "Lewica") {
+        Q[portfolio + "_minister_party"] =
+            Q["ministry_" + portfolio + "_default_party"] || "PiS";
+        Q[portfolio + "_minister"] =
+            Q["ministry_" + portfolio + "_default_minister"] ||
+            "PiS nominee";
+    }
+}
+Q.family_minister_party = Q.labor_minister_party;
+Q.family_minister = Q.labor_minister;
+Q.left_in_government = 0;
+Q.left_cabinet_committed = 0;
+Q.left_cabinet_model = "Parliamentary opposition";
+Q.razem_in_government = 0;
+Q.razem_government_role = "Lewica opposition caucus";
+Q.position = "Parliamentary opposition";
+Q.left_role = "Opposition after withdrawing from Morawiecki's cabinet";
+Q.government_name = "Third Morawiecki Cabinet — PiS minority";
+Q.government_owner = "PiS minority government";
+Q.coalition_status = "PiS minority after New Left withdrawal";
+Q.coalition_seats = Math.max(0, Number(Q.pis_seats) || 0);
+Q.government_support_seats = Q.coalition_seats;
+Q.ministry_count = 0;
+Q.ministry_left_cabinet_seats = 0;
+Q.ministries_finalized = 1;
+Q.cabinet_roster_government_party = "pis";
+Q.budget = 0;
+Q.budget_authority = "Opposition — no state spending authority";
+Q.pis_relation -= 18;
+Q.ko_relation += 8;
+Q.p2050_relation += 5;
+Q.government_coalition_dissent += 15;
+Q.progressive_credibility += 5;
+Q.news_headline =
+    "New Left ministers resign and Morawiecki loses his majority";
+!}
+
+= The nameplates come down
+
+Our ministers submit their resignations together. PiS deputies call it
+desertion; Razem asks why it took this long; KO offers no absolution for the
+months in which our votes sustained the cabinet. By nightfall the civil
+servants report to PiS nominees again and Morawiecki is back to counting every
+bill.
+
+Leaving restores the freedom to oppose. It does not erase the record of having
+governed.
 
 - #poland_card_finish

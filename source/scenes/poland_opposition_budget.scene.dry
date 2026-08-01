@@ -192,9 +192,6 @@ Q.opposition_budget_left_is_pivotal =
         leftSeats >
         Q.opposition_budget_preview_external_no - previewAlignedSplinters
         ? 1 : 0;
-Q.opposition_budget_legal_influence = oppositionYear <= 2020
-    ? "Sejm amendments, a recorded vote and Senate amendments; no executive spending authority"
-    : "Sejm amendments, bargaining and a recorded vote; no executive spending authority";
 if (
     !Number.isFinite(Number(Q.budget_submission_time)) ||
     Number(Q.budget_submission_year) != oppositionYear
@@ -319,12 +316,15 @@ on-arrival: opposition_budget_stage = 1
 The government's actual priorities are **[+ opposition_budget_draft_priorities
 +]**. Its draft leaves **[+ opposition_budget_draft_omissions +]** exposed.
 
+<div class="ledger-notice"><b>Your task:</b> choose two demands, settle the
+club line, then choose whether to bargain, abstain or oppose. The final screen
+will show the cabinet's answer and the actual vote.</div>
+
 <div class="ledger-section ledger-section-first"><div class="ledger-title">What the chamber can do</div>
-<div class="ledger-row"><span>Government bloc</span><b>[+ opposition_budget_government_seats +] seats</b></div>
-<div class="ledger-row"><span>Other opposition</span><b>[+ opposition_budget_other_opposition_seats +] seats</b></div>
+<div class="ledger-row"><span>Cabinet starts with</span><b>[+ opposition_budget_government_seats +] votes</b></div>
 <div class="ledger-row"><span>Lewica controls</span><b>[+ opposition_budget_left_seats +] votes</b></div>
-<div class="ledger-row"><span>Lewica pivotal on the current count</span><b>[? if opposition_budget_left_is_pivotal: yes?][? if not opposition_budget_left_is_pivotal: no?]</b></div>
-<div class="ledger-row"><span>Legal influence</span><b>[+ opposition_budget_legal_influence +]</b></div></div>
+<div class="ledger-row"><span>Are Lewica's votes pivotal?</span><b>[? if opposition_budget_left_is_pivotal: Yes?][? if not opposition_budget_left_is_pivotal: No?]</b></div>
+<div class="ledger-row"><span>Passage rule</span><b>More yes than no</b></div></div>
 
 Lewica may amend, bargain, abstain or oppose. It cannot spend a złoty, order a
 ministry to implement a promise or treat a shadow programme as enacted law.
@@ -339,7 +339,9 @@ The menu changes with the year's crises. Choose exactly two. The conference
 will have to reconcile both; the parliamentary tactic will determine whether
 either becomes an amendment, a concession or only a shadow-programme claim.
 
-Selected: **[+ opposition_budget_priority_1 +]**[? if opposition_budget_priority_count = 2: and **[+ opposition_budget_priority_2 +]**?].
+[? if opposition_budget_priority_count = 0: Nothing selected yet.?]
+[? if opposition_budget_priority_count = 1: First demand: **[+ opposition_budget_priority_1 +]**. Choose one more.?]
+[? if opposition_budget_priority_count = 2: Demands: **[+ opposition_budget_priority_1 +]** and **[+ opposition_budget_priority_2 +]**.?]
 
 - @priority_wages
 - @priority_services
@@ -528,18 +530,21 @@ Q.opposition_budget_pps_demand =
 = Demands and red lines, not percentages
 
 The conference must reconcile **[+ opposition_budget_priority_1 +]** with **[+
-opposition_budget_priority_2 +]**. Each active current states what would make
-it rebel:
+opposition_budget_priority_2 +]**. Choose how firmly the parliamentary club
+will bind itself. Any likely dissent will be named before you choose the final
+Sejm tactic.
 
-[? if barons_active: - **[+ barons_name +]:** [+ opposition_budget_barons_demand +].?]
-[? if spring_active: - **[+ spring_name +]:** [+ opposition_budget_spring_demand +].?]
-[? if labor_active: - **[+ labor_name +]:** [+ opposition_budget_labor_demand +].?]
-[? if progressives_active: - **[+ progressives_name +]:** [+ opposition_budget_progressives_demand +].?]
-[? if razem_active: - **Razem:** [+ opposition_budget_razem_demand +].?]
-[? if pps_active: - **PPS:** [+ opposition_budget_pps_demand +].?]
-
-No weighted ratification score decides the answer. Leadership must choose how
-the parliamentary club will manage a disagreement that remains visible.
+<details class="ledger-disclosure">
+<summary><span>Faction red lines</span><b>Why MPs may rebel</b></summary>
+<div class="disclosure-body">
+[? if barons_active: <div class="ledger-note"><b>[+ barons_name +]:</b> [+ opposition_budget_barons_demand +].</div>?]
+[? if spring_active: <div class="ledger-note"><b>[+ spring_name +]:</b> [+ opposition_budget_spring_demand +].</div>?]
+[? if labor_active: <div class="ledger-note"><b>[+ labor_name +]:</b> [+ opposition_budget_labor_demand +].</div>?]
+[? if progressives_active: <div class="ledger-note"><b>[+ progressives_name +]:</b> [+ opposition_budget_progressives_demand +].</div>?]
+[? if razem_active: <div class="ledger-note"><b>Razem:</b> [+ opposition_budget_razem_demand +].</div>?]
+[? if pps_active: <div class="ledger-note"><b>PPS:</b> [+ opposition_budget_pps_demand +].</div>?]
+</div>
+</details>
 
 - @conference_negotiate
 - @conference_promise
@@ -573,7 +578,7 @@ on-arrival: opposition_budget_conference_code = 4; opposition_budget_conference_
 go-to: conference_result
 
 @conference_result
-title: The conference instruction
+title: Step 4 of 4 — Choose the parliamentary tactic
 new-page: true
 on-arrival: {!
 const leftDelegation = Math.max(0, Math.round(Number(Q.left_seats) || 0));
@@ -652,16 +657,28 @@ Q.opposition_budget_named_rebels = rebelNames.length
     : "None";
 !}
 
-**[+ opposition_budget_conference_management +]** becomes the club rule.
-Reserved dissenters: **[+ opposition_budget_rebel_count +]**. Named deputies:
-**[+ opposition_budget_named_rebels +]**.
+= Club instruction: [+ opposition_budget_conference_management +]
 
-Priority fit: **[+ opposition_budget_priority_mismatch +]**.
+Demands: **[+ opposition_budget_priority_1 +]** and **[+
+opposition_budget_priority_2 +]**.
 
-These are possible deviations from the line, not a fictional internal vote.
-Their actual yes, no or abstention will appear in the Sejm roll call.
+<div class="ledger-section ledger-section-first"><div class="ledger-title">Before the vote</div>
+<div class="ledger-row"><span>Likely dissenters</span><b>[+ opposition_budget_rebel_count +] MPs</b></div>
+<div class="ledger-subrow">[+ opposition_budget_priority_mismatch +].</div></div>
 
-- @choose_tactic: Choose the parliamentary tactic
+[? if opposition_budget_rebel_count > 0: <details class="ledger-disclosure">
+<summary><span>Likely dissenters</span><b>[+ opposition_budget_rebel_count +] MPs</b></summary>
+<div class="disclosure-body">[+ opposition_budget_named_rebels +]. These are
+possible deviations; the final roll call records how they actually vote.</div>
+</details>?]
+
+Now choose what Lewica files and how it votes.
+
+- @tactic_shadow
+- @tactic_amendments
+- @tactic_bargain
+- @tactic_abstain
+- @tactic_against
 
 @choose_tactic
 go-to: tactics
@@ -690,7 +707,7 @@ go-to: resolve
 
 @tactic_amendments
 title: Submit two named amendments and vote on the government's answer
-subtitle: Cost: 1 party resource. Each amendment gets a separate cabinet answer before the recorded budget vote.
+subtitle: Cost: 1 party resource. The cabinet rules on each demand; Lewica then votes no on the amended bill.
 choose-if: resources >= 1
 unavailable-subtitle: Drafting and whipping two amendments requires one party resource.
 on-arrival: resources -= 1; opposition_budget_tactic_code = 2; opposition_budget_tactic = "Two named Sejm amendments"; annual_budget_posture = "Vote no after amendments"
@@ -698,7 +715,7 @@ go-to: resolve
 
 @tactic_bargain
 title: Bargain for named concessions
-subtitle: Cost: 1 party resource. No concession exists until the cabinet accepts exact language and the budget passes.
+subtitle: Cost: 1 party resource. Best chance of a concession; the cabinet's exact answer sets a support, abstention or no-vote line.
 choose-if: resources >= 1
 unavailable-subtitle: A written negotiation and monitoring file requires one party resource.
 on-arrival: resources -= 1; opposition_budget_tactic_code = 3; opposition_budget_tactic = "Named-concession bargain"; annual_budget_posture = "Conditional line"
@@ -980,44 +997,81 @@ if (Q.annual_budget_year == 2022) Q.budget_2022_done = 1;
 Q.news_headline = Q.annual_budget_passed
     ? "The government's budget passes after a recorded opposition process"
     : "The government loses the budget vote without automatically losing office";
+
+Q.opposition_budget_outcome = Q.annual_budget_passed
+    ? "Budget passed"
+    : "Budget defeated";
+const enactedCount = Q.annual_budget_passed
+    ? Q.opposition_budget_amendments_passed
+    : 0;
+Q.opposition_budget_sejm_clause_count = enactedCount;
+Q.opposition_budget_sejm_clause = enactedCount > 0
+    ? Q.annual_budget_concession
+    : "None";
+if (enactedCount == 2) {
+    Q.opposition_budget_result_summary =
+        "Lewica secured both named demands. Its Sejm line was: " +
+        Q.annual_budget_posture + ".";
+} else if (enactedCount == 1) {
+    Q.opposition_budget_result_summary =
+        "Lewica secured " + Q.opposition_budget_priority_1 +
+        ". Its Sejm line was: " + Q.annual_budget_posture + ".";
+} else if (Q.annual_budget_passed) {
+    Q.opposition_budget_result_summary =
+        "The budget passed without a Lewica clause. Its Sejm line was: " +
+        Q.annual_budget_posture + ".";
+} else {
+    Q.opposition_budget_result_summary =
+        "The budget failed. Cabinet acceptance cannot enact a clause from a " +
+        "defeated bill.";
+}
+Q.opposition_budget_delivery_status = enactedCount > 0
+    ? enactedCount + (enactedCount == 1 ? " clause is" : " clauses are") +
+        " eligible for next year's delivery audit after the Senate stage. " +
+        "Public capacity does not change today."
+    : "No Lewica clause enters next year's delivery audit.";
+Q.opposition_budget_next_step = Q.annual_budget_passed
+    ? "Next: Senate review. The Senate may propose amendments, but it cannot " +
+        "reject a budget."
+    : "Next: cabinet revision. The government remains in office while the " +
+        "four-month Article 225 clock continues.";
 !}
 
-= Government majority, Lewica line and amendments
+= [+ opposition_budget_outcome +]: [+ annual_budget_yes +]–[+ annual_budget_no +]
 
-<div class="ledger-section ledger-section-first"><div class="ledger-title">Real Sejm roll call</div>
-<div class="ledger-row"><span>Government yes</span><b>[+ annual_budget_government_yes +]</b></div>
+**[+ annual_budget_abstain +] abstained. [+ annual_budget_threshold +] yes votes
+were required.**
+
+<div class="ledger-notice">[+ opposition_budget_result_summary +]</div>
+
+<div class="ledger-section ledger-section-first"><div class="ledger-title">What your choice achieved</div>
+<div class="ledger-row"><span>Strategy</span><b>[+ opposition_budget_tactic +]</b></div>
 <div class="ledger-row"><span>Lewica line</span><b>[+ annual_budget_posture +]</b></div>
-<div class="ledger-row"><span>Named rebels</span><b>[+ opposition_budget_named_rebels +]</b></div>
-<div class="ledger-row"><span>Lewica split</span><b>[+ annual_budget_left_yes +] yes · [+ annual_budget_left_no +] no · [+ annual_budget_left_abstain +] abstain</b></div>
+<div class="ledger-row"><span>Clauses accepted by Sejm</span><b>[+ opposition_budget_sejm_clause_count +] of 2</b></div>
+<div class="ledger-row"><span>Delivery today</span><b>None</b></div>
+<div class="ledger-subrow">Accepted: [+ opposition_budget_sejm_clause +].</div>
+<div class="ledger-subrow">[+ opposition_budget_delivery_status +]</div></div>
+
+[? if opposition_budget_tactic_code = 2 or opposition_budget_tactic_code = 3:
+<div class="ledger-section"><div class="ledger-title">Cabinet decisions</div>
+<div class="ledger-row"><span>[+ opposition_budget_priority_1 +]</span><b>[? if opposition_budget_amendment_1_passed: Accepted?][? if not opposition_budget_amendment_1_passed: Refused?]</b></div>
+<div class="ledger-row"><span>[+ opposition_budget_priority_2 +]</span><b>[? if opposition_budget_amendment_2_passed: Accepted?][? if not opposition_budget_amendment_2_passed: Refused?]</b></div></div>?]
+
+<details class="ledger-disclosure">
+<summary><span>Full Sejm roll call</span><b>[+ annual_budget_yes +] yes · [+ annual_budget_no +] no · [+ annual_budget_abstain +] abstain</b></summary>
+<div class="disclosure-body">
+<div class="ledger-row"><span>Cabinet bloc</span><b>[+ annual_budget_government_yes +] yes · [+ annual_budget_government_abstain +] abstain</b></div>
+<div class="ledger-row"><span>Lewica</span><b>[+ annual_budget_left_yes +] yes · [+ annual_budget_left_no +] no · [+ annual_budget_left_abstain +] abstain</b></div>
 <div class="ledger-row"><span>Other clubs</span><b>[+ annual_budget_external_yes +] yes · [+ annual_budget_external_no +] no · [+ annual_budget_external_abstain +] abstain</b></div>
-<div class="ledger-subrow">[+ opposition_budget_external_support_basis +].</div>
-<div class="ledger-row"><span>Whole chamber</span><b>[+ annual_budget_yes +] yes · [+ annual_budget_no +] no · [+ annual_budget_abstain +] abstain</b></div>
-<div class="ledger-row"><span>Required</span><b>[+ annual_budget_threshold +] yes</b></div></div>
+<div class="ledger-row"><span>Required</span><b>[+ annual_budget_threshold +] yes</b></div>
+<div class="ledger-note">[+ opposition_budget_external_support_basis +].</div>
+[? if opposition_budget_rebel_count > 0: <div class="ledger-note">Lewica dissenters: [+ opposition_budget_named_rebels +].</div>?]
+</div>
+</details>
 
-<div class="ledger-section"><div class="ledger-title">What the cabinet accepted before the vote</div>
-<div class="ledger-row"><span>Government acceptance score</span><b>[+ opposition_budget_negotiation_score +] / [+ opposition_budget_negotiation_threshold +]</b></div>
-<div class="ledger-row"><span>Priority one</span><b>[+ opposition_budget_amendment_1 +]</b></div>
-<div class="ledger-row"><span>Priority two</span><b>[+ opposition_budget_amendment_2 +]</b></div>
-<div class="ledger-row"><span>Budget</span><b>[? if annual_budget_passed: passed?][? if not annual_budget_passed: failed?]</b></div></div>
+<div class="ledger-notice">[+ opposition_budget_next_step +]</div>
 
-[? if opposition_budget_tactic_code = 1: The shadow budget has already added
-political issue ownership, credibility and media attention. It has added
-**zero public capacity**.?]
-
-[? if opposition_budget_amendments_passed > 0 and annual_budget_passed: The
-adopted language is now eligible for next year's delivery audit. No capacity
-improves today.?]
-[? if opposition_budget_amendments_passed > 0 and not annual_budget_passed:
-Amendments attached to a defeated bill are not enacted and will score no
-capacity at audit.?]
-
-[? if annual_budget_year <= 2020 and annual_budget_passed: The budget now enters the retained Senate
-stage. The upper chamber may propose amendments but may not reject the budget.?]
-[? if annual_budget_year <= 2022 and not annual_budget_passed: A rejected bill
-does not enter the Senate. The cabinet keeps office, may revise the bill and
-remains subject to the recorded four-month Article 225 clock.?]
-
-- @complete: Record the vote
+- @complete: Continue the budget procedure
 
 @complete
 go-to: poland_budget_2023_2026.opposition_budget_failed if annual_budget_passed = 0; poland_senate.budget_2019 if annual_budget_year = 2019 and annual_budget_passed = 1; poland_senate.budget_2020 if annual_budget_year = 2020 and annual_budget_passed = 1; poland_senate.budget_2021_2022 if annual_budget_year >= 2021 and annual_budget_passed = 1

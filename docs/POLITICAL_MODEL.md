@@ -221,12 +221,25 @@ threshold separately, and the December 2026 assessment scores lists, wasted
 sub-threshold votes and family seats.
 
 Rightward change is also organisational. Welfare-conservative, sovereignty
-and order choices accumulate support for a cross-cutting Social-Patriot
-caucus; capitalist, credit and lower-tax choices can produce a Market Left
-caucus. These affinities overlap the ancestry caucuses and do not manufacture
-MPs. Sustained movement right raises dissent and grievance outside the SLD
+and order choices accumulate support for a Social-Patriot founding congress.
+On formation it transfers real weight from SLD, labour and Razem into **Lewica
+Patriotyczna**, with its own referrals, leadership pool, actions, crises and
+electoral AI. Its legal name is fixed rather than derived from the parent
+Left's dynamic name. At 5% or above it runs independently; below 5% it seeks
+protected places on the PiS party list and does not attach itself to Razem.
+Capitalist, credit and lower-tax choices can still produce a
+cross-cutting Market Left affinity. Sustained movement right raises dissent
+and grievance outside the SLD
 establishment—especially among Wiosna, labour, progressives, Razem and PPS—so
 those organisations can reach the existing defection and split stages.
+
+Every registered successor party runs a lightweight monthly AI. Inherited MPs
+or a founding network determine its initial capacity; quiet months build
+branches and income, while active campaigns change polling momentum and the
+relationship with the parent party. Wiosna, Labour Left and Young Left may
+join an independent Razem committee only when their combined component poll
+clears 5%, both sides are willing to cooperate and the ballot has not already
+been filed. SLD and PPS remain separate organisations.
 
 The August 2023 list negotiation then turns organisational exits into explicit
 electoral bargaining rather than automatic reunification. The player chooses
@@ -741,9 +754,13 @@ teleport across the spectrum.
 The annual Independence Day choice also leaves memory. Radical-right street
 capacity adds to Konfederacja's agenda pull, while a sustained civic-patriotic
 counter-tradition subtracts from it. Counter-mobilisation, legal monitoring,
-prohibition, neglect and civic commemoration produce different shifts among
-Braunists, market radicals and nationalists. The ledger describes who holds
-the street advantage without exposing either raw score.
+prohibition, neglect, civic commemoration and social-patriotic participation
+inside the main march produce different shifts among Braunists, market
+radicals and nationalists. Participation grows Lewica's conservative caucus
+and progressive dissent while also legitimising the nationalist street. The
+2020 choice always proceeds to a separate reckoning over the riot, apartment
+fire and police response. The ledger describes who holds the street advantage
+without exposing either raw score.
 
 This creates competitive adaptation in both directions. A strong Left makes
 social spending, public services and rights harder for the democratic parties

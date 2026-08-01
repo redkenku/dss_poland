@@ -589,6 +589,12 @@ if (latestMarchYear > finiteAI(Q.konf_last_march_wing_year, 2018)) {
     ) {
         shiftWingAI("konf_braunist_share", 1.5);
     } else if (
+        marchText.includes("join") ||
+        marchText.includes("participat")
+    ) {
+        shiftWingAI("konf_nationalist_share", 0.8);
+        shiftWingAI("konf_braunist_share", -0.5);
+    } else if (
         marchText.includes("police") ||
         marchText.includes("legal")
     ) {
@@ -1376,24 +1382,36 @@ const successorParties = [
         id: "centrum",
         active: !!Q.unia_centrum_formed,
         parent: "p2050",
+        seats: "centrum_seats",
+        founding: "centrum_party_readiness",
+        parentRelation: 34,
         label: "Centrum"
     },
     {
         id: "rozwoj",
         active: !!Q.rozwoj_party_formed && !Q.rozwoj_joined_left,
         parent: "pis",
+        seats: "rozwoj_seats",
+        founding: "rozwoj_association_members",
+        parentRelation: 28,
         label: "Rozwój"
     },
     {
         id: "tak_rozwoj",
         active: !!Q.tak_dla_rozwoju_party_formed,
         parent: Q.razem_party_formed ? "razem" : "left",
+        seats: "tak_rozwoj_seats",
+        founding: "matysiak_development_pressure",
+        parentRelation: 30,
         label: "Tak! Dla Rozwoju"
     },
     {
         id: "korona",
         active: !!Q.far_right_split,
         parent: "konf",
+        seats: "korona_seats",
+        founding: "far_right_split",
+        parentRelation: 20,
         label: "Korona"
     },
     {
@@ -1401,13 +1419,29 @@ const successorParties = [
         active: !!Q.barons_party_formed,
         parent: "left",
         caucus: "barons",
+        seats: "sld_breakaway_seats",
+        founding: "barons_exit_strength",
         label: Q.barons_party_name || "SLD breakaway"
+    },
+    {
+        id: "social_patriot",
+        active: !!Q.social_patriot_party_formed,
+        parent: "left",
+        caucus: "social_patriot",
+        seats: "social_patriot_seats",
+        founding: "social_patriot_exit_strength",
+        label: Q.social_patriot_party_name || "Lewica Patriotyczna"
     },
     {
         id: "spring_breakaway",
         active: !!Q.spring_party_formed,
         parent: "left",
         caucus: "spring",
+        seats: "spring_breakaway_seats",
+        founding: "spring_exit_strength",
+        list: "spring_list_committee",
+        joinedRazem: "spring_joined_razem",
+        razemRelation: 58,
         label: Q.spring_party_name || "Spring breakaway"
     },
     {
@@ -1415,6 +1449,11 @@ const successorParties = [
         active: !!Q.labor_party_formed,
         parent: "left",
         caucus: "labor",
+        seats: "labor_left_seats",
+        founding: "labor_exit_strength",
+        list: "labor_list_committee",
+        joinedRazem: "labor_joined_razem",
+        razemRelation: 50,
         label: Q.labor_party_name || "Labour Left"
     },
     {
@@ -1422,6 +1461,11 @@ const successorParties = [
         active: !!Q.progressives_party_formed,
         parent: "left",
         caucus: "progressives",
+        seats: "young_left_seats",
+        founding: "progressives_exit_strength",
+        list: "progressives_list_committee",
+        joinedRazem: "progressives_joined_razem",
+        razemRelation: 62,
         label: Q.progressives_party_name || "Young Left"
     },
     {
@@ -1429,6 +1473,8 @@ const successorParties = [
         active: !!Q.razem_party_formed,
         parent: "left",
         caucus: "razem",
+        seats: "razem_party_seats",
+        founding: "razem_exit_strength",
         label: Q.razem_party_name || "Razem"
     },
     {
@@ -1436,6 +1482,8 @@ const successorParties = [
         active: !!Q.pps_party_formed,
         parent: "left",
         caucus: "pps",
+        seats: "pps_party_seats",
+        founding: "pps_exit_strength",
         label: Q.pps_party_name || "PPS"
     }
 ];
@@ -1446,19 +1494,42 @@ for (const successor of successorParties) {
         Q[id + "_ai_strategy"] = "Organisation not active";
         continue;
     }
+    const successorSeats = Math.max(0, finiteAI(Q[successor.seats], 0));
+    const foundingStrength = Math.max(
+        0,
+        finiteAI(Q[successor.founding], 0)
+    );
     if (!Number.isFinite(Number(Q[id + "_org_resources"]))) {
-        Q[id + "_org_resources"] = 2;
+        Q[id + "_org_resources"] = Math.round(clampAI(
+            2 + Math.max(successorSeats * 0.30, foundingStrength * 0.08),
+            2,
+            8
+        ));
     }
     if (!Number.isFinite(Number(Q[id + "_org_income"]))) {
-        Q[id + "_org_income"] = 1;
+        Q[id + "_org_income"] = Math.round(clampAI(
+            1 + Math.max(successorSeats * 0.08, foundingStrength * 0.035),
+            1,
+            5
+        ));
+    }
+    if (!Number.isFinite(Number(Q[id + "_organisation"]))) {
+        Q[id + "_organisation"] = Math.round(clampAI(
+            12 + successorSeats * 2 + foundingStrength * 0.5,
+            12,
+            65
+        ));
     }
     if (!Number.isFinite(Number(Q[id + "_income_last_year"]))) {
         Q[id + "_income_last_year"] = Q.year;
     }
     if (Q.year > Q[id + "_income_last_year"]) {
-        Q[id + "_org_resources"] +=
-            Q[id + "_org_income"] *
-            Math.min(10, Q.year - Q[id + "_income_last_year"]);
+        Q[id + "_org_resources"] = Math.min(
+            12,
+            Q[id + "_org_resources"] +
+                Q[id + "_org_income"] *
+                Math.min(10, Q.year - Q[id + "_income_last_year"])
+        );
         Q[id + "_income_last_year"] = Q.year;
     }
     if (!Number.isFinite(Number(Q[id + "_ai_actions"]))) {
@@ -1466,54 +1537,167 @@ for (const successor of successorParties) {
     }
     Q[id + "_ai_acted"] = 0;
     Q[id + "_ai_last_spend"] = 0;
+    const successorVote = Math.max(0, finiteAI(
+        Q[id + "_component_vote_intent"],
+        finiteAI(Q[id + "_vote_intent"], finiteAI(Q[id + "_poll"], 0))
+    ));
+    Q[id + "_electoral_viability"] = successorVote >= 5
+        ? "Above the 5% threshold"
+        : "Below the 5% threshold";
+    const relationKey = successor.caucus
+        ? successor.caucus + "_party_relation"
+        : id + "_parent_relation";
+    if (!Number.isFinite(Number(Q[relationKey]))) {
+        Q[relationKey] = successor.caucus
+            ? 20
+            : successor.parentRelation;
+    }
+    let relation = finiteAI(Q[relationKey], 20);
     const successorActs =
         Q[id + "_org_resources"] >= 1 &&
         randomAI() <= Math.min(
-            0.68,
-            0.38 + Q[id + "_org_resources"] * 0.04
+            0.82,
+            0.40 + Q[id + "_org_resources"] * 0.04 +
+                (successorVote < 5 ? 0.12 : 0)
         );
     if (!successorActs) {
         Q[id + "_ai_strategy"] = "Build an independent organisation";
+        Q[id + "_organisation"] = clampAI(
+            Q[id + "_organisation"] + 1.5,
+            0,
+            100
+        );
+        Q[id + "_org_resources"] = Math.min(
+            12,
+            Q[id + "_org_resources"] + 0.2
+        );
+        Q[id + "_org_income"] = Math.min(
+            5,
+            Q[id + "_org_income"] + 0.04
+        );
+        Q[id + "_poll_momentum"] = clampAI(
+            finiteAI(Q[id + "_poll_momentum"], 0) + 0.06,
+            -4,
+            8
+        );
         Q[id + "_ai_headline"] =
             successor.label + " spends the month building local branches";
-        continue;
-    }
-    Q[id + "_org_resources"] -= 1;
-    Q[id + "_ai_last_spend"] = 1;
-    Q[id + "_ai_acted"] = 1;
-    Q[id + "_ai_actions"] += 1;
-    Q.rival_actions_this_month += 1;
-    let relation = 20;
-    if (successor.caucus) {
-        relation = finiteAI(
-            Q[successor.caucus + "_party_relation"],
-            20
-        );
-    } else if (id == "centrum") {
-        relation = finiteAI(Q.p2050_relation, 35);
-    } else if (id == "rozwoj") {
-        relation = finiteAI(Q.pis_relation, 25);
-    } else if (id == "korona") {
-        relation = finiteAI(Q.konf_relation, 15);
-    }
-    if (relation >= 45) {
-        Q[id + "_ai_strategy"] = "Coordinate without surrendering autonomy";
-        Q[id + "_poll_momentum"] =
-            finiteAI(Q[id + "_poll_momentum"], 0) + 0.08;
-        Q[successor.parent + "_poll_momentum"] =
-            finiteAI(Q[successor.parent + "_poll_momentum"], 0) + 0.03;
-        Q[id + "_ai_headline"] =
-            successor.label + " negotiates an electoral non-aggression pact";
     } else {
-        Q[id + "_ai_strategy"] = "Differentiate from the parent party";
-        Q[id + "_poll_momentum"] =
-            finiteAI(Q[id + "_poll_momentum"], 0) + 0.16;
-        Q[successor.parent + "_poll_momentum"] =
-            finiteAI(Q[successor.parent + "_poll_momentum"], 0) - 0.05;
-        Q[id + "_ai_headline"] =
-            successor.label + " attacks its former party from outside";
+        Q[id + "_org_resources"] -= 1;
+        Q[id + "_organisation"] = clampAI(
+            Q[id + "_organisation"] + 0.5,
+            0,
+            100
+        );
+        Q[id + "_ai_last_spend"] = 1;
+        Q[id + "_ai_acted"] = 1;
+        Q[id + "_ai_actions"] += 1;
+        Q.rival_actions_this_month += 1;
+        if (relation >= 45) {
+            Q[id + "_ai_strategy"] =
+                "Coordinate without surrendering autonomy";
+            Q[id + "_poll_momentum"] = clampAI(
+                finiteAI(Q[id + "_poll_momentum"], 0) + 0.22,
+                -4,
+                8
+            );
+            Q[successor.parent + "_poll_momentum"] = clampAI(
+                finiteAI(Q[successor.parent + "_poll_momentum"], 0) + 0.04,
+                -4,
+                8
+            );
+            relation = clampAI(relation + 1.5, 0, 100);
+            Q[id + "_ai_headline"] = successor.label +
+                " negotiates an electoral non-aggression pact";
+        } else {
+            Q[id + "_ai_strategy"] = "Differentiate from the parent party";
+            Q[id + "_poll_momentum"] = clampAI(
+                finiteAI(Q[id + "_poll_momentum"], 0) + 0.34,
+                -4,
+                8
+            );
+            Q[successor.parent + "_poll_momentum"] = clampAI(
+                finiteAI(Q[successor.parent + "_poll_momentum"], 0) - 0.08,
+                -4,
+                8
+            );
+            relation = clampAI(relation - 2, 0, 100);
+            Q[id + "_ai_headline"] =
+                successor.label + " attacks its former party from outside";
+        }
+        Q[relationKey] = relation;
+    }
+    const filed2023List =
+        Q.year == 2023 && !!Q.sejm_list_negotiation_done;
+    if (successor.list && !filed2023List) {
+        const razemVote = Math.max(0, finiteAI(
+            Q.razem_component_vote_intent,
+            finiteAI(Q.razem_vote_intent, finiteAI(Q.razem_poll, 0))
+        ));
+        const razemRelationKey = id + "_razem_relation";
+        if (!Number.isFinite(Number(Q[razemRelationKey]))) {
+            Q[razemRelationKey] = successor.razemRelation;
+        }
+        const viableRazemAlliance =
+            !!Q.razem_party_formed && successorVote < 5 &&
+            successorVote + razemVote >= 5 &&
+            finiteAI(Q[razemRelationKey], 0) >= 50 &&
+            finiteAI(Q.razem_cooperation, 0) >= 50;
+        const canReturnToLeft =
+            successorVote < 5 && relation >= 55 && !viableRazemAlliance;
+        Q[successor.list] = viableRazemAlliance
+            ? "razem"
+            : (canReturnToLeft ? "left" : id);
+        Q[successor.joinedRazem] = viableRazemAlliance ? 1 : 0;
+        Q[id + "_electoral_strategy"] = viableRazemAlliance
+            ? "Join a viable independent Razem list"
+            : (canReturnToLeft
+                ? "Negotiate protected places on the Lewica list"
+                : (successorVote >= 5
+                    ? "Defend an independent five-percent campaign"
+                    : "Build an independent list toward five percent"));
+    } else if (id == "sld_breakaway" || id == "pps") {
+        Q[id + "_electoral_strategy"] =
+            "Remain a separate party and contest independently";
+    } else if (!successor.list) {
+        Q[id + "_electoral_strategy"] = successorVote >= 5
+            ? "Defend an independent five-percent campaign"
+            : "Build an independent list toward five percent";
     }
     headlines.push(Q[id + "_ai_headline"]);
+}
+
+if (Q.social_patriot_party_formed) {
+    Q.social_patriot_party_name = "Lewica Patriotyczna";
+    Q.social_patriot_joined_razem = 0;
+    const socialPatriotVote = finiteAI(
+        Q.social_patriot_component_vote_intent,
+        finiteAI(
+            Q.social_patriot_vote_intent,
+            finiteAI(Q.social_patriot_poll, 0)
+        )
+    );
+    const filed2023List =
+        Q.year == 2023 && !!Q.sejm_list_negotiation_done &&
+        ["pis", "social_patriot"].includes(
+            String(Q.social_patriot_list_committee)
+        );
+    if (!filed2023List) {
+        Q.social_patriot_list_committee = socialPatriotVote < 5
+            ? "pis"
+            : "social_patriot";
+    }
+    const joinsPis = Q.social_patriot_list_committee == "pis";
+    Q.social_patriot_electoral_strategy = joinsPis
+        ? "Protected places on the PiS party list"
+        : "Independent party list above 5%";
+    Q.social_patriot_ai_strategy = joinsPis
+        ? "Secure PiS list places before votes are wasted"
+        : "Defend an independent five-percent campaign";
+    Q.social_patriot_ai_headline = joinsPis
+        ? "Lewica Patriotyczna chooses PiS list places over a sub-threshold run"
+        : "Lewica Patriotyczna campaigns to clear five percent alone";
+    headlines.push(Q.social_patriot_ai_headline);
 }
 
 // Component parties and associations keep acting even when they share a

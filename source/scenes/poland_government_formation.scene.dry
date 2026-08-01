@@ -62,6 +62,11 @@ Q.post_formation_return_pending = 0;
 // This entry is deliberately not a new-game setup. Party resources, the
 // agenda hand, advisors, factional history, rival AI, ideology, relations,
 // presidential history and the judicial record all remain untouched.
+Q.pre_election_left_in_government = Q.left_in_government ? 1 : 0;
+Q.pre_election_government_party = String(Q.government_party || "");
+Q.pre_election_government_name = String(Q.government_name || "");
+Q.pre_election_prime_minister = String(Q.prime_minister || "");
+Q.pre_election_position = String(Q.position || "");
 Q.year = 2023;
 Q.month = 10;
 Q.month_name = "October";
@@ -84,7 +89,7 @@ Q.sejm_statutory_majority = 231;
 
 const partyIds = [
     "pis", "ko", "p2050", "psl", "left", "konf", "other",
-    "sld_breakaway", "spring_breakaway", "labor_left", "young_left",
+    "sld_breakaway", "social_patriot", "spring_breakaway", "labor_left", "young_left",
     "razem", "pps", "centrum", "rozwoj", "korona", "ko_splinter",
     "left_coalition", "democratic_list", "third_way"
 ];
@@ -104,12 +109,18 @@ if (!Q.election_2023_certified) {
         spring_breakaway: String(Q.spring_list_committee || "spring_breakaway"),
         labor_left: String(Q.labor_list_committee || "labor_left"),
         young_left: String(Q.progressives_list_committee || "young_left"),
-        razem: String(Q.razem_list_committee || "razem")
+        razem: String(Q.razem_list_committee || "razem"),
+        social_patriot: String(
+            Q.social_patriot_list_committee || "social_patriot"
+        )
     };
     for (const id of Object.keys(breakawayCommittees)) {
-        if (["left", "razem", "left_coalition"].includes(
-            breakawayCommittees[id]
-        )) {
+        if (
+            ["left", "razem", "left_coalition"].includes(
+                breakawayCommittees[id]
+            ) ||
+            (id == "social_patriot" && breakawayCommittees[id] == "pis")
+        ) {
             committeeForFormation[id] = breakawayCommittees[id];
         }
     }
@@ -184,7 +195,8 @@ if (!Q.election_2023_certified) {
     const thresholds = {
         pis: 5, ko: Q.ko_consolidated || listOutcome == "ko_5" ? 5 : 8,
         p2050: 5, psl: 5,
-        left: 5, konf: 5, sld_breakaway: 5, spring_breakaway: 5,
+        left: 5, konf: 5, sld_breakaway: 5, social_patriot: 5,
+        spring_breakaway: 5,
         labor_left: 5, young_left: 5, razem: 5, pps: 5,
         centrum: 5, rozwoj: 5, korona: 5, ko_splinter: 5,
         left_coalition: 8, democratic_list: 8, third_way: 8
@@ -274,12 +286,13 @@ if (!Q.election_2023_certified) {
     Q.election_2023_certified = 1;
 }
 const certifiedLeftLists = [
-    "left", "sld_breakaway", "spring_breakaway", "labor_left",
+    "left", "sld_breakaway", "social_patriot", "spring_breakaway", "labor_left",
     "young_left", "razem", "pps"
 ].filter(function(id) {
     if (id == "left") return true;
     const activeQualities = {
         sld_breakaway: Q.barons_party_formed,
+        social_patriot: Q.social_patriot_party_formed,
         spring_breakaway: Q.spring_party_formed,
         labor_left: Q.labor_party_formed,
         young_left: Q.progressives_party_formed,
@@ -300,6 +313,9 @@ const certifiedMainCommittee = {
 const certifiedLeftCommitteeFor = {
     left: certifiedMainCommittee,
     sld_breakaway: "sld_breakaway",
+    social_patriot: String(
+        Q.social_patriot_list_committee || "social_patriot"
+    ),
     spring_breakaway: String(Q.spring_list_committee || "spring_breakaway"),
     labor_left: String(Q.labor_list_committee || "labor_left"),
     young_left: String(Q.progressives_list_committee || "young_left"),
@@ -369,7 +385,11 @@ const leftCaucusDefinitions = [
         weight: Q.progressives_active ? Q.progressives_strength : 0
     },
     {id: "razem", weight: Q.razem_active ? Q.razem_strength : 0},
-    {id: "pps", weight: Q.pps_active ? Q.pps_strength : 0}
+    {id: "pps", weight: Q.pps_active ? Q.pps_strength : 0},
+    {
+        id: "social_patriot",
+        weight: Q.social_patriot_active ? Q.social_patriot_strength : 0
+    }
 ].filter(function(entry) {
     return Number(entry.weight) > 0;
 });
@@ -380,6 +400,7 @@ Q.left_barons_seats = leftCaucuses.barons || 0;
 Q.left_spring_seats = leftCaucuses.spring || 0;
 Q.left_labor_seats = leftCaucuses.labor || 0;
 Q.left_progressives_seats = leftCaucuses.progressives || 0;
+Q.left_social_patriot_seats = leftCaucuses.social_patriot || 0;
 Q.left_new_generation_seats =
     Q.left_labor_seats + Q.left_progressives_seats;
 Q.razem_seats = leftCaucuses.razem || 0;
@@ -407,17 +428,22 @@ Q.p2050_liberal_seats = p2050Caucuses.liberal;
 Q.p2050_independent_seats = p2050Caucuses.independent;
 
 Q.left_splinter_seats =
-    Q.sld_breakaway_seats + Q.spring_breakaway_seats +
+    Q.sld_breakaway_seats + Q.social_patriot_seats +
+    Q.spring_breakaway_seats +
     Q.labor_left_seats + Q.young_left_seats +
-    Q.razem_party_seats + Q.pps_party_seats;
+    Q.razem_party_seats + Q.pps_party_seats + Q.tak_rozwoj_seats;
 Q.left_family_seats = Q.left_seats + Q.left_splinter_seats;
 Q.left_splinter_support_votes =
     (Q.barons_party_relation >= 45 ? Q.sld_breakaway_seats : 0) +
+    (Q.social_patriot_list_committee != "pis" &&
+        Q.social_patriot_party_relation >= 45
+        ? Q.social_patriot_seats : 0) +
     (Q.spring_party_relation >= 45 ? Q.spring_breakaway_seats : 0) +
     (Q.labor_party_relation >= 45 ? Q.labor_left_seats : 0) +
     (Q.progressives_party_relation >= 45 ? Q.young_left_seats : 0) +
     (Q.razem_party_relation >= 45 ? Q.razem_party_seats : 0) +
-    (Q.pps_party_relation >= 45 ? Q.pps_party_seats : 0);
+    (Q.pps_party_relation >= 45 ? Q.pps_party_seats : 0) +
+    (Q.tak_rozwoj_parent_relation >= 45 ? Q.tak_rozwoj_seats : 0);
 Q.left_committed_seats =
     Q.left_seats + Q.left_splinter_support_votes;
 Q.coalition_democratic_seats =
@@ -426,8 +452,12 @@ Q.coalition_democratic_seats =
 Q.coalition_center_seats =
     Q.ko_seats + Q.p2050_seats + Q.psl_seats + Q.centrum_seats;
 Q.coalition_right_seats =
-    Q.pis_seats + Q.konf_seats + Q.rozwoj_seats + Q.korona_seats;
-Q.coalition_pis_psl_seats = Q.pis_seats + Q.psl_seats;
+    Q.pis_seats + Q.konf_seats + Q.rozwoj_seats + Q.korona_seats +
+    (Q.social_patriot_list_committee == "pis"
+        ? Q.social_patriot_seats : 0);
+Q.coalition_pis_psl_seats = Q.pis_seats + Q.psl_seats +
+    (Q.social_patriot_list_committee == "pis"
+        ? Q.social_patriot_seats : 0);
 Q.seat_subvention_seats = Q.left_seats;
 Q.seat_subvention = Q.left_seats > 0
     ? Math.max(1, Math.round(Q.left_seats / 25))
@@ -436,8 +466,9 @@ Q.party_income =
     Math.max(0, finiteFormation(Q.member_dues, 0)) + Q.seat_subvention;
 
 // Certify one winner in each of the Senate's 100 single-member districts.
-// A pact combines the democratic vote behind one district candidate; without
-// it, KO, Third Way and the Left compete separately and may split a plurality.
+// A pact combines its members behind one district candidate. Lewica may be a
+// full partner, receive limited reservations, stand down or run outside a
+// bilateral KO–Third Way agreement.
 if (!Q.senate_election_2023_certified) {
     Q.senate_total = 100;
     if (!Q.senate_pact_2023_done) {
@@ -445,6 +476,7 @@ if (!Q.senate_election_2023_certified) {
         Q.senate_pact_strength = 60;
         Q.senate_pact_strategy =
             "Senate Pact with three Sejm lists";
+        Q.senate_left_pact_mode = "full";
     }
     const senateVote = function(id) {
         return Math.max(
@@ -456,7 +488,9 @@ if (!Q.senate_election_2023_certified) {
         );
     };
     const senateVotes = {
-        pis: senateVote("pis"),
+        pis: senateVote("pis") +
+            (Q.social_patriot_list_committee == "pis"
+                ? senateVote("social_patriot") : 0),
         konf: senateVote("konf"),
         rozwoj: senateVote("rozwoj"),
         korona: senateVote("korona"),
@@ -469,12 +503,18 @@ if (!Q.senate_election_2023_certified) {
             "labor_left", "young_left", "razem", "pps"
         ].reduce(function(total, id) {
             return total + senateVote(id);
-        }, 0),
+        }, 0) + (Q.social_patriot_list_committee != "pis"
+            ? senateVote("social_patriot") : 0),
         independent: senateVote("other")
     };
-    const democraticVote =
-        senateVotes.ko + senateVotes.p2050 +
-        senateVotes.psl + senateVotes.left;
+    const leftPactMode = String(Q.senate_left_pact_mode || "full");
+    const leftPactNominationWeight = leftPactMode == "full"
+        ? 1
+        : (leftPactMode == "reserved" ? 0.2 : 0);
+    const leftVoteInsidePact = leftPactMode != "outside";
+    const democraticPactVote =
+        senateVotes.ko + senateVotes.p2050 + senateVotes.psl +
+        (leftVoteInsidePact ? senateVotes.left : 0);
     const pactStrength = Math.max(
         0,
         Math.min(100, finiteFormation(Q.senate_pact_strength, 60))
@@ -485,7 +525,10 @@ if (!Q.senate_election_2023_certified) {
             {id: "ko", weight: senateVotes.ko},
             {id: "p2050", weight: senateVotes.p2050},
             {id: "psl", weight: senateVotes.psl},
-            {id: "left", weight: senateVotes.left}
+            {
+                id: "left",
+                weight: senateVotes.left * leftPactNominationWeight
+            }
         ]
     );
     const pactNominees = [];
@@ -542,9 +585,16 @@ if (!Q.senate_election_2023_certified) {
             const transfer = 0.88 + pactStrength / 1000;
             addCandidate(
                 pactNominees[district],
-                democraticVote * transfer + democraticLean +
+                democraticPactVote * transfer + democraticLean +
                     (randomUnit(this) - 0.5) * 8
             );
+            if (leftPactMode == "outside") {
+                addCandidate(
+                    "left",
+                    senateVotes.left + democraticLean * 0.55 +
+                        (randomUnit(this) - 0.5) * 18
+                );
+            }
         } else {
             addCandidate(
                 "ko",
@@ -747,6 +797,7 @@ Q.left_seats = 26;
 Q.konf_seats = 18;
 Q.other_seats = 0;
 Q.sld_breakaway_seats = 0;
+Q.social_patriot_seats = 0;
 Q.spring_breakaway_seats = 0;
 Q.labor_left_seats = 0;
 Q.young_left_seats = 0;
@@ -760,6 +811,7 @@ Q.coalition_seats = 0;
 Q.left_barons_seats = 6;
 Q.left_labor_seats = 5;
 Q.left_progressives_seats = 7;
+Q.left_social_patriot_seats = 0;
 Q.left_new_generation_seats = 12;
 Q.left_spring_seats = 0;
 Q.razem_seats = 7;
@@ -819,6 +871,7 @@ Q.senate_pact_2023_done = 1;
 Q.senate_pact_coordinated = 1;
 Q.senate_pact_strength = 78;
 Q.senate_pact_strategy = "Senate Pact with three Sejm lists";
+Q.senate_left_pact_mode = "full";
 Q.senate_election_2023_certified = 1;
 Q.senate_election_rule =
     "100 single-member districts; the leading candidate wins";
@@ -1113,13 +1166,14 @@ Q.news_headline = "The election produces 248 democratic seats and no incumbent m
 go-to: poland_election.results_2023
 
 @first_sitting
-# prose-audit: Grade B — Strong branching scene; trim seat-ledger exposition and let negotiators, factions, and concessions carry the arithmetic.
+# prose-audit: Grade A — The certified seats remain visible, while the scene moves immediately to the President, PSL's brokers and Lewica's competing caucuses.
 title: The first sitting
 new-page: true
 
 = 13 November 2023 — two clocks begin
 
-The election has returned a precise and awkward chamber:
+The certified count has returned an awkward chamber. The numbers below are
+public seats; the agreements they imply still have to be made.
 
 <div class="ledger-section ledger-section-first"><div class="ledger-title">The
 new Sejm — 460 seats</div>
@@ -1129,10 +1183,9 @@ new Sejm — 460 seats</div>
 <div class="poll-row"><span class="party party-psl"><b>PSL</b></span><span>[+ psl_seats +]</span><span>Third Way</span></div>
 <div class="poll-row"><span class="party party-lewica"><b>Lewica</b></span><span>[+ left_seats +]</span><span>[+ nowa_lewica_seats +] New Left · [+ razem_seats +] Razem</span></div>
 <div class="poll-row"><span class="party party-konf"><b>Konfederacja</b></span><span>[+ konf_seats +]</span><span>federal caucus</span></div>
-<div class="ledger-subrow">KO + Poland 2050 + PSL + Lewica = <b>[+
-coalition_democratic_seats +]</b>. Without Lewica: [+
-coalition_center_seats +]. Without PSL: [+ coalition_democratic_seats -
-psl_seats +]. Neither partner is automatically ornamental.</div></div>
+<div class="ledger-subrow">KO, Poland 2050, PSL and Lewica can together command
+<b>[+ coalition_democratic_seats +]</b>. Neither Lewica nor PSL can be treated as
+an ornamental signature.</div></div>
 
 [? if not trz_inaugurated: President [+ president_name +] accepts the outgoing
 cabinet's resignation but lets it remain as caretaker. The Palace is
@@ -2453,7 +2506,7 @@ confidence.
 go-to: poland_events_2026.snap_campaign_launch if formation_continuous = 1; formation_exit if formation_continuous = 0
 
 @governing_agreement
-# prose-audit: Grade B — Strong branching scene; trim seat-ledger exposition and let negotiators, factions, and concessions carry the arithmetic.
+# prose-audit: Grade A — Named party currents and PSL's annual leverage carry the coalition problem without reducing it to a seat formula.
 title: Write rules for an impossible coalition
 new-page: true
 view-if: left_in_government = 1
@@ -2467,9 +2520,9 @@ not enough. Each mini-party needs a way to lose a dispute without treating it
 as grounds to leave.
 
 PSL insists that every annual budget is a new confidence test. The Left knows
-that accepting this principle gives a **[+ psl_seats +]-seat partner**
-permanent leverage. It also knows that **[+ coalition_democratic_seats -
-psl_seats +] is not 231**.
+that accepting this principle gives the agrarian partner permanent leverage.
+It also knows that KO, Poland 2050 and Lewica cannot command 231 votes after a
+PSL walkout.
 
 - @agreement_dispute_protocol
 - @agreement_bilateral
@@ -2505,16 +2558,16 @@ on-arrival: year = 2024; month = 12; month_name = "December"; date_label = "Dece
 go-to: annual_budget if left_in_government = 1; opposition_assessment if left_in_government = 0
 
 @annual_budget
-# prose-audit: Grade B — Strong branching scene; trim seat-ledger exposition and let negotiators, factions, and concessions carry the arithmetic.
+# prose-audit: Grade A — Ministers, Left caucuses and coalition partners negotiate the package; internal support is delivered as a political verdict before the public roll call.
 title: The 2025 state budget
 new-page: true
 view-if: left_in_government = 1
 
 = December 2024 — every promise gets a number
 
-This is the coalition's annual survival test. The Left has **[+ budget +]
-governing-capacity points** available because it holds cabinet responsibility.
-These are not party campaign resources and they do not exist in opposition.
+This is the coalition's annual survival test. Our ministers have **[+ budget +]
+shares of cabinet bargaining room** left: influence that exists only because
+we accepted responsibility for the government, not ordinary party money.
 
 The package must first survive four Left caucuses, then KO, Poland 2050 and
 PSL, then an ordinary Sejm vote. For final passage, abstentions do not count
@@ -2568,19 +2621,19 @@ on-arrival: {!
 const formationBudgetProfiles = {
     1: {
         barons: 64, spring: 85, labor: 86,
-        progressives: 82, razem: 92, pps: 88
+        progressives: 82, razem: 92, pps: 88, social_patriot: 78
     },
     2: {
         barons: 76, spring: 75, labor: 82,
-        progressives: 74, razem: 68, pps: 84
+        progressives: 74, razem: 68, pps: 84, social_patriot: 86
     },
     3: {
         barons: 84, spring: 44, labor: 42,
-        progressives: 52, razem: 18, pps: 35
+        progressives: 52, razem: 18, pps: 35, social_patriot: 82
     },
     4: {
         barons: 55, spring: 54, labor: 52,
-        progressives: 50, razem: 45, pps: 50
+        progressives: 50, razem: 45, pps: 50, social_patriot: 55
     }
 };
 const formationBudgetProfile =
@@ -2592,7 +2645,8 @@ const caucusSeatQualities = {
     labor: "left_labor_seats",
     progressives: "left_progressives_seats",
     razem: "razem_seats",
-    pps: "left_pps_seats"
+    pps: "left_pps_seats",
+    social_patriot: "left_social_patriot_seats"
 };
 let formationWeightedBacking = 0;
 let formationActiveSeats = 0;
@@ -2625,21 +2679,19 @@ Q.annual_budget_internal_backing = Math.round(
 Q.annual_budget_internal_vetoes = formationVetoes;
 !}
 
-= Active caucuses, one line
+= The caucus chairs answer
 
-<div class="ledger-section ledger-section-first"><div class="ledger-title">Left
-ratification</div>
-[? if barons_active: <div class="ledger-row"><span>[+ barons_name +] · [+ left_barons_seats +] seats</span><b>[+ budget_barons_backing +]%</b></div>?]
-[? if spring_active: <div class="ledger-row"><span>[+ spring_name +] · [+ left_spring_seats +]</span><b>[+ budget_spring_backing +]%</b></div>?]
-[? if labor_active: <div class="ledger-row"><span>[+ labor_name +] · [+ left_labor_seats +]</span><b>[+ budget_labor_backing +]%</b></div>?]
-[? if progressives_active: <div class="ledger-row"><span>[+ progressives_name +] · [+ left_progressives_seats +]</span><b>[+ budget_progressives_backing +]%</b></div>?]
-[? if razem_active: <div class="ledger-row"><span>Razem · [+ razem_seats +]</span><b>[+ budget_razem_backing +]%</b></div>?]
-[? if pps_active: <div class="ledger-row"><span>PPS · [+ left_pps_seats +]</span><b>[+ budget_pps_backing +]%</b></div>?]
-<div class="ledger-row"><span>Weighted mandate</span><b>[+ annual_budget_internal_backing +]%</b></div>
-<div class="ledger-row"><span>Caucus vetoes below 35%</span><b>[+ annual_budget_internal_vetoes +]</b></div></div>
+[? if annual_budget_internal_backing >= 55: Most of our deputies are ready to
+defend the cabinet text.?][? if annual_budget_internal_backing < 55: The
+package has not persuaded most of the Left caucus; ministers may own it before
+their own deputies do.?] [? if annual_budget_internal_vetoes = 0: No organised
+current has declared a veto.?][? if annual_budget_internal_vetoes = 1: One
+current has declared that the bill is not its budget.?][? if
+annual_budget_internal_vetoes > 1: Several currents are reserving public no
+votes.?]
 
-An internal veto does not erase a minister's legal power. It tells the player
-how many deputies will refuse to treat the cabinet text as their own.
+Their refusal cannot erase a minister's legal power. It can deny the cabinet
+the votes and party mandate needed to use it.
 
 - @budget_ratify_clean
 - @budget_emergency_conference
@@ -2779,7 +2831,7 @@ Q.coalition_budget_bargain = "KO fiscal rewrite";
 go-to: budget_sejm_roll
 
 @budget_sejm_roll
-# prose-audit: Grade B — Strong branching scene; trim seat-ledger exposition and let negotiators, factions, and concessions carry the arithmetic.
+# prose-audit: Grade A — The public roll call reports only constitutionally meaningful votes, then names the coalition consequence of passage or defeat.
 title: The annual budget vote
 new-page: true
 view-if: left_in_government = 1

@@ -54,6 +54,9 @@ progressives_strength : strength +] strength, [+ progressives_dissent : dissent
 razem_dissent : dissent +] dissent.  ?]
 [? if pps_active: **PPS** — [+ pps_strength : strength +] strength, [+
 pps_dissent : dissent +] dissent; no standing bureau nominee.  ?]
+[? if social_patriot_active: **[+ social_patriot_name +]** — [+
+social_patriot_strength : strength +] strength, [+ social_patriot_dissent :
+dissent +] dissent.  ?]
 
 - @remove: Remove advisers
 - @add: Appoint advisers
@@ -68,6 +71,7 @@ subtitle: Open a caucus, then withdraw one of its active representatives.
 - @remove_labor
 - @remove_progressives
 - @remove_razem
+- @remove_social_patriot
 - @poland_manage_advisors: Back to the slate
 
 @remove_barons
@@ -110,13 +114,25 @@ view-if: progressives_active = 1 and (zukowska_advisor = 1 or kotula_advisor = 1
 @remove_razem
 title: Razem
 subtitle: Razem's autonomous organisation, programme and parliamentary network.
-view-if: razem_active = 1 and (zandberg_advisor = 1 or biejat_advisor = 1 or zawisza_advisor = 1 or matysiak_advisor = 1)
+view-if: razem_active = 1 and (zandberg_advisor = 1 or biejat_advisor = 1 or zawisza_advisor = 1 or (social_patriot_active = 0 and matysiak_advisor = 1))
 
 - @remove_zandberg
 - @remove_biejat
 - @remove_zawisza
+- @remove_matysiak_razem
+- @remove: Back to the caucuses
+
+@remove_social_patriot
+title: Lewica Patriotyczna
+subtitle: Regional welfare, development and sovereignty organisers.
+view-if: social_patriot_active = 1 and matysiak_advisor = 1
+
 - @remove_matysiak
 - @remove: Back to the caucuses
+
+@remove_matysiak_razem
+title: Remove Paulina Matysiak
+go-to: remove_matysiak
 
 @remove_czarzasty
 title: Remove Włodzimierz Czarzasty
@@ -241,10 +257,23 @@ go-to: poland_manage_advisors
 @remove_matysiak
 title: Remove Paulina Matysiak
 subtitle: The smaller-city and transport network loses its advocate.
-view-if: matysiak_advisor = 1
+view-if: matysiak_advisor = 1 and (razem_active = 1 or social_patriot_active = 1)
 choose-if: leadership_reshuffle_timer <= 0 and n_advisors > 0
 unavailable-subtitle: The bureau cannot be changed now.
-on-arrival: matysiak_advisor = 0; n_advisors -= 1; advisor_reshuffle_removed_matysiak = 1; removed_advisor = "Paulina Matysiak"; razem_strength -= 1; labor_strength -= 1; local_network -= 1
+on-arrival: {!
+Q.matysiak_advisor = 0;
+Q.n_advisors -= 1;
+Q.advisor_reshuffle_removed_matysiak = 1;
+Q.removed_advisor = "Paulina Matysiak";
+if (Q.social_patriot_active) {
+    Q.social_patriot_strength -= 2;
+    Q.social_patriot_dissent += 5;
+} else {
+    Q.razem_strength -= 1;
+    Q.labor_strength -= 1;
+}
+Q.local_network -= 1;
+!}
 go-to: poland_manage_advisors
 
 @add
@@ -258,6 +287,7 @@ unavailable-subtitle: All three bureau seats are filled.
 - @add_labor
 - @add_progressives
 - @add_razem
+- @add_social_patriot
 - @poland_manage_advisors: Back to the slate
 
 @add_barons
@@ -305,8 +335,20 @@ view-if: razem_active = 1 and n_advisors < 3
 - @add_zandberg
 - @add_biejat
 - @add_zawisza
+- @add_matysiak_razem
+- @add: Back to the caucuses
+
+@add_social_patriot
+title: Lewica Patriotyczna
+subtitle: Regional welfare, development and sovereignty organisers.
+view-if: social_patriot_active = 1 and n_advisors < 3
+
 - @add_matysiak
 - @add: Back to the caucuses
+
+@add_matysiak_razem
+title: Appoint Paulina Matysiak
+go-to: add_matysiak
 
 @add_czarzasty
 title: Appoint Włodzimierz Czarzasty
@@ -418,9 +460,23 @@ go-to: poland_manage_advisors
 @add_matysiak
 title: Appoint Paulina Matysiak
 subtitle: Rail, smaller cities and an uneasy cross-party materialism.
-view-if: razem_active = 1 and matysiak_advisor = 0 and not advisor_reshuffle_removed_matysiak and n_advisors < 3
+view-if: (razem_active = 1 or social_patriot_active = 1) and matysiak_advisor = 0 and not advisor_reshuffle_removed_matysiak and n_advisors < 3
 choose-if: n_advisors < 3
-on-arrival: matysiak_advisor = 1; n_advisors += 1; razem_strength += 1; labor_strength += 1; local_network += 1; news_headline = "Matysiak joins the bureau"
+on-arrival: {!
+Q.matysiak_advisor = 1;
+Q.n_advisors += 1;
+if (Q.social_patriot_active) {
+    Q.social_patriot_strength += 2;
+    Q.social_patriot_dissent -= 3;
+    Q.matysiak_party = "Lewica Patriotyczna";
+    Q.news_headline = "Matysiak represents Lewica Patriotyczna in the bureau";
+} else {
+    Q.razem_strength += 1;
+    Q.labor_strength += 1;
+    Q.news_headline = "Matysiak joins the bureau";
+}
+Q.local_network += 1;
+!}
 go-to: poland_manage_advisors
 
 @finish
@@ -460,7 +516,10 @@ if (finalSignature !== openingSignature) {
         progressives: [
             "zukowska", "kotula", "gawkowski", "nowicka"
         ].concat(Q.spring_active ? [] : ["biedron"]),
-        razem: ["zandberg", "biejat", "zawisza", "matysiak"]
+        razem: ["zandberg", "biejat", "zawisza"].concat(
+            Q.social_patriot_active ? [] : ["matysiak"]
+        ),
+        social_patriot: ["matysiak"]
     };
     const representation = {};
     for (const faction of Object.keys(advisorCaucuses)) {

@@ -1,7 +1,7 @@
 title: Transfer of power and the first coalition year
 
 @august_lists
-# prose-audit: Grade B — Sound scene and consequence structure; tighten the briefing voice and use a consistent first-person Lewica perspective.
+# prose-audit: Grade A — Lewica negotiates the list in first person, the legal thresholds stay concrete, and acceptance is delivered as a political verdict rather than a scorecard.
 title: The October list negotiation
 subtitle: Host-party control at 5%, coalition autonomy at 8%, and partners who can walk away
 new-page: true
@@ -23,11 +23,10 @@ Q.news_headline =
 
 = August 2023 — Five percent or eight?
 
-A party committee clears **5%**, but the host controls nominations and the
-public subsidy. Separate parties can instead create a coalition committee:
-each keeps legal identity and a claim on funding, but the ballot must clear
-**8%**. That makes an eight-percent coalition attractive to partners and
-riskier to the whole camp.
+A party committee clears **5%**, but its host controls nominations and the
+public subsidy. We can instead ask separate parties to create a coalition
+committee: each keeps its identity and a claim on funding, but all of us must
+clear **8%**. The safer threshold therefore comes with the hardest terms.
 
 The talks can include KO and the democratic parties, Third Way or one of its
 hosts, PiS, independent Razem and compatible minor-left breakaways. A revived
@@ -180,6 +179,10 @@ const optionalMinorLeft = [
     return !!Q[party.id + "_party_formed"];
 });
 const minorLeftScores = {};
+const socialPatriotVote = Number(Q.social_patriot_vote_intent) ||
+    Number(Q.social_patriot_poll) || 0;
+const socialPatriotNeedsHost =
+    !!Q.social_patriot_party_formed && socialPatriotVote < 5;
 
 if (outcome == "left_5") {
     if (Q.sejm_list_terms_code == 5) {
@@ -311,10 +314,17 @@ const accepted = outcome == "left_5" ||
 Q.spring_joined_razem = 0;
 Q.labor_joined_razem = 0;
 Q.progressives_joined_razem = 0;
+Q.social_patriot_joined_razem = 0;
 Q.pps_joined_razem = 0;
 Q.spring_list_committee = "spring_breakaway";
 Q.labor_list_committee = "labor_left";
 Q.progressives_list_committee = "young_left";
+Q.social_patriot_list_committee = socialPatriotNeedsHost
+    ? "pis"
+    : "social_patriot";
+Q.social_patriot_electoral_strategy = socialPatriotNeedsHost
+    ? "Protected places on the PiS party list"
+    : "Independent party list above 5%";
 Q.razem_list_committee = "razem";
 Q.pps_list_committee = "pps";
 Q.sejm_list_partner_score = partnerScore;
@@ -323,7 +333,11 @@ Q.sejm_list_acceptances = partnerNames.map(function(name, index) {
     return name + " " + Math.round(partnerScores[index]) +
         (partnerScores[index] >= 50 ? " accepts" : " refuses");
 }).join("; ") + "; internal ratification " + Math.round(internalScore) +
-    (internalScore >= 45 ? " passes" : " fails");
+    (internalScore >= 45 ? " passes" : " fails") +
+    (Q.social_patriot_party_formed
+        ? "; Lewica Patriotyczna chooses " +
+            Q.social_patriot_electoral_strategy
+        : "");
 
 if (accepted) {
     Q.sejm_list_outcome = outcome;
@@ -398,63 +412,202 @@ Q.sejm_list_negotiation_done = 1;
 
 **[+ sejm_list_result +].**
 
-Partner floor: **[+ sejm_list_partner_score +]/100**<br>
-Internal ratification: **[+ sejm_list_internal_score +]/100**<br>
 Legal form: **[+ sejm_list_structure +] · [+ sejm_list_threshold +]%**<br>
 Control: **[+ sejm_list_control +]**
 
-[+ sejm_list_acceptances +].
+The committees' answer fixes the ballot. Candidates now organise under that
+legal form; any argument over nominations, subsidy and autonomy moves from the
+negotiating room into the campaign.
 
 SLD and PPS breakaways remain on their own legal committees. They are never
 silently folded into Razem by this bargain.
+[? if social_patriot_party_formed: **Lewica Patriotyczna:** [+
+social_patriot_electoral_strategy +].?]
 
 - @poland_event_queue: File the lists
 
 @august_senate_pact
-# prose-audit: Grade D — The factual premise is usable, but the scene is skeletal; add named actors, Lewica viewpoint, and a bespoke aftermath for each exit.
-title: The Senate Pact and the three Sejm lists
-subtitle: One candidate per Senate district—or three democratic candidates splitting a plurality
+# prose-audit: Grade A — Lewica's place in the pact now follows its bargaining power, KO and Third Way can coordinate without it, and every response receives an authored aftermath.
+title: Who gets a place in the Senate Pact?
+subtitle: KO and Third Way do not need a weak Lewica to divide one hundred districts
 new-page: true
 tags: poland_event
 priority: 19
 order: 11
 max-visits: 1
 view-if: continuous_campaign = 1 and year = 2023 and month = 8 and senate_pact_2023_done = 0
-on-arrival: senate_pact_2023_done = 1; news_headline = "The three democratic lists must decide whether to share the Senate map"
+on-arrival: {!
+const leftPollForPact = Number(Q.left_poll) || 0;
+const leftSeatsForPact = Number(Q.left_projected_seats) || 0;
+const fullPactPartner = leftPollForPact >= 7 && leftSeatsForPact >= 24;
+Q.senate_pact_2023_done = 1;
+Q.senate_left_pact_mode = fullPactPartner ? "full" : "outside";
+Q.news_headline = fullPactPartner
+    ? "Lewica enters the negotiation over one democratic Senate map"
+    : "KO and Third Way begin dividing the Senate map without Lewica";
+!}
 
-= August 2023 — Two electoral systems, one ballot day
+= August 2023 — One hundred negotiations
 
-The Sejm campaign has settled around **three democratic lists**: KO, Third
-Way and the Left. The Senate uses one hundred single-member districts instead.
-In each district every committee may nominate one candidate, and only the
-candidate with the most votes wins.
+Whatever arrangement we have just filed for the Sejm, the Senate is a separate
+contest. Its one hundred seats are single-member districts: every committee
+may nominate a candidate, but only the candidate with the most votes wins.
 
-A Senate Pact can therefore preserve three distinct Sejm campaigns while
-preventing their Senate candidates from dividing the same electorate. It also
-means accepting a negotiated district allocation before anyone knows which
-party will lead the next government.
+Donald Tusk's KO and the Third Way led by Szymon Hołownia and Władysław
+Kosiniak-Kamysz can therefore divide the map between themselves. They need our
+voters against PiS; they do not need to give our candidates a share of
+winnable districts in return.
+
+[? if senate_left_pact_mode = "full": Our polling and projected delegation are
+large enough that excluding Lewica would endanger too many districts. We have
+a seat at the table—but must decide whether the Senate bargain should remain
+separate from the argument over one Sejm list.
+?]
+
+[? if senate_left_pact_mode = "outside": Our weak national position changes
+the negotiation. KO and Third Way can field one agreed candidate while leaving
+Lewica without an equal district quota. We cannot veto their bilateral pact;
+we can prove that a few local organisations deserve exceptions, endorse their
+map without reward, or run against it.
+?]
 
 - @senate_three_lists_pact
 - @senate_one_list
 - @senate_separate_lists
+- @senate_weak_reservations
+- @senate_weak_stand_down
+- @senate_weak_run
 
 @senate_three_lists_pact
-title: Sign one Senate Pact while keeping three Sejm lists
-subtitle: Historical structure. Strong FPTP coordination; every party surrenders some districts.
-on-arrival: senate_pact_coordinated = 1; senate_pact_strength = 78; senate_pact_strategy = "Senate Pact with three Sejm lists"; senate_cohesion += 12; ko_relation += 3; psl_relation += 3; p2050_relation += 3; party_unity += 1; news_headline = "Three Sejm lists agree one democratic Senate candidate per district"
-go-to: poland_event_queue
+title: Sign one four-party Senate Pact
+subtitle: Czarzasty accepts a common map without reopening the Sejm-list bargain.
+view-if: senate_left_pact_mode = "full"
+on-arrival: senate_pact_coordinated = 1; senate_pact_strength = 78; senate_pact_strategy = "Senate Pact with Lewica as a full partner"; senate_left_pact_mode = "full"; senate_cohesion += 12; ko_relation += 3; psl_relation += 3; p2050_relation += 3; party_unity += 1; news_headline = "Four parties agree one democratic Senate candidate per district"
+go-to: senate_three_lists_pact_aftermath
+
+@senate_three_lists_pact_aftermath
+title: One Senate map, one settled Sejm bargain
+new-page: true
+
+The negotiators put **KO, Polska 2050, PSL and Lewica** behind one candidate in
+each allocated district. Włodzimierz Czarzasty can defend the agreement as
+electoral arithmetic rather than submission to Donald Tusk: it does not alter
+the legal form, branding or nomination control already settled for the Sejm.
+
+Some local hopefuls lose their races before the ballot is printed. In return,
+the districts assigned to Lewica carry the whole pact rather than only our
+vote. We have exchanged breadth for winnability.
+
+- @poland_event_queue: Publish the common map
 
 @senate_one_list
 title: Demand one opposition list in both chambers
-subtitle: The Senate field coordinates, but Third Way and Razem resist extending it to the Sejm.
-on-arrival: senate_pact_coordinated = 1; senate_pact_strength = 62; senate_pact_strategy = "One-list demand extended to the Senate"; senate_cohesion += 4; ko_relation += 5; psl_relation -= 5; p2050_relation -= 4; razem_dissent += 6; party_unity -= 3; opposition_list_pressure += 5; news_headline = "The Senate deal survives a renewed fight over one Sejm list"
-go-to: poland_event_queue
+subtitle: Tusk gains an ally for one Sejm list; Third Way and Razem must defend refusing it.
+view-if: senate_left_pact_mode = "full"
+on-arrival: senate_pact_coordinated = 1; senate_pact_strength = 62; senate_pact_strategy = "Senate Pact strained by Lewica's one-list demand"; senate_left_pact_mode = "full"; senate_cohesion += 4; ko_relation += 5; psl_relation -= 5; p2050_relation -= 4; razem_dissent += 6; party_unity -= 3; opposition_list_pressure += 5; news_headline = "The Senate deal survives Lewica's demand for one Sejm list"
+go-to: senate_one_list_aftermath
+
+@senate_one_list_aftermath
+title: The pact survives the larger argument
+new-page: true
+
+Donald Tusk welcomes our demand and immediately turns it against Third Way.
+Hołownia and Kosiniak-Kamysz refuse to dissolve their Sejm project; Razem says
+a common Senate candidate is sensible precisely because it does **not** require
+one proportional list under KO's leadership.
+
+The district map is still signed, but later and with less trust. We gain a
+clear answer to the one-list question: KO agrees, while Third Way and part of
+our own party do not.
+
+- @poland_event_queue: Campaign on the answer
 
 @senate_separate_lists
-title: Let all three lists nominate their own Senate candidates
-subtitle: Maximum party visibility; no protection against splitting the FPTP vote.
-on-arrival: senate_pact_coordinated = 0; senate_pact_strength = 18; senate_pact_strategy = "Three separate democratic Senate slates"; senate_cohesion -= 14; party_unity += 2; ko_relation -= 5; psl_relation -= 3; p2050_relation -= 3; left_poll_momentum += 0.1; news_headline = "Three democratic Senate candidates compete in the same districts"
-go-to: poland_event_queue
+title: Refuse the allocations and nominate separately
+subtitle: Every Lewica organisation may campaign, even where it divides the anti-PiS vote.
+view-if: senate_left_pact_mode = "full"
+on-arrival: senate_pact_coordinated = 0; senate_pact_strength = 18; senate_pact_strategy = "Separate KO, Third Way and Lewica Senate slates"; senate_left_pact_mode = "outside"; senate_cohesion -= 14; party_unity += 2; ko_relation -= 5; psl_relation -= 3; p2050_relation -= 3; left_poll_momentum += 0.1; news_headline = "Lewica rejects the Senate allocations and files separately"
+go-to: senate_separate_lists_aftermath
+
+@senate_separate_lists_aftermath
+title: Three names for one seat
+new-page: true
+
+County organisers no longer have to stand down for a nominee chosen in Warsaw.
+Lewica posters appear even in districts assigned by KO and Third Way to their
+own candidates, and the party briefly looks larger because it is visible
+everywhere.
+
+The ballot paper exposes the cost. Where PiS has one nominee, democratic voters
+may now find three. A strong local Lewica campaign can win; a merely respectable
+one can decide which rival loses.
+
+- @poland_event_queue: File our candidates
+
+@senate_weak_reservations
+title: Prove that a few local organisations deserve candidates
+subtitle: KO and Third Way keep the map; only demonstrated county strength can win exceptions.
+view-if: senate_left_pact_mode = "outside"
+choose-if: local_network >= 45
+unavailable-subtitle: Our county network is too thin to make exclusion costly.
+on-arrival: senate_pact_coordinated = 1; senate_pact_strength = 74; senate_pact_strategy = "KO–Third Way Senate Pact with limited Lewica reservations"; senate_left_pact_mode = "reserved"; senate_cohesion += 7; senate_left_leverage += 2; ko_relation += 1; psl_relation += 1; p2050_relation += 1; party_unity -= 2; news_headline = "Local strength wins Lewica a handful of places on the Senate map"
+go-to: senate_weak_reservations_aftermath
+
+@senate_weak_reservations_aftermath
+title: Exceptions, not partnership
+new-page: true
+
+KO and Third Way refuse to reopen their national formula. They do, however,
+yield a handful of districts where mayors, councillors and organisers can show
+that a Lewica name is the pact's strongest name.
+
+Those candidates receive the common endorsement. The rest of the map remains
+a bilateral bargain, and Czarzasty has no equal veto over it. Local roots have
+won representation that the national poll could not command.
+
+- @poland_event_queue: Defend the reserved districts
+
+@senate_weak_stand_down
+title: Endorse the KO–Third Way map and stand down
+subtitle: Maximise the anti-PiS vote while accepting no guaranteed Lewica districts.
+view-if: senate_left_pact_mode = "outside"
+on-arrival: senate_pact_coordinated = 1; senate_pact_strength = 78; senate_pact_strategy = "KO–Third Way Senate Pact; Lewica stands down"; senate_left_pact_mode = "stand_down"; senate_cohesion += 8; ko_relation += 3; psl_relation += 2; p2050_relation += 2; party_unity -= 5; left_poll_momentum -= 0.2; news_headline = "Lewica endorses a Senate map negotiated by KO and Third Way"
+go-to: senate_weak_stand_down_aftermath
+
+@senate_weak_stand_down_aftermath
+title: Discipline without a district share
+new-page: true
+
+Tusk, Hołownia and Kosiniak-Kamysz publish the map they negotiated together.
+We endorse its candidates and withdraw competing nominations, so the pact can
+collect much of our vote without placing Lewica on the ballot.
+
+The democratic camp praises our discipline. Inside the party, organisers ask
+what exactly loyalty has bought them. We may help elect an opposition Senate
+majority while arriving in that chamber with no senators of our own.
+
+- @poland_event_queue: Campaign against PiS
+
+@senate_weak_run
+title: Run Lewica candidates against the bilateral pact
+subtitle: KO and Third Way still coordinate with each other; we make them compete for our voters.
+view-if: senate_left_pact_mode = "outside"
+on-arrival: senate_pact_coordinated = 1; senate_pact_strength = 68; senate_pact_strategy = "KO–Third Way Senate Pact with a separate Lewica slate"; senate_left_pact_mode = "outside"; senate_cohesion -= 8; party_unity += 2; ko_relation -= 6; psl_relation -= 4; p2050_relation -= 4; left_poll_momentum += 0.1; news_headline = "Lewica files candidates against the KO–Third Way Senate Pact"
+go-to: senate_weak_run_aftermath
+
+@senate_weak_run_aftermath
+title: A bilateral pact, challenged from the Left
+new-page: true
+
+KO and Third Way keep one agreed nominee in every district they have divided.
+Lewica files its own candidates beside them. We recover a platform for rents,
+wages and public services, but we do not dissolve their pact by refusing it.
+
+Every close count will now carry the same accusation: if PiS wins with less
+than the combined democratic vote, our candidacy will be blamed. The only clean
+answer is to win somewhere ourselves.
+
+- @poland_event_queue: Print the separate ballots
 
 @september_visa
 # prose-audit: Grade D — The factual premise is usable, but the scene is skeletal; add named actors, Lewica viewpoint, and a bespoke aftermath for each exit.
@@ -498,7 +651,7 @@ on-arrival: border_doctrine = "Anti-migrant scandal competition"; border_securit
 go-to: poland_event_queue
 
 @election_2023
-# prose-audit: Grade B — Sound chain; reduce model and score language and narrate voter, campaign, and faction reactions more directly.
+# prose-audit: Grade A — Election night is grounded in what the result means for Lewica's MPs, funding and leverage before the constitutional formation sequence begins.
 title: The 2023 parliamentary election
 subtitle: Election night, certification and coalition arithmetic
 new-page: true
@@ -511,11 +664,11 @@ on-arrival: news_headline = "Poland votes after the largest mobilisation of the 
 
 = 15 October 2023 — The Sejm is elected
 
-Polls close after a record campaign. The Left's result will decide its public
-funding, the size of every internal caucus, and whether a democratic government
-needs its votes. The constitutional sequence follows: the outgoing cabinet,
-the first sitting, the President's nominee and up to three attempts to form a
-government that can win confidence.
+Polls close after a record mobilisation. We are waiting to learn who returns
+to the Sejm, which of our internal currents can still claim a caucus, and
+whether any democratic cabinet can govern without our votes. After the count,
+the outgoing cabinet remains in place until the first sitting and the
+President's nominee begin the constitutional contest for confidence.
 
 - @election_night
 
@@ -709,9 +862,11 @@ the radical right while it bargains for ministries.
 
 **Inherited organisation:** [+ civic_independence_years +] civic
 commemoration(s) · [+ independence_monitor_years +] monitoring operation(s) ·
-[+ independence_counter_years +] counter-mobilisation(s).
+[+ independence_counter_years +] counter-mobilisation(s) · [+
+independence_join_years +] appearance(s) inside the main march.
 
 - @ind23_civic
+- @ind23_join
 - @ind23_monitor
 - @ind23_ignore
 
@@ -721,6 +876,12 @@ subtitle: Cost: 1 resource.
 choose-if: resources >= 1
 unavailable-subtitle: Formation has consumed the organisers.
 on-arrival: resources -= 1; independence_march_strategy = "Civic tradition"; civic_independence_years += 1; civic_patriotism += 5; local_network += 2; public_trust += 2; far_right_street_capacity -= 1; news_headline = "A civic independence tradition survives the transfer of power"
+go-to: poland_event_queue
+
+@ind23_join
+title: Let the social-patriotic current enter the main march
+subtitle: It gains an autonomous national platform while coalition partners demand distance.
+on-arrival: independence_march_strategy = "Join the Independence March"; independence_join_years += 1; civic_patriotism += 4; social_patriot_support += 9; left_cultural_position += 4; left_right_score += 4; rural_support += 2; progressives_dissent += 8; spring_dissent += 6; razem_dissent += 5; ko_relation -= 2; p2050_relation -= 2; minority_safety -= 2; far_right_street_capacity += 2; far_right_split += 2; news_headline = "Lewica's social patriots join the march as coalition partners keep their distance"
 go-to: poland_event_queue
 
 @ind23_monitor
@@ -1284,7 +1445,7 @@ on-arrival: border_security_confidence += 4; refugee_empathy -= 5; minority_safe
 go-to: poland_event_queue
 
 @abortion_defeat
-# prose-audit: Grade C — Keep the factual setup, but write distinct aftermaths before the queue and translate +/- forecasts into faction and public reactions.
+# prose-audit: Grade A — The roll call now produces six distinct Lewica aftermaths spanning passage, movement strategy and coalition survival.
 title: The decriminalisation roll call
 subtitle: The result follows seats, relations and the April strategy
 new-page: true
@@ -1399,30 +1560,55 @@ choose-if: resources >= 1
 unavailable-subtitle: No constituency operation is ready.
 view-if: abortion_vote_passed = 0
 on-arrival: resources -= 1; feminist_trust += 6; local_network += 3; psl_relation -= 10; government_coalition_dissent += 5; public_trust += 1; news_headline = "The abortion roll call follows PSL deputies home"
+
+We print every name and take the vote back to the districts that supplied the
+noes. Movement organisers gain a concrete target; PSL deputies treat every
+local meeting as the opening of a coalition reprisal.
+
 go-to: poland_event_queue
 
 @abort_trade
 title: Negotiate a narrower clinical-access and decriminalisation package
 view-if: abortion_vote_passed = 0
 on-arrival: feminist_trust += 2; government_delivery += 2 if left_in_government = 1; psl_relation += 5; progressives_dissent += 5; razem_dissent += 4; barons_dissent -= 2; news_headline = "A narrower reproductive-health package keeps the talks alive"
+
+Clinical access and decriminalisation remain on the table, but the settlement
+abandons the clean victory promised in spring. PSL reopens talks; progressive
+and Razem organisers ask how many defeats will be renamed sequencing.
+
 go-to: poland_event_queue
 
 @abort_crisis
 title: Make the next coalition council a confidence test
 view-if: abortion_vote_passed = 0 and left_in_government = 1
 on-arrival: coalition_break_threat = 1; psl_relation -= 14; government_coalition_dissent += 14; party_unity += 2; progressive_credibility += 4; barons_dissent += 5; early_election_risk += 12; news_headline = "The Left threatens office over abortion"
+
+We tell the coalition council that office without bodily autonomy is no longer
+worth holding. The ultimatum unites our activists and forces every governing
+partner to prepare for a cabinet collapse.
+
 go-to: poland_event_queue
 
 @abort_rebuild
 title: Accept defeat, rebuild the social movement and return later
 view-if: abortion_vote_passed = 0
 on-arrival: organiser_energy += 5; feminist_trust += 3; psl_relation += 1; government_coalition_dissent -= 2; government_delivery -= 2; public_trust -= 1; news_headline = "The parliamentary defeat returns the issue to organisers"
+
+We refuse a theatrical retaliation and return staff to clinics, legal aid and
+the movement. Organisers recover; voters who expected governing power to
+deliver the bill hear a request for patience instead.
+
 go-to: poland_event_queue
 
 @abort_pass_claim
 title: Publish the coalition and constituency path to passage
 view-if: abortion_vote_passed = 1
 on-arrival: feminist_trust += 3; public_trust += 2; local_network += 2; psl_relation += 1; news_headline = "Lewica publishes how district pressure assembled the majority"
+
+We show which district campaigns and reluctant deputies completed the
+majority. The movement receives authorship rather than a government victory
+lap, and wavering PSL MPs can defend how they crossed the aisle.
+
 go-to: abortion_presidential_decision
 
 @abort_pass_prepare
@@ -1443,6 +1629,14 @@ if (Q.left_in_government) {
         "Opposition Lewica prepares the presidential and constitutional case";
 }
 !}
+
+[? if left_in_government: Health officials draft the clinical guidance while
+our lawyers prepare for the Palace. Nothing reaches a patient until the bill is
+signed, but implementation will not begin from an empty desk.?]
+[? if not left_in_government: We finance the presidential and constitutional
+brief from opposition. The government still owns clinical implementation; our
+case makes a veto or referral harder to disguise.?]
+
 go-to: abortion_presidential_decision
 
 @abortion_presidential_decision
@@ -2318,8 +2512,12 @@ This is the sixth campaign-season encounter with the march. The Left brings
 **[+ civic_independence_years +] civic commemorations** and **[+
 independence_monitor_years +] monitoring operations** into government. The
 police plan and the party's civic tradition are now separate responsibilities.
+[? if independence_join_years > 0: A social-patriotic network has also entered
+the main march [+ independence_join_years +] time(s), and now wants ministers
+to treat that access as legitimate party work.?]
 
 - @ind24_civic
+- @ind24_join
 - @ind24_rules
 - @ind24_ban
 
@@ -2329,6 +2527,12 @@ subtitle: Cost: 1 resource.
 choose-if: resources >= 1
 unavailable-subtitle: The party organisation cannot stage a separate event.
 on-arrival: resources -= 1; independence_march_strategy = "Civic tradition"; civic_independence_years += 1; civic_patriotism += 6; local_network += 2; public_trust += 2; far_right_street_capacity -= 1; news_headline = "The Left contests patriotism without commanding the police response"
+go-to: poland_event_queue
+
+@ind24_join
+title: Authorise a social-patriotic party column inside the main march
+subtitle: Ministers stay out; the caucus gains the stage and owns every incident around it.
+on-arrival: independence_march_strategy = "Join the Independence March"; independence_join_years += 1; civic_patriotism += 4; social_patriot_support += 9; left_cultural_position += 4; left_right_score += 4; rural_support += 2; progressives_dissent += 9; spring_dissent += 7; razem_dissent += 6; government_coalition_dissent += 4 if left_in_government = 1; ko_relation -= 3 if left_in_government = 1; minority_safety -= 2; far_right_street_capacity += 2; far_right_split += 3; news_headline = "A social-patriotic Left column joins the march without government patronage"
 go-to: poland_event_queue
 
 @ind24_rules

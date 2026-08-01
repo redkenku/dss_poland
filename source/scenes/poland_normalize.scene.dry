@@ -62,6 +62,8 @@ if (Q.started) {
         matysiak_development_score: 0,
         matysiak_resolution_done: 0,
         razem_right_score: 18,
+        independence_join_years: 0,
+        independence_2020_riot_done: 0,
         tak_dla_rozwoju_party_formed: 0,
         tak_rozwoj_poll: 0,
         tak_rozwoj_vote_intent: 0,
@@ -103,6 +105,9 @@ if (Q.started) {
     if (typeof Q.razem_ideology != "string") Q.razem_ideology = "Socialist left";
     if (typeof Q.razem_leadership_result != "string") {
         Q.razem_leadership_result = "Adrian Zandberg leads Razem";
+    }
+    if (typeof Q.independence_2020_riot_response != "string") {
+        Q.independence_2020_riot_response = "No riot response";
     }
 
     const rivalGroupDefaults = [
@@ -391,13 +396,17 @@ if (Q.started) {
         labor: "labor_left",
         progressives: "young_left",
         razem: "razem",
-        pps: "pps"
+        pps: "pps",
+        social_patriot: "social_patriot"
     };
     for (const caucus of Object.keys(leftListCommitteeDefaults)) {
         const quality = caucus + "_list_committee";
         if (typeof Q[quality] != "string" || !Q[quality].length) {
             Q[quality] = leftListCommitteeDefaults[caucus];
         }
+    }
+    if (typeof Q.social_patriot_electoral_strategy != "string") {
+        Q.social_patriot_electoral_strategy = "Independent party list";
     }
 
     for (const quality of [
@@ -409,15 +418,41 @@ if (Q.started) {
     }
     Q.social_patriot_active = Q.social_patriot_active ? 1 : 0;
     Q.market_liberal_active = Q.market_liberal_active ? 1 : 0;
+    Q.social_patriot_referrals = Math.max(
+        0,
+        Math.round(Number(Q.social_patriot_referrals) || 0)
+    );
     if (
         !Q.social_patriot_active &&
+        !Q.social_patriot_party_formed &&
         Q.social_patriot_support >= 18 &&
         Number(Q.left_right_score) >= 44
     ) {
         Q.social_patriot_active = 1;
+        Q.social_patriot_in_left = 1;
         Q.social_patriot_emerged_time = Number(Q.time) || 0;
+        Q.social_patriot_strength = clamp(
+            6 + (Q.social_patriot_support - 18) * 0.45,
+            6,
+            18
+        );
+        Q.social_patriot_dissent = 18;
+        Q.social_patriot_launch_pending = 1;
+        const socialPatriotTransfer = Q.social_patriot_strength;
+        Q.barons_strength = Math.max(
+            1,
+            (Number(Q.barons_strength) || 0) - socialPatriotTransfer * 0.55
+        );
+        Q.labor_strength = Math.max(
+            1,
+            (Number(Q.labor_strength) || 0) - socialPatriotTransfer * 0.20
+        );
+        Q.razem_strength = Math.max(
+            1,
+            (Number(Q.razem_strength) || 0) - socialPatriotTransfer * 0.25
+        );
         Q.news_headline =
-            "A Social-Patriot caucus organises inside the Left";
+            "A Social-Patriot organisation calls a founding congress";
     }
     if (
         !Q.market_liberal_active &&
@@ -430,16 +465,8 @@ if (Q.started) {
             "Market liberals establish a caucus inside the Left";
     }
     if (Q.social_patriot_active) {
-        Q.social_patriot_strength = clamp(
-            6 + (Q.social_patriot_support - 18) * 0.45,
-            6,
-            28
-        );
-        Q.social_patriot_dissent = clamp(
-            28 + (44 - Number(Q.left_right_score || 0)) * 2,
-            0,
-            100
-        );
+        Q.social_patriot_dissent +=
+            (44 - Number(Q.left_right_score || 0)) * 0.04;
     }
     if (Q.market_liberal_active) {
         Q.market_liberal_strength = clamp(
@@ -453,7 +480,9 @@ if (Q.started) {
             100
         );
     }
-    Q.social_patriot_name = "Social-Patriot caucus";
+    Q.social_patriot_name = "Social-Patriot organisation";
+    // Canonicalise legacy saves that composed this from the parent Left name.
+    Q.social_patriot_party_name = "Lewica Patriotyczna";
     Q.market_liberal_name = "Market Left caucus";
     Q.right_turn_caucuses = [];
     if (Q.social_patriot_active) {
@@ -506,6 +535,12 @@ if (Q.started) {
             dissent: 20,
             name: "PPS",
             partyName: "PPS"
+        },
+        social_patriot: {
+            strength: 0,
+            dissent: 18,
+            name: "Social-Patriot organisation",
+            partyName: "Lewica Patriotyczna"
         }
     };
     const caucusEscalationDefaults = {
@@ -550,6 +585,13 @@ if (Q.started) {
             demand: "a programme seat and a guaranteed social floor",
             mps: 1, offices: 18, local: 34, following: 38,
             ideology: 82, list: 76, cohesion: 60
+        },
+        social_patriot: {
+            leader: "Paulina Matysiak",
+            broker: "regional welfare and sovereignty organisers",
+            demand: "ownership of regional development and social-sovereignty policy",
+            mps: 4, offices: 26, local: 48, following: 58,
+            ideology: 74, list: 58, cohesion: 62
         }
     };
     const escalationLabels = [
@@ -715,6 +757,7 @@ if (Q.started) {
         ["progressives", Q.progressives_party_name || "Young Left"]
     ];
     Q.pps_joined_razem = 0;
+    Q.social_patriot_joined_razem = 0;
     const razemAllianceMembers = ["Razem"];
     for (const party of razemAllianceParties) {
         const joinedQuality = party[0] + "_joined_razem";
@@ -765,7 +808,11 @@ if (Q.started) {
             (!Q.spring_active && Q.biedron_advisor),
         razem:
             Q.zandberg_advisor || Q.biejat_advisor ||
-            Q.zawisza_advisor || Q.matysiak_advisor,
+            Q.zawisza_advisor ||
+            (!Q.social_patriot_active && Q.matysiak_advisor),
+        social_patriot:
+            Q.social_patriot_active &&
+            (Q.matysiak_advisor || Q.left_leader == "Paulina Matysiak"),
         pps: false
     };
     Q.left_party_name = Q.left_realign_formed
@@ -778,7 +825,7 @@ if (Q.started) {
         Number(Q.organised_left_splits) >= 3 &&
         Number(Q.party_unity) < 20
     ) {
-        Q.left_party_name = "Lewica Lewic";
+        Q.left_party_name = "Porozumienie Lewicy";
     } else if (!Q.left_party_name && Q.nowa_lewica_merger_agreed) {
         Q.left_party_name =
             Q.merger_leader == "Razem"
@@ -795,7 +842,8 @@ if (Q.started) {
             razem: "Lewica Razem",
             labor: "Partia Pracy",
             progressives: "Wspólne Jutro",
-            spring: "Wiosna-SLD"
+            spring: "Wiosna-SLD",
+            social_patriot: "Lewica Patriotyczna"
         };
         Q.left_party_name = factionBrands[strongestLeftCaucus] || "";
     }
@@ -1209,6 +1257,7 @@ if (Q.started) {
     );
     const liveCommittedSeparateLeftSeats = [
         ["sld_breakaway_seats", "barons_party_relation"],
+        ["social_patriot_seats", "social_patriot_party_relation"],
         ["spring_breakaway_seats", "spring_party_relation"],
         ["labor_left_seats", "labor_party_relation"],
         ["young_left_seats", "progressives_party_relation"],
@@ -2738,8 +2787,11 @@ if (Q.started) {
         progressives: [
             "zukowska", "kotula", "gawkowski", "nowicka"
         ].concat(Q.spring_active ? [] : ["biedron"]),
-        razem: ["zandberg", "biejat", "zawisza", "matysiak"],
-        pps: []
+        razem: ["zandberg", "biejat", "zawisza"].concat(
+            Q.social_patriot_active ? [] : ["matysiak"]
+        ),
+        pps: [],
+        social_patriot: ["matysiak"]
     };
     for (const faction of Q.factions) {
         const caucusRoster = advisorCaucuses[faction] || [];
@@ -2846,7 +2898,8 @@ if (Q.started) {
         return Number(Q[caucus + "_escalation_stage"]) >= 7 &&
             !(caucus == "razem" && Q.razem_breakaway_protected);
     }) ? 1 : 0;
-    Q.caucus_crisis_pending = Q.factions.some(function(caucus) {
+    Q.caucus_crisis_pending = Q.social_patriot_launch_pending ? 1 :
+        (Q.factions.some(function(caucus) {
         if (caucus == "razem" && Q.razem_breakaway_protected) {
             return false;
         }
@@ -2856,7 +2909,7 @@ if (Q.started) {
             !Q[caucus + "_demand_answered"] &&
             Number(Q.time) >= Number(Q[caucus + "_demand_deadline"])
         ) || stage >= 7;
-    }) ? 1 : 0;
+    }) ? 1 : 0);
     Q.faction_stage_highwater = caucusIds.reduce(
         function(highest, caucus) {
             return Math.max(
@@ -2932,11 +2985,13 @@ if (Q.started) {
 
     const splinterSeatQualities = [
         "sld_breakaway_seats",
+        "social_patriot_seats",
         "spring_breakaway_seats",
         "labor_left_seats",
         "young_left_seats",
         "razem_party_seats",
-        "pps_party_seats"
+        "pps_party_seats",
+        "tak_rozwoj_seats"
     ];
     Q.left_splinter_seats = splinterSeatQualities.reduce(
         function(total, quality) {
@@ -2952,11 +3007,13 @@ if (Q.started) {
         Q.left_splinter_seats;
     const splinterRelations = [
         ["sld_breakaway_seats", "barons_party_relation"],
+        ["social_patriot_seats", "social_patriot_party_relation"],
         ["spring_breakaway_seats", "spring_party_relation"],
         ["labor_left_seats", "labor_party_relation"],
         ["young_left_seats", "progressives_party_relation"],
         ["razem_party_seats", "razem_party_relation"],
-        ["pps_party_seats", "pps_party_relation"]
+        ["pps_party_seats", "pps_party_relation"],
+        ["tak_rozwoj_seats", "tak_rozwoj_parent_relation"]
     ];
     Q.left_splinter_support_votes = splinterRelations.reduce(
         function(total, entry) {

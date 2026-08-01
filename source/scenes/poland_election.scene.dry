@@ -11,9 +11,10 @@ new-page: true
 on-arrival: {!
 Q.election_2023_seen = 1;
 const leftFamilySeatCeiling =
-    Q.left_seats + Q.sld_breakaway_seats + Q.spring_breakaway_seats +
+    Q.left_seats + Q.sld_breakaway_seats + Q.social_patriot_seats +
+    Q.spring_breakaway_seats +
     Q.labor_left_seats + Q.young_left_seats +
-    Q.razem_party_seats + Q.pps_party_seats;
+    Q.razem_party_seats + Q.pps_party_seats + Q.tak_rozwoj_seats;
 if (
     !Number.isFinite(Number(Q.left_committed_seats)) ||
     Q.left_committed_seats < Q.left_seats ||
@@ -21,11 +22,15 @@ if (
 ) {
     Q.left_splinter_support_votes =
         (Q.barons_party_relation >= 45 ? Q.sld_breakaway_seats : 0) +
+        (Q.social_patriot_list_committee != "pis" &&
+            Q.social_patriot_party_relation >= 45
+            ? Q.social_patriot_seats : 0) +
         (Q.spring_party_relation >= 45 ? Q.spring_breakaway_seats : 0) +
         (Q.labor_party_relation >= 45 ? Q.labor_left_seats : 0) +
         (Q.progressives_party_relation >= 45 ? Q.young_left_seats : 0) +
         (Q.razem_party_relation >= 45 ? Q.razem_party_seats : 0) +
-        (Q.pps_party_relation >= 45 ? Q.pps_party_seats : 0);
+        (Q.pps_party_relation >= 45 ? Q.pps_party_seats : 0) +
+        (Q.tak_rozwoj_parent_relation >= 45 ? Q.tak_rozwoj_seats : 0);
     Q.left_committed_seats =
         Q.left_seats + Q.left_splinter_support_votes;
 }
@@ -35,8 +40,12 @@ Q.coalition_democratic_seats =
 Q.coalition_center_seats =
     Q.ko_seats + Q.p2050_seats + Q.psl_seats + Q.centrum_seats;
 Q.coalition_right_seats =
-    Q.pis_seats + Q.konf_seats + Q.rozwoj_seats + Q.korona_seats;
-Q.coalition_pis_psl_seats = Q.pis_seats + Q.psl_seats;
+    Q.pis_seats + Q.konf_seats + Q.rozwoj_seats + Q.korona_seats +
+    (Q.social_patriot_list_committee == "pis"
+        ? Q.social_patriot_seats : 0);
+Q.coalition_pis_psl_seats = Q.pis_seats + Q.psl_seats +
+    (Q.social_patriot_list_committee == "pis"
+        ? Q.social_patriot_seats : 0);
 Q.news_headline =
     "The election produces " + Q.coalition_democratic_seats +
     " democratic seats";
@@ -49,6 +58,7 @@ const certifiedParties = [
     ["ko", "KO", "KO", Q.ko_seats],
     ["left", "NL", Q.left_party_name || "Lewica", Q.left_seats],
     ["sld_breakaway", "SLD", Q.barons_party_name, Q.sld_breakaway_seats],
+    ["social_patriot", "LP", Q.social_patriot_party_name, Q.social_patriot_seats],
     ["spring_breakaway", "Spring", Q.spring_party_name, Q.spring_breakaway_seats],
     ["labor_left", "Labour", Q.labor_party_name, Q.labor_left_seats],
     ["young_left", "Young", Q.progressives_party_name, Q.young_left_seats],
@@ -123,6 +133,7 @@ if (
 [? if third_way_split = 1: <div class="election-table-row"><span class="party party-p2050">Polska 2050</span><span>[+ election_2023_p2050_vote +]%</span><b>[+ p2050_seats +]</b><span>separate list · 5%</span></div><div class="election-table-row"><span class="party party-psl">PSL</span><span>[+ election_2023_psl_vote +]%</span><b>[+ psl_seats +]</b><span>separate list · 5%</span></div>?]
 <div class="election-table-row"><span class="party party-lewica">[+ left_party_name +]</span><span>[+ election_2023_left_vote +]%</span><b>[+ left_seats +]</b><span>[? if not sejm_list_has_partners: main list?][? if sejm_list_has_partners: component share?]</span></div>
 [? if sld_breakaway_seats > 0 or barons_party_formed = 1: <div class="election-table-row"><span class="party party-sld">[+ barons_party_name +]</span><span>[+ election_2023_sld_breakaway_vote +]%</span><b>[+ sld_breakaway_seats +]</b><span>breakaway</span></div>?]
+[? if social_patriot_seats > 0 or social_patriot_party_formed = 1: <div class="election-table-row"><span class="party party-social-patriot">[+ social_patriot_party_name +]</span><span>[+ election_2023_social_patriot_vote +]%</span><b>[+ social_patriot_seats +]</b><span>[? if social_patriot_list_committee = "pis": PiS host list?][? if social_patriot_list_committee != "pis": independent?]</span></div>?]
 [? if spring_breakaway_seats > 0 or spring_party_formed = 1: <div class="election-table-row"><span class="party party-wiosna">[+ spring_party_name +]</span><span>[+ election_2023_spring_breakaway_vote +]%</span><b>[+ spring_breakaway_seats +]</b><span>breakaway</span></div>?]
 [? if labor_left_seats > 0 or labor_party_formed = 1: <div class="election-table-row"><span class="party party-left-labor">[+ labor_party_name +]</span><span>[+ election_2023_labor_left_vote +]%</span><b>[+ labor_left_seats +]</b><span>breakaway</span></div>?]
 [? if young_left_seats > 0 or progressives_party_formed = 1: <div class="election-table-row"><span class="party party-progressive">[+ progressives_party_name +]</span><span>[+ election_2023_young_left_vote +]%</span><b>[+ young_left_seats +]</b><span>breakaway</span></div>?]
@@ -140,19 +151,57 @@ Election-day movement: **[+ election_2023_day_shock_summary +]**.
 - @summary_2023: Read the election summary
 
 @sejm_threshold_defeat
-title: Out of the Sejm
+# prose-audit: Grade A — The zero-seat ending now treats electoral extinction as a historical rupture, names every Left organisation and reconstructs the chamber, cabinet succession and recovery horizon.
+title: Epilogue — Out of the Sejm
 new-page: true
+face-image: img/poland/cards/campaigning.webp
 view-if: left_seats = 0
 game-over: true
-on-arrival: game_over = 1; formation_in_progress = 0; position = "Outside parliament"; news_headline = "The Left falls below the Sejm threshold"
+on-arrival: game_over = 1; formation_in_progress = 0; position = "Outside parliament"; ending_exit_type = "Voted out"; news_headline = "The Left falls below the Sejm threshold"
+call: poland_ending.prepare_epilogue
 
-= Game over
+= [+ ending_name +]
 
-**[+ left_party_name +]** received no Sejm seats. The player-controlled list
-did not clear the applicable legal threshold—**5% for a party committee or 8%
-for a coalition committee**.
+[+ ending_opening +]
 
-Without parliamentary representation, the campaign ends here.
+[+ ending_2015_comparison +]
+
+[+ ending_outgoing_cabinet +]
+
+= Several defeats wearing the same colour
+
+The Left did not arrive at this result as one defeated army. The certified
+vote records **[+ ending_electoral_organisations +] organisations** across **[+
+ending_fragmentation_lists +] filed committees**: [+ ending_left_organisations
++].
+
+What was built is still real: [+ ending_achievements +]
+[+ ending_public_memory +] The electorate's answer is nonetheless final: [+
+ending_failures +]
+
+= The Sejm that replaces you
+
+[+ ending_chamber_result +]
+
+[+ ending_next_government +]
+
+= Winter after the count
+
+[+ ending_party_future +]
+
+The statistics now describe casualties rather than resources: **[+
+individual_defections +] individual defections**, **[+ parliamentary_circles
++] parliamentary clubs** and **[+ organised_left_splits +] organised splits**
+between the return to the Sejm in 2019 and expulsion **[+
+ending_campaign_years +] years later**.
+
+= What can still exist in 2030
+
+[+ ending_future_path +]
+
+[+ ending_national_future +]
+
+*“[+ ending_coda +]”*
 
 @summary_2023
 title: Election summary
@@ -224,9 +273,10 @@ new-page: true
 on-arrival: {!
 Q.election_coalition_seen = 1;
 const leftFamilySeatCeiling =
-    Q.left_seats + Q.sld_breakaway_seats + Q.spring_breakaway_seats +
+    Q.left_seats + Q.sld_breakaway_seats + Q.social_patriot_seats +
+    Q.spring_breakaway_seats +
     Q.labor_left_seats + Q.young_left_seats +
-    Q.razem_party_seats + Q.pps_party_seats;
+    Q.razem_party_seats + Q.pps_party_seats + Q.tak_rozwoj_seats;
 if (
     !Number.isFinite(Number(Q.left_committed_seats)) ||
     Q.left_committed_seats < Q.left_seats ||
@@ -234,11 +284,15 @@ if (
 ) {
     Q.left_splinter_support_votes =
         (Q.barons_party_relation >= 45 ? Q.sld_breakaway_seats : 0) +
+        (Q.social_patriot_list_committee != "pis" &&
+            Q.social_patriot_party_relation >= 45
+            ? Q.social_patriot_seats : 0) +
         (Q.spring_party_relation >= 45 ? Q.spring_breakaway_seats : 0) +
         (Q.labor_party_relation >= 45 ? Q.labor_left_seats : 0) +
         (Q.progressives_party_relation >= 45 ? Q.young_left_seats : 0) +
         (Q.razem_party_relation >= 45 ? Q.razem_party_seats : 0) +
-        (Q.pps_party_relation >= 45 ? Q.pps_party_seats : 0);
+        (Q.pps_party_relation >= 45 ? Q.pps_party_seats : 0) +
+        (Q.tak_rozwoj_parent_relation >= 45 ? Q.tak_rozwoj_seats : 0);
     Q.left_committed_seats =
         Q.left_seats + Q.left_splinter_support_votes;
 }
@@ -246,10 +300,14 @@ Q.coalition_democratic_seats =
     Q.ko_seats + Q.p2050_seats + Q.psl_seats +
     Q.centrum_seats + Q.left_committed_seats;
 Q.coalition_right_seats =
-    Q.pis_seats + Q.konf_seats + Q.rozwoj_seats + Q.korona_seats;
+    Q.pis_seats + Q.konf_seats + Q.rozwoj_seats + Q.korona_seats +
+    (Q.social_patriot_list_committee == "pis"
+        ? Q.social_patriot_seats : 0);
 Q.coalition_center_seats =
     Q.ko_seats + Q.p2050_seats + Q.psl_seats + Q.centrum_seats;
-Q.coalition_pis_psl_seats = Q.pis_seats + Q.psl_seats;
+Q.coalition_pis_psl_seats = Q.pis_seats + Q.psl_seats +
+    (Q.social_patriot_list_committee == "pis"
+        ? Q.social_patriot_seats : 0);
 if (!Number.isFinite(Number(Q.coalition_democratic_score))) {
     Q.coalition_democratic_score = 67;
 }
@@ -269,7 +327,7 @@ if (!Number.isFinite(Number(Q.coalition_pis_psl_score))) {
 <div class="coalition-option [? if coalition_democratic_seats >= 231: viable?]"><span>KO · democratic centre · Left parties</span><b>[+ coalition_democratic_seats +]</b><small>[? if coalition_democratic_seats >= 231: Majority · ?]compatibility [+ coalition_democratic_score +]/100</small></div>
 <div class="coalition-option [? if coalition_center_seats >= 231: viable?]"><span>KO · PL2050 · PSL</span><b>[+ coalition_center_seats +]</b><small>[? if coalition_center_seats >= 231: Majority · ?]compatibility [+ coalition_center_score +]/100</small></div>
 <div class="coalition-option [? if coalition_pis_psl_seats >= 231: viable?]"><span>PiS · PSL</span><b>[+ coalition_pis_psl_seats +]</b><small>[? if coalition_pis_psl_seats >= 231: Majority · ?]compatibility [+ coalition_pis_psl_score +]/100</small></div>
-<div class="coalition-option [? if coalition_right_seats >= 231: viable?]"><span>PiS · Konfederacja</span><b>[+ coalition_right_seats +]</b><small>[? if coalition_right_seats >= 231: Majority · ?]compatibility [+ coalition_right_score +]/100</small></div>
+<div class="coalition-option [? if coalition_right_seats >= 231: viable?]"><span>PiS · Konfederacja[? if social_patriot_list_committee = "pis":  · Lewica Patriotyczna?]</span><b>[+ coalition_right_seats +]</b><small>[? if coalition_right_seats >= 231: Majority · ?]compatibility [+ coalition_right_score +]/100</small></div>
 
 The numbers identify possibilities, not agreements. The formation sequence
 will test relations, party resources and caucus defections. The Senate does
@@ -284,7 +342,7 @@ problem.?]
 - @poland_government_formation.first_sitting: Begin government formation
 
 @campaign_projection
-# prose-audit: Grade B — Sound chain; reduce model and score language and narrate voter, campaign, and faction reactions more directly.
+# prose-audit: Grade A — The projection keeps votes, seats and legal thresholds visible while replacing model resources and compatibility scores with ballot and majority status.
 title: July 2023 election readiness
 new-page: true
 call: poland_polling
@@ -297,6 +355,7 @@ const projectionParties = [
     ["ko", "KO", "KO", Q.ko_projected_seats],
     ["left", "NL", Q.left_party_name || "Lewica", Q.left_projected_seats],
     ["sld_breakaway", "SLD", Q.barons_party_name, Q.sld_breakaway_projected_seats],
+    ["social_patriot", "LP", Q.social_patriot_party_name, Q.social_patriot_projected_seats],
     ["spring_breakaway", "Spring", Q.spring_party_name, Q.spring_breakaway_projected_seats],
     ["labor_left", "Labour", Q.labor_party_name, Q.labor_left_projected_seats],
     ["young_left", "Young", Q.progressives_party_name, Q.young_left_projected_seats],
@@ -371,14 +430,15 @@ sejm_list_control +].
 {!<svg id="poland-projection" class="poland-sejm-chart"></svg>!}
 
 <div class="election-table">
-<div class="election-table-head"><span>Party</span><span>Intent</span><span>Seats</span><span>AI pool</span></div>
+<div class="election-table-head"><span>Party</span><span>Intent</span><span>Seats</span><span>Ballot status</span></div>
 [? if sejm_list_has_partners: <div class="election-table-row"><span class="party party-lewica">[+ sejm_list_target +]</span><span>[+ left_committee_poll +]%</span><b>[+ left_filed_committee_projected_seats +]</b><span>[+ sejm_list_threshold +]% committee</span></div>?]
-<div class="election-table-row"><span class="party party-pis">PiS</span><span>[+ pis_vote_intent +]%</span><b>[+ pis_projected_seats +]</b><span>[+ pis_org_resources +]</span></div>
-<div class="election-table-row"><span class="party party-ko">KO</span><span>[+ ko_vote_intent +]%</span><b>[+ ko_projected_seats +]</b><span>[+ ko_org_resources +]</span></div>
-[? if third_way_joint_list = 1: <div class="election-table-row"><span class="party party-third-way">Trzecia Droga</span><span>[+ p2050_component_vote_intent + psl_component_vote_intent +]%</span><b>[+ third_way_projected_seats +]</b><span>PSL [+ psl_org_resources +] · PL2050 [+ p2050_org_resources +]</span></div>?]
-[? if third_way_joint_list = 0 and p2050_emerged = 1: <div class="election-table-row"><span class="party party-p2050">Polska 2050</span><span>[+ p2050_vote_intent +]%</span><b>[+ p2050_projected_seats +]</b><span>[+ p2050_org_resources +]</span></div>?]
-<div class="election-table-row"><span class="party party-lewica">[+ left_party_name +]</span><span>[+ left_vote_intent +]%</span><b>[+ left_projected_seats +]</b><span>[? if not sejm_list_has_partners: [+ resources +]?][? if sejm_list_has_partners: component share?]</span></div>
+<div class="election-table-row"><span class="party party-pis">PiS</span><span>[+ pis_vote_intent +]%</span><b>[+ pis_projected_seats +]</b><span>party list</span></div>
+<div class="election-table-row"><span class="party party-ko">KO</span><span>[+ ko_vote_intent +]%</span><b>[+ ko_projected_seats +]</b><span>party list</span></div>
+[? if third_way_joint_list = 1: <div class="election-table-row"><span class="party party-third-way">Trzecia Droga</span><span>[+ p2050_component_vote_intent + psl_component_vote_intent +]%</span><b>[+ third_way_projected_seats +]</b><span>8% coalition</span></div>?]
+[? if third_way_joint_list = 0 and p2050_emerged = 1: <div class="election-table-row"><span class="party party-p2050">Polska 2050</span><span>[+ p2050_vote_intent +]%</span><b>[+ p2050_projected_seats +]</b><span>party list</span></div>?]
+<div class="election-table-row"><span class="party party-lewica">[+ left_party_name +]</span><span>[+ left_vote_intent +]%</span><b>[+ left_projected_seats +]</b><span>[? if not sejm_list_has_partners: host list?][? if sejm_list_has_partners: component share?]</span></div>
 [? if barons_party_formed = 1: <div class="election-table-row"><span class="party party-sld">[+ barons_party_name +]</span><span>[+ sld_breakaway_vote_intent +]%</span><b>[+ sld_breakaway_projected_seats +]</b><span>separate</span></div>?]
+[? if social_patriot_party_formed = 1: <div class="election-table-row"><span class="party party-social-patriot">[+ social_patriot_party_name +]</span><span>[+ social_patriot_vote_intent +]%</span><b>[+ social_patriot_projected_seats +]</b><span>[? if social_patriot_list_committee = "pis": PiS host list?][? if social_patriot_list_committee != "pis": independent?]</span></div>?]
 [? if spring_party_formed = 1: <div class="election-table-row"><span class="party party-wiosna">[+ spring_party_name +]</span><span>[+ spring_breakaway_component_vote_intent +]%</span><b>[+ spring_breakaway_projected_seats +]</b><span>[? if spring_list_committee = "left": Lewica host?][? if spring_list_committee = "razem": Razem list?][? if spring_list_committee = "left_coalition": Left coalition?][? if spring_list_committee = "spring_breakaway": separate?]</span></div>?]
 [? if labor_party_formed = 1: <div class="election-table-row"><span class="party party-left-labor">[+ labor_party_name +]</span><span>[+ labor_left_component_vote_intent +]%</span><b>[+ labor_left_projected_seats +]</b><span>[? if labor_list_committee = "left": Lewica host?][? if labor_list_committee = "razem": Razem list?][? if labor_list_committee = "left_coalition": Left coalition?][? if labor_list_committee = "labor_left": separate?]</span></div>?]
 [? if progressives_party_formed = 1: <div class="election-table-row"><span class="party party-progressive">[+ progressives_party_name +]</span><span>[+ young_left_component_vote_intent +]%</span><b>[+ young_left_projected_seats +]</b><span>[? if progressives_list_committee = "left": Lewica host?][? if progressives_list_committee = "razem": Razem list?][? if progressives_list_committee = "left_coalition": Left coalition?][? if progressives_list_committee = "young_left": separate?]</span></div>?]
@@ -387,13 +447,13 @@ sejm_list_control +].
 [? if unia_centrum_formed = 1: <div class="election-table-row"><span class="party party-centrum">Unia Centrum</span><span>[+ centrum_vote_intent +]%</span><b>[+ centrum_projected_seats +]</b><span>separate</span></div>?]
 [? if pis_split = 1: <div class="election-table-row"><span class="party party-rozwoj">Rozwój Plus</span><span>[+ rozwoj_vote_intent +]%</span><b>[+ rozwoj_projected_seats +]</b><span>separate</span></div>?]
 [? if far_right_split > 0: <div class="election-table-row"><span class="party party-korona">Korona</span><span>[+ korona_vote_intent +]%</span><b>[+ korona_projected_seats +]</b><span>separate</span></div>?]
-[? if third_way_joint_list = 0: <div class="election-table-row"><span class="party party-psl">PSL</span><span>[+ psl_vote_intent +]%</span><b>[+ psl_projected_seats +]</b><span>[+ psl_org_resources +]</span></div>?]
-<div class="election-table-row"><span class="party party-konf">Konfederacja</span><span>[+ konf_vote_intent +]%</span><b>[+ konf_projected_seats +]</b><span>[+ konf_org_resources +]</span></div>
+[? if third_way_joint_list = 0: <div class="election-table-row"><span class="party party-psl">PSL</span><span>[+ psl_vote_intent +]%</span><b>[+ psl_projected_seats +]</b><span>party list</span></div>?]
+<div class="election-table-row"><span class="party party-konf">Konfederacja</span><span>[+ konf_vote_intent +]%</span><b>[+ konf_projected_seats +]</b><span>party list</span></div>
 </div>
 
-<div class="coalition-option [? if coalition_democratic_seats >= 231: viable?]"><span>Democratic opposition</span><b>[+ coalition_democratic_seats +]</b><small>compatibility [+ coalition_democratic_score +]/100</small></div>
-<div class="coalition-option [? if coalition_right_seats >= 231: viable?]"><span>PiS · Konfederacja</span><b>[+ coalition_right_seats +]</b><small>compatibility [+ coalition_right_score +]/100</small></div>
-<div class="coalition-option [? if coalition_center_seats >= 231: viable?]"><span>Centrist opposition</span><b>[+ coalition_center_seats +]</b><small>compatibility [+ coalition_center_score +]/100</small></div>
-<div class="coalition-option [? if coalition_pis_psl_seats >= 231: viable?]"><span>PiS · PSL</span><b>[+ coalition_pis_psl_seats +]</b><small>compatibility [+ coalition_pis_psl_score +]/100</small></div>
+<div class="coalition-option [? if coalition_democratic_seats >= 231: viable?]"><span>Democratic opposition</span><b>[+ coalition_democratic_seats +]</b><small>[? if coalition_democratic_seats >= 231: possible majority?][? if coalition_democratic_seats < 231: short of 231?]</small></div>
+<div class="coalition-option [? if coalition_right_seats >= 231: viable?]"><span>PiS · Konfederacja</span><b>[+ coalition_right_seats +]</b><small>[? if coalition_right_seats >= 231: possible majority?][? if coalition_right_seats < 231: short of 231?]</small></div>
+<div class="coalition-option [? if coalition_center_seats >= 231: viable?]"><span>Centrist opposition</span><b>[+ coalition_center_seats +]</b><small>[? if coalition_center_seats >= 231: possible majority?][? if coalition_center_seats < 231: short of 231?]</small></div>
+<div class="coalition-option [? if coalition_pis_psl_seats >= 231: viable?]"><span>PiS · PSL</span><b>[+ coalition_pis_psl_seats +]</b><small>[? if coalition_pis_psl_seats >= 231: possible majority?][? if coalition_pis_psl_seats < 231: short of 231?]</small></div>
 
 - @poland_hub: Continue into the election campaign

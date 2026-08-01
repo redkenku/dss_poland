@@ -9,7 +9,9 @@ card-image: img/poland/cards/equality-bill.webp
 
 = Equality
 
-The dispute is over scope and timing.
+The dispute is over scope and timing. [? if government_party = "pis": PiS
+accepted an Equality Ministry as a cheap office. It did not expect the minister
+to put an equality bill on the cabinet agenda.?]
 
 - @full
 - @employment
@@ -34,9 +36,15 @@ const scale = Math.max(0.65, Math.min(1.50, 1 + net * 0.15));
 Q.progressive_credibility += Math.max(3, Math.round(7 * scale));
 Q.feminist_trust += Math.max(3, Math.round(6 * scale));
 Q.minority_safety += Math.max(2, Math.round(5 * scale));
-Q.psl_coalition_dissent += Math.round(
+const coalitionResistance = Math.round(
     7 + salience / 25 + backlash / 35
 );
+if (Q.government_party == "pis") {
+    Q.government_coalition_dissent += coalitionResistance;
+    Q.pis_relation -= Math.max(2, Math.round(coalitionResistance / 3));
+} else {
+    Q.psl_coalition_dissent += coalitionResistance;
+}
 Q.government_delivery += net >= 0 ? 3 : 2;
 Q.public_trust += net * 0.45;
 Q.left_poll += net * 0.10;
@@ -66,9 +74,12 @@ Q.news_headline = net >= 1
 [? if card_public_response = "breakthrough": Cabinet expected a defensive
 fight and instead finds a public majority asking why the law took so long.
 Coalition conservatives still resist, but their veto is newly expensive. ?]
-[? if card_public_response = "favourable": The proposal wins more approval
-than alarm. PSL negotiators demand concessions without being able to claim the
-country is behind them. ?]
+[? if card_public_response = "favourable" and government_party != "pis": The
+proposal wins more approval than alarm. PSL negotiators demand concessions
+without being able to claim the country is behind them. ?]
+[? if card_public_response = "favourable" and government_party = "pis": The
+proposal wins more approval than alarm. PiS can still block it, but can no
+longer pretend that doing so protects a settled public consensus. ?]
 [? if card_public_response = "contested": The bill mobilises supporters and
 opponents in almost equal measure. Its fate now depends on coalition discipline
 rather than an obvious public verdict. ?]
@@ -97,10 +108,16 @@ const net = Math.round(Math.max(
 const scale = Math.max(0.70, Math.min(1.45, 1 + net * 0.14));
 Q.progressive_credibility += Math.max(1, Math.round(3 * scale));
 Q.minority_safety += Math.max(1, Math.round(3 * scale));
-Q.psl_coalition_dissent += Math.max(
+const coalitionResistance = Math.max(
     1,
     Math.round(1 + Number(Q.lgbt_equality_backlash) / 45)
 );
+if (Q.government_party == "pis") {
+    Q.government_coalition_dissent += coalitionResistance;
+    Q.pis_relation -= Math.max(1, Math.round(coalitionResistance / 3));
+} else {
+    Q.psl_coalition_dissent += coalitionResistance;
+}
 Q.government_delivery += 2;
 Q.public_trust += net * 0.35;
 Q.left_poll += net * 0.07;
@@ -153,7 +170,13 @@ const delayScore = Math.round(Math.max(
     -3,
     Math.min(3, (backlash - salience) / 18)
 ));
-Q.psl_coalition_dissent -= 3 + (delayScore > 0 ? 1 : 0);
+const tensionRelief = 3 + (delayScore > 0 ? 1 : 0);
+if (Q.government_party == "pis") {
+    Q.government_coalition_dissent -= tensionRelief;
+    Q.pis_relation += 2;
+} else {
+    Q.psl_coalition_dissent -= tensionRelief;
+}
 Q.progressives_dissent += 4 + (delayScore < 0 ? 2 : 0);
 Q.feminist_trust -= 2 + (delayScore < 0 ? 1 : 0);
 Q.public_trust += delayScore * 0.30;

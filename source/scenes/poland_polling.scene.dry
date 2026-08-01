@@ -751,6 +751,12 @@ const leftBreakaways = [
         retention: 0.74
     },
     {
+        id: "social_patriot",
+        caucus: "social_patriot",
+        active: !!Q.social_patriot_party_formed,
+        retention: 0.76
+    },
+    {
         id: "spring_breakaway",
         caucus: "spring",
         active: !!Q.spring_party_formed,
@@ -789,7 +795,8 @@ const plannedLeftCommittee = function(entry) {
         spring_breakaway: "spring_list_committee",
         labor_left: "labor_list_committee",
         young_left: "progressives_list_committee",
-        razem: "razem_list_committee"
+        razem: "razem_list_committee",
+        social_patriot: "social_patriot_list_committee"
     };
     return qualities[entry.id]
         ? String(Q[qualities[entry.id]] || entry.id)
@@ -813,6 +820,7 @@ for (const entry of activeLeftBreakaways) {
 }
 const dynamicPartyIds = [
     "sld_breakaway",
+    "social_patriot",
     "spring_breakaway",
     "labor_left",
     "young_left",
@@ -1025,13 +1033,17 @@ const breakawayCommitteeQualities = {
     spring_breakaway: "spring_list_committee",
     labor_left: "labor_list_committee",
     young_left: "progressives_list_committee",
-    razem: "razem_list_committee"
+    razem: "razem_list_committee",
+    social_patriot: "social_patriot_list_committee"
 };
 for (const id of Object.keys(breakawayCommitteeQualities)) {
     const requestedCommittee = String(
         Q[breakawayCommitteeQualities[id]] || id
     );
-    if (["left", "razem", "left_coalition"].includes(requestedCommittee)) {
+    if (
+        ["left", "razem", "left_coalition"].includes(requestedCommittee) ||
+        (id == "social_patriot" && requestedCommittee == "pis")
+    ) {
         committeeFor[id] = requestedCommittee;
     }
 }
@@ -1140,6 +1152,7 @@ const thresholds = {
     konf: 5,
     p2050: 5,
     sld_breakaway: 5,
+    social_patriot: 5,
     spring_breakaway: 5,
     labor_left: 5,
     young_left: 5,
@@ -1186,6 +1199,7 @@ const seatProjection = {
     konf: 0,
     p2050: 0,
     sld_breakaway: 0,
+    social_patriot: 0,
     spring_breakaway: 0,
     labor_left: 0,
     young_left: 0,
@@ -1262,15 +1276,19 @@ Q.other_projected_seats = 0;
 // The exact pairwise relations remain hidden simulation state.
 Q.left_splinter_projected_seats =
     Q.sld_breakaway_projected_seats +
+    Q.social_patriot_projected_seats +
     Q.spring_breakaway_projected_seats +
     Q.labor_left_projected_seats +
     Q.young_left_projected_seats +
     Q.razem_projected_seats +
-    Q.pps_projected_seats;
+    Q.pps_projected_seats +
+    Q.tak_rozwoj_projected_seats;
 Q.left_family_projected_seats =
     Q.left_projected_seats + Q.left_splinter_projected_seats;
 const activeLeftSourceIds = ["left"].concat(
     activeLeftBreakaways.map(function(entry) { return entry.id; })
+).concat(
+    Q.tak_dla_rozwoju_party_formed ? ["tak_rozwoj"] : []
 ).filter(function(id) {
     return componentCorrected[id] > 0;
 });
@@ -1338,6 +1356,9 @@ Q.left_vote_intent = Number(Q.left_component_vote_intent) || 0;
 Q.left_splinter_support_projected_seats =
     (Q.barons_party_relation >= 45
         ? Q.sld_breakaway_projected_seats : 0) +
+    (Q.social_patriot_list_committee != "pis" &&
+        Q.social_patriot_party_relation >= 45
+        ? Q.social_patriot_projected_seats : 0) +
     (Q.spring_party_relation >= 45
         ? Q.spring_breakaway_projected_seats : 0) +
     (Q.labor_party_relation >= 45
@@ -1347,7 +1368,9 @@ Q.left_splinter_support_projected_seats =
     (Q.razem_party_relation >= 45
         ? Q.razem_projected_seats : 0) +
     (Q.pps_party_relation >= 45
-        ? Q.pps_projected_seats : 0);
+        ? Q.pps_projected_seats : 0) +
+    (Q.tak_rozwoj_parent_relation >= 45
+        ? Q.tak_rozwoj_projected_seats : 0);
 Q.left_committed_projected_seats =
     Q.left_projected_seats + Q.left_splinter_support_projected_seats;
 Q.coalition_democratic_seats =
@@ -1357,13 +1380,17 @@ Q.coalition_democratic_seats =
     Q.centrum_projected_seats + Q.ko_splinter_projected_seats;
 Q.coalition_right_seats =
     Q.pis_projected_seats + Q.konf_projected_seats +
-    Q.rozwoj_projected_seats + Q.korona_projected_seats;
+    Q.rozwoj_projected_seats + Q.korona_projected_seats +
+    (Q.social_patriot_list_committee == "pis"
+        ? Q.social_patriot_projected_seats : 0);
 Q.coalition_center_seats =
     Q.ko_projected_seats + Q.psl_projected_seats +
     (Q.p2050_emerged ? Q.p2050_projected_seats : 0) +
     Q.centrum_projected_seats + Q.ko_splinter_projected_seats;
 Q.coalition_pis_psl_seats =
-    Q.pis_projected_seats + Q.psl_projected_seats;
+    Q.pis_projected_seats + Q.psl_projected_seats +
+    (Q.social_patriot_list_committee == "pis"
+        ? Q.social_patriot_projected_seats : 0);
 const democraticCompatibilityParts = [
     finitePolling(Q.rival_relation_ko_psl, 50),
     finitePolling(Q.ko_relation, 40),

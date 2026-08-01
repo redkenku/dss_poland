@@ -180,15 +180,32 @@ never escaped the PiS Sejm. A friendly pen did not create a majority. ?]
 - @restart: Return to the title
 - @library: Review the Polish dossier
 
-@final_assessment
-title: December 2026 assessment
-new-page: true
-call: poland_normalize
+@prepare_epilogue
+title: Prepare the Polish epilogue
 on-arrival: {!
+const endingNumber = function(value, fallback) {
+    return Number.isFinite(Number(value)) ? Number(value) : fallback;
+};
+const endingClamp = function(value, low, high) {
+    return Math.max(low, Math.min(high, value));
+};
+const votedOut = Q.ending_exit_type == "Voted out" ||
+    (Q.election_2023_seen && endingNumber(Q.left_seats, 0) == 0);
+const lostByThreshold = votedOut &&
+    endingNumber(Q.election_2023_filed_committee_seats, 0) == 0;
 Q.prototype_complete = 1;
 Q.poland_event_phase = 0;
-Q.timeline_complete = 1;
-Q.left_poll = Math.round(Q.left_poll * 10) / 10;
+Q.timeline_complete = votedOut ? 0 : 1;
+Q.ending_exit_type = votedOut ? "Voted out" : "Natural conclusion";
+Q.ending_exit_date = Q.date_label ||
+    ((Q.month_name || "December") + " " + (Q.year || 2026));
+const endingElectionYear = Math.round(endingNumber(Q.year, 2023));
+const endingYearsSince2015 = Math.max(1, endingElectionYear - 2015);
+Q.ending_campaign_years = Math.max(1, endingElectionYear - 2019);
+const endingNextOrganisationalTest = endingElectionYear <= 2023
+    ? "the 2024 local and European campaigns"
+    : "the next local and European campaigns";
+Q.left_poll = Math.round(endingNumber(Q.left_poll, 0) * 10) / 10;
 Q.ending_budget_wins = [
     Q.annual_budget_done_2023 && Q.annual_budget_passed_2023,
     Q.annual_budget_done_2024 && Q.annual_budget_passed_2024,
@@ -199,79 +216,325 @@ Q.ending_budget_wins = [
 }, 0);
 Q.ending_judiciary_score = Math.round(
     (
-        Number(Q.tribunal_composition_legality) +
-        Number(Q.tribunal_domestic_recognition) +
-        Number(Q.krs_independence) +
-        Number(Q.supreme_court_chamber_recognition) +
-        Number(Q.prosecution_command_clarity) +
-        Number(Q.european_judgment_compliance) +
-        Number(Q.court_user_trust) +
-        (100 - Number(Q.legal_dualism)) +
-        (100 - Number(Q.court_backlog))
+        endingNumber(Q.tribunal_composition_legality, 40) +
+        endingNumber(Q.tribunal_domestic_recognition, 40) +
+        endingNumber(Q.krs_independence, 40) +
+        endingNumber(Q.supreme_court_chamber_recognition, 40) +
+        endingNumber(Q.prosecution_command_clarity, 40) +
+        endingNumber(Q.european_judgment_compliance, 40) +
+        endingNumber(Q.court_user_trust, 40) +
+        (100 - endingNumber(Q.legal_dualism, 60)) +
+        (100 - endingNumber(Q.court_backlog, 60))
     ) / 9
 );
-const endingLeftLists = [
-    ["left", 1],
-    ["sld_breakaway", Q.barons_party_formed],
-    ["spring_breakaway", Q.spring_party_formed],
-    ["labor_left", Q.labor_party_formed],
-    ["young_left", Q.progressives_party_formed],
-    ["razem", Q.razem_party_formed],
-    ["pps", Q.pps_party_formed]
+const endingLeftOrganisations = [
+    ["left", 1, Q.left_party_name || "Lewica", "left_seats"],
+    [
+        "sld_breakaway", Q.barons_party_formed,
+        Q.barons_party_name || "Democratic Left Alliance",
+        "sld_breakaway_seats"
+    ],
+    [
+        "social_patriot", Q.social_patriot_party_formed,
+        Q.social_patriot_party_name || "Lewica Patriotyczna",
+        "social_patriot_seats"
+    ],
+    [
+        "spring_breakaway", Q.spring_party_formed,
+        Q.spring_party_name || "Spring", "spring_breakaway_seats"
+    ],
+    [
+        "labor_left", Q.labor_party_formed,
+        Q.labor_party_name || "Labour Left", "labor_left_seats"
+    ],
+    [
+        "young_left", Q.progressives_party_formed,
+        Q.progressives_party_name || "Young Left", "young_left_seats"
+    ],
+    ["razem", Q.razem_party_formed, Q.razem_party_name || "Razem", "razem_party_seats"],
+    ["pps", Q.pps_party_formed, Q.pps_party_name || "PPS", "pps_party_seats"]
 ].filter(function(entry) {
     return entry[1];
 });
-Q.ending_fragmentation_lists = endingLeftLists.length;
-Q.ending_lists_above_threshold = endingLeftLists.reduce(
+const endingMainCommittee = {
+    left_coalition_8: "left_coalition",
+    razem_5: "razem",
+    democratic_8: "democratic_list",
+    ko_5: "ko",
+    third_way_8: "third_way",
+    third_host_5: String(Q.sejm_list_host || "psl"),
+    pis_5: "pis"
+}[String(Q.sejm_list_outcome || "left_5")] || "left";
+const endingCommitteeFor = {
+    left: endingMainCommittee,
+    sld_breakaway: "sld_breakaway",
+    social_patriot: String(
+        Q.social_patriot_list_committee || "social_patriot"
+    ),
+    spring_breakaway: String(
+        Q.spring_list_committee || "spring_breakaway"
+    ),
+    labor_left: String(Q.labor_list_committee || "labor_left"),
+    young_left: String(Q.progressives_list_committee || "young_left"),
+    razem: String(Q.razem_list_committee || "razem"),
+    pps: "pps"
+};
+const endingCommitteeThreshold = {
+    left_coalition: 8,
+    democratic_list: 8,
+    third_way: 8
+};
+const endingVote = function(id) {
+    return endingNumber(
+        Q["election_2023_" + id + "_vote"],
+        endingNumber(Q[id + "_vote_intent"], 0)
+    );
+};
+const endingCommitteeVote = function(id) {
+    return endingNumber(
+        Q["election_2023_" + id + "_committee_vote"],
+        endingVote(id)
+    );
+};
+const endingLeftCommittees = [];
+for (const organisation of endingLeftOrganisations) {
+    const committee = endingCommitteeFor[organisation[0]] || organisation[0];
+    if (!endingLeftCommittees.includes(committee)) {
+        endingLeftCommittees.push(committee);
+    }
+}
+Q.ending_electoral_organisations = endingLeftOrganisations.length;
+Q.ending_fragmentation_lists = endingLeftCommittees.length;
+Q.ending_lists_above_threshold = endingLeftCommittees.reduce(
     function(total, entry) {
         return total + (
-            Number(Q[entry[0] + "_vote_intent"]) >= 5 ? 1 : 0
+            endingCommitteeVote(entry) >=
+                (endingCommitteeThreshold[entry] || 5)
+                ? 1 : 0
         );
     },
     0
 );
-Q.ending_threshold_losses = endingLeftLists.reduce(
+Q.ending_threshold_losses = endingLeftCommittees.reduce(
     function(total, entry) {
         return total + (
-            Number(Q[entry[0] + "_vote_intent"]) < 5 ? 1 : 0
+            endingCommitteeVote(entry) <
+                (endingCommitteeThreshold[entry] || 5)
+                ? 1 : 0
         );
     },
     0
 );
 Q.ending_family_vote = Math.round(
-    endingLeftLists.reduce(function(total, entry) {
-        return total + Math.max(
-            0,
-            Number(Q[entry[0] + "_vote_intent"]) || 0
-        );
+    endingLeftOrganisations.reduce(function(total, entry) {
+        return total + Math.max(0, endingVote(entry[0]));
     }, 0) * 10
 ) / 10;
-Q.ending_family_seats = Math.max(
-    0,
-    Math.round(Number(Q.left_family_projected_seats) || 0)
+const actualLeftFamilySeats = [
+    "left_seats", "sld_breakaway_seats", "social_patriot_seats",
+    "spring_breakaway_seats",
+    "labor_left_seats", "young_left_seats", "razem_party_seats",
+    "pps_party_seats"
+].reduce(function(total, quality) {
+    return total + Math.max(0, endingNumber(Q[quality], 0));
+}, 0);
+Q.ending_family_seats = Math.max(0, Math.round(votedOut
+    ? actualLeftFamilySeats
+    : endingNumber(Q.left_family_projected_seats, actualLeftFamilySeats)));
+const endingCleanName = function(value) {
+    return String(value || "Lewica")
+        .replace(/Lewica Lewic/g, "Porozumienie Lewicy")
+        .replace(/\s+/g, " ")
+        .trim();
+};
+const endingSeries = function(items) {
+    if (!items.length) return "";
+    if (items.length == 1) return items[0];
+    if (items.length == 2) return items[0] + " and " + items[1];
+    return items.slice(0, -1).join(", ") + ", and " + items[items.length - 1];
+};
+const endingVoteText = function(value) {
+    return (Math.round(value * 100) / 100).toFixed(2)
+        .replace(/0+$/, "").replace(/\.$/, "");
+};
+Q.ending_player_party_name = endingCleanName(Q.left_party_name);
+const endingOrganisationResults = endingLeftOrganisations.map(
+    function(entry) {
+        const seats = Math.max(0, Math.round(endingNumber(Q[entry[3]], 0)));
+        return endingCleanName(entry[2]) + " " +
+            endingVoteText(endingVote(entry[0])) + "% (" + seats +
+            " seat" + (seats == 1 ? "" : "s") + ")";
+    }
 );
+Q.ending_left_organisations = endingSeries(endingOrganisationResults);
+Q.ending_left_names = endingSeries(endingLeftOrganisations.map(
+    function(entry) { return endingCleanName(entry[2]); }
+));
+Q.ending_2015_comparison = lostByThreshold
+    ? (actualLeftFamilySeats > 0
+        ? (
+            "In 2015, Zjednoczona Lewica won 7.55% and missed the 8% " +
+            "coalition threshold, leaving the post-1989 Sejm without a " +
+            "parliamentary left for the first time. " +
+            endingYearsSince2015 + " years later your " +
+            "committee suffers the same legal defeat, while rival Left " +
+            "organisations return with " + actualLeftFamilySeats +
+            " seats. The tradition survives in parliament; your claim to " +
+            "lead it does not."
+        )
+        : (
+        "In 2015, Zjednoczona Lewica won 7.55% and missed the 8% " +
+        "coalition threshold, producing the first post-1989 Sejm without " +
+        "a parliamentary left. " + endingYearsSince2015 +
+        " years later the shock has returned, " +
+        "but the excuse is weaker: 2015 was one coalition defeated by one " +
+        "threshold; this campaign ends with " +
+        Q.ending_electoral_organisations + " rival Left organisations and " +
+        Q.ending_fragmentation_lists + " filed committees unable to elect " +
+        "a single deputy."
+        ))
+    : (
+        "The comparison is 2015, when Zjednoczona Lewica's 7.55% failed " +
+        "against an 8% coalition threshold and the Left vanished from the " +
+        "Sejm. This defeat is stranger. The filed committee crossed its " +
+        "threshold, but its candidate allocation returned no deputy from " +
+        "the organisation you controlled."
+    );
+
+const endingThirdWayText = Q.third_way_split
+    ? "Polska 2050 " + Math.max(0, endingNumber(Q.p2050_seats, 0)) +
+        " and PSL " + Math.max(0, endingNumber(Q.psl_seats, 0))
+    : "Third Way " + Math.max(
+        0,
+        endingNumber(Q.p2050_seats, 0) + endingNumber(Q.psl_seats, 0)
+    );
+Q.ending_chamber_result =
+    "The certified chamber gives PiS " +
+    Math.max(0, endingNumber(Q.pis_seats, 0)) + " seats, KO " +
+    Math.max(0, endingNumber(Q.ko_seats, 0)) + ", " +
+    endingThirdWayText + ", and Konfederacja " +
+    Math.max(0, endingNumber(Q.konf_seats, 0)) + ". The whole Left family " +
+    "holds " + actualLeftFamilySeats + ". Every majority will therefore be " +
+    "assembled without the organisation your leadership spent four years building.";
+
+const endingMajority = Math.max(
+    1,
+    Math.round(endingNumber(Q.sejm_statutory_majority, 231))
+);
+const endingCentreSeats =
+    endingNumber(Q.ko_seats, 0) + endingNumber(Q.p2050_seats, 0) +
+    endingNumber(Q.psl_seats, 0) + endingNumber(Q.centrum_seats, 0);
+const endingBroadDemocraticSeats = endingCentreSeats + actualLeftFamilySeats;
+const endingRightSeats =
+    endingNumber(Q.pis_seats, 0) + endingNumber(Q.konf_seats, 0) +
+    endingNumber(Q.rozwoj_seats, 0) + endingNumber(Q.korona_seats, 0);
+const endingPisPslSeats =
+    endingNumber(Q.pis_seats, 0) + endingNumber(Q.psl_seats, 0);
+const endingPresident = Q.president_name || "the President";
+if (endingNumber(Q.pis_seats, 0) >= endingMajority) {
+    Q.ending_next_government =
+        "PiS has a majority of its own. " + endingPresident +
+        " can renew a Morawiecki government without a Left confidence vote, " +
+        "and Kaczyński can treat the former junior partner as a spent experiment.";
+} else if (endingCentreSeats >= endingMajority) {
+    Q.ending_next_government =
+        "KO, Poland 2050, PSL and the democratic centre hold " +
+        endingCentreSeats + " seats between them. The arithmetic points to a " +
+        (Q.ko_leader || "Donald Tusk") +
+        "-led cabinet that needs no red vote and will be free to adopt the " +
+        "popular parts of the Left programme without giving its authors an office.";
+} else if (
+    endingBroadDemocraticSeats >= endingMajority && actualLeftFamilySeats > 0
+) {
+    Q.ending_next_government =
+        "The democratic centre is short on its own but reaches " +
+        endingBroadDemocraticSeats + " with the rival Left deputies who did " +
+        "survive. Government formation will pass through their clubs, not yours.";
+} else if (
+    endingPisPslSeats >= endingMajority &&
+    (
+        endingRightSeats < endingMajority ||
+        endingNumber(Q.coalition_pis_psl_score, 36) >=
+            endingNumber(Q.coalition_right_score, 28)
+    )
+) {
+    Q.ending_next_government =
+        "PiS and PSL can command " + endingPisPslSeats + " seats. The next " +
+        "government depends on Kosiniak-Kamysz deciding whether replacing " +
+        "the vanished Left as PiS's social partner is rescue or surrender.";
+} else if (endingRightSeats >= endingMajority) {
+    Q.ending_next_government =
+        "PiS, Konfederacja and the surviving right-wing splinters hold " +
+        endingRightSeats + " seats. A right cabinet can take office without " +
+        "one negotiation across the old opposition aisle.";
+} else {
+    Q.ending_next_government =
+        "No bloc reaches " + endingMajority + ". " + endingPresident +
+        " must begin formation in a hung Sejm where PSL and individual " +
+        "defectors matter more than the entire extra-parliamentary Left. A " +
+        "minority cabinet or another election is now more plausible than a " +
+        "government built around your programme.";
+}
+
+const endingWasInGovernment = Boolean(
+    Q.pre_election_left_in_government || Q.left_in_government
+);
+const endingOutgoingParty = String(
+    Q.pre_election_government_party || Q.government_party || ""
+);
+const endingOutgoingName = String(
+    Q.pre_election_government_name || Q.government_name || "the outgoing cabinet"
+);
+if (votedOut && endingWasInGovernment) {
+    Q.ending_outgoing_cabinet = endingOutgoingParty == "pis"
+        ? (
+            "The verdict also ends the New Left experiment inside " +
+            endingOutgoingName + ". Social " +
+            "ministries gave the party things it can still point to, but the " +
+            "junior partner has been erased while PiS remains in the chamber. " +
+            "That is not coalition blur. It is electoral annexation."
+        )
+        : (
+            "The outgoing cabinet loses its Left delegation on election " +
+            "night. Ministers may leave files and enacted measures behind; " +
+            "without deputies, they cannot supply confidence to its successor."
+        );
+} else {
+    Q.ending_outgoing_cabinet =
+        "The old government will bargain over its successor. The Left will " +
+        "watch those talks from party offices, municipalities and television " +
+        "studios rather than from the chamber.";
+}
 Q.ending_fragmentation_penalty =
     Math.max(0, Q.ending_fragmentation_lists - 1) * 2 +
     Q.ending_threshold_losses * 2;
 Q.ending_score =
-    Math.round(Number(Q.party_unity) / 10) +
-    Math.round(Number(Q.ending_family_vote) / 2) +
-    Math.round(Number(Q.public_trust) / 12) +
+    Math.round(endingNumber(Q.party_unity, 0) / 10) +
+    Math.round(endingNumber(Q.ending_family_vote, 0) / 2) +
+    Math.round(endingNumber(Q.public_trust, 0) / 12) +
     Math.round(
-        (Number(Q.media_capacity) + Number(Q.local_network)) / 20
+        (endingNumber(Q.media_capacity, 0) +
+            endingNumber(Q.local_network, 0)) / 20
     ) +
     Q.ending_budget_wins * 3 +
     Math.round(Q.ending_judiciary_score / 12) +
     (Q.left_in_government ? 4 : 0) +
-    (Q.pres_2025_winner == Q.pres_2025_left_candidate ? 6 : 0) -
-    Q.ending_fragmentation_penalty;
-if (
+    (Q.pres_2025_round_one_done &&
+        Q.pres_2025_winner == Q.pres_2025_left_candidate ? 6 : 0) -
+    Q.ending_fragmentation_penalty - (votedOut ? 8 : 0);
+if (votedOut) {
+    Q.ending_name = actualLeftFamilySeats > 0
+        ? "The centre is voted out"
+        : (Q.ending_family_vote >= 5
+            ? "Votes without representation"
+            : "The red benches empty");
+} else if (
     Q.party_unity >= 65 &&
     Q.ending_family_vote >= 13 &&
     Q.ending_threshold_losses == 0 &&
     Q.ending_budget_wins >= 3 &&
     Q.ending_judiciary_score >= 55 &&
-    (Q.left_in_government || Q.coalition_status.indexOf("Left") >= 0)
+    (Q.left_in_government || (Q.coalition_status || "").indexOf("Left") >= 0)
 ) {
     Q.ending_name = "The impossible majority";
 } else if (
@@ -288,24 +551,284 @@ if (
 } else {
     Q.ending_name = "The long fragmentation";
 }
-Q.ending_constitutional_status = Q.snap_campaign_active
-    ? "Parliament dissolved; snap-election polling day falls after the playable horizon"
-    : (Q.snap_repeated_deadlock
-        ? "Two elections ended without an investiture majority"
-        : "No unresolved election campaign at the horizon");
-Q.news_headline = Q.snap_campaign_active
-    ? "The campaign ends with a constitutionally scheduled snap election still underway"
-    : "The 2026 budget closes the playable campaign";
+Q.ending_constitutional_status = votedOut
+    ? "The electorate removed the player-controlled list from the Sejm"
+    : (Q.snap_campaign_active
+        ? "Parliament dissolved; snap-election polling day falls after the playable horizon"
+        : (Q.snap_repeated_deadlock
+            ? "Two elections ended without an investiture majority"
+            : "No unresolved election campaign at the horizon"));
+
+const publicLegacy = (
+    endingNumber(Q.public_trust, 0) +
+    endingNumber(Q.issue_ownership, 0) +
+    endingNumber(Q.winner_reputation, 0) +
+    endingNumber(Q.electoral_viability, 0)
+) / 4 - endingNumber(Q.coalition_blur, 0) * 0.12;
+if (publicLegacy >= 62) {
+    Q.ending_public_memory =
+        "The public remembers a Left that made its conflicts look like arguments about governing Poland, not merely surviving inside a coalition.";
+} else if (publicLegacy >= 48) {
+    Q.ending_public_memory =
+        "The public record is mixed but durable: voters can name what the Left defended, even when they disagree about the bargains and personalities.";
+} else if (publicLegacy >= 34) {
+    Q.ending_public_memory =
+        "The achievements remain visible, but so does the blur. Many voters remember the Left as a pressure group inside somebody else's political story.";
+} else {
+    Q.ending_public_memory =
+        "By the end, public memory has reduced the project to quarrels, tactical votes and promises that never became a convincing claim to power.";
+}
+
+if (votedOut) {
+    Q.ending_party_future =
+        "The authority of " +
+        (Q.left_leader || "the last national leadership") +
+        " now ends at " + Q.ending_player_party_name + "'s door. " +
+        Q.ending_left_names +
+        " retain their own executives, debts, mailing lists and accounts of " +
+        "who caused the defeat. Parliamentary offices close immediately; " +
+        "municipal councillors, union organisers and the remaining staff must " +
+        "choose which of those organisations is still worth carrying.";
+} else if (
+    Q.ending_electoral_organisations >= 4 || Q.ending_threshold_losses >= 2
+) {
+    Q.ending_party_future =
+        "The common Left is now a family of rival organisations. " +
+        (Q.left_leader || "the remaining leadership") +
+        " controls one inheritance, not the whole tradition; the next congresses will be negotiations over reunification, dominance or permanent separation.";
+} else if (Q.ending_electoral_organisations >= 2) {
+    Q.ending_party_future =
+        "The old umbrella has become a negotiated party system. " +
+        (Q.left_leader || "the party leadership") +
+        " can still assemble common lists, but no faction will again confuse cooperation with dissolution.";
+} else if (Q.party_unity >= 65) {
+    Q.ending_party_future =
+        "The merger finally resembles a party rather than a ceasefire. Under " +
+        (Q.left_leader || "its elected leadership") +
+        ", disputes move through rules strong enough to survive the next succession.";
+} else {
+    Q.ending_party_future =
+        "One legal party survives, but its currents retain separate memories, patrons and exit plans. " +
+        (Q.left_leadership_result || "The leadership settlement") +
+        " postpones the next structural argument rather than ending it.";
+}
+
+const achievements = [];
+const leftPresidentialWin = Q.pres_2025_round_one_done &&
+    Q.pres_2025_winner == Q.pres_2025_left_candidate;
+if (leftPresidentialWin) {
+    achievements.push("a Left candidate captured the Presidency in 2025");
+}
+if (Q.ending_budget_wins >= 3) {
+    achievements.push(Q.ending_budget_wins +
+        " post-transfer budgets survived the Sejm");
+}
+if (Q.ending_judiciary_score >= 60) {
+    achievements.push("the judicial settlement left the courts more coherent and legitimate");
+}
+if (Q.abortion_law_enacted) {
+    achievements.push("reproductive-rights reform became law rather than a manifesto line");
+}
+if (Q.partnership_revision_enacted || Q.partnership_presidential_outcome == "Signed") {
+    achievements.push("a partnership settlement survived both coalition bargaining and the Palace");
+}
+if (endingNumber(Q.labor_credibility, 0) >= 60) {
+    achievements.push("labour institutions and public-service politics again carried a recognisable Left signature");
+}
+if (endingNumber(Q.media_capacity, 0) + endingNumber(Q.local_network, 0) >= 110) {
+    achievements.push("a durable local and media organisation outlived the campaign cycle");
+}
+if (!achievements.length) {
+    achievements.push("the Left remained an organised national tradition through years that could have dissolved it");
+}
+Q.ending_achievements = achievements.join("; ") + ".";
+Q.ending_signature_achievement = achievements[0] + ".";
+
+const failures = [];
+if (votedOut) {
+    failures.push(lostByThreshold
+        ? Q.ending_player_party_name +
+            " failed to carry its filed committee across the Sejm threshold"
+        : "the host committee entered the Sejm without electing one of your deputies");
+}
+if (Q.ending_threshold_losses > 0) {
+    failures.push(Q.ending_threshold_losses +
+        " Left list" + (Q.ending_threshold_losses == 1 ? "" : "s") +
+        " converted votes into no representation");
+}
+if (!votedOut && Q.ending_budget_wins < 2) {
+    failures.push("too few annual budgets produced a stable record of delivery");
+}
+if (Q.ending_judiciary_score < 45) {
+    failures.push("the court settlement carried legal dualism into the next decade");
+}
+if (endingNumber(Q.public_trust, 0) < 40) {
+    failures.push("public trust finished below the level needed for a persuasive governing claim");
+}
+if (endingNumber(Q.coalition_blur, 0) >= 60) {
+    failures.push("coalition responsibility obscured which changes belonged to the Left");
+}
+if (endingNumber(Q.organised_left_splits, 0) >= 2) {
+    failures.push("repeated organised splits turned internal pluralism into electoral competition");
+}
+if (!failures.length) {
+    failures.push("success never resolved the tension between movement autonomy, party discipline and coalition office");
+}
+Q.ending_failures = failures.join("; ") + ".";
+
+const organisation = (
+    endingNumber(Q.media_capacity, 0) +
+    endingNumber(Q.local_network, 0) +
+    endingNumber(Q.organiser_energy, 0)
+) / 3;
+Q.ending_future_strength = endingClamp(
+    Q.ending_family_vote * 2.1 +
+    endingNumber(Q.electoral_viability, 0) * 0.18 +
+    endingNumber(Q.public_trust, 0) * 0.12 +
+    endingNumber(Q.party_unity, 0) * 0.12 +
+    organisation * 0.18 -
+    Q.ending_fragmentation_penalty * 1.4 -
+    (votedOut ? 14 : 0),
+    0,
+    100
+);
+if (Q.ending_future_strength >= 66) {
+    Q.ending_future_path =
+        "By the early 2030s, the Left is one of the poles around which governments are built. Its younger ministers and organisers inherit institutions, not just a famous defeat, and every coalition negotiation begins with the possibility that it could lead the cabinet itself.";
+} else if (Q.ending_future_strength >= 50) {
+    Q.ending_future_path =
+        "Through the early 2030s, the Left remains a necessary coalition force: rarely dominant, never safely ignored. Its future depends on turning visible municipal, labour and parliamentary work into an electorate that no longer deserts it for the largest anti-right list.";
+} else if (Q.ending_future_strength >= 32) {
+    Q.ending_future_path =
+        "The election cycles around 2030 force a painful consolidation. Some names and logos disappear, but local networks, unions and rights campaigns provide the material for a return—smaller than the old alliance, clearer about why it exists.";
+} else {
+    Q.ending_future_path =
+        "By the early 2030s, the parliamentary Left is absent or peripheral. Its inheritance survives in municipalities, unions and movements until a new generation rebuilds it under another name; whether that is a recovery or a replacement remains contested.";
+}
+if (votedOut) {
+    if (Q.ending_future_strength >= 50) {
+        Q.ending_future_path =
+            "The first chance to reverse the verdict comes before another " +
+            "Sejm election: " + endingNextOrganisationalTest + ". A common " +
+            "committee could turn surviving mayors, councillors, union halls " +
+            "and movement networks into the beginnings of a return. Failure " +
+            "to agree one would instead teach a generation of voters to look " +
+            "for social policy inside KO or PiS. By 2030, recovery is possible, " +
+            "but only through a refoundation in which several current names " +
+            "and leadership claims disappear.";
+    } else if (Q.ending_future_strength >= 32) {
+        Q.ending_future_path =
+            endingNextOrganisationalTest.charAt(0).toUpperCase() +
+            endingNextOrganisationalTest.slice(1) +
+            " become survival tests rather " +
+            "than rehearsals for government. One part of the old Left is " +
+            "likely to retreat into municipal and trade-union work, another " +
+            "to seek places on KO lists, and another to preserve ideological " +
+            "independence below the threshold. A parliamentary return around " +
+            "2030 remains possible, but it will look more like a new party " +
+            "built from the ruins than a reunion of equal heirs.";
+    } else {
+        Q.ending_future_path =
+            "The immediate future is contraction: lost parliamentary offices, " +
+            "departing staff, rival congresses and local organisations deciding " +
+            "whether the national label still helps them. " +
+            endingNextOrganisationalTest.charAt(0).toUpperCase() +
+            endingNextOrganisationalTest.slice(1) +
+            " scatter the survivors further. By 2030, labour, " +
+            "housing and equality politics remain alive, but the party family " +
+            "that once claimed them has become historical material for somebody " +
+            "else's refoundation.";
+    }
+}
+
+const democraticLegacy = (
+    Q.ending_judiciary_score +
+    endingNumber(Q.institutional_trust, 0) +
+    endingNumber(Q.constitutional_restraint, 0) +
+    endingNumber(Q.minority_safety, 0) -
+    endingNumber(Q.far_right_agenda, 0) * 0.5
+) / 3.5;
+Q.ending_national_future = democraticLegacy >= 60
+    ? "Poland enters the next decade with democratic conflict still fierce, but with courts, civic organisations and constitutional habits capable of surviving another transfer of power."
+    : (democraticLegacy >= 42
+        ? "Poland reaches the next decade without a settled constitutional peace. Every later government inherits both repaired institutions and precedents for bypassing them."
+        : "The unresolved constitutional war becomes the inheritance of the 2030s. Governments change, but distrust, legal dualism and a stronger radical right make each transfer of power feel provisional.");
+
+if (votedOut) {
+    Q.ending_vote_out_cause = lostByThreshold
+        ? "The filed committee did not clear its legal threshold."
+        : "The filed committee won seats, but its candidate allocation elected none of your deputies.";
+    Q.ending_opening =
+        Q.ending_exit_date + ". At headquarters the national map finishes " +
+        "changing colour, the last district protocols are entered and the " +
+        "number beside " + Q.ending_player_party_name + " remains zero. No " +
+        "candidate will take the oath. No whip will count a doubtful deputy. " +
+        "The next Sejm will conduct every argument in which you once had " +
+        "leverage without you.";
+    Q.ending_coda = actualLeftFamilySeats > 0
+        ? "The red benches are not empty. They simply belong to deputies who no longer answer your calls."
+        : "In 2015 the Left could say that one threshold had defeated one coalition. In " +
+            endingElectionYear +
+            ", every red banner arrives at the same locked door.";
+    Q.news_headline = Q.ending_player_party_name +
+        " is eliminated from the Sejm";
+} else {
+    Q.ending_opening = Q.snap_campaign_active
+        ? "December 2026. The playable horizon closes while a constitutionally scheduled snap campaign is still underway. There is no invented polling-day result—only the country and organisation you carry into it."
+        : "December 2026. The last budget folders close, ministers and opposition leaders leave the chamber, and the playable years become a political record rather than another decision waiting on the desk.";
+    Q.ending_coda = Q.ending_future_strength >= 50
+        ? "You do not leave behind a finished Left. You leave behind one with a future large enough to fight over."
+        : "History does not preserve the plan as you wrote it. It preserves the institutions, grudges and people still capable of trying again.";
+    Q.news_headline = Q.snap_campaign_active
+        ? "The campaign ends with a constitutionally scheduled snap election still underway"
+        : "The 2026 budget closes the playable campaign";
+}
 !}
+
+@final_assessment
+title: Epilogue — December 2026
+new-page: true
+on-arrival: ending_exit_type = "Natural conclusion"
+call: prepare_epilogue
 
 = [+ ending_name +]
 
-The playable campaign closes after the **December 2026 budget vote**.
+[+ ending_opening +]
+
+## What survives the count
+
+**The achievement most closely tied to your leadership:** [+
+ending_signature_achievement +]
+
+[+ ending_public_memory +]
+
+The fuller record is not a victory screen. **Achievements:** [+
+ending_achievements +] **Failures:** [+ ending_failures +]
+
+## The party after you
+
+[+ ending_party_future +]
+
+The player finishes as **[+ strategic_centre_label +]**. During the campaign,
+there were **[+ individual_defections +] individual defections**, **[+
+parliamentary_circles +] parliamentary clubs** and **[+ organised_left_splits
++] organised splits**.
+
+## Poland, 2030 and after
+
+[+ ending_future_path +]
+
+[+ ending_national_future +]
+
+## Final ledger
 
 Lewica modelled vote: **[+ left_vote_intent +]%**  
-Left electoral family: **[+ ending_family_vote +]% across [+ ending_fragmentation_lists +] lists**
-Lists clearing 5%: **[+ ending_lists_above_threshold +]**; sub-threshold
-lists: **[+ ending_threshold_losses +]**; projected family seats: **[+ ending_family_seats +]**
+Left electoral family: **[+ ending_family_vote +]% across [+
+ending_fragmentation_lists +] lists**<br>
+Lists clearing their filed threshold: **[+ ending_lists_above_threshold +]**;
+sub-threshold
+lists: **[+ ending_threshold_losses +]**; projected family seats: **[+
+ending_family_seats +]**<br>
 Alliance unity: **[+ party_unity +]/100**  
 Current position: **[+ position +]**  
 Budgets carried since the transfer of power: **[+ ending_budget_wins +]/4**  
@@ -320,27 +843,7 @@ ending_constitutional_status +]. The dissolution trigger was **[+
 snap_election_trigger +]** and the chosen campaign was **[+
 snap_campaign_strategy +]**. No result is credited before polling day.?]
 
-The player finishes as **[+ strategic_centre_label +]**. During the campaign,
-there were **[+ individual_defections +] individual defections**, **[+ parliamentary_circles +] parliamentary clubs** and **[+ organised_left_splits +] organised splits**. Fragmentation is scored here through competing lists,
-wasted votes and seats rather than through an earlier loss screen.
-
-[? if ending_name = "The impossible majority": The coalition of mini-parties
-did not become harmonious. It became governable. The Left preserved enough
-autonomy, delivery and institutional credibility to enter the next election as
-a claimant to power rather than somebody else's appendage.?]
-
-[? if ending_name = "A Left that can govern": Office, movement politics and
-coalition discipline remain in tension, but the Left has a record and a
-machine capable of surviving that argument.?]
-
-[? if ending_name = "Survival with leverage": The project reaches 2027 alive.
-It still depends on harder choices about Razem, PSL, coalition office and
-whether incremental achievements justify the bargains that produced them.?]
-
-[? if ending_name = "The long fragmentation": The coordinating centre reaches
-the finish, but the election arithmetic is unforgiving: separate organisations
-preserved reasons to exist while too many lists failed to turn the wider Left
-vote into seats.?]
+*“[+ ending_coda +]”*
 
 - @restart: Return to the title
 - @library: Review the Polish dossier

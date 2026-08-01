@@ -206,7 +206,7 @@ The inherited currencies are now separated by political role.
 | August 2020 | Hołownia converts his breakthrough into Polska 2050; Trzaskowski certification/oath crisis if he wins |
 | September 2020 | SLD–Wiosna/Nowa Lewica architecture |
 | October 2020 | Constitutional Tribunal abortion ruling; conditional Palace–Tribunal showdown |
-| November 2020 | Women's Strike organisation and programme; pandemic-era Independence Day response; variable US presidential election |
+| November 2020 | Women's Strike organisation and programme; pandemic-era Independence Day strategy followed by the riot, apartment fire and police-response reckoning; variable US presidential election |
 | December 2020 | Pandemic draft, two Left priorities, visible faction conference, Sejm vote and Senate amendments |
 | January 2021 | Vaccination strategy |
 | February 2021 | Conditional Trzaskowski judicial-veto war |
@@ -605,15 +605,20 @@ individual defections; a parliamentary club; and an organised competing list.
 The caucus-specific deadline crisis offers a bespoke settlement, a free-vote
 concession or rejection. Sustained pressure determines what follows.
 
-Two additional cross-cutting tendencies can organise without replacing that
-six-caucus ancestry map. Repeated welfare-conservative and sovereignty choices
-build a Social-Patriot caucus; capitalist and lower-tax choices build a Market
-Left caucus. Their affinity overlaps the organisational strengths rather than
-adding phantom MPs. Moving far enough right also adds persistent dissent and
-grievance to Wiosna, labour, progressives, Razem and PPS, which can carry those
-existing caucuses through the normal breakaway ladder.
+Two additional tendencies can organise. Repeated welfare-conservative and
+sovereignty choices transfer real weight into **Lewica Patriotyczna**, a
+seventh Social-Patriot organisation with referrals, a leadership slate,
+monthly actions, crisis events and threshold-aware electoral AI. Independent
+Lewica Patriotyczna runs alone when it clears 5%; otherwise it seeks PiS list
+places rather than joining Razem. Capitalist and
+lower-tax choices build a cross-cutting Market Left affinity. Moving far
+enough right also adds persistent dissent and grievance to Wiosna, labour,
+progressives, Razem and PPS, which can carry those existing caucuses through
+the normal breakaway ladder.
 
-Structural events use the same machinery. The Wiosna merger removes `spring`
+Structural events use the same machinery. Lewica Patriotyczna can remain in
+the common party, supply its leadership or leave through the full staged split
+and polling route. The Wiosna merger removes `spring`
 and transfers its complete live strength between the labour and younger
 progressive successors. Razem can sit inside the Left, leave with its MPs or
 later return through an explicit pact. PPS can leave or use its own reunion
