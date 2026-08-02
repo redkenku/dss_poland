@@ -348,6 +348,15 @@ function validateArchitecture() {
   );
   const ids = new Set();
   for (const event of manifest.events) {
+    if (event.id === 'poland_events_2021_2023.nov21_konf') {
+      console.error('DEBUG validateArchitecture event', JSON.stringify(event));
+    }
+    if (event.id === 'poland_events_2021_2023.nov21_konf') {
+      fs.appendFileSync(path.join(projectRoot, '.event_manifest_debug.log'), 'event=' + JSON.stringify(event) + '\n');
+    }
+    if (!/^[A-FR]$/.test(event.proseGrade)) {
+      fs.appendFileSync(path.join(projectRoot, '.event_manifest_debug.log'), 'grade-fail=' + JSON.stringify(event) + '\n');
+    }
     assert(/^[A-FR]$/.test(event.proseGrade),
       'Missing prose audit grade: ' + event.id);
     assert(event.proseAudit,
@@ -645,7 +654,11 @@ function validateCorrectnessInvariants() {
       sectionById.get(route);
     if (!target || !target.localId || !/_hub$/.test(target.localId)) continue;
     if (!/^new-page:\s*true\b/m.test(target.source)) continue;
-    if (/^=\s+/m.test(section.source) || isPureRoutingChoice(section)) continue;
+    if (/^=\s+/m.test(section.source) || isPureRoutingChoice(section)) {
+      console.log('SKIP', section.id, 'hasHeading', /^=\s+/m.test(section.source), 'isPure', isPureRoutingChoice(section));
+      continue;
+    }
+    console.log('FAIL', section.id, 'hasHeading', /^=\s+/m.test(section.source), 'isPure', isPureRoutingChoice(section), 'sourceSnippet', JSON.stringify(section.source.split('\n').slice(0, 20).join('\n')));
     assert.fail(
       section.id +
         ' jumps straight into the clean hub page ' + target.id +

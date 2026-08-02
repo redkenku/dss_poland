@@ -83,6 +83,16 @@ const advisorRepresentation = {
     razem: Number(Q.razem_advisor_count) || 0,
     social_patriot: Number(Q.social_patriot_advisor_count) || 0
 };
+const activeLeftCaucusCount = Math.max(1, Number(Q.factions.length) || 0);
+const lowCaucusDissentRiseScale = activeLeftCaucusCount <= 1
+    ? 0.20
+    : (activeLeftCaucusCount == 2
+        ? 0.45
+        : (activeLeftCaucusCount == 3
+            ? 0.68
+            : (activeLeftCaucusCount == 4
+                ? 0.82
+                : (activeLeftCaucusCount == 5 ? 0.92 : 1.00))));
 const apparatusGlue = Math.max(
     0.10,
     1 - advisorRepresentation.barons * 0.30
@@ -102,6 +112,9 @@ for (const faction of Q.factions) {
     }
     if ((Number(Q[faction + "_dissent"]) || 0) > 20) {
         structuralDrift -= dissentRecovery;
+    }
+    if (structuralDrift > 0) {
+        structuralDrift *= lowCaucusDissentRiseScale;
     }
     Q[faction + "_dissent"] += structuralDrift;
     Q[faction + "_strength"] += represented * 0.50;
@@ -125,8 +138,10 @@ for (const faction of Object.keys(rightTurnDissentWeights)) {
     if (!Q[faction + "_active"] || !Q[faction + "_in_left"]) continue;
     const weights = rightTurnDissentWeights[faction];
     const dissentGain =
-        culturalRightPressure * weights[0] +
-        marketRightPressure * weights[1];
+        (
+            culturalRightPressure * weights[0] +
+            marketRightPressure * weights[1]
+        ) * lowCaucusDissentRiseScale;
     Q[faction + "_dissent"] += dissentGain;
     if (dissentGain >= 2.5) {
         Q[faction + "_grievance_memory"] += 0.5;
@@ -166,7 +181,8 @@ if (
             Q[faction + "_grievance_memory"] +=
                 Q.party_unity < 15 ? 4 : 2;
             Q[faction + "_dissent"] +=
-                Q.party_unity < 15 ? 1.5 : 0.75;
+                (Q.party_unity < 15 ? 1.5 : 0.75) *
+                lowCaucusDissentRiseScale;
         }
     }
 }
@@ -213,6 +229,8 @@ const monthlyTimers = [
     "poland_cabinet_reshuffle_timer",
     "poland_coalition_council_timer",
     "poland_coalition_affairs_timer",
+    "poland_party_clubs_timer",
+    "poland_party_discipline_timer",
     "poland_social_welfare_review_timer",
     "poland_fundraising_timer",
     "poland_campaigning_timer",
@@ -498,6 +516,20 @@ if (Q.faction_vetoes > 0) {
     Q.party_unity -= Q.faction_vetoes;
 }
 
+const lowCaucusUnityRecovery = activeLeftCaucusCount <= 1
+    ? 2.4
+    : (activeLeftCaucusCount == 2
+        ? 1.6
+        : (activeLeftCaucusCount == 3
+            ? 1.0
+            : (activeLeftCaucusCount == 4 ? 0.5 : 0)));
+if (lowCaucusUnityRecovery > 0) {
+    const highDissentDrag = Q.internal_dissent >= 50
+        ? 0.55
+        : (Q.internal_dissent >= 35 ? 0.75 : 1);
+    Q.party_unity += lowCaucusUnityRecovery * highDissentDrag;
+}
+
 const caucusSeatRecords = {
     barons: {
         internal: "left_barons_seats",
@@ -540,6 +572,11 @@ const caucusAdvisers = {
     social_patriot: ["matysiak"]
 };
 const escalationThresholds = [0, 48, 58, 67, 74, 81, 88, 94];
+const lowCaucusEscalationBuffer = activeLeftCaucusCount <= 1
+    ? 16
+    : (activeLeftCaucusCount == 2
+        ? 10
+        : (activeLeftCaucusCount == 3 ? 5 : 0));
 for (const faction of Q.factions.slice()) {
     if (!Q[faction + "_active"] || !Q[faction + "_in_left"]) continue;
     const dissent = Math.max(0, Number(Q[faction + "_dissent"]) || 0);
@@ -595,7 +632,10 @@ for (const faction of Q.factions.slice()) {
         listDependence * 0.025;
     let targetStage = 0;
     for (let stage = 1; stage <= 7; stage += 1) {
-        if (escalationPressure >= escalationThresholds[stage]) {
+        if (
+            escalationPressure >=
+                escalationThresholds[stage] + lowCaucusEscalationBuffer
+        ) {
             targetStage = stage;
         }
     }
@@ -683,22 +723,35 @@ for (const faction of Q.factions.slice()) {
                 recordedSeats > 0 ? recordedSeats : proportionalSeats
             );
             const individualRate = Math.max(
-                0.08,
+                activeLeftCaucusCount <= 1
+                    ? 0
+                    : (activeLeftCaucusCount == 2 ? 0.02 : 0.08),
                 Math.min(
-                    0.36,
-                    0.04 +
-                    (Number(Q[faction + "_personal_following"]) || 0) * 0.001 +
-                    (Number(Q[faction + "_ideological_intensity"]) || 0) * 0.001 +
-                    (100 - listDependence) * 0.0008 +
-                    (Number(Q[faction + "_local_organisation"]) || 0) * 0.0006 +
-                    grievance * 0.001 -
-                    offices * 0.0007
+                    activeLeftCaucusCount <= 1
+                        ? 0.10
+                        : (activeLeftCaucusCount == 2 ? 0.18 : 0.36),
+                    (
+                        0.04 +
+                        (Number(Q[faction + "_personal_following"]) || 0) *
+                            0.001 +
+                        (Number(Q[faction + "_ideological_intensity"]) || 0) *
+                            0.001 +
+                        (100 - listDependence) * 0.0008 +
+                        (Number(Q[faction + "_local_organisation"]) || 0) *
+                            0.0006 +
+                        grievance * 0.001 -
+                        offices * 0.0007
+                    ) * lowCaucusDissentRiseScale
                 )
             );
+            const minimumDefectors = activeLeftCaucusCount <= 2 ? 0 : 1;
             const defectors = estimatedSeats > 0
                 ? Math.min(
                     estimatedSeats,
-                    Math.max(1, Math.round(estimatedSeats * individualRate))
+                    Math.max(
+                        minimumDefectors,
+                        Math.round(estimatedSeats * individualRate)
+                    )
                 )
                 : 0;
             Q[faction + "_estimated_mps"] = Math.max(

@@ -667,6 +667,21 @@ if (Q.started) {
             greensRecord.exclusive_seats = 0;
         }
     }
+    if (Q.ipl_joined_left) {
+        const iplRecord = rivalGroup("ipl");
+        if (iplRecord) {
+            iplRecord.bloc = "left";
+            iplRecord.kind = "current";
+            iplRecord.parent = Q.left_party_name || "Lewica";
+            iplRecord.legal_status = "internal progressive current";
+            iplRecord.exclusive_seats = 0;
+        }
+    }
+    if (Q.trzaskowski_joined_left) {
+        Q.trzaskowski_affiliation =
+            (Q.trzaskowski_current_name || "Civic-progressive current") +
+            " in " + (Q.left_party_name || "Lewica");
+    }
 
     const sejmListTextDefaults = {
         sejm_list_target: "Left host list",
@@ -1449,6 +1464,8 @@ if (Q.started) {
             Q.government_party == "psl" ||
             Boolean(Q.snap_psl_cabinet_committed)
         );
+    const konfCabinetEligible = Boolean(Q.sikorski_konf_cabinet) &&
+        Number(Q.konf_seats) > 0;
     const democraticCabinetDefaults = {
         labor: ["KO", "Marzena Okła-Drewnowicz"],
         equality: ["KO", "Monika Rosa"],
@@ -1482,6 +1499,9 @@ if (Q.started) {
     }
     if (pslCabinetEligible) {
         cabinetAllowedParties.push("PSL");
+    }
+    if (konfCabinetEligible) {
+        cabinetAllowedParties.push("Konfederacja");
     }
     if (
         !Q.left_in_government &&
@@ -1704,6 +1724,10 @@ if (Q.started) {
         "Poland 2050": Math.max(
             0,
             Math.round(Number(Q.p2050_seats) || 0)
+        ),
+        Konfederacja: Math.max(
+            0,
+            Math.round(Number(Q.konf_seats) || 0)
         )
     };
     const cabinetParties = [];
@@ -1721,6 +1745,7 @@ if (Q.started) {
             ["KO", Q.ministry_ko_in_cabinet, Q.ko_seats],
             ["Poland 2050", Q.ministry_p2050_in_cabinet, Q.p2050_seats],
             ["PSL", Q.ministry_psl_in_cabinet, Q.psl_seats],
+            ["Konfederacja", Q.sikorski_konf_cabinet, Q.konf_seats],
             ["Lewica", Q.left_in_government, recordedLeftCabinetSeats]
         ];
         for (const membership of recordedCabinetMembership) {
@@ -1770,6 +1795,7 @@ if (Q.started) {
         Q.ministry_ko_in_cabinet = 0;
         Q.ministry_p2050_in_cabinet = 0;
         Q.ministry_psl_in_cabinet = 0;
+        Q.sikorski_konf_cabinet = 0;
     }
     Q.coalition_seats_basis =
         "MPs of parties holding Council of Ministers portfolios";
@@ -2245,6 +2271,7 @@ if (Q.started) {
     Q.psl_poll = Math.round(clamp(Q.psl_poll, 0, 40) * 10) / 10;
     Q.konf_poll = Math.round(clamp(Q.konf_poll, 0, 40) * 10) / 10;
     Q.p2050_poll = Math.round(clamp(Q.p2050_poll, 0, 40) * 10) / 10;
+    Q.p0_poll = Math.round(clamp(Q.p0_poll, 0, 30) * 10) / 10;
     Q.other_poll = Math.round(clamp(Q.other_poll, 0, 40) * 10) / 10;
     const pollNumbers = [
         "left_vote_intent",
@@ -2253,6 +2280,7 @@ if (Q.started) {
         "psl_vote_intent",
         "konf_vote_intent",
         "p2050_vote_intent",
+        "p0_vote_intent",
         "other_vote_intent"
     ];
     for (const quality of pollNumbers) {
@@ -2268,6 +2296,7 @@ if (Q.started) {
         "psl_poll_momentum",
         "konf_poll_momentum",
         "p2050_poll_momentum",
+        "p0_poll_momentum",
         "other_poll_momentum",
         "poll_calibration_left",
         "poll_calibration_pis",
@@ -2275,6 +2304,7 @@ if (Q.started) {
         "poll_calibration_psl",
         "poll_calibration_konf",
         "poll_calibration_p2050",
+        "poll_calibration_p0",
         "poll_calibration_other"
     ];
     for (const quality of pollStateNumbers) {
@@ -2289,6 +2319,7 @@ if (Q.started) {
         "psl_projected_seats",
         "konf_projected_seats",
         "p2050_projected_seats",
+        "p0_projected_seats",
         "other_projected_seats"
     ];
     for (const quality of projectedSeats) {
@@ -2314,7 +2345,7 @@ if (Q.started) {
         Q[group + "_turnout"] = clamp(Q[group + "_turnout"], 0, 100);
         Q[group + "_margin"] = clamp(Q[group + "_margin"], 0, 100);
         for (const party of [
-            "left", "pis", "ko", "psl", "konf", "p2050", "other"
+            "left", "pis", "ko", "psl", "konf", "p2050", "p0", "other"
         ]) {
             Q[group + "_" + party] =
                 clamp(Q[group + "_" + party], 0, 100);
@@ -2331,7 +2362,7 @@ if (Q.started) {
         Q[group + "_left"] = clamp(Q[group + "_left"], 0, 100);
     }
     for (const party of [
-        "left", "pis", "ko", "psl", "konf", "p2050"
+        "left", "pis", "ko", "psl", "konf", "p2050", "p0"
     ]) {
         if (Number.isFinite(Number(Q[party + "_economic_position"]))) {
             Q[party + "_economic_position"] =
@@ -2461,6 +2492,28 @@ if (Q.started) {
             Math.max(0, Number(Q[party + "_ai_income"]) || 0);
         Q[party + "_ai_activity"] =
             clamp(Q[party + "_ai_activity"], 0, 100);
+    }
+    for (const party of ["p0"]) {
+        Q[party + "_org_resources"] =
+            Number.isFinite(Number(Q[party + "_org_resources"]))
+                ? Math.max(0, Number(Q[party + "_org_resources"]))
+                : 0;
+        Q[party + "_org_income"] =
+            Number.isFinite(Number(Q[party + "_org_income"]))
+                ? Math.max(0, Number(Q[party + "_org_income"]))
+                : 0;
+        Q[party + "_ai_actions"] =
+            Number.isFinite(Number(Q[party + "_ai_actions"]))
+                ? Math.max(0, Number(Q[party + "_ai_actions"]))
+                : 0;
+        Q[party + "_ai_last_spend"] =
+            Number.isFinite(Number(Q[party + "_ai_last_spend"]))
+                ? Math.max(0, Number(Q[party + "_ai_last_spend"]))
+                : 0;
+        Q[party + "_ai_acted"] =
+            Number.isFinite(Number(Q[party + "_ai_acted"]))
+                ? clamp(Q[party + "_ai_acted"], 0, 1)
+                : 0;
     }
     for (const pair of [
         "pis_ko",
@@ -3232,6 +3285,8 @@ if (Q.started) {
         "poland_cabinet_reshuffle_timer",
         "poland_coalition_council_timer",
         "poland_coalition_affairs_timer",
+        "poland_party_clubs_timer",
+        "poland_party_discipline_timer",
         "poland_social_welfare_review_timer"
     ]) {
         Q[cabinetTimer] = Math.max(
@@ -3263,6 +3318,10 @@ if (Q.started) {
         Math.max(0, Q.poland_inter_party_relations_timer || 0);
     Q.poland_coalition_affairs_timer =
         Math.max(0, Q.poland_coalition_affairs_timer || 0);
+    Q.poland_party_clubs_timer =
+        Math.max(0, Q.poland_party_clubs_timer || 0);
+    Q.poland_party_discipline_timer =
+        Math.max(0, Q.poland_party_discipline_timer || 0);
     if (typeof Q.poland_enemy_focus != "string") {
         Q.poland_enemy_focus = "No fixed enemy";
     }
@@ -3304,7 +3363,31 @@ if (Q.started) {
     Q.pis_cohabitation_last_shift = Number.isFinite(
         Number(Q.pis_cohabitation_last_shift)
     ) ? clamp(Q.pis_cohabitation_last_shift, -20, 20) : 0;
+    if (typeof Q.advisor_slot_1 != "string" || !Q.advisor_slot_1.length) {
+        Q.advisor_slot_1 = "czarzasty";
+    }
+    if (typeof Q.advisor_slot_2 != "string" || !Q.advisor_slot_2.length) {
+        Q.advisor_slot_2 = "biedron";
+    }
+    if (typeof Q.advisor_slot_3 != "string" || !Q.advisor_slot_3.length) {
+        Q.advisor_slot_3 = "zandberg";
+    }
+    Q.advisor_slot_1_locked = Number(Q.advisor_slot_1_locked) === 1 ? 1 : 0;
+    if (
+        typeof Q.advisor_slot_1_lock_reason != "string" ||
+        !Q.advisor_slot_1_lock_reason.length
+    ) {
+        Q.advisor_slot_1_lock_reason = "None";
+    }
+    Q.miller_advisor = Number(Q.miller_advisor) === 1 ? 1 : 0;
+    Q.miller_restoration_done =
+        Number(Q.miller_restoration_done) === 1 ? 1 : 0;
+    if (Q.advisor_slot_1_locked) {
+        Q.advisor_slot_1 = "miller";
+        Q.miller_advisor = 1;
+    }
     const advisorRoster = [
+        "miller",
         "czarzasty",
         "biedron",
         "zandberg",
@@ -3323,7 +3406,7 @@ if (Q.started) {
             (Number(Q[advisor + "_advisor"]) === 1 ? 1 : 0);
     }, 0);
     const advisorCaucuses = {
-        barons: ["czarzasty", "wieczorek"],
+        barons: ["miller", "czarzasty", "wieczorek"],
         spring: Q.spring_active ? ["biedron"] : [],
         labor: ["dziemianowicz_bak"],
         progressives: [

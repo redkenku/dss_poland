@@ -377,6 +377,14 @@ displayPoll25.other = Math.round(
 for (const id of pollIds25) {
     Q["pres_2025_poll_" + id] = displayPoll25[id];
 }
+Q.stanowski_best_poll = Math.max(
+    finitePoll25(Q.stanowski_best_poll, 1.24),
+    finitePoll25(Q.pres_2025_poll_stanowski, 0)
+);
+Q.stanowski_trigger_score = Math.max(
+    finitePoll25(Q.stanowski_trigger_score, 0),
+    finitePoll25(Q.pres_2025_poll_stanowski, 0)
+);
 if (Q.pres_2025_poll_stage == "tracking") {
     Q.pres_2025_debate_shift = Math.round(
         (displayPoll25.left -
@@ -1977,6 +1985,14 @@ for (const key of Object.keys(raw)) {
     Q["pres_2025_r1_display_" + key] =
         Math.round(raw[key] * 10) / 10;
 }
+Q.stanowski_best_poll = Math.max(
+    finitePres25(Q.stanowski_best_poll, 1.24),
+    finitePres25(Q.pres_2025_r1_stanowski, 0)
+);
+Q.stanowski_trigger_score = Math.max(
+    finitePres25(Q.stanowski_trigger_score, 0),
+    finitePres25(Q.pres_2025_r1_stanowski, 0)
+);
 const displayTotal = Object.keys(raw).reduce(function(sum, key) {
     return sum + (Number(Q["pres_2025_r1_display_" + key]) || 0);
 }, 0);
@@ -2698,7 +2714,7 @@ Q.pres_2025_hostile_president =
     Q.pres_2025_winner_key == "mentzen" ||
     Q.pres_2025_winner_key == "braun" ? 1 : 0;
 Q.pres_2025_runoff_done = 1;
-Q.news_headline =
+Q.news_headline = Q.pres_2025_winner + " wins the presidential runoff";
 const statusByKey = {};
 for (const key of [
     "ko", "right", "left", "razem", "mentzen",
@@ -2724,7 +2740,6 @@ Q.pres_2025_status_mentzen = statusByKey.mentzen;
 Q.pres_2025_status_braun = statusByKey.braun;
 Q.pres_2025_status_holownia = statusByKey.holownia;
 Q.pres_2025_status_stanowski = statusByKey.stanowski;
-    Q.pres_2025_winner + " wins the presidential runoff";
 !}
 
 = 1 June 2025 — Poland chooses the Palace
@@ -5961,7 +5976,7 @@ Q.news_headline = "Razem votes on Matysiak's developmental challenge";
 
 = November 2025 — Who gets to define Razem?
 
-Matysiak brings the earlier Tak! Dla Rozwoju dispute into Razem's leadership
+Matysiak brings the earlier Akcja Socjalistyczna dispute into Razem's leadership
 vote. When economic development dominates the public argument and her network
 has survived, she can challenge Zandberg directly. Otherwise the question is
 whether defeat produces one independent MP or a separate developmental list.
@@ -5977,7 +5992,22 @@ title: Replace Zandberg with Matysiak and make development the new dividing line
 subtitle: Requires a developed internal base and a less culture-led electorate.
 choose-if: matysiak_development_score >= 50 and cultural_issue_salience <= 46
 unavailable-subtitle: Matysiak has a platform but not a majority inside Razem.
-on-arrival: razem_leader = "Paulina Matysiak"; razem_right_score = 62; razem_ideology = "Developmentalist social conservatism"; razem_leadership_result = "Paulina Matysiak replaces Adrian Zandberg"; matysiak_status = "Leader of Razem"; matysiak_party = "Razem"; matysiak_resolution_done = 1; left_right_score += 8; labor_credibility += 4; progressive_credibility -= 5; razem_dissent += 8; news_headline = "Matysiak defeats Zandberg and turns Razem toward developmental conservatism"
+on-arrival: {!
+Q.razem_leader = "Paulina Matysiak";
+Q.razem_right_score = 62;
+Q.razem_ideology = "Developmentalist social conservatism";
+Q.razem_leadership_result = "Paulina Matysiak replaces Adrian Zandberg";
+Q.matysiak_status = "Leader of Razem";
+Q.matysiak_party = "Razem";
+Q.matysiak_resolution_done = 1;
+Q.left_right_score += 8;
+Q.labor_credibility += 4;
+Q.progressive_credibility -= 5;
+Q.razem_dissent = Math.max(0, (Number(Q.razem_dissent) || 0) - 4);
+Q.razem_cohesion = Math.min(100, (Number(Q.razem_cohesion) || 0) + 6);
+Q.razem_cooperation = Math.min(100, (Number(Q.razem_cooperation) || 0) + 5);
+Q.news_headline = "Matysiak defeats Zandberg and turns Razem toward developmental conservatism";
+!}
 
 Matysiak defeats Zandberg and keeps Razem's economic radicalism while moving
 its cultural boundary. Developmentalists gain the chair; progressive members
@@ -5986,11 +6016,11 @@ must decide whether the party they built still speaks for them.
 - @poland_event_queue: Record Matysiak's victory
 
 @matysiak_own_party
-title: Let the losing developmental wing form Tak! Dla Rozwoju
-subtitle: Requires a minimum organisational base; one Matysiak seat leaves Razem if available.
+title: Let the losing original-left wing form Akcja Socjalistyczna
+subtitle: Requires a minimum organisational base; the left wing leaves while Razem stays and shifts right.
 choose-if: matysiak_development_score >= 36
 unavailable-subtitle: The association cannot sustain an electoral vehicle.
-on-arrival: matysiak_exit_choice = "Tak! Dla Rozwoju"; tak_dla_rozwoju_party_formed = 1
+on-arrival: matysiak_exit_choice = "Akcja Socjalistyczna"; tak_dla_rozwoju_party_formed = 1
 go-to: matysiak_exit_result
 
 @matysiak_expulsion
@@ -6019,14 +6049,15 @@ if (Q.razem_party_formed && (Number(Q.razem_party_seats) || 0) > 0) {
 Q.matysiak_resolution_done = 1;
 Q.matysiak_advisor = 0;
 Q.matysiak_has_sejm_mandate = movedSeat;
-Q.razem_dissent = Math.max(0, (Number(Q.razem_dissent) || 0) - 3);
-Q.razem_cohesion = Math.min(100, (Number(Q.razem_cohesion) || 0) + 4);
-if (Q.matysiak_exit_choice == "Tak! Dla Rozwoju") {
+Q.razem_dissent = Math.max(0, (Number(Q.razem_dissent) || 0) - 7);
+Q.razem_cohesion = Math.min(100, (Number(Q.razem_cohesion) || 0) + 6);
+Q.razem_cooperation = Math.min(100, (Number(Q.razem_cooperation) || 0) + 4);
+if (Q.matysiak_exit_choice == "Akcja Socjalistyczna") {
     Q.tak_rozwoj_seats = (Number(Q.tak_rozwoj_seats) || 0) + movedSeat;
-    Q.matysiak_status = "Leader of Tak! Dla Rozwoju";
+    Q.matysiak_status = "Leader of Akcja Socjalistyczna";
     Q.matysiak_party = "tak_rozwoj";
     Q.matysiak_development_pressure += 8;
-    Q.news_headline = "Matysiak leaves Razem with Tak! Dla Rozwoju";
+    Q.news_headline = "Razem stays in place while Akcja Socjalistyczna breaks away";
 } else {
     Q.other_seats = (Number(Q.other_seats) || 0) + movedSeat;
     Q.matysiak_status = "Independent MP after expulsion from Razem";
@@ -6040,9 +6071,9 @@ Q.razem_leadership_result = "Adrian Zandberg defeats Matysiak's challenge";
 seat transfer is bounded to Matysiak's own mandate; no notional faction share
 is moved wholesale.
 
-[? if matysiak_exit_choice = "Tak! Dla Rozwoju": Matysiak leaves with a named
-organisation and, if she held one, her own mandate. Razem recovers internal
-cohesion while a developmental competitor begins outside it.?]
+[? if matysiak_exit_choice = "Akcja Socjalistyczna": Matysiak leaves with a
+named organisation and, if she held one, her own mandate. Razem recovers
+internal cohesion while a developmental competitor begins outside it.?]
 [? if matysiak_exit_choice = "Independent": Razem enforces discipline and
 Matysiak keeps only her individual mandate. Zandberg retains the leadership;
 Rozwój+ now has one more possible recruit, not an automatic ally.?]

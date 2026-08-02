@@ -932,6 +932,82 @@ politics through its clips.
 
 - @poland_event_queue: Return to the event desk
 
+@p0_breakthrough_watch_2026
+# prose-audit: Grade A — The event names the anti-system threat directly, keeps the response paths distinct, and ties each option to a different coalition or legitimacy cost without collapsing the party into a single moral category.
+title: Partia Zero breaks into national polling
+subtitle: Stanowski's right-libertarian committee starts cutting into PiS, Konfederacja and KO at once
+new-page: true
+tags: poland_event
+priority: 24
+order: 12
+max-visits: 1
+view-if: continuous_campaign = 1 and year >= 2026 and p0_formed = 1 and p0_poll >= 2.5 and p0_alert_event_done = 0
+on-arrival: {!
+Q.p0_alert_event_done = 1;
+Q.p0_alert_stage = Q.p0_poll >= 9
+    ? 3
+    : (Q.p0_poll >= 5 ? 2 : 1);
+Q.news_headline =
+    "Partia Zero's rise starts draining the right and centre simultaneously";
+!}
+
+= [+ date_label +] — A new anti-system market right
+
+The **[+ p0_name +]** project built around **Krzysztof Stanowski** has crossed
+from personality to organisation. In the current model it is strongest among
+anti-establishment younger voters, but its losses are spread across **PiS**,
+**Konfederacja** and parts of **KO**. No bloc can treat it as someone else's
+problem.
+
+[? if p0_peak = 3: Intelligence expects a contained insurgency, peaking near
+three percent if the established right recentres quickly.?]
+[? if p0_peak = 6: Intelligence expects a durable secondary right force,
+capable of reshaping coalition arithmetic around six percent.?]
+[? if p0_peak = 11: Intelligence warns of a major rupture: an eleven-percent
+ceiling would make [+ p0_short_name +] a national threat to every existing
+right-wing machine.?]
+
+The danger for Lewica is twofold: the radical right's language gets a new,
+media-native vehicle, and every democratic rival may chase it with harder
+security and market rhetoric.
+
+- @p0_response_isolate_2026
+- @p0_response_material_2026
+- @p0_response_alarm_2026
+
+@p0_response_isolate_2026
+title: Isolate the party as a media vehicle, not a programme
+subtitle: Deny it anti-system glamour and force specific policy comparisons.
+on-arrival: media_capacity += 2; public_trust += 1; p0_poll_momentum -= 0.12; p0_ai_actions -= 1 if p0_ai_actions > 0; news_headline = "Lewica treats Partia Zero as a media vehicle rather than a governing offer"
+
+Lewica spokespeople stop arguing with clips and start arguing with details:
+who pays, what law changes, which institution enforces it. The approach cools
+the novelty effect, but it requires discipline every week.
+
+- @poland_event_queue: Return to the event desk
+
+@p0_response_material_2026
+title: Re-anchor the campaign in wages, rents and services
+subtitle: Accept that cultural escalation feeds P0; move the fight to material security.
+on-arrival: labor_credibility += 3; workers_support += 2; household_security += 2; left_poll_momentum += 0.10; p0_poll_momentum -= 0.06; news_headline = "Lewica answers Partia Zero with a material-security campaign"
+
+Lewica's organisers return to inflation, rent and transport costs. The frame
+does not erase anti-system anger, but it narrows the electorate willing to
+treat a media rebellion as an economic programme.
+
+- @poland_event_queue: Return to the event desk
+
+@p0_response_alarm_2026
+title: Declare P0 an immediate democratic danger
+subtitle: Mobilise the anti-far-right base quickly, at the cost of broad persuasion.
+on-arrival: progressive_credibility += 3; media_capacity += 1; p0_poll_momentum += 0.08; konf_poll_momentum += 0.05; public_trust -= 1; news_headline = "An emergency anti-P0 line hardens both camps"
+
+The warning mobilises committed anti-far-right voters immediately. It also
+helps P0 claim persecution and pushes some right-wing voters into solidarity
+with the very current Lewica wanted to isolate.
+
+- @poland_event_queue: Return to the event desk
+
 @partnership_passes_2026
 # prose-audit: Grade A — Kotula, Kosiniak-Kamysz, the parliamentary clubs and the President carry the compromise through a visible roll call; all six responses explain the next consequence, and implementation authority follows the serving portfolio rather than cabinet membership alone.
 title: The partnership compromise reaches a Sejm vote
@@ -3536,7 +3612,37 @@ const morawieckiCamp = Math.max(
     0,
     Number(Q.pis_morawiecki_camp) || 0
 );
-if (Q.pis_split || morawieckiCamp >= 25) {
+const sikorskiDemocraticSeats =
+    Math.max(0, Number(Q.ko_seats) || 0) +
+    Math.max(0, Number(Q.psl_seats) || 0) +
+    Math.max(0, Number(Q.p2050_seats) || 0) +
+    Math.max(0, Number(Q.centrum_seats) || 0);
+const sikorskiBlocSeats = sikorskiDemocraticSeats +
+    Math.max(0, Number(Q.konf_seats) || 0);
+const hostileDemocraticPartners = [
+    [Q.ko_seats, Q.ko_relation],
+    [Q.psl_seats, Q.psl_relation],
+    [Q.p2050_seats, Q.p2050_relation],
+    [Q.centrum_seats, Q.centrum_relation]
+].filter(function(party) {
+    return Number(party[0]) > 0 && Number(party[1]) <= 30;
+}).length;
+const sikorskiRoute =
+    Q.government_party == "lewica" &&
+    Q.left_in_government &&
+    Q.ministry_ko_in_cabinet &&
+    Q.president_name != "Radosław Sikorski" &&
+    Q.prime_minister != "Radosław Sikorski" &&
+    (Number(Q.government_coalition_dissent) || 0) >= 60 &&
+    hostileDemocraticPartners >= 2 &&
+    (Number(Q.konf_seats) || 0) > 0 &&
+    sikorskiBlocSeats >= 231;
+if (sikorskiRoute) {
+    Q.constructive_candidate = "Radosław Sikorski";
+    Q.constructive_base = sikorskiBlocSeats;
+    Q.constructive_nomination_reason =
+        "KO and the estranged democratic partners accept Konfederacja's votes to remove the Left-led cabinet.";
+} else if (Q.pis_split || morawieckiCamp >= 25) {
     Q.constructive_candidate = "Mateusz Morawiecki";
     Q.constructive_base =
         pisSeats +
@@ -3571,15 +3677,34 @@ This is a **scenario event**. At least 46 sponsors must name a candidate, and
 231 deputies must vote for that person. A failed motion does not dissolve the
 Sejm.
 
-The opposition—not Lewica—has named **[+ constructive_candidate +]**.
+[? if constructive_candidate = "Radosław Sikorski": KO, the estranged
+democratic coalition parties and Konfederacja have named **Radosław Sikorski**.
+The agreement gives the radical right cabinet offices in exchange for replacing
+Lewica immediately.?][? if constructive_candidate != "Radosław Sikorski": The
+opposition—not Lewica—has named **[+ constructive_candidate +]**.?]
 [+ constructive_nomination_reason +] Its published starting count is **[+
-constructive_base +]**. Low PSL/Poland 2050 relations and coalition dissent can
-still add defections at the roll call.
+constructive_base +]**. [? if constructive_candidate != "Radosław Sikorski":
+Low PSL/Poland 2050 relations and coalition dissent can still add defections at
+the roll call.?]
 
+- @constructive_sikorski
 - @constructive_morawiecki
 - @constructive_czarnek
 - @constructive_szydlo
 - @constructive_defend_2026
+
+@constructive_sikorski
+title: Publish the secret Konfederacja annex
+subtitle: Force every democratic-party deputy to defend the ministries traded for the radical right's votes.
+view-if: constructive_candidate = "Radosław Sikorski"
+on-arrival: constructive_base -= 6; media_capacity += 4; public_trust += 2; far_right_agenda -= 2; news_headline = "Lewica publishes the Konfederacja annex behind Sikorski's motion"
+
+The signatures reveal the price: Finance and Economy for Konfederacja, a
+moratorium on Lewica's social programme and a first-session repeal calendar.
+Six deputies retreat. The remaining signatories decide that removing the Left
+is worth making the bargain public.
+
+- @constructive_roll_2026: Bring the named replacement to a roll call
 
 @constructive_morawiecki
 title: Publish the nominee's recruitment ledger
@@ -3647,14 +3772,14 @@ title: Constructive roll call
 new-page: true
 on-arrival: {!
 const relationRecruit =
-    Math.round(
+    Q.constructive_candidate == "Radosław Sikorski" ? 0 : Math.round(
         Math.max(0, 38 - (Number(Q.psl_relation) || 0)) / 4
     ) +
     Math.round(
         Math.max(0, 35 - (Number(Q.p2050_relation) || 0)) / 5
     );
 const coalitionDefections = Math.round(
-    Math.max(
+    Q.constructive_candidate == "Radosław Sikorski" ? 0 : Math.max(
         0,
         (Number(Q.government_coalition_dissent) || 0) - 35
     ) / 5
@@ -3691,10 +3816,14 @@ Q.confidence_mode = "Constructive no confidence";
 Q.confidence_present = 460;
 Q.confidence_threshold = 231;
 if (Q.constructive_passed) {
+    const sikorskiReplacement =
+        Q.constructive_candidate == "Radosław Sikorski";
     Q.prime_minister = Q.constructive_candidate;
     Q.government_name = Q.constructive_candidate + " replacement cabinet";
-    Q.government_party = "pis";
-    Q.government_owner = "PiS and its governing partners";
+    Q.government_party = sikorskiReplacement ? "ko" : "pis";
+    Q.government_owner = sikorskiReplacement
+        ? "Sikorski's KO–centre–Konfederacja compact"
+        : "PiS and its governing partners";
     Q.left_in_government = 0;
     Q.left_cabinet_committed = 0;
     Q.left_cabinet_model = "Opposition";
@@ -3705,8 +3834,18 @@ if (Q.constructive_passed) {
     Q.budget_authority =
         "Opposition — no state spending authority";
     Q.position = "Parliamentary opposition";
-    Q.coalition_status = "Constructive replacement majority";
-    Q.coalition_seats = Math.max(0, Number(Q.pis_seats) || 0);
+    Q.coalition_status = sikorskiReplacement
+        ? "KO–centre–Konfederacja constructive majority"
+        : "Constructive replacement majority";
+    Q.coalition_seats = sikorskiReplacement
+        ? Math.min(
+            Number(Q.sejm_total) || 460,
+            Math.max(0, Number(Q.ko_seats) || 0) +
+            Math.max(0, Number(Q.psl_seats) || 0) +
+            Math.max(0, Number(Q.p2050_seats) || 0) +
+            Math.max(0, Number(Q.konf_seats) || 0)
+        )
+        : Math.max(0, Number(Q.pis_seats) || 0);
     Q.government_support_seats = Q.constructive_yes;
     Q.government_has_confidence = 1;
     Q.caretaker_government = 0;
@@ -3747,7 +3886,27 @@ if (Q.constructive_passed) {
             Math.max(0, Number(Q.other_seats) || 0) +
             durableLeftDefections;
     }
-    const replacementCabinet = {
+    const replacementCabinet = sikorskiReplacement ? {
+        labor: ["KO", "Marzena Okła-Drewnowicz"],
+        equality: ["KO", "Monika Rosa"],
+        housing: ["KO", "Krystyna Sibińska"],
+        health: ["KO", "Izabela Leszczyna"],
+        digital: (Number(Q.p2050_seats) || 0) > 0
+            ? ["Poland 2050", "Michał Gramatyka"]
+            : ["KO", "Jan Grabiec"],
+        science: ["KO", "Barbara Nowacka"],
+        interior: ["KO", "Marcin Kierwiński"],
+        finance: ["Konfederacja", "Sławomir Mentzen"],
+        economy: ["Konfederacja", "Przemysław Wipler"],
+        justice: ["KO", "Adam Bodnar"],
+        foreign: ["KO", "Paweł Kowal"],
+        agriculture: (Number(Q.psl_seats) || 0) > 0
+            ? ["PSL", "Czesław Siekierski"]
+            : ["KO", "Dorota Niedziela"],
+        defence: (Number(Q.psl_seats) || 0) > 0
+            ? ["PSL", "Władysław Kosiniak-Kamysz"]
+            : ["KO", "Tomasz Siemoniak"]
+    } : {
         labor: ["PiS", "Dorota Bojemska"],
         equality: ["PiS", "Anna Schmidt"],
         housing: ["PiS", "Piotr Uściński"],
@@ -3771,9 +3930,17 @@ if (Q.constructive_passed) {
     Q.family_minister_party = Q.labor_minister_party;
     Q.family_minister = Q.labor_minister;
     Q.ministry_count = 0;
-    Q.cabinet_roster_government_party = "pis";
-    Q.news_headline =
-        Q.constructive_candidate + " replaces the prime minister";
+    Q.ministry_ko_in_cabinet = sikorskiReplacement ? 1 : 0;
+    Q.ministry_p2050_in_cabinet = sikorskiReplacement &&
+        (Number(Q.p2050_seats) || 0) > 0 ? 1 : 0;
+    Q.ministry_psl_in_cabinet = sikorskiReplacement &&
+        (Number(Q.psl_seats) || 0) > 0 ? 1 : 0;
+    Q.sikorski_konf_cabinet = sikorskiReplacement ? 1 : 0;
+    Q.sikorski_nightmare = sikorskiReplacement ? 1 : 0;
+    Q.cabinet_roster_government_party = sikorskiReplacement ? "ko" : "pis";
+    Q.news_headline = sikorskiReplacement
+        ? "Sikorski replaces the Left with Konfederacja's decisive votes"
+        : Q.constructive_candidate + " replaces the prime minister";
 } else {
     Q.news_headline =
         "The constructive motion fails with " +
@@ -3799,10 +3966,163 @@ separate destructive vote or automatic election follows.?]
 partners have seen exactly who was willing to leave, while PiS has learned that
 this named alternative could not reach 231.?]
 
+- @sikorski_compact_2026: Face the replacement compact
 - @constructive_return_2026: Record the vote
 
 @constructive_return_2026
+view-if: not (constructive_passed = 1 and constructive_candidate = "Radosław Sikorski")
 go-to: poland_event_queue
+
+@sikorski_compact_2026
+title: The democratic firewall changes sides
+subtitle: Sikorski takes office through a published compact with Konfederacja
+new-page: true
+view-if: constructive_passed = 1 and constructive_candidate = "Radosław Sikorski"
+on-arrival: {!
+Q.sikorski_abortion_stage_before_repeal =
+    Math.max(0, Number(Q.abortion_reform_stage) || 0);
+Q.sikorski_marriage_stage_before_repeal =
+    Math.max(0, Number(Q.marriage_reform_stage) || 0);
+Q.sikorski_labor_stage_before_repeal =
+    Math.max(0, Number(Q.labor_reform_stage) || 0);
+Q.sikorski_reforms_at_risk =
+    (Q.sikorski_abortion_stage_before_repeal > 0 ? 1 : 0) +
+    (Q.sikorski_marriage_stage_before_repeal > 0 ? 1 : 0) +
+    (Q.sikorski_labor_stage_before_repeal > 0 ? 1 : 0);
+Q.sikorski_repeal_stage = Q.sikorski_reforms_at_risk > 0 ? 1 : 0;
+Q.sikorski_protest_strength = 0;
+Q.sikorski_police_militarisation = 0;
+Q.sikorski_legal_defence = 0;
+Q.sikorski_marriage_bill_pending = 0;
+Q.sikorski_marriage_veto_promised = 0;
+Q.sikorski_marriage_vetoed = 0;
+Q.sikorski_marriage_override_votes = 0;
+Q.sikorski_abortion_vetoed = 0;
+Q.sikorski_labor_vetoed = 0;
+Q.sikorski_left_veto_count = 0;
+Q.sikorski_veto_president_branded = 0;
+Q.sikorski_reforms_repealed = 0;
+Q.sikorski_refugee_wave = 0;
+Q.sikorski_refugee_seats = 0;
+Q.sikorski_minority_government = 0;
+Q.sikorski_government_status = "Constructive majority intact";
+Q.ko_relation = 0;
+Q.psl_relation = 0;
+Q.p2050_relation = 0;
+Q.centrum_relation = 0;
+Q.ko_coalition_dissent = 100;
+Q.psl_coalition_dissent = 100;
+Q.p2050_coalition_dissent = 100;
+Q.democratic_cordon_broken = 1;
+Q.ending_name = "The Sikorski nightmare";
+Q.ending_score -= 25;
+Q.news_headline =
+    "The democratic parties replace Lewica with a Konfederacja-backed cabinet";
+!}
+
+= The firewall was a coalition offer
+
+Sikorski is sworn in before the democratic parties answer Lewica's calls.
+KO keeps the premiership and most ministries; PSL and Poland 2050 keep their
+institutional footholds; Konfederacja receives the economic ministries and a
+written repeal calendar.
+
+Every democratic partner insists that the compact is temporary and
+constitutional. Every one of them has also chosen Konfederacja over continuing
+government with Lewica. The old opposition relationships are over.
+
+- @sikorski_denounce_2026
+- @sikorski_ledger_2026
+- @sikorski_mobilise_2026
+
+@sikorski_denounce_2026
+title: Declare the democratic alliance dead
+subtitle: Preserve a clear opposition line and accept total isolation from its former parties.
+on-arrival: party_unity += 6; progressive_credibility += 4; public_trust -= 2; left_poll_momentum += 0.3; news_headline = "Lewica declares the old democratic alliance dead"
+go-to: poland_event_queue
+
+@sikorski_ledger_2026
+title: Publish every vote and every cabinet promise
+subtitle: Turn the betrayal into a permanent public record without reopening negotiations.
+on-arrival: media_capacity += 5; public_trust += 2; constitutional_restraint += 2; coalition_blur -= 5; news_headline = "Lewica publishes the complete Sikorski–Konfederacja bargain"
+go-to: poland_event_queue
+
+@sikorski_mobilise_2026
+title: Build a social opposition outside the democratic parties
+subtitle: Cost: 2 resources. Prepare unions, tenants and equality organisations for the repeal session.
+choose-if: resources >= 2
+unavailable-subtitle: The party cannot sustain a national mobilisation.
+on-arrival: resources -= 2; local_network += 5; workers_support += 4; feminist_trust += 3; party_unity += 2; news_headline = "Lewica prepares a social opposition to the repeal cabinet"
+go-to: poland_event_queue
+
+@sikorski_freeze_2026
+# prose-audit: Grade A — The first step distinguishes an administrative freeze from statutory repeal, names the responsible ministries and gives every protest response a concrete organisational consequence.
+title: The repeal calendar begins with an implementation freeze
+subtitle: The cabinet cannot erase statutes overnight, so it first starves the institutions meant to carry them out
+new-page: true
+tags: poland_event
+priority: 48
+order: 1
+max-visits: 1
+view-if: continuous_campaign = 1 and year = 2026 and month = 12 and sikorski_nightmare = 1 and sikorski_repeal_stage = 1 and sikorski_reforms_at_risk > 0
+on-arrival: {!
+if (Q.abortion_reform_stage > 0) {
+    Q.abortion_reform_progress = Math.max(0, Q.abortion_reform_progress - 15);
+}
+if (Q.marriage_reform_stage > 0) {
+    Q.marriage_reform_progress = Math.max(0, Q.marriage_reform_progress - 15);
+}
+if (Q.labor_reform_stage > 0) {
+    Q.labor_reform_progress = Math.max(0, Q.labor_reform_progress - 15);
+}
+Q.sikorski_repeal_stage = 2;
+Q.sikorski_protest_strength = 18 + Q.sikorski_reforms_at_risk * 4;
+Q.sikorski_police_militarisation = 1;
+Q.government_delivery -= 4;
+Q.public_trust -= 3;
+Q.news_headline =
+    "The Sikorski cabinet freezes implementation before attempting repeal";
+!}
+
+= December 2026 — First, make the laws stop working
+
+Finance Minister **Sławomir Mentzen** blocks implementation funds. Economy
+Minister **Przemysław Wipler** orders a review of labour-inspection powers.
+The equality administration stops issuing new guidance, while hospitals are
+told that reproductive-rights regulations are under legal reconsideration.
+
+No statute has yet been repealed. That distinction matters to courts and to the
+President, but less to the people whose appointments, inspections and clinical
+decisions have already stalled. Union pickets, equality vigils and a revived
+Women's Strike begin on separate calendars. Interior Ministry vans and police
+barriers appear before the crowds have agreed on a common name.
+
+- @sikorski_freeze_movements_2026
+- @sikorski_freeze_courts_2026
+- @sikorski_freeze_strike_2026
+
+@sikorski_freeze_movements_2026
+title: Build one movements council without taking it over
+subtitle: Cost: 1 resource. Join unions, equality groups and the Women's Strike while preserving their autonomy.
+choose-if: resources >= 1
+unavailable-subtitle: Lewica cannot staff a permanent movements secretariat.
+on-arrival: resources -= 1; sikorski_protest_strength += 10; movement_autonomy += 4; local_network += 3; party_unity += 1; news_headline = "The repeal protests acquire a common council outside party control"
+
+- @poland_event_queue: Return to the event desk
+
+@sikorski_freeze_courts_2026
+title: Challenge every administrative freeze in court
+subtitle: Preserve the line between a hostile ministry and a repealed statute.
+on-arrival: sikorski_legal_defence = 1; constitutional_restraint += 4; judicial_legitimacy += 3; sikorski_protest_strength += 4; media_capacity -= 1; news_headline = "Lewica turns the implementation freeze into a chain of reviewable decisions"
+
+- @poland_event_queue: Return to the event desk
+
+@sikorski_freeze_strike_2026
+title: Call a national social strike
+subtitle: Escalate before the repeal bills reach the Sejm and accept an earlier security response.
+on-arrival: sikorski_protest_strength += 15; workers_support += 5; labor_credibility += 3; public_trust -= 2; sikorski_police_militarisation += 1; news_headline = "A national social strike meets the cabinet before its repeal bills"
+
+- @poland_event_queue: Return to the event desk
 
 @snap_election_2026
 # prose-audit: Grade A — Constitutional thresholds remain explicit, while presidential discretion, campaign choices and their political aftermaths are narrated without exposing the hidden model.
@@ -4958,6 +5278,14 @@ const previousCooperativeSeats = Math.max(
     0,
     Math.round(Number(Q.left_cooperative_independent_seats) || 0)
 );
+const previousTrzaskowskiCurrentSeats = Math.max(
+    0,
+    Math.round(Number(Q.left_trzaskowski_current_seats) || 0)
+);
+const previousIplCurrentSeats = Math.max(
+    0,
+    Math.round(Number(Q.left_ipl_current_seats) || 0)
+);
 const previousP2050CurrentSeats = Math.max(
     0,
     Math.round(Number(Q.left_p2050_current_seats) || 0)
@@ -5206,18 +5534,35 @@ Q.left_cooperative_independent_seats = Math.min(
 const snapCurrentScale = previousMainLeftSeats > 0
     ? Q.left_seats / previousMainLeftSeats
     : 0;
-Q.left_p2050_current_seats = Math.min(
+Q.left_trzaskowski_current_seats = Math.min(
     Q.left_seats,
+    Math.round(previousTrzaskowskiCurrentSeats * snapCurrentScale)
+);
+Q.left_ipl_current_seats = Math.min(
+    Math.max(0, Q.left_seats - Q.left_trzaskowski_current_seats),
+    Math.round(previousIplCurrentSeats * snapCurrentScale)
+);
+Q.left_p2050_current_seats = Math.min(
+    Math.max(
+        0,
+        Q.left_seats - Q.left_trzaskowski_current_seats -
+            Q.left_ipl_current_seats
+    ),
     Math.round(previousP2050CurrentSeats * snapCurrentScale)
 );
 Q.left_green_current_seats = Math.min(
-    Math.max(0, Q.left_seats - Q.left_p2050_current_seats),
+    Math.max(
+        0,
+        Q.left_seats - Q.left_trzaskowski_current_seats -
+            Q.left_ipl_current_seats - Q.left_p2050_current_seats
+    ),
     Math.round(previousGreenCurrentSeats * snapCurrentScale)
 );
 Q.left_rozwoj_current_seats = Math.min(
     Math.max(
         0,
-        Q.left_seats - Q.left_p2050_current_seats -
+        Q.left_seats - Q.left_trzaskowski_current_seats -
+            Q.left_ipl_current_seats - Q.left_p2050_current_seats -
             Q.left_green_current_seats
     ),
     Math.round(previousRozwojCurrentSeats * snapCurrentScale)
@@ -5544,7 +5889,7 @@ independent. **[+ senate_control +]** under 100 single-member district results.
 [? if young_left_seats > 0: <div class="election-table-row"><span class="party party-progressive">[+ progressives_party_name +]</span><span></span><b>[+ young_left_seats +]</b><span>breakaway</span></div>?]
 [? if razem_party_seats > 0: <div class="election-table-row"><span class="party party-razem">Razem</span><span></span><b>[+ razem_party_seats +]</b><span>independent</span></div>?]
 [? if pps_party_seats > 0: <div class="election-table-row"><span class="party party-pps">PPS</span><span></span><b>[+ pps_party_seats +]</b><span>independent</span></div>?]
-[? if tak_rozwoj_seats > 0: <div class="election-table-row"><span class="party party-razem">Tak! Dla Rozwoju</span><span></span><b>[+ tak_rozwoj_seats +]</b><span>Matysiak splitter</span></div>?]
+[? if tak_rozwoj_seats > 0: <div class="election-table-row"><span class="party party-razem">Akcja Socjalistyczna</span><span></span><b>[+ tak_rozwoj_seats +]</b><span>Matysiak splitter</span></div>?]
 <div class="election-table-row"><span class="party party-psl">PSL</span><span></span><b>[+ psl_seats +]</b><span></span></div>
 <div class="election-table-row"><span class="party party-p2050">Poland 2050</span><span></span><b>[+ p2050_seats +]</b><span></span></div>
 [? if centrum_seats > 0: <div class="election-table-row"><span class="party party-centrum">Unia Centrum</span><span></span><b>[+ centrum_seats +]</b><span>PL2050 split</span></div>?]

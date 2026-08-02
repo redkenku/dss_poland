@@ -6,6 +6,7 @@ card-image: img/poland/cards/reshuffle.webp
 new-page: true
 on-arrival: {!
 const advisorKeys = [
+    "miller",
     "czarzasty",
     "biedron",
     "zandberg",
@@ -22,6 +23,22 @@ const advisorKeys = [
 Q.n_advisors = advisorKeys.reduce(function(total, advisor) {
     return total + (Number(Q[advisor + "_advisor"]) === 1 ? 1 : 0);
 }, 0);
+const activeAdvisors = advisorKeys.filter(function(advisor) {
+    return Number(Q[advisor + "_advisor"]) === 1;
+});
+if (Number(Q.advisor_slot_1_locked) === 1) {
+    Q.advisor_slot_1 = "miller";
+    Q.miller_advisor = 1;
+    const openSeats = activeAdvisors.filter(function(advisor) {
+        return advisor !== "miller";
+    });
+    Q.advisor_slot_2 = openSeats[0] || "";
+    Q.advisor_slot_3 = openSeats[1] || "";
+} else {
+    Q.advisor_slot_1 = activeAdvisors[0] || "";
+    Q.advisor_slot_2 = activeAdvisors[1] || "";
+    Q.advisor_slot_3 = activeAdvisors[2] || "";
+}
 if (!Q.advisor_reshuffle_active) {
     Q.advisor_reshuffle_before = advisorKeys.map(function(advisor) {
         return Number(Q[advisor + "_advisor"]) === 1 ? "1" : "0";
@@ -40,6 +57,9 @@ The bureau has **[+ n_advisors +] / 3** filled seats. You may change several
 seats before confirming the final slate.
 
 Only active caucuses can appoint or retain a bureau representative.
+
+[? if advisor_slot_1_locked: **Slot 1 is locked:** Leszek Miller remains in
+place and cannot be removed by reshuffle. ?]
 
 [? if barons_active: **[+ barons_name +]** — [+ barons_strength : strength +]
 strength, [+ barons_dissent : dissent +] dissent.  ?]
@@ -138,8 +158,8 @@ go-to: remove_matysiak
 title: Remove Włodzimierz Czarzasty
 subtitle: The SLD apparatus treats the removal as a direct purge.
 view-if: czarzasty_advisor = 1
-choose-if: leadership_reshuffle_timer <= 0 and n_advisors > 0
-unavailable-subtitle: The bureau cannot be changed now.
+choose-if: leadership_reshuffle_timer <= 0 and n_advisors > 0 and (advisor_slot_1_locked = 0 or advisor_slot_1 != "czarzasty")
+unavailable-subtitle: The bureau cannot be changed now, or slot 1 is locked.
 on-arrival: czarzasty_advisor = 0; n_advisors -= 1; advisor_reshuffle_removed_czarzasty = 1; removed_advisor = "Włodzimierz Czarzasty"; barons_strength -= 2; barons_dissent += 12
 go-to: poland_manage_advisors
 
@@ -147,8 +167,8 @@ go-to: poland_manage_advisors
 title: Remove Robert Biedroń
 subtitle: Wiosna loses its most visible standing representative.
 view-if: spring_active = 1 and biedron_advisor = 1
-choose-if: leadership_reshuffle_timer <= 0 and n_advisors > 0
-unavailable-subtitle: The bureau cannot be changed now.
+choose-if: leadership_reshuffle_timer <= 0 and n_advisors > 0 and (advisor_slot_1_locked = 0 or advisor_slot_1 != "biedron")
+unavailable-subtitle: The bureau cannot be changed now, or slot 1 is locked.
 on-arrival: biedron_advisor = 0; n_advisors -= 1; advisor_reshuffle_removed_biedron = 1; removed_advisor = "Robert Biedroń"; spring_strength -= 2; spring_dissent += 4
 go-to: poland_manage_advisors
 
@@ -156,8 +176,8 @@ go-to: poland_manage_advisors
 title: Remove Robert Biedroń
 subtitle: The merged Wiosna network loses its progressive-current representative.
 view-if: spring_active = 0 and progressives_active = 1 and biedron_advisor = 1
-choose-if: leadership_reshuffle_timer <= 0 and n_advisors > 0
-unavailable-subtitle: The bureau cannot be changed now.
+choose-if: leadership_reshuffle_timer <= 0 and n_advisors > 0 and (advisor_slot_1_locked = 0 or advisor_slot_1 != "biedron")
+unavailable-subtitle: The bureau cannot be changed now, or slot 1 is locked.
 on-arrival: biedron_advisor = 0; n_advisors -= 1; advisor_reshuffle_removed_biedron = 1; removed_advisor = "Robert Biedroń"; progressives_strength -= 2; progressives_dissent += 4
 go-to: poland_manage_advisors
 
@@ -165,8 +185,8 @@ go-to: poland_manage_advisors
 title: Remove Adrian Zandberg
 subtitle: Razem reads the decision as a retreat from written guarantees.
 view-if: zandberg_advisor = 1
-choose-if: leadership_reshuffle_timer <= 0 and n_advisors > 0
-unavailable-subtitle: The bureau cannot be changed now.
+choose-if: leadership_reshuffle_timer <= 0 and n_advisors > 0 and (advisor_slot_1_locked = 0 or advisor_slot_1 != "zandberg")
+unavailable-subtitle: The bureau cannot be changed now, or slot 1 is locked.
 on-arrival: zandberg_advisor = 0; n_advisors -= 1; advisor_reshuffle_removed_zandberg = 1; removed_advisor = "Adrian Zandberg"; razem_strength -= 2; razem_dissent += 5; razem_cooperation -= 2
 go-to: poland_manage_advisors
 
@@ -174,8 +194,8 @@ go-to: poland_manage_advisors
 title: Remove Agnieszka Dziemianowicz-Bąk
 subtitle: Labour and younger progressives both lose a bridge.
 view-if: dziemianowicz_bak_advisor = 1
-choose-if: leadership_reshuffle_timer <= 0 and n_advisors > 0
-unavailable-subtitle: The bureau cannot be changed now.
+choose-if: leadership_reshuffle_timer <= 0 and n_advisors > 0 and (advisor_slot_1_locked = 0 or advisor_slot_1 != "dziemianowicz_bak")
+unavailable-subtitle: The bureau cannot be changed now, or slot 1 is locked.
 on-arrival: dziemianowicz_bak_advisor = 0; n_advisors -= 1; advisor_reshuffle_removed_dziemianowicz_bak = 1; removed_advisor = "Agnieszka Dziemianowicz-Bąk"; labor_strength -= 1; progressives_strength -= 1; labor_dissent += 3
 go-to: poland_manage_advisors
 
@@ -183,8 +203,8 @@ go-to: poland_manage_advisors
 title: Remove Anna-Maria Żukowska
 subtitle: The younger SLD loses a combative media seat.
 view-if: zukowska_advisor = 1
-choose-if: leadership_reshuffle_timer <= 0 and n_advisors > 0
-unavailable-subtitle: The bureau cannot be changed now.
+choose-if: leadership_reshuffle_timer <= 0 and n_advisors > 0 and (advisor_slot_1_locked = 0 or advisor_slot_1 != "zukowska")
+unavailable-subtitle: The bureau cannot be changed now, or slot 1 is locked.
 on-arrival: zukowska_advisor = 0; n_advisors -= 1; advisor_reshuffle_removed_zukowska = 1; removed_advisor = "Anna-Maria Żukowska"; progressives_strength -= 2; progressives_dissent += 4
 go-to: poland_manage_advisors
 
@@ -192,8 +212,8 @@ go-to: poland_manage_advisors
 title: Remove Katarzyna Kotula
 subtitle: Feminist networks lose a direct route into the bureau.
 view-if: kotula_advisor = 1
-choose-if: leadership_reshuffle_timer <= 0 and n_advisors > 0
-unavailable-subtitle: The bureau cannot be changed now.
+choose-if: leadership_reshuffle_timer <= 0 and n_advisors > 0 and (advisor_slot_1_locked = 0 or advisor_slot_1 != "kotula")
+unavailable-subtitle: The bureau cannot be changed now, or slot 1 is locked.
 on-arrival: {!
 Q.kotula_advisor = 0;
 Q.n_advisors -= 1;
@@ -213,8 +233,8 @@ go-to: poland_manage_advisors
 title: Remove Magdalena Biejat
 subtitle: Parliamentary casework loses its Razem and labour bridge.
 view-if: biejat_advisor = 1
-choose-if: leadership_reshuffle_timer <= 0 and n_advisors > 0
-unavailable-subtitle: The bureau cannot be changed now.
+choose-if: leadership_reshuffle_timer <= 0 and n_advisors > 0 and (advisor_slot_1_locked = 0 or advisor_slot_1 != "biejat")
+unavailable-subtitle: The bureau cannot be changed now, or slot 1 is locked.
 on-arrival: biejat_advisor = 0; n_advisors -= 1; advisor_reshuffle_removed_biejat = 1; removed_advisor = "Magdalena Biejat"; razem_strength -= 1; labor_strength -= 1; razem_dissent += 3
 go-to: poland_manage_advisors
 
@@ -222,8 +242,8 @@ go-to: poland_manage_advisors
 title: Remove Dariusz Wieczorek
 subtitle: Regional barons lose a seat and start counting delegates.
 view-if: wieczorek_advisor = 1
-choose-if: leadership_reshuffle_timer <= 0 and n_advisors > 0
-unavailable-subtitle: The bureau cannot be changed now.
+choose-if: leadership_reshuffle_timer <= 0 and n_advisors > 0 and (advisor_slot_1_locked = 0 or advisor_slot_1 != "wieczorek")
+unavailable-subtitle: The bureau cannot be changed now, or slot 1 is locked.
 on-arrival: wieczorek_advisor = 0; n_advisors -= 1; advisor_reshuffle_removed_wieczorek = 1; removed_advisor = "Dariusz Wieczorek"; barons_strength -= 2; barons_dissent += 4
 go-to: poland_manage_advisors
 
@@ -231,8 +251,8 @@ go-to: poland_manage_advisors
 title: Remove Krzysztof Gawkowski
 subtitle: The parliamentary and government-coordination bridge weakens.
 view-if: gawkowski_advisor = 1
-choose-if: leadership_reshuffle_timer <= 0 and n_advisors > 0
-unavailable-subtitle: The bureau cannot be changed now.
+choose-if: leadership_reshuffle_timer <= 0 and n_advisors > 0 and (advisor_slot_1_locked = 0 or advisor_slot_1 != "gawkowski")
+unavailable-subtitle: The bureau cannot be changed now, or slot 1 is locked.
 on-arrival: gawkowski_advisor = 0; n_advisors -= 1; advisor_reshuffle_removed_gawkowski = 1; removed_advisor = "Krzysztof Gawkowski"; barons_strength -= 1; progressives_strength -= 1; party_unity -= 1
 go-to: poland_manage_advisors
 
@@ -240,8 +260,8 @@ go-to: poland_manage_advisors
 title: Remove Wanda Nowicka
 subtitle: The feminist parliamentary current loses senior representation.
 view-if: nowicka_advisor = 1
-choose-if: leadership_reshuffle_timer <= 0 and n_advisors > 0
-unavailable-subtitle: The bureau cannot be changed now.
+choose-if: leadership_reshuffle_timer <= 0 and n_advisors > 0 and (advisor_slot_1_locked = 0 or advisor_slot_1 != "nowicka")
+unavailable-subtitle: The bureau cannot be changed now, or slot 1 is locked.
 on-arrival: nowicka_advisor = 0; n_advisors -= 1; advisor_reshuffle_removed_nowicka = 1; removed_advisor = "Wanda Nowicka"; progressives_strength -= 2; feminist_trust -= 2
 go-to: poland_manage_advisors
 
@@ -249,8 +269,8 @@ go-to: poland_manage_advisors
 title: Remove Marcelina Zawisza
 subtitle: Razem's health and care-work caucus loses access.
 view-if: zawisza_advisor = 1
-choose-if: leadership_reshuffle_timer <= 0 and n_advisors > 0
-unavailable-subtitle: The bureau cannot be changed now.
+choose-if: leadership_reshuffle_timer <= 0 and n_advisors > 0 and (advisor_slot_1_locked = 0 or advisor_slot_1 != "zawisza")
+unavailable-subtitle: The bureau cannot be changed now, or slot 1 is locked.
 on-arrival: zawisza_advisor = 0; n_advisors -= 1; advisor_reshuffle_removed_zawisza = 1; removed_advisor = "Marcelina Zawisza"; razem_strength -= 1; labor_strength -= 1; razem_dissent += 3
 go-to: poland_manage_advisors
 
@@ -258,8 +278,8 @@ go-to: poland_manage_advisors
 title: Remove Paulina Matysiak
 subtitle: The smaller-city and transport network loses its advocate.
 view-if: matysiak_advisor = 1 and (razem_active = 1 or social_patriot_active = 1)
-choose-if: leadership_reshuffle_timer <= 0 and n_advisors > 0
-unavailable-subtitle: The bureau cannot be changed now.
+choose-if: leadership_reshuffle_timer <= 0 and n_advisors > 0 and (advisor_slot_1_locked = 0 or advisor_slot_1 != "matysiak")
+unavailable-subtitle: The bureau cannot be changed now, or slot 1 is locked.
 on-arrival: {!
 Q.matysiak_advisor = 0;
 Q.n_advisors -= 1;
@@ -484,6 +504,7 @@ title: Finish the reshuffle
 subtitle: A caucus taking most seats inflicts 10 dissent on every unrepresented wing.
 on-arrival: {!
 const advisorKeys = [
+    "miller",
     "czarzasty",
     "biedron",
     "zandberg",
@@ -510,7 +531,7 @@ const openingSignature =
 if (finalSignature !== openingSignature) {
     Q.leadership_reshuffle_timer = 6;
     const advisorCaucuses = {
-        barons: ["czarzasty", "wieczorek"],
+        barons: ["miller", "czarzasty", "wieczorek"],
         spring: Q.spring_active ? ["biedron"] : [],
         labor: ["dziemianowicz_bak"],
         progressives: [

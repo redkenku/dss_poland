@@ -8117,9 +8117,18 @@ function runSmoke(game) {
     assert(currentChoices().some(function(choice) {
       return choice.id === 'poland_events.revolt_suspend';
     }));
+    assert(currentChoices().some(function(choice) {
+      return choice.id === 'poland_events.revolt_restore_miller';
+    }));
     assert(!currentChoices().some(function(choice) {
       return choice.id === 'poland_events.revolt_razem_enforce';
     }));
+    choose('poland_events.revolt_restore_miller');
+    assert.strictEqual(qualities.miller_restoration_done, 1);
+    assert.strictEqual(qualities.miller_advisor, 1);
+    assert.strictEqual(qualities.advisor_slot_1_locked, 1);
+    assert.strictEqual(qualities.advisor_slot_1, 'miller');
+    assert.strictEqual(qualities.n_advisors, 3);
 
     startStandard('merger-revolt-dual-without-czarzasty');
     qualities = engine.state.qualities;
@@ -8144,6 +8153,37 @@ function runSmoke(game) {
     }));
     choose('poland_events.revolt_razem_pact');
     assert.strictEqual(qualities.merger_resolution, 'Razem-led current pact');
+  }
+
+  function testDirectMillerRestorationRoute() {
+    startStandard('august-direct-miller-route');
+    const qualities = engine.state.qualities;
+    qualities.year = 2021;
+    qualities.month = 8;
+    qualities.august_2021_done = 0;
+    engine.goToScene('poland_events_2021_2023');
+    assert.strictEqual(engine.state.sceneId, 'poland_events_2021_2023.august_2021');
+    assert(currentChoices().some(function(choice) {
+      return choice.id === 'poland_events_2021_2023.aug21_restore_miller';
+    }));
+    choose('poland_events_2021_2023.aug21_restore_miller');
+    assert.strictEqual(qualities.miller_restoration_done, 1);
+    assert.strictEqual(qualities.miller_advisor, 1);
+    assert.strictEqual(qualities.advisor_slot_1_locked, 1);
+    assert.strictEqual(qualities.advisor_slot_1, 'miller');
+    assert.strictEqual(qualities.n_advisors, 3);
+
+    engine.goToScene('poland_manage_advisors');
+    choose('poland_manage_advisors.remove');
+    choose('poland_manage_advisors.remove_barons');
+    assert(!currentChoices().some(function(choice) {
+      return choice.id === 'poland_manage_advisors.remove_miller';
+    }));
+    const removeCzarzastyChoice = currentChoices().find(function(choice) {
+      return choice.id === 'poland_manage_advisors.remove_czarzasty';
+    });
+    assert(removeCzarzastyChoice);
+    assert.strictEqual(removeCzarzastyChoice.canChoose, true);
   }
 
   function testOctoberMergerCongress() {
@@ -10795,6 +10835,7 @@ function runSmoke(game) {
       'poland_events_2026.constructive_motion_2026'
     );
     choose('poland_events_2026.constructive_szydlo');
+    choose('poland_events_2026.constructive_roll_2026');
     assert.strictEqual(qualities.constructive_passed, 1);
     assert(qualities.constructive_left_defections > 0);
     assert.strictEqual(
@@ -10835,10 +10876,296 @@ function runSmoke(game) {
       'poland_events_2026.constructive_motion_2026'
     );
     choose('poland_events_2026.constructive_morawiecki');
+    choose('poland_events_2026.constructive_roll_2026');
     assert.strictEqual(qualities.constructive_passed, 0);
     assert.strictEqual(qualities.government_has_confidence, 1);
     assert.strictEqual(qualities.caretaker_government, 0);
     assert.strictEqual(qualities.coalition_seats, 250);
+
+    startStandard('constructive-sikorski-nightmare-repeals-reforms');
+    qualities = engine.state.qualities;
+    Object.assign(qualities, {
+      year: 2026,
+      month: 11,
+      continuous_campaign: 1,
+      left_in_government: 1,
+      government_has_confidence: 1,
+      caretaker_government: 0,
+      formation_in_progress: 0,
+      formation_complete: 1,
+      coalition_broken: 0,
+      government_party: 'lewica',
+      government_coalition_dissent: 75,
+      ministry_ko_in_cabinet: 1,
+      president_name: 'Karol Nawrocki',
+      prime_minister: 'Agnieszka Dziemianowicz-Bąk',
+      left_seats: 60,
+      pis_seats: 155,
+      ko_seats: 130,
+      psl_seats: 35,
+      p2050_seats: 25,
+      centrum_seats: 10,
+      konf_seats: 45,
+      ko_relation: 18,
+      psl_relation: 22,
+      p2050_relation: 24,
+      centrum_relation: 20,
+      abortion_reform_stage: 4,
+      abortion_reform_settled: 1,
+      abortion_law_enacted: 1,
+      marriage_reform_stage: 3,
+      marriage_reform_settled: 1,
+      partnership_sejm_passed: 1,
+      partnership_implementation_complete: 1,
+      labor_reform_stage: 4,
+      labor_reform_settled: 1,
+      pip_law_enacted: 1,
+    });
+    engine.goToScene(
+      'poland_events_2026.constructive_motion_2026'
+    );
+    assert.strictEqual(qualities.constructive_candidate, 'Radosław Sikorski');
+    choose('poland_events_2026.constructive_sikorski');
+    choose('poland_events_2026.constructive_roll_2026');
+    assert.strictEqual(qualities.constructive_passed, 1);
+    assert.strictEqual(qualities.government_party, 'ko');
+    assert.strictEqual(qualities.sikorski_konf_cabinet, 1);
+    assert.strictEqual(qualities.finance_minister_party, 'Konfederacja');
+    choose('poland_events_2026.sikorski_compact_2026');
+    assert.strictEqual(qualities.sikorski_reforms_at_risk, 3);
+    assert.strictEqual(qualities.ko_relation, 0);
+    assert.strictEqual(qualities.psl_relation, 0);
+    assert.strictEqual(qualities.p2050_relation, 0);
+    choose('poland_events_2026.sikorski_ledger_2026');
+    assert.strictEqual(
+      qualities.abortion_reform_stage,
+      4,
+      'The Sikorski compact repealed reforms before its dated calendar'
+    );
+    engine.goToScene('poland_events_2026.sikorski_freeze_2026');
+    assert.strictEqual(qualities.sikorski_repeal_stage, 2);
+    assert.strictEqual(qualities.abortion_reform_stage, 4);
+    choose('poland_events_2026.sikorski_freeze_courts_2026');
+    engine.goToScene('poland_events_2027.sikorski_marriage_revolt_2027');
+    assert.strictEqual(qualities.sikorski_marriage_bill_pending, 1);
+    assert.strictEqual(qualities.marriage_reform_stage, 3);
+    choose('poland_events_2027.sikorski_marriage_left_line_2027');
+    const koBeforeTrzaskowskiExodus = qualities.ko_seats;
+    const leftBeforeTrzaskowskiExodus = qualities.left_seats;
+    const supportBeforeTrzaskowskiExodus =
+      qualities.government_support_seats;
+    const razemDissentBeforeLiberalRefugees = qualities.razem_dissent;
+    const razemCooperationBeforeLiberalRefugees =
+      qualities.razem_cooperation;
+    engine.goToScene(
+      'poland_events_2027.sikorski_trzaskowski_crosses_2027'
+    );
+    assert.strictEqual(qualities.trzaskowski_joined_left, 1);
+    assert(qualities.left_trzaskowski_current_seats > 0);
+    assert(!qualities.trzaskowski_affiliation.includes('KO'));
+    assert(
+      qualities.trzaskowski_affiliation.includes(qualities.left_party_name)
+    );
+    assert(qualities.razem_dissent > razemDissentBeforeLiberalRefugees);
+    assert(
+      qualities.razem_cooperation < razemCooperationBeforeLiberalRefugees
+    );
+    assert.strictEqual(
+      qualities.ko_seats,
+      koBeforeTrzaskowskiExodus - qualities.left_trzaskowski_current_seats
+    );
+    assert.strictEqual(
+      qualities.left_seats,
+      leftBeforeTrzaskowskiExodus +
+        qualities.left_trzaskowski_current_seats
+    );
+    assert.strictEqual(
+      qualities.government_support_seats,
+      supportBeforeTrzaskowskiExodus -
+        qualities.left_trzaskowski_current_seats
+    );
+    assert.strictEqual(qualities.sikorski_refugee_wave, 1);
+    assert.strictEqual(
+      qualities.sikorski_minority_government,
+      qualities.government_support_seats < 231 ? 1 : 0
+    );
+    choose('poland_events_2027.sikorski_trz_platform_2027');
+    engine.goToScene('poland_events_2027.sikorski_black_march_2027');
+    assert.strictEqual(qualities.abortion_reform_stage, 0);
+    assert.strictEqual(qualities.marriage_reform_stage, 0);
+    assert.strictEqual(qualities.abortion_law_enacted, 0);
+    assert.strictEqual(qualities.partnership_sejm_passed, 0);
+    assert.strictEqual(
+      qualities.labor_reform_stage,
+      4,
+      'The labour reform fell before the final repeal event'
+    );
+    choose('poland_events_2027.sikorski_black_autonomy_2027');
+    const koBeforeComponentExodus = qualities.ko_seats;
+    engine.goToScene(
+      'poland_events_2027.sikorski_ko_currents_flee_2027'
+    );
+    assert.strictEqual(qualities.ipl_joined_left, 1);
+    assert.strictEqual(qualities.greens_joined_left, 1);
+    assert(qualities.left_ipl_current_seats > 0);
+    assert(qualities.left_green_current_seats > 0);
+    assert.strictEqual(
+      qualities.ko_seats,
+      koBeforeComponentExodus - qualities.left_ipl_current_seats -
+        qualities.left_green_current_seats
+    );
+    assert.strictEqual(qualities.sikorski_refugee_wave, 2);
+    choose('poland_events_2027.sikorski_ko_federation_2027');
+    engine.goToScene('poland_events_2027.sikorski_security_state_2027');
+    assert.strictEqual(qualities.labor_reform_stage, 0);
+    assert.strictEqual(qualities.pip_law_enacted, 0);
+    assert(qualities.sikorski_police_militarisation >= 6);
+    choose('poland_events_2027.sikorski_security_nonviolence_2027');
+    const p2050BeforeSocialExodus = qualities.p2050_seats;
+    engine.goToScene(
+      'poland_events_2027.sikorski_p2050_refugees_2027'
+    );
+    assert.strictEqual(qualities.p2050_social_joined_left, 1);
+    assert(qualities.left_p2050_current_seats > 0);
+    assert.strictEqual(
+      qualities.p2050_seats,
+      p2050BeforeSocialExodus - qualities.left_p2050_current_seats
+    );
+    assert.strictEqual(qualities.sikorski_refugee_wave, 3);
+    assert(qualities.razem_dissent > razemDissentBeforeLiberalRefugees);
+    assert(
+      qualities.razem_cooperation < razemCooperationBeforeLiberalRefugees
+    );
+    assert.strictEqual(
+      qualities.sikorski_minority_government,
+      qualities.government_support_seats < 231 ? 1 : 0
+    );
+    assert.strictEqual(
+      qualities.sikorski_minority_government,
+      1,
+      'The tested refugee wave did not leave Sikorski with a minority cabinet'
+    );
+    choose('poland_events_2027.sikorski_p2050_social_floor_2027');
+    engine.goToScene('poland_normalize');
+    assert(!qualities.trzaskowski_affiliation.includes('KO'));
+    assert.strictEqual(qualities.finance_minister_party, 'Konfederacja');
+    assert.strictEqual(
+      qualities.coalition_seats,
+      qualities.ko_seats + qualities.psl_seats +
+        qualities.p2050_seats + qualities.konf_seats,
+      'Normalization erased or miscounted the Sikorski compact'
+    );
+
+    startStandard('sikorski-marriage-repeal-meets-trzaskowski-veto');
+    qualities = engine.state.qualities;
+    Object.assign(qualities, {
+      year: 2027,
+      continuous_campaign: 1,
+      president_name: 'Rafał Trzaskowski',
+      sikorski_nightmare: 1,
+      sikorski_repeal_stage: 2,
+      sikorski_reforms_at_risk: 2,
+      sikorski_abortion_stage_before_repeal: 4,
+      sikorski_marriage_stage_before_repeal: 4,
+      sikorski_labor_stage_before_repeal: 0,
+      abortion_reform_stage: 4,
+      abortion_reform_progress: 80,
+      abortion_law_enacted: 1,
+      marriage_reform_stage: 4,
+      marriage_reform_progress: 80,
+      partnership_sejm_passed: 1,
+      partnership_implementation_complete: 1,
+      partnership_revision_enacted: 1,
+      pis_seats: 100,
+      konf_seats: 30,
+      psl_seats: 20,
+      ko_seats: 130,
+      p2050_seats: 25,
+    });
+    engine.goToScene('poland_events_2027.sikorski_marriage_revolt_2027');
+    assert.strictEqual(qualities.sikorski_marriage_veto_promised, 1);
+    choose('poland_events_2027.sikorski_marriage_join_2027');
+    engine.goToScene('poland_events_2027.sikorski_black_march_2027');
+    assert.strictEqual(qualities.sikorski_abortion_vetoed, 1);
+    assert.strictEqual(qualities.abortion_reform_stage, 4);
+    assert.strictEqual(qualities.abortion_law_enacted, 1);
+    assert.strictEqual(qualities.sikorski_marriage_vetoed, 1);
+    assert.strictEqual(qualities.marriage_reform_stage, 4);
+    choose('poland_events_2027.sikorski_black_document_2027');
+    engine.goToScene('poland_events_2027.sikorski_security_state_2027');
+    assert(qualities.sikorski_marriage_override_votes < 276);
+    assert.strictEqual(
+      qualities.marriage_reform_stage,
+      4,
+      'A failed override silently defeated President Trzaskowski\'s veto'
+    );
+
+    startStandard('left-president-vetoes-every-sikorski-repeal');
+    qualities = engine.state.qualities;
+    Object.assign(qualities, {
+      year: 2027,
+      continuous_campaign: 1,
+      president_name: 'Magdalena Biejat',
+      pres_2025_winner: 'Magdalena Biejat',
+      pres_2025_winner_key: 'left',
+      pres_2025_inaugurated: 1,
+      left_president: 1,
+      sikorski_nightmare: 1,
+      sikorski_repeal_stage: 2,
+      sikorski_reforms_at_risk: 3,
+      sikorski_abortion_stage_before_repeal: 4,
+      sikorski_marriage_stage_before_repeal: 4,
+      sikorski_labor_stage_before_repeal: 4,
+      abortion_reform_stage: 4,
+      abortion_reform_progress: 100,
+      abortion_law_enacted: 1,
+      marriage_reform_stage: 4,
+      marriage_reform_progress: 100,
+      partnership_sejm_passed: 1,
+      partnership_implementation_complete: 1,
+      partnership_revision_enacted: 1,
+      labor_reform_stage: 4,
+      labor_reform_progress: 100,
+      pip_law_enacted: 1,
+      left_poll: 15,
+      left_poll_momentum: 0,
+      pis_seats: 155,
+      konf_seats: 45,
+      psl_seats: 35,
+      ko_seats: 130,
+      p2050_seats: 25,
+    });
+    const leftPollBeforeRepealVetoes = qualities.left_poll;
+    engine.goToScene('poland_events_2027.sikorski_marriage_revolt_2027');
+    assert.strictEqual(qualities.sikorski_marriage_veto_promised, 1);
+    choose('poland_events_2027.sikorski_marriage_left_line_2027');
+    engine.goToScene('poland_events_2027.sikorski_black_march_2027');
+    assert.strictEqual(qualities.sikorski_abortion_vetoed, 1);
+    assert.strictEqual(qualities.sikorski_marriage_vetoed, 1);
+    assert.strictEqual(qualities.abortion_reform_stage, 4);
+    assert.strictEqual(qualities.marriage_reform_stage, 4);
+    assert.strictEqual(qualities.sikorski_left_veto_count, 2);
+    assert.strictEqual(qualities.sikorski_veto_president_branded, 1);
+    choose('poland_events_2027.sikorski_black_autonomy_2027');
+    engine.goToScene('poland_events_2027.sikorski_security_state_2027');
+    assert.strictEqual(qualities.sikorski_labor_vetoed, 1);
+    assert.strictEqual(qualities.labor_reform_stage, 4);
+    assert.strictEqual(qualities.pip_law_enacted, 1);
+    assert.strictEqual(qualities.marriage_reform_stage, 4);
+    assert.strictEqual(qualities.sikorski_left_veto_count, 3);
+    assert.strictEqual(qualities.sikorski_reforms_repealed, 0);
+    assert(qualities.left_poll < leftPollBeforeRepealVetoes);
+    choose('poland_events_2027.sikorski_security_nonviolence_2027');
+    const leftPollBeforeVetoBrandCampaign = qualities.left_poll;
+    engine.goToScene(
+      'poland_events_2027.sikorski_veto_president_campaign_2027'
+    );
+    assert(qualities.left_poll < leftPollBeforeVetoBrandCampaign);
+    assert.strictEqual(qualities.sikorski_veto_president_branded, 1);
+    choose('poland_events_2027.sikorski_veto_own_2027');
+    if (process.env.DSS_SIKORSKI_SMOKE === '1') {
+      return;
+    }
 
     startStandard('legacy-constructive-success-updates-majority');
     qualities = engine.state.qualities;
@@ -15135,6 +15462,7 @@ function runSmoke(game) {
     if (process.env.DSS_LEFT_ORG_SMOKE === '1') {
       testRazemLedMerger();
       testMergerRevoltGates();
+      testDirectMillerRestorationRoute();
       testOctoberMergerCongress();
       testAdvisorRepresentationDrift();
       return {
@@ -15223,6 +15551,18 @@ function runSmoke(game) {
         cardsPlayed: 0,
       };
     }
+    if (process.env.DSS_SIKORSKI_SMOKE === '1') {
+      testBudgetOppositionAndConstitutionalRoutes();
+      return {
+        ending: 'Sikorski nightmare fixture passed',
+        score: 0,
+        unity: engine.state.qualities.party_unity,
+        polling: engine.state.qualities.left_poll,
+        budget2019: 0,
+        budget2020: 0,
+        cardsPlayed: 0,
+      };
+    }
     testMonthlyCardDiscard();
     testOpportunityCardGating();
     testGovernmentBurden();
@@ -15276,6 +15616,7 @@ function runSmoke(game) {
     testLiveDossier();
     testRazemLedMerger();
     testMergerRevoltGates();
+    testDirectMillerRestorationRoute();
     testOctoberMergerCongress();
     testAdvisorRepresentationDrift();
     decksUsed.clear();

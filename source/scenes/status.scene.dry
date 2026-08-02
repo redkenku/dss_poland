@@ -261,6 +261,7 @@ Q.status_reshuffle_timer = Math.max(
 Q.status_advisors = statusNumber(Q.n_advisors, 3);
 const activeAdvisorNames = [];
 const advisorStatusRoster = [
+    ["miller", "Leszek Miller"],
     ["czarzasty", "Włodzimierz Czarzasty"],
     ["biedron", "Robert Biedroń"],
     ["zandberg", "Adrian Zandberg"],
@@ -282,6 +283,13 @@ for (const advisor of advisorStatusRoster) {
 Q.status_active_advisors = activeAdvisorNames.length
     ? activeAdvisorNames.join(" · ")
     : "Vacant bureau";
+Q.status_slot_1_lock = Number(Q.advisor_slot_1_locked) === 1
+    ? "Locked"
+    : "Open";
+Q.status_slot_1_lock_reason = statusText(
+    Q.advisor_slot_1_lock_reason,
+    "No lock"
+);
 Q.status_barons_advisors = statusNumber(Q.barons_advisor_count, 0);
 Q.status_spring_advisors = statusNumber(Q.spring_advisor_count, 0);
 Q.status_labor_advisors = statusNumber(Q.labor_advisor_count, 0);
@@ -339,6 +347,8 @@ const primeMinisterParty = function(name, government) {
         combined.includes("morawiecki") ||
         combined.includes("szydło") ||
         combined.includes("szydlo") ||
+        combined.includes("sasin") ||
+        combined.includes("kowalczyk") ||
         combined.includes("czarnek") ||
         combined.includes("pis")
     ) {
@@ -428,6 +438,7 @@ Q.status_ko_poll = statusOneDecimal(Q.ko_poll, 27.4);
 Q.status_psl_poll = statusOneDecimal(Q.psl_poll, 8.6);
 Q.status_konf_poll = statusOneDecimal(Q.konf_poll, 6.8);
 Q.status_p2050_poll = statusOneDecimal(Q.p2050_poll, 0);
+Q.status_p0_poll = statusOneDecimal(Q.p0_poll, 0);
 Q.status_other_poll = statusOneDecimal(Q.other_poll, 1.0);
 Q.status_nowa_solidarnosc_visible =
     Q.nowa_solidarnosc_formed && !Q.nowa_solidarnosc_dissolved ? 1 : 0;
@@ -480,6 +491,7 @@ Q.status_ko_intent = statusOneDecimal(Q.ko_vote_intent, 27.4);
 Q.status_psl_intent = statusOneDecimal(Q.psl_vote_intent, 8.6);
 Q.status_konf_intent = statusOneDecimal(Q.konf_vote_intent, 6.8);
 Q.status_p2050_intent = statusOneDecimal(Q.p2050_vote_intent, 0);
+Q.status_p0_intent = statusOneDecimal(Q.p0_vote_intent, 0);
 Q.status_other_intent = statusOneDecimal(Q.other_vote_intent, 1.0);
 Q.status_left_projection = statusWhole(Q.left_projected_seats, 49);
 Q.status_pis_projection = statusWhole(Q.pis_projected_seats, 235);
@@ -490,6 +502,7 @@ Q.status_p2050_projection = statusWhole(
     Q.p2050_projected_seats,
     0
 );
+Q.status_p0_projection = statusWhole(Q.p0_projected_seats, 0);
 Q.status_other_projection = statusWhole(Q.other_projected_seats, 0);
 Q.status_poll_sample = statusWhole(Q.poll_sample_size, 1400);
 Q.status_poll_margin = statusOneDecimal(Q.poll_margin_error, 2.6);
@@ -501,6 +514,7 @@ Q.status_poll_total = statusOneDecimal(
         Q.status_psl_poll +
         Q.status_konf_poll +
         Q.status_p2050_poll +
+        Q.status_p0_poll +
         Q.status_other_poll +
         dynamicElectionParties.reduce(function(total, party) {
             return total + Q["status_" + party + "_poll"];
@@ -510,6 +524,8 @@ Q.status_poll_total = statusOneDecimal(
 Q.status_p2050_visible =
     !Q.p2050_joined_left &&
     (Q.p2050_emerged || Q.status_p2050_poll > 0) ? 1 : 0;
+Q.status_p0_visible =
+    Q.p0_formed || Q.status_p0_poll > 0 ? 1 : 0;
 
 Q.status_pis_leader = statusText(Q.pis_leader, "Jarosław Kaczyński");
 Q.status_ko_leader = statusText(Q.ko_leader, "Grzegorz Schetyna");
@@ -524,6 +540,10 @@ Q.status_konf_leader = statusText(
 Q.status_p2050_leader = statusText(
     Q.p2050_leader,
     "Movement not yet formed"
+);
+Q.status_p0_leader = statusText(
+    Q.p0_leader,
+    "Krzysztof Stanowski"
 );
 Q.status_pis_ideology = statusText(
     Q.pis_ideology,
@@ -544,6 +564,10 @@ Q.status_konf_ideology = statusText(
 Q.status_p2050_ideology = statusText(
     Q.p2050_ideology,
     "Centrist institutionalism"
+);
+Q.status_p0_ideology = statusText(
+    Q.p0_ideology,
+    "Right-libertarian anti-establishment"
 );
 const leftPoleIntent = statusNumber(
     Q.left_vote_intent,
@@ -588,9 +612,10 @@ const wingFallbacks = {
     ko: "Broad-tent liberal centre",
     psl: "Agrarian and local-government brokers",
     konf: "Libertarian-nationalist federation",
-    p2050: "Institutional reformers"
+    p2050: "Institutional reformers",
+    p0: "Media-libertarian founders"
 };
-for (const party of ["pis", "ko", "psl", "konf", "p2050"]) {
+for (const party of ["pis", "ko", "psl", "konf", "p2050", "p0"]) {
     Q["status_" + party + "_org_resources"] = statusNumber(
         Q[party + "_org_resources"],
         0
@@ -615,7 +640,7 @@ for (const party of ["pis", "ko", "psl", "konf", "p2050"]) {
 const statusSuccessorParties = [
     ["centrum", "Unia Centrum", !!Q.unia_centrum_formed],
     ["rozwoj", "Rozwój Plus", !!Q.rozwoj_party_formed && !Q.rozwoj_joined_left],
-    ["tak_rozwoj", "Tak! Dla Rozwoju", !!Q.tak_dla_rozwoju_party_formed],
+    ["tak_rozwoj", "Akcja Socjalistyczna", !!Q.tak_dla_rozwoju_party_formed],
     ["korona", "Korona", !!Q.far_right_split],
     ["sld_breakaway", Q.barons_party_name || "SLD breakaway", !!Q.barons_party_formed],
     ["social_patriot", Q.social_patriot_party_name || "Lewica Patriotyczna", !!Q.social_patriot_party_formed],
@@ -736,6 +761,14 @@ Q.status_social_patriot_support = statusNumber(
 );
 Q.status_left_p2050_current_seats = statusNumber(
     Q.left_p2050_current_seats,
+    0
+);
+Q.status_left_trzaskowski_current_seats = statusNumber(
+    Q.left_trzaskowski_current_seats,
+    0
+);
+Q.status_left_ipl_current_seats = statusNumber(
+    Q.left_ipl_current_seats,
     0
 );
 Q.status_left_green_current_seats = statusNumber(
@@ -1554,6 +1587,7 @@ for (const group of voterGroupsForStatus) {
 <summary><span>Leadership bureau</span><b>[+ status_advisors +]</b></summary>
 <div class="disclosure-body">
 <div class="ledger-row"><span>Active slate</span><b>[+ status_active_advisors +]</b></div>
+<div class="ledger-row"><span>Slot 1 lock</span><b>[+ status_slot_1_lock +] · [+ status_slot_1_lock_reason +]</b></div>
 <div class="faction-mix">[? if status_barons_active: <span class="party-sld" title="[+ status_barons_name +]">[+ status_barons_advisors +]</span>?][? if status_spring_active: <span class="party-wiosna" title="[+ status_spring_name +]">[+ status_spring_advisors +]</span>?][? if status_labor_active: <span class="party-left-labor" title="[+ status_labor_name +]">[+ status_labor_advisors +]</span>?][? if status_progressives_active: <span class="party-progressive" title="[+ status_progressives_name +]">[+ status_progressives_advisors +]</span>?][? if status_razem_active: <span class="party-razem" title="Razem">[+ status_razem_advisors +]</span>?][? if status_pps_active: <span class="party-pps" title="PPS">[+ status_pps_advisors +]</span>?][? if status_social_patriot_active: <span class="party-social-patriot" title="[+ status_social_patriot_name +]">[+ status_social_patriot_advisors +]</span>?]</div>
 <div class="ledger-row"><span>Campaign</span><b>[+ status_leadership_actions +] of 87 months</b></div>
 <div class="ledger-note">[+ status_left_family_name +] · only active caucuses are shown</div>
@@ -1612,7 +1646,7 @@ for (const group of voterGroupsForStatus) {
 [? if progressives_party_formed: <div class="poll-row"><span class="party party-progressive"><b>[+ progressives_party_name +]</b></span><span></span><span>[+ status_young_left_seats +] seats</span></div>?]
 [? if razem_party_formed: <div class="poll-row"><span class="party party-razem"><b>Razem</b></span><span></span><span>[+ status_razem_party_seats +] seats</span></div>?]
 [? if pps_party_formed: <div class="poll-row"><span class="party party-pps"><b>PPS</b></span><span></span><span>[+ status_pps_party_seats +] seats</span></div>?]
-[? if tak_dla_rozwoju_party_formed: <div class="poll-row"><span class="party party-razem"><b>Tak! Dla Rozwoju</b></span><span></span><span>[+ status_tak_rozwoj_seats +] seats</span></div>?]
+[? if tak_dla_rozwoju_party_formed: <div class="poll-row"><span class="party party-razem"><b>Akcja Socjalistyczna</b></span><span></span><span>[+ status_tak_rozwoj_seats +] seats</span></div>?]
 <div class="poll-row"><span class="party party-psl"><b>PSL</b></span><span></span><span>[+ status_psl_seats +] seats</span></div>
 [? if status_p2050_visible: <div class="poll-row"><span class="party party-p2050"><b>PL2050</b></span><span></span><span>[+ status_p2050_seats +] seats</span></div>?]
 <div class="poll-row"><span class="party party-konf"><b>Konf.</b></span><span></span><span>[+ status_konf_seats +] seats</span></div>
@@ -1650,7 +1684,9 @@ call: status
 [? if status_razem_active: <div class="faction-row"><span class="party party-razem"><b>[+ status_razem_name +]</b></span><span>[+ status_razem_strength : strength +] · [+ status_razem_dissent : dissent +] dissent · [+ status_razem_escalation +]</span></div>?]
 [? if status_pps_active: <div class="faction-row"><span class="party party-pps"><b>[+ status_pps_name +]</b></span><span>[+ status_pps_strength : strength +] · [+ status_pps_dissent : dissent +] dissent · [+ status_pps_escalation +]</span></div>?]
 [? if status_social_patriot_active: <div class="faction-row"><span class="party party-social-patriot"><b>[+ status_social_patriot_name +]</b></span><span>[+ status_social_patriot_strength : strength +] · [+ status_social_patriot_dissent : dissent +] dissent · [+ status_social_patriot_referrals +] referrals · [+ status_social_patriot_escalation +]</span></div>?]
-[? if p2050_joined_left and status_left_p2050_current_seats > 0: <div class="faction-row"><span class="party party-p2050"><b>Polska 2050 current</b></span><span>[+ status_left_p2050_current_seats +] seats integrated into the Left caucus</span></div>?]
+[? if trzaskowski_joined_left and status_left_trzaskowski_current_seats > 0: <div class="faction-row"><span class="party party-progressive"><b>Rafał Trzaskowski · [+ trzaskowski_current_name +]</b></span><span>[+ status_left_trzaskowski_current_seats +] seats integrated into the Left caucus</span></div>?]
+[? if ipl_joined_left and status_left_ipl_current_seats > 0: <div class="faction-row"><span class="party party-ko"><b>Inicjatywa Polska current</b></span><span>[+ status_left_ipl_current_seats +] seats integrated into the Left caucus</span></div>?]
+[? if (p2050_joined_left or p2050_social_joined_left) and status_left_p2050_current_seats > 0: <div class="faction-row"><span class="party party-p2050"><b>Polska 2050 current</b></span><span>[+ status_left_p2050_current_seats +] seats integrated into the Left caucus</span></div>?]
 [? if greens_joined_left and status_left_green_current_seats > 0: <div class="faction-row"><span class="party party-ko"><b>Zieloni current</b></span><span>[+ status_left_green_current_seats +] seats integrated into the Left caucus</span></div>?]
 [? if rozwoj_joined_left and status_left_rozwoj_current_seats > 0: <div class="faction-row"><span class="party party-rozwoj"><b>Rozwój+ current</b></span><span>[+ status_left_rozwoj_current_seats +] seats integrated into the Left caucus</span></div>?]
 [? if not status_social_patriot_active and status_social_patriot_support > 0: <div class="ledger-subrow">Social-Patriot current: [+ status_social_patriot_formation +].</div>?]
@@ -1690,7 +1726,7 @@ call: status
 [? if progressives_party_formed: <div class="faction-row"><span class="party party-progressive"><b>[+ progressives_party_name +]</b></span><span>[+ status_young_left_seats +] seats</span></div>?]
 [? if razem_party_formed: <div class="faction-row"><span class="party party-razem"><b>[+ razem_party_name +]</b></span><span>[+ status_razem_party_seats +] seats</span></div>?]
 [? if pps_party_formed: <div class="faction-row"><span class="party party-pps"><b>[+ pps_party_name +]</b></span><span>[+ status_pps_party_seats +] seats</span></div>?]
-[? if tak_dla_rozwoju_party_formed: <div class="faction-row"><span class="party party-razem"><b>Tak! Dla Rozwoju</b></span><span>[+ status_tak_rozwoj_seats +] seats</span></div>?]
+[? if tak_dla_rozwoju_party_formed: <div class="faction-row"><span class="party party-razem"><b>Akcja Socjalistyczna</b></span><span>[+ status_tak_rozwoj_seats +] seats</span></div>?]
 [? if barons_party_formed or social_patriot_party_formed or spring_party_formed or labor_party_formed or progressives_party_formed or razem_party_formed or pps_party_formed or tak_dla_rozwoju_party_formed: </div>?]
 
 <details class="ledger-disclosure"><summary>Leadership and organisation</summary>
@@ -1725,7 +1761,9 @@ call: status
 [? if status_razem_active: <div class="faction-row"><span class="party party-razem tooltip-text" title="Razem remains legally autonomous while it belongs to the common caucus"><b>[+ status_razem_name +]</b></span><span>[+ status_razem_strength : strength +] · dissent [+ status_razem_dissent : dissent +] · [+ status_razem_escalation +]</span></div>?]
 [? if status_pps_active: <div class="faction-row"><span class="party party-pps tooltip-text" title="A tiny PPS partner with symbolic and programme influence"><b>[+ status_pps_name +]</b></span><span>[+ status_pps_strength : strength +] · dissent [+ status_pps_dissent : dissent +] · [+ status_pps_escalation +]</span></div>?]
 [? if status_social_patriot_active: <div class="faction-row"><span class="party party-social-patriot tooltip-text" title="An autonomous welfare, regional-development and sovereignty organisation"><b>[+ status_social_patriot_name +]</b></span><span>[+ status_social_patriot_strength : strength +] · dissent [+ status_social_patriot_dissent : dissent +] · [+ status_social_patriot_referrals +] referrals · [+ status_social_patriot_escalation +]</span></div>?]
-[? if p2050_joined_left and status_left_p2050_current_seats > 0: <div class="faction-row"><span class="party party-p2050"><b>Polska 2050 current</b></span><span>[+ status_left_p2050_current_seats +] seats integrated into the Left caucus</span></div>?]
+[? if trzaskowski_joined_left and status_left_trzaskowski_current_seats > 0: <div class="faction-row"><span class="party party-progressive"><b>Rafał Trzaskowski · [+ trzaskowski_current_name +]</b></span><span>[+ status_left_trzaskowski_current_seats +] seats integrated into the Left caucus</span></div>?]
+[? if ipl_joined_left and status_left_ipl_current_seats > 0: <div class="faction-row"><span class="party party-ko"><b>Inicjatywa Polska current</b></span><span>[+ status_left_ipl_current_seats +] seats integrated into the Left caucus</span></div>?]
+[? if (p2050_joined_left or p2050_social_joined_left) and status_left_p2050_current_seats > 0: <div class="faction-row"><span class="party party-p2050"><b>Polska 2050 current</b></span><span>[+ status_left_p2050_current_seats +] seats integrated into the Left caucus</span></div>?]
 [? if greens_joined_left and status_left_green_current_seats > 0: <div class="faction-row"><span class="party party-ko"><b>Zieloni current</b></span><span>[+ status_left_green_current_seats +] seats integrated into the Left caucus</span></div>?]
 [? if rozwoj_joined_left and status_left_rozwoj_current_seats > 0: <div class="faction-row"><span class="party party-rozwoj"><b>Rozwój+ current</b></span><span>[+ status_left_rozwoj_current_seats +] seats integrated into the Left caucus</span></div>?]
 [? if status_market_liberal_active: <div class="faction-row"><span class="party party-centrum tooltip-text" title="A cross-cutting capitalist, lower-tax and small-business current; its affinity overlaps the main caucus shares"><b>Market Left caucus</b></span><span>[+ status_market_liberal_strength : strength +] affinity · dissent [+ status_market_liberal_dissent : dissent +]</span></div>?]
@@ -1760,7 +1798,7 @@ call: status
 [? if progressives_party_formed: <div class="faction-row"><span class="party party-progressive"><b>[+ progressives_party_name +]</b></span><span>[+ status_young_left_seats +] seats · [+ status_progressives_departed +] departed / [+ status_progressives_retained +] stayed[? if progressives_list_committee = "left":  · Lewica host list?][? if progressives_list_committee = "razem":  · Razem list?][? if progressives_list_committee = "left_coalition":  · Left coalition?]</span></div>?]
 [? if razem_party_formed: <div class="faction-row"><span class="party party-razem"><b>[+ razem_party_name +]</b></span><span>[+ status_razem_party_seats +] seats · [+ status_razem_departed +] departed / [+ status_razem_retained +] stayed</span></div>?]
 [? if pps_party_formed: <div class="faction-row"><span class="party party-pps"><b>[+ pps_party_name +]</b></span><span>[+ status_pps_party_seats +] seats · [+ status_pps_departed +] departed / [+ status_pps_retained +] stayed</span></div>?]
-[? if tak_dla_rozwoju_party_formed: <div class="faction-row"><span class="party party-razem"><b>Tak! Dla Rozwoju</b></span><span>[+ status_tak_rozwoj_seats +] seats · led by Paulina Matysiak</span></div>?]
+[? if tak_dla_rozwoju_party_formed: <div class="faction-row"><span class="party party-razem"><b>Akcja Socjalistyczna</b></span><span>[+ status_tak_rozwoj_seats +] seats · led by Paulina Matysiak</span></div>?]
 [? if not barons_party_formed and not spring_party_formed and not labor_party_formed and not progressives_party_formed and not razem_party_formed and not pps_party_formed and not tak_dla_rozwoju_party_formed: <div class="ledger-subrow">No Left caucus currently contests against the main list.</div>?]
 [? if status_successor_ai_visible: <div class="ledger-subrow">Successor AI: [+ status_successor_ai_summary +]</div>?]</div>
 
@@ -1815,6 +1853,7 @@ call: status
 <div class="ledger-subrow">[+ status_psl_ai_headline +]</div>
 <div class="ledger-row"><span class="party party-konf"><b>Konf.</b> · [+ status_konf_dominant_wing +]</span><span>[+ status_konf_org_resources +] (+[+ status_konf_org_income +]/yr) · [+ status_konf_ideology_drift +]</span></div>
 <div class="ledger-subrow">[+ status_konf_ai_headline +]</div>
+[? if status_p0_visible: <div class="ledger-row"><span class="party"><b>[+ p0_short_name +]</b> · [+ status_p0_dominant_wing +]</span><span>[+ status_p0_org_resources +] (+[+ status_p0_org_income +]/yr) · [+ status_p0_ideology_drift +]</span></div><div class="ledger-subrow">[+ status_p0_ai_headline +]</div>?]
 [? if status_p2050_visible: <div class="ledger-row"><span class="party party-p2050"><b>PL2050</b> · [+ status_p2050_dominant_wing +]</span><span>[+ status_p2050_org_resources +] (+[+ status_p2050_org_income +]/yr) · [+ status_p2050_ideology_drift +]</span></div><div class="ledger-subrow">[+ status_p2050_ai_headline +]</div>?]
 <div class="ledger-subrow">[+ status_rival_coalition_signal +]</div></div>
 
@@ -1848,6 +1887,7 @@ call: status
 <div class="faction-row"><span class="party party-ko"><b>KO</b> · [+ status_ko_dominant_wing +]</span><span>[+ status_ko_ideology_drift +]</span></div><div class="ledger-subrow">[+ status_ko_ai_headline +]</div>
 <div class="faction-row"><span class="party party-psl"><b>PSL</b> · [+ status_psl_dominant_wing +]</span><span>[+ status_psl_ideology_drift +]</span></div><div class="ledger-subrow">[+ status_psl_ai_headline +]</div>
 <div class="faction-row"><span class="party party-konf"><b>Konfederacja</b> · [+ status_konf_dominant_wing +]</span><span>[+ status_konf_ideology_drift +]</span></div><div class="ledger-subrow">[+ status_konf_ai_headline +]</div>
+[? if status_p0_visible: <div class="faction-row"><span class="party"><b>[+ p0_name +]</b> · [+ status_p0_dominant_wing +]</span><span>[+ status_p0_ideology_drift +]</span></div><div class="ledger-subrow">[+ status_p0_ai_headline +]</div>?]
 [? if status_p2050_visible: <div class="faction-row"><span class="party party-p2050"><b>Poland 2050</b> · [+ status_p2050_dominant_wing +]</span><span>[+ status_p2050_ideology_drift +]</span></div><div class="ledger-subrow">[+ status_p2050_ai_headline +]</div>?]
 </div>
 
@@ -1973,10 +2013,11 @@ call: status
 [? if progressives_party_formed: <div class="poll-row"><span class="party party-progressive"><b>[+ progressives_party_name +]</b></span><span>[+ status_young_left_poll +]%</span><span>[+ status_young_left_projection +] projected</span></div>?]
 [? if razem_party_formed: <div class="poll-row"><span class="party party-razem"><b>Razem</b></span><span>[+ status_razem_poll +]%</span><span>[+ status_razem_projection +] projected</span></div>?]
 [? if pps_party_formed: <div class="poll-row"><span class="party party-pps"><b>PPS</b></span><span>[+ status_pps_poll +]%</span><span>[+ status_pps_projection +] projected</span></div>?]
-[? if tak_dla_rozwoju_party_formed: <div class="poll-row"><span class="party party-razem"><b>Tak! Dla Rozwoju</b></span><span>[+ status_tak_rozwoj_poll +]%</span><span>[+ status_tak_rozwoj_projection +] projected</span></div>?]
+[? if tak_dla_rozwoju_party_formed: <div class="poll-row"><span class="party party-razem"><b>Akcja Socjalistyczna</b></span><span>[+ status_tak_rozwoj_poll +]%</span><span>[+ status_tak_rozwoj_projection +] projected</span></div>?]
 <div class="poll-row"><span class="party party-psl"><b>PSL</b></span><span>[+ status_psl_poll +]%</span><span>[+ status_psl_projection +] projected</span></div>
 [? if status_p2050_visible: <div class="poll-row"><span class="party party-p2050"><b>Poland 2050</b></span><span>[+ status_p2050_poll +]%</span><span>[+ status_p2050_projection +] projected</span></div>?]
 <div class="poll-row"><span class="party party-konf"><b>Konfederacja</b></span><span>[+ status_konf_poll +]%</span><span>[+ status_konf_projection +] projected</span></div>
+[? if status_p0_visible: <div class="poll-row"><span><b>[+ p0_name +]</b></span><span>[+ status_p0_poll +]%</span><span>[+ status_p0_projection +] projected</span></div>?]
 [? if unia_centrum_formed: <div class="poll-row"><span class="party party-centrum"><b>Unia Centrum</b></span><span>[+ status_centrum_poll +]%</span><span>[+ status_centrum_projection +] projected</span></div>?]
 [? if rozwoj_party_formed and not rozwoj_joined_left: <div class="poll-row"><span class="party party-rozwoj"><b>Rozwój Plus</b></span><span>[+ status_rozwoj_poll +]%</span><span>[+ status_rozwoj_projection +] projected</span></div>?]
 [? if far_right_split > 0: <div class="poll-row"><span class="party party-korona"><b>Korona</b></span><span>[+ status_korona_poll +]%</span><span>[+ status_korona_projection +] projected</span></div>?]
@@ -2006,10 +2047,11 @@ call: status
 [? if progressives_party_formed: <div class="poll-row"><span class="party party-progressive"><b>[+ progressives_party_name +]</b></span><span></span><span>[+ status_young_left_seats +] seats</span></div>?]
 [? if razem_party_formed: <div class="poll-row"><span class="party party-razem"><b>Razem</b></span><span></span><span>[+ status_razem_party_seats +] seats</span></div>?]
 [? if pps_party_formed: <div class="poll-row"><span class="party party-pps"><b>PPS</b></span><span></span><span>[+ status_pps_party_seats +] seats</span></div>?]
-[? if tak_dla_rozwoju_party_formed: <div class="poll-row"><span class="party party-razem"><b>Tak! Dla Rozwoju</b></span><span></span><span>[+ status_tak_rozwoj_seats +] seats</span></div>?]
+[? if tak_dla_rozwoju_party_formed: <div class="poll-row"><span class="party party-razem"><b>Akcja Socjalistyczna</b></span><span></span><span>[+ status_tak_rozwoj_seats +] seats</span></div>?]
 <div class="poll-row"><span class="party party-psl"><b>PSL</b></span><span></span><span>[+ status_psl_seats +] seats</span></div>
 [? if status_p2050_visible: <div class="poll-row"><span class="party party-p2050"><b>Poland 2050</b></span><span></span><span>[+ status_p2050_seats +] seats</span></div>?]
 <div class="poll-row"><span class="party party-konf" data-short-label="Konf." aria-label="Konfederacja"><b>Konfederacja</b></span><span></span><span>[+ status_konf_seats +] seats</span></div>
+[? if status_p0_visible and status_p0_projection > 0: <div class="poll-row"><span><b>[+ p0_name +]</b></span><span></span><span>[+ status_p0_projection +] projected seats</span></div>?]
 [? if unia_centrum_formed or status_centrum_seats > 0: <div class="poll-row"><span class="party party-centrum"><b>Unia Centrum</b></span><span></span><span>[+ status_centrum_seats +] seats</span></div>?]
 [? if rozwoj_party_formed and not rozwoj_joined_left: <div class="poll-row"><span class="party party-rozwoj"><b>Rozwój Plus</b></span><span></span><span>[+ status_rozwoj_seats +] seats</span></div>?]
 [? if far_right_split > 0: <div class="poll-row"><span class="party party-korona"><b>Korona</b></span><span></span><span>[+ status_korona_seats +] seats</span></div>?]
@@ -2055,10 +2097,11 @@ call: status
 [? if progressives_party_formed: <div class="poll-row"><span class="party party-progressive"><b>[+ progressives_party_name +]</b></span><span>[+ status_young_left_poll +]%</span><span>[+ status_young_left_projection +] projected</span></div>?]
 [? if razem_party_formed: <div class="poll-row"><span class="party party-razem"><b>Razem</b></span><span>[+ status_razem_poll +]%</span><span>[+ status_razem_projection +] projected</span></div>?]
 [? if pps_party_formed: <div class="poll-row"><span class="party party-pps"><b>PPS</b></span><span>[+ status_pps_poll +]%</span><span>[+ status_pps_projection +] projected</span></div>?]
-[? if tak_dla_rozwoju_party_formed: <div class="poll-row"><span class="party party-razem"><b>Tak! Dla Rozwoju</b></span><span>[+ status_tak_rozwoj_poll +]%</span><span>[+ status_tak_rozwoj_projection +] projected</span></div>?]
+[? if tak_dla_rozwoju_party_formed: <div class="poll-row"><span class="party party-razem"><b>Akcja Socjalistyczna</b></span><span>[+ status_tak_rozwoj_poll +]%</span><span>[+ status_tak_rozwoj_projection +] projected</span></div>?]
 <div class="poll-row"><span class="party party-psl"><b>PSL</b></span><span>[+ status_psl_poll +]%</span><span>[+ status_psl_projection +] projected</span></div>
 [? if status_p2050_visible: <div class="poll-row"><span class="party party-p2050"><b>PL2050</b></span><span>[+ status_p2050_poll +]%</span><span>[+ status_p2050_projection +] projected</span></div>?]
 <div class="poll-row"><span class="party party-konf"><b>Konf.</b></span><span>[+ status_konf_poll +]%</span><span>[+ status_konf_projection +] projected</span></div>
+[? if status_p0_visible: <div class="poll-row"><span><b>[+ p0_short_name +]</b></span><span>[+ status_p0_poll +]%</span><span>[+ status_p0_projection +] projected</span></div>?]
 [? if unia_centrum_formed: <div class="poll-row"><span class="party party-centrum"><b>Unia Centrum</b></span><span>[+ status_centrum_poll +]%</span><span>[+ status_centrum_projection +] projected</span></div>?]
 [? if rozwoj_party_formed and not rozwoj_joined_left: <div class="poll-row"><span class="party party-rozwoj"><b>Rozwój Plus</b></span><span>[+ status_rozwoj_poll +]%</span><span>[+ status_rozwoj_projection +] projected</span></div>?]
 [? if far_right_split > 0: <div class="poll-row"><span class="party party-korona"><b>Korona</b></span><span>[+ status_korona_poll +]%</span><span>[+ status_korona_projection +] projected</span></div>?]
@@ -2086,7 +2129,7 @@ call: status
 [? if progressives_party_formed: <div class="poll-row"><span class="party party-progressive"><b>[+ progressives_party_name +]</b></span><span></span><span>[+ status_young_left_seats +] seats</span></div>?]
 [? if razem_party_formed: <div class="poll-row"><span class="party party-razem"><b>Razem</b></span><span></span><span>[+ status_razem_party_seats +] seats</span></div>?]
 [? if pps_party_formed: <div class="poll-row"><span class="party party-pps"><b>PPS</b></span><span></span><span>[+ status_pps_party_seats +] seats</span></div>?]
-[? if tak_dla_rozwoju_party_formed: <div class="poll-row"><span class="party party-razem"><b>Tak! Dla Rozwoju</b></span><span></span><span>[+ status_tak_rozwoj_seats +] seats</span></div>?]
+[? if tak_dla_rozwoju_party_formed: <div class="poll-row"><span class="party party-razem"><b>Akcja Socjalistyczna</b></span><span></span><span>[+ status_tak_rozwoj_seats +] seats</span></div>?]
 <div class="poll-row"><span class="party party-psl"><b>PSL</b></span><span></span><span>[+ status_psl_seats +] seats</span></div>
 [? if status_p2050_visible: <div class="poll-row"><span class="party party-p2050"><b>PL2050</b></span><span></span><span>[+ status_p2050_seats +] seats</span></div>?]
 <div class="poll-row"><span class="party party-konf"><b>Konf.</b></span><span></span><span>[+ status_konf_seats +] seats</span></div>

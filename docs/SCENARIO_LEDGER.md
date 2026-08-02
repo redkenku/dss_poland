@@ -470,6 +470,9 @@ historical breakup.
 | **ISS-COV-04 — Vaccination strategy** | **H/P** | Persuasion, local clinics, health-worker mandate, general mandate, certificates or no mandate. | Coverage and deaths versus anti-system mobilisation, health-worker retention and trust. |
 | **ISS-COV-05 — Procurement scandal** | **P** | Masks, ventilators, tests or vaccine contracts reveal incompetence or corruption. Investigate across party lines or exploit immediately. | A clean investigation can force resignation; partisan overreach can bury evidence in polarisation. |
 | **ISS-COV-06 — Long aftermath** | **P** | Address excess deaths, long COVID, learning loss, mental health and medical backlog or declare the crisis over. | Neglected costs surface during later elections and undermine every health promise. |
+| **ISS-COV-07 — Hospital overload wave** | **P** | COVID wards absorb staff while cardiology, oncology and elective care are repeatedly postponed. Choose emergency staffing, triage rules and private-sector contracting under scrutiny. | Restored throughput can reduce excess mortality; opaque triage or crony contracting creates a second legitimacy crisis. |
+| **ISS-COV-08 — Pandemic debt and rent shock** | **P** | Isolation without paid leave, utility arrears and rent debt produce a household solvency shock after restrictions lift. | Debt mediation and social protection can preserve trust; debt collection waves fuel anti-system recruitment in both towns and cities. |
+| **ISS-COV-09 — Health-worker attrition** | **P** | Burnout, migration and wage disputes reduce staffing after the emergency phase. Prioritise pay, training and conditions or rely on emergency patriotism rhetoric. | Retention policy improves resilience for future shocks; attrition creates multi-year waiting lists that punish every incumbent. |
 
 ### Abortion and reproductive rights
 

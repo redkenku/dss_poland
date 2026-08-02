@@ -473,6 +473,7 @@ if (!Q.senate_election_2023_certified) {
     Q.senate_total = 100;
     if (!Q.senate_pact_2023_done) {
         Q.senate_pact_coordinated = 1;
+        Q.senate_pact_side = "left";
         Q.senate_pact_strength = 60;
         Q.senate_pact_strategy =
             "Senate Pact with three Sejm lists";
@@ -512,9 +513,14 @@ if (!Q.senate_election_2023_certified) {
         ? 1
         : (leftPactMode == "reserved" ? 0.2 : 0);
     const leftVoteInsidePact = leftPactMode != "outside";
+    const rightPactMode = String(Q.senate_pact_side || "left") == "right"
+        ? "full"
+        : "outside";
+    const rightVoteInsidePact = rightPactMode != "outside";
     const democraticPactVote =
         senateVotes.ko + senateVotes.p2050 + senateVotes.psl +
         (leftVoteInsidePact ? senateVotes.left : 0);
+    const rightPactVote = senateVotes.pis + senateVotes.konf;
     const pactStrength = Math.max(
         0,
         Math.min(100, finiteFormation(Q.senate_pact_strength, 60))
@@ -556,11 +562,30 @@ if (!Q.senate_election_2023_certified) {
             thirdNominees.push(id);
         }
     }
+    const rightPactNomineeParts = apportionFormation(
+        Q.senate_total,
+        [
+            {id: "pis", weight: senateVotes.pis},
+            {id: "konf", weight: senateVotes.konf}
+        ]
+    );
+    const rightPactNominees = [];
+    for (const id of ["pis", "konf"]) {
+        for (let seat = 0; seat < rightPactNomineeParts[id]; seat += 1) {
+            rightPactNominees.push(id);
+        }
+    }
     for (let i = thirdNominees.length - 1; i > 0; i -= 1) {
         const swap = this.random.uint32() % (i + 1);
         const current = thirdNominees[i];
         thirdNominees[i] = thirdNominees[swap];
         thirdNominees[swap] = current;
+    }
+    for (let i = rightPactNominees.length - 1; i > 0; i -= 1) {
+        const swap = this.random.uint32() % (i + 1);
+        const current = rightPactNominees[i];
+        rightPactNominees[i] = rightPactNominees[swap];
+        rightPactNominees[swap] = current;
     }
     const senateWinners = {
         pis: 0,
@@ -583,17 +608,32 @@ if (!Q.senate_election_2023_certified) {
         };
         if (Q.senate_pact_coordinated) {
             const transfer = 0.88 + pactStrength / 1000;
-            addCandidate(
-                pactNominees[district],
-                democraticPactVote * transfer + democraticLean +
-                    (randomUnit(this) - 0.5) * 8
-            );
-            if (leftPactMode == "outside") {
+            if (String(Q.senate_pact_side || "left") == "right") {
                 addCandidate(
-                    "left",
-                    senateVotes.left + democraticLean * 0.55 +
-                        (randomUnit(this) - 0.5) * 18
+                    rightPactNominees[district],
+                    rightPactVote * transfer - democraticLean +
+                        (randomUnit(this) - 0.5) * 8
                 );
+                if (rightVoteInsidePact == false) {
+                    addCandidate(
+                        "pis",
+                        senateVotes.pis - democraticLean +
+                            (randomUnit(this) - 0.5) * 10
+                    );
+                }
+            } else {
+                addCandidate(
+                    pactNominees[district],
+                    democraticPactVote * transfer + democraticLean +
+                        (randomUnit(this) - 0.5) * 8
+                );
+                if (leftPactMode == "outside") {
+                    addCandidate(
+                        "left",
+                        senateVotes.left + democraticLean * 0.55 +
+                            (randomUnit(this) - 0.5) * 18
+                    );
+                }
             }
         } else {
             addCandidate(
@@ -612,26 +652,28 @@ if (!Q.senate_election_2023_certified) {
                     (randomUnit(this) - 0.5) * 18
             );
         }
-        addCandidate(
-            "pis",
-            senateVotes.pis - democraticLean +
-                (randomUnit(this) - 0.5) * 10
-        );
-        addCandidate(
-            "konf",
-            senateVotes.konf - democraticLean * 0.35 +
-                (randomUnit(this) - 0.5) * 16
-        );
-        addCandidate(
-            "pis",
-            senateVotes.rozwoj - democraticLean * 0.3 +
-                (randomUnit(this) - 0.5) * 18
-        );
-        addCandidate(
-            "konf",
-            senateVotes.korona - democraticLean * 0.25 +
-                (randomUnit(this) - 0.5) * 18
-        );
+        if (String(Q.senate_pact_side || "left") != "right") {
+            addCandidate(
+                "pis",
+                senateVotes.pis - democraticLean +
+                    (randomUnit(this) - 0.5) * 10
+            );
+            addCandidate(
+                "konf",
+                senateVotes.konf - democraticLean * 0.35 +
+                    (randomUnit(this) - 0.5) * 16
+            );
+            addCandidate(
+                "pis",
+                senateVotes.rozwoj - democraticLean * 0.3 +
+                    (randomUnit(this) - 0.5) * 18
+            );
+            addCandidate(
+                "konf",
+                senateVotes.korona - democraticLean * 0.25 +
+                    (randomUnit(this) - 0.5) * 18
+            );
+        }
         addCandidate(
             "independent",
             senateVotes.independent + randomUnit(this) * 42
@@ -1213,6 +1255,7 @@ potential majority behaves like a coalition before any minister exists.
 - @first_democratic_protocol
 - @first_presidential_channel
 - @first_rural_channel
+- @first_morawiecki_continuation
 - @trzaskowski_majority_designation
 
 @first_democratic_protocol
@@ -1237,6 +1280,12 @@ subtitle: A practical hedge that gives the most nervous partner the first privat
 view-if: not trz_inaugurated
 on-arrival: formation_discipline = 1; psl_relation += 8; ko_relation -= 2; p2050_relation -= 2; barons_dissent -= 3; progressives_dissent += 3; news_headline = "The Left treats PSL as the hinge of the transfer"
 go-to: psl_courting
+
+@first_morawiecki_continuation
+title: Continue the Morawiecki cabinet
+subtitle: Keep the outgoing PiS government in play if the post-election arithmetic still lets it survive.
+view-if: not trz_inaugurated
+go-to: third_morawiecki_toleration
 
 @trzaskowski_majority_designation
 title: Ask Trzaskowski to recognise the certified majority
@@ -2213,6 +2262,9 @@ different arithmetic.
 - @third_reassemble
 - @third_presidential_compromise
 - @third_morawiecki_toleration
+- @third_szydlo_toleration
+- @third_sasin_toleration
+- @third_kowalczyk_toleration
 - @third_refuse_rescue
 
 @third_reassemble
@@ -2297,6 +2349,72 @@ Q.party_unity -= 8;
 Q.psl_relation -= 12;
 Q.far_right_agenda += 4;
 Q.news_headline = "Simple-majority arithmetic rescues a Morawiecki minority";
+!}
+go-to: third_confidence_roll
+
+@third_szydlo_toleration
+title: Bring back a Szydło minority cabinet
+subtitle: The arithmetic stays the same; only the PiS face at the podium changes.
+on-arrival: {!
+const pslSupport = Math.min(22, Math.max(0, Q.psl_seats));
+Q.third_candidate = "Beata Szydło";
+Q.third_yes = Math.max(0, Q.pis_seats) + pslSupport;
+Q.third_no =
+    Math.max(0, Q.ko_seats) + Math.max(0, Q.left_seats) +
+    Math.min(7, Math.max(0, Q.p2050_seats));
+Q.third_abstain = Math.max(
+    0,
+    Q.sejm_total - Q.third_yes - Q.third_no
+);
+Q.third_left_cabinet = 0;
+Q.party_unity -= 8;
+Q.psl_relation -= 12;
+Q.far_right_agenda += 4;
+Q.news_headline = "Simple-majority arithmetic rescues a Szydło minority";
+!}
+go-to: third_confidence_roll
+
+@third_sasin_toleration
+title: Let Sasin take the PiS minority
+subtitle: The coalition arithmetic stays fixed; only the prime minister's name changes.
+on-arrival: {!
+const pslSupport = Math.min(22, Math.max(0, Q.psl_seats));
+Q.third_candidate = "Jacek Sasin";
+Q.third_yes = Math.max(0, Q.pis_seats) + pslSupport;
+Q.third_no =
+    Math.max(0, Q.ko_seats) + Math.max(0, Q.left_seats) +
+    Math.min(7, Math.max(0, Q.p2050_seats));
+Q.third_abstain = Math.max(
+    0,
+    Q.sejm_total - Q.third_yes - Q.third_no
+);
+Q.third_left_cabinet = 0;
+Q.party_unity -= 8;
+Q.psl_relation -= 12;
+Q.far_right_agenda += 4;
+Q.news_headline = "Simple-majority arithmetic rescues a Sasin minority";
+!}
+go-to: third_confidence_roll
+
+@third_kowalczyk_toleration
+title: Let Kowalczyk keep the PiS minority alive
+subtitle: The vote count is unchanged; the cabinet is just wearing a different label.
+on-arrival: {!
+const pslSupport = Math.min(22, Math.max(0, Q.psl_seats));
+Q.third_candidate = "Henryk Kowalczyk";
+Q.third_yes = Math.max(0, Q.pis_seats) + pslSupport;
+Q.third_no =
+    Math.max(0, Q.ko_seats) + Math.max(0, Q.left_seats) +
+    Math.min(7, Math.max(0, Q.p2050_seats));
+Q.third_abstain = Math.max(
+    0,
+    Q.sejm_total - Q.third_yes - Q.third_no
+);
+Q.third_left_cabinet = 0;
+Q.party_unity -= 8;
+Q.psl_relation -= 12;
+Q.far_right_agenda += 4;
+Q.news_headline = "Simple-majority arithmetic rescues a Kowalczyk minority";
 !}
 go-to: third_confidence_roll
 
@@ -2393,6 +2511,8 @@ if (
     thirdCandidateKey.includes("morawiecki") ||
     thirdCandidateKey.includes("szydło") ||
     thirdCandidateKey.includes("szydlo") ||
+    thirdCandidateKey.includes("sasin") ||
+    thirdCandidateKey.includes("kowalczyk") ||
     thirdCandidateKey.includes("czarnek")
 ) {
     Q.government_party = "pis";

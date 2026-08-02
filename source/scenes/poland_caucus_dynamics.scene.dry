@@ -438,6 +438,20 @@ if (
     Q[target + "_active"] &&
     !(target == "razem" && Q.razem_breakaway_protected)
 ) {
+    const activeLeftCaucuses = [
+        "barons",
+        "spring",
+        "labor",
+        "progressives",
+        "razem",
+        "pps",
+        "social_patriot"
+    ].filter(function(caucus) {
+        if (caucus == "razem" && Q.razem_breakaway_protected) {
+            return false;
+        }
+        return Q[caucus + "_active"] && Q[caucus + "_in_left"];
+    }).length;
     const strength = Math.max(
         0.5,
         Number(Q[target + "_strength"]) || 0
@@ -481,28 +495,45 @@ if (
     const brokerCohesion = Number(Q[target + "_cohesion"]) || 0;
     const grievanceMemory =
         Number(Q[target + "_grievance_memory"]) || 0;
+    const lateCaucusExitScale = activeLeftCaucuses <= 1
+        ? 0.12
+        : (activeLeftCaucuses == 2
+            ? 0.35
+            : (activeLeftCaucuses == 3 ? 0.70 : 1));
+    const departureFloor = activeLeftCaucuses <= 1
+        ? 0.01
+        : (activeLeftCaucuses == 2 ? 0.05 : 0.18);
+    const departureCeiling = activeLeftCaucuses <= 1
+        ? 0.22
+        : (activeLeftCaucuses == 2 ? 0.40 : 0.82);
     const departureRate = Math.max(
-        0.18,
+        departureFloor,
         Math.min(
-            0.82,
-            0.10 +
-                localOrganisation * 0.0022 +
-                personalFollowing * 0.0017 +
-                ideologicalIntensity * 0.0022 +
-                brokerCohesion * 0.0013 +
-                grievanceMemory * 0.001 +
-                (100 - listDependence) * 0.0015 -
-                officeHold * 0.002
+            departureCeiling,
+            (
+                0.10 +
+                    localOrganisation * 0.0022 +
+                    personalFollowing * 0.0017 +
+                    ideologicalIntensity * 0.0022 +
+                    brokerCohesion * 0.0013 +
+                    grievanceMemory * 0.001 +
+                    (100 - listDependence) * 0.0015 -
+                    officeHold * 0.002
+            ) * lateCaucusExitScale
         )
     );
     const maximumFinalWave = estimatedCaucusMps > 1
         ? Math.max(0, availableSeats - 1)
         : availableSeats;
+    const minimumExitSeats = activeLeftCaucuses <= 2 ? 0 : 1;
     const exitSeats = availableSeats > 0
         ? Math.min(
             currentLeftSeats,
             maximumFinalWave,
-            Math.max(1, Math.round(availableSeats * departureRate))
+            Math.max(
+                minimumExitSeats,
+                Math.round(availableSeats * departureRate)
+            )
         )
         : 0;
     const totalDeparted = priorIndividualDefections + exitSeats;

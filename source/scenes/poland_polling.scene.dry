@@ -10,6 +10,8 @@ const clampPolling = function(value, low, high) {
 };
 const pollMonthKey =
     finitePolling(Q.year, 2019) * 100 + finitePolling(Q.month, 1);
+const pollMonthIndex =
+    finitePolling(Q.year, 2019) * 12 + finitePolling(Q.month, 1);
 const shouldRefreshPolling =
     finitePolling(Q.poll_state_month_key, -1) != pollMonthKey;
 
@@ -18,9 +20,11 @@ const shouldRefreshPolling =
 // are monthly state, so only the first visit may rebuild them.
 if (shouldRefreshPolling) {
 const partyIds = [
-    "left", "pis", "ko", "psl", "konf", "p2050", "other"
+    "left", "pis", "ko", "psl", "konf", "p2050", "p0", "other"
 ];
-const namedPartyIds = ["left", "pis", "ko", "psl", "konf", "p2050"];
+const namedPartyIds = [
+    "left", "pis", "ko", "psl", "konf", "p2050", "p0"
+];
 const partyNames = {
     left: "Lewica",
     pis: "PiS",
@@ -28,10 +32,14 @@ const partyNames = {
     psl: "PSL",
     konf: "Konfederacja",
     p2050: "Polska 2050",
+    p0: "Partia Zero",
     other: "Inni"
 };
 const isFormationEra = Q.scenario_mode == "formation_2023";
 const activeParty = function(id) {
+    if (id == "p0") {
+        return !!Q.p0_formed;
+    }
     return id != "p2050" ||
         (!!Q.p2050_emerged && !Q.p2050_joined_left);
 };
@@ -48,7 +56,7 @@ const groupDefinitions = [
         culturalIdeal: 20,
         scores: {
             left: 24, pis: 10, ko: 44, psl: 2,
-            konf: 6, p2050: 14, other: 5
+            konf: 6, p2050: 14, p0: 5, other: 5
         }
     },
     {
@@ -59,7 +67,7 @@ const groupDefinitions = [
         culturalIdeal: 35,
         scores: {
             left: 12, pis: 16, ko: 52, psl: 5,
-            konf: 8, p2050: 18, other: 5
+            konf: 8, p2050: 18, p0: 6, other: 5
         }
     },
     {
@@ -70,7 +78,7 @@ const groupDefinitions = [
         culturalIdeal: 46,
         scores: {
             left: 20, pis: 38, ko: 28, psl: 7,
-            konf: 4, p2050: 9, other: 5
+            konf: 4, p2050: 9, p0: 4, other: 5
         }
     },
     {
@@ -81,7 +89,7 @@ const groupDefinitions = [
         culturalIdeal: 66,
         scores: {
             left: 18, pis: 48, ko: 18, psl: 7,
-            konf: 9, p2050: 5, other: 3
+            konf: 9, p2050: 5, p0: 8, other: 3
         }
     },
     {
@@ -92,7 +100,7 @@ const groupDefinitions = [
         culturalIdeal: 75,
         scores: {
             left: 9, pis: 55, ko: 15, psl: 10,
-            konf: 9, p2050: 7, other: 3
+            konf: 9, p2050: 7, p0: 9, other: 3
         }
     },
     {
@@ -103,7 +111,7 @@ const groupDefinitions = [
         culturalIdeal: 80,
         scores: {
             left: 5, pis: 55, ko: 9, psl: 22,
-            konf: 7, p2050: 6, other: 2
+            konf: 7, p2050: 6, p0: 8, other: 2
         }
     },
     {
@@ -114,7 +122,7 @@ const groupDefinitions = [
         culturalIdeal: 82,
         scores: {
             left: 6, pis: 61, ko: 18, psl: 11,
-            konf: 2, p2050: 4, other: 2
+            konf: 2, p2050: 4, p0: 3, other: 2
         }
     },
     {
@@ -125,7 +133,7 @@ const groupDefinitions = [
         culturalIdeal: 51,
         scores: {
             left: 14, pis: 18, ko: 15, psl: 3,
-            konf: 40, p2050: 12, other: 6
+            konf: 40, p2050: 12, p0: 26, other: 6
         }
     }
 ];
@@ -240,7 +248,8 @@ const economicDefaults = {
     ko: 60,
     psl: 49,
     konf: 86,
-    p2050: 55
+    p2050: 55,
+    p0: 92
 };
 const culturalDefaults = {
     left: isFormationEra ? 50.3 : 52.3,
@@ -248,7 +257,8 @@ const culturalDefaults = {
     ko: 43,
     psl: 68,
     konf: 91,
-    p2050: 51
+    p2050: 51,
+    p0: 74
 };
 
 if (!Number.isFinite(Number(Q.national_turnout_climate))) {
@@ -261,7 +271,7 @@ if (!Number.isFinite(Number(Q.left_economic_position))) {
 if (!Number.isFinite(Number(Q.left_cultural_position))) {
     Q.left_cultural_position = culturalDefaults.left;
 }
-for (const id of ["pis", "ko", "psl", "konf", "p2050"]) {
+for (const id of ["pis", "ko", "psl", "konf", "p2050", "p0"]) {
     if (!Number.isFinite(Number(Q[id + "_economic_position"]))) {
         Q[id + "_economic_position"] = economicDefaults[id];
     }
@@ -284,6 +294,50 @@ for (const id of partyIds) {
     Q[id + "_poll_momentum"] =
         finitePolling(Q[id + "_poll_momentum"], 0) +
         current - previous;
+}
+
+const monthKeyNow = Math.round(finitePolling(pollMonthKey, -1));
+const monthIndexNow = Math.round(finitePolling(pollMonthIndex, 0));
+if (
+    !Q.p0_formed &&
+    monthKeyNow >= 202506 &&
+    finitePolling(Q.stanowski_trigger_score, 0) > 1.24
+) {
+    const triggerSupport =
+        finitePolling(Q.stanowski_trigger_score, 0) - 1.24;
+    const channelFactor = Math.max(
+        0,
+        finitePolling(Q.kanal_zero_capacity, 12) - 12
+    );
+    const emergenceChance = clampPolling(
+        0.14 + triggerSupport * 0.22 + channelFactor * 0.005,
+        0.14,
+        0.68
+    );
+    if ((this.random.uint32() / 4294967296) <= emergenceChance) {
+        const peakRoll = this.random.uint32() / 4294967296;
+        Q.p0_peak = peakRoll < 0.30
+            ? 3
+            : (peakRoll < 0.60 ? 6 : (peakRoll < 0.90 ? 11 : 6));
+        Q.p0_peak_band = Q.p0_peak == 3
+            ? "minor"
+            : (Q.p0_peak == 6 ? "mid" : "major");
+        Q.p0_formed = 1;
+        Q.p0_emergence_month_key = monthKeyNow;
+        Q.p0_emergence_month_index = monthIndexNow;
+        Q.p0_alert_stage = 0;
+        Q.p0_alert_event_done = 0;
+        Q.p0_pressure = 1;
+        Q.p0_org_resources = Math.max(3, finitePolling(Q.p0_org_resources, 3));
+        Q.p0_org_income = Math.max(2, finitePolling(Q.p0_org_income, 2));
+        Q.p0_ai_actions = Math.max(0, finitePolling(Q.p0_ai_actions, 0));
+        Q.p0_ai_headline =
+            "Partia Zero launches from the Kanał Zero electorate";
+        Q.p0_ai_strategy =
+            "Convert a media electorate into a right-libertarian committee";
+        Q.news_headline =
+            "Stanowski's presidential electorate starts a new party project";
+    }
 }
 
 const positionFitChange = function(group, party) {
@@ -510,6 +564,25 @@ const partyBlocChange = function(group, id) {
                     ? delta("government_delivery") * 0.030
                     : 0)
             : 0;
+    }
+    if (id == "p0") {
+        if (!Q.p0_formed) return 0;
+        const monthsSinceLaunch = Math.max(
+            0,
+            monthIndexNow - Math.max(
+                0,
+                finitePolling(Q.p0_emergence_month_index, monthIndexNow)
+            )
+        );
+        const launchScale = clampPolling(monthsSinceLaunch / 16, 0, 1);
+        const antiSystemTailwind = clampPolling(
+            finitePolling(Q.covid_anti_system_pressure, 0) * 0.012,
+            0,
+            1.6
+        );
+        return launchScale * 1.2 +
+            antiSystemTailwind +
+            Math.min(1.4, finitePolling(Q.p0_ai_actions, 0) * 0.06);
     }
     return 0;
 };
@@ -790,6 +863,59 @@ for (const id of partyIds) {
             finitePolling(Q[id + "_poll_momentum"], 0) -
             budgetCrisisPenalty(id) + economyCorrection(id)
     );
+}
+
+if (Q.p0_formed) {
+    const peakTarget = Math.max(3, finitePolling(Q.p0_peak, 6));
+    const launchIndex = Math.max(
+        0,
+        finitePolling(Q.p0_emergence_month_index, monthIndexNow)
+    );
+    const monthsSinceLaunch = Math.max(0, monthIndexNow - launchIndex);
+    const growthWindow = clampPolling(monthsSinceLaunch / 22, 0, 1);
+    const desiredShare = clampPolling(
+        peakTarget * (0.32 + growthWindow * 0.78),
+        0.9,
+        peakTarget + 0.6
+    );
+    const upward = clampPolling(desiredShare - corrected.p0, -0.3, 0.85);
+    if (upward != 0) {
+        corrected.p0 = Math.max(0.1, corrected.p0 + upward);
+        const donors = [
+            {id: "pis", weight: 0.45},
+            {id: "konf", weight: 0.35},
+            {id: "ko", weight: 0.20}
+        ];
+        let transferPool = Math.abs(upward);
+        if (upward > 0) {
+            for (const donor of donors) {
+                const requested = transferPool * donor.weight;
+                const taken = Math.min(
+                    Math.max(0, corrected[donor.id] - 0.05),
+                    requested
+                );
+                corrected[donor.id] -= taken;
+                transferPool -= taken;
+            }
+            if (transferPool > 0) {
+                const konfTake = Math.min(
+                    Math.max(0, corrected.konf - 0.05),
+                    transferPool
+                );
+                corrected.konf -= konfTake;
+            }
+        } else {
+            corrected.konf += Math.abs(upward) * 0.45;
+            corrected.pis += Math.abs(upward) * 0.35;
+            corrected.ko += Math.abs(upward) * 0.20;
+        }
+    }
+    Q.p0_pressure = Math.round(
+        clampPolling((corrected.p0 / Math.max(0.1, peakTarget)) * 100, 0, 140)
+    );
+    Q.p0_alert_stage = corrected.p0 >= 9
+        ? 3
+        : (corrected.p0 >= 5 ? 2 : (corrected.p0 >= 2.5 ? 1 : 0));
 }
 
 // Splits are committees, not flavour flags. First calculate the electoral
@@ -1204,6 +1330,7 @@ const thresholds = {
     psl: 5,
     konf: 5,
     p2050: 5,
+    p0: 5,
     sld_breakaway: 5,
     social_patriot: 5,
     spring_breakaway: 5,
@@ -1213,7 +1340,7 @@ const thresholds = {
     pps: 5,
     left_coalition: 8,
     democratic_list: 8,
-    tak_rozwoj: 5,
+    tak_rozwoj: 3,
     centrum: 5,
     rozwoj: 5,
     korona: 5,
@@ -1251,6 +1378,7 @@ const seatProjection = {
     psl: 0,
     konf: 0,
     p2050: 0,
+    p0: 0,
     sld_breakaway: 0,
     social_patriot: 0,
     spring_breakaway: 0,
@@ -1434,6 +1562,7 @@ Q.coalition_democratic_seats =
 Q.coalition_right_seats =
     Q.pis_projected_seats + Q.konf_projected_seats +
     Q.rozwoj_projected_seats + Q.korona_projected_seats +
+    Q.p0_projected_seats +
     (Q.social_patriot_list_committee == "pis"
         ? Q.social_patriot_projected_seats : 0);
 Q.coalition_center_seats =
@@ -1596,6 +1725,7 @@ const pollHistoryRecord = {
     ko: finitePolling(Q.ko_poll, 0),
     psl: finitePolling(Q.psl_poll, 0),
     p2050: finitePolling(Q.p2050_poll, 0),
+    p0: finitePolling(Q.p0_poll, 0),
     konf: finitePolling(Q.konf_poll, 0),
     other: finitePolling(Q.other_poll, 0)
 };
@@ -1662,7 +1792,8 @@ Q.polling_has_dated_route =
     ) ||
     (
         Q.year == 2020 && Q.month == 9 &&
-        (Q.trz_repeat_election_pending || !Q.merger_event_done)
+        (Q.trz_repeat_election_pending || !Q.merger_event_done) &&
+        Q.barons_active && Q.barons_in_left && Q.spring_active && Q.spring_in_left
     ) ||
     (
         Q.year == 2020 && Q.month == 10 && !Q.abortion_event_done
