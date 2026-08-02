@@ -13,6 +13,312 @@ if (Q.started) {
         }
     };
 
+    // Old saves could retain the historical Razem candidacy after making
+    // Zandberg the common nominee. One person can occupy only one ballot row.
+    if (Q.pres_2025_left_candidate == "Adrian Zandberg") {
+        Q.pres_2025_candidate = "Adrian Zandberg";
+        Q.pres_2025_united_left = 1;
+        Q.pres_2025_razem_candidate = "None";
+    } else if (Q.pres_2025_united_left) {
+        Q.pres_2025_razem_candidate = "None";
+    }
+
+    // Major reforms are persistent projects rather than one-off cabinet
+    // cards. Explicit defaults keep old saves safe when raw JavaScript reads
+    // progress, commitments or a pending coalition dispute.
+    const majorReformDefaults = {
+        poland_abortion_reform_timer: 0,
+        poland_marriage_reform_timer: 0,
+        poland_labor_reform_timer: 0,
+        abortion_reform_stage: 0,
+        abortion_reform_defined: 0,
+        abortion_reform_goal_stage: 4,
+        abortion_reform_proposal_stage: 4,
+        abortion_reform_settled: 0,
+        abortion_reform_progress: 0,
+        abortion_reform_power: 0,
+        abortion_reform_threshold: 0,
+        abortion_reform_next_stage: 4,
+        abortion_ko_commitment: 0,
+        abortion_pis_commitment: 0,
+        abortion_third_way_commitment: 0,
+        abortion_palace_commitment: 0,
+        abortion_referendum_mandate: 0,
+        abortion_referendum_score: 0,
+        marriage_reform_stage: 0,
+        marriage_reform_defined: 0,
+        marriage_reform_goal_stage: 4,
+        marriage_reform_proposal_stage: 4,
+        marriage_reform_settled: 0,
+        marriage_reform_progress: 0,
+        marriage_reform_power: 0,
+        marriage_reform_threshold: 0,
+        marriage_reform_next_stage: 4,
+        marriage_ko_commitment: 0,
+        marriage_pis_commitment: 0,
+        marriage_third_way_commitment: 0,
+        marriage_palace_commitment: 0,
+        marriage_referendum_mandate: 0,
+        marriage_referendum_score: 0,
+        labor_reform_stage: 0,
+        labor_reform_defined: 0,
+        labor_reform_goal_stage: 4,
+        labor_reform_proposal_stage: 4,
+        labor_reform_settled: 0,
+        labor_reform_progress: 0,
+        labor_reform_power: 0,
+        labor_reform_threshold: 0,
+        labor_reform_next_stage: 4,
+        labor_ko_commitment: 0,
+        labor_pis_commitment: 0,
+        labor_third_way_commitment: 0,
+        labor_palace_commitment: 0,
+        reform_pressure_pending: 0,
+        reform_pressure_actor_live: 0,
+        reform_pressure_authority_live: 0,
+        reform_pressure_intensity: 0,
+        reform_pressure_illegality: 0,
+        reform_pressure_target_stage: 0,
+        reform_pressure_previous_stage: 0,
+        reform_pressure_palace_override: 0,
+        reform_pressure_referendum_used: 0,
+        reform_pressure_bargain_available: 0,
+        reform_pressure_override_votes: 0,
+        reform_pressure_override_available: 0,
+        reform_pressure_abandoned: 0,
+        reform_pressure_cooldown: 0,
+        reform_pressure_due_time: -1,
+        reform_pressure_demands: 0,
+        reform_pressure_objections: 0,
+        major_reforms_complete: 0,
+        coalition_judicial_pressure_concessions: 0,
+        coalition_media_takeover_concessions: 0,
+        marketisation_concessions: 0,
+        pegasus_legal_framework: 0,
+        anticlerical_edge: 70,
+        pzpr_history_concessions: 0
+    };
+    for (const key of Object.keys(majorReformDefaults)) {
+        if (!Number.isFinite(Number(Q[key]))) {
+            Q[key] = majorReformDefaults[key];
+        }
+    }
+    for (const issue of ["abortion", "marriage", "labor"]) {
+        Q[issue + "_reform_stage"] = Math.round(clamp(
+            Q[issue + "_reform_stage"], 0, 4
+        ));
+        Q[issue + "_reform_goal_stage"] = Math.round(clamp(
+            Q[issue + "_reform_goal_stage"], 1, 4
+        ));
+        Q[issue + "_reform_proposal_stage"] = Math.round(clamp(
+            Q[issue + "_reform_proposal_stage"], 1, 4
+        ));
+        Q[issue + "_reform_defined"] =
+            Q[issue + "_reform_defined"] ? 1 : 0;
+        Q[issue + "_reform_settled"] =
+            Q[issue + "_reform_settled"] ? 1 : 0;
+        Q[issue + "_reform_progress"] = clamp(
+            Q[issue + "_reform_progress"], 0, 100
+        );
+        Q[issue + "_reform_power"] = clamp(
+            Q[issue + "_reform_power"], 0, 140
+        );
+        for (const partner of ["ko", "pis", "third_way", "palace"]) {
+            Q[issue + "_" + partner + "_commitment"] = Math.round(clamp(
+                Q[issue + "_" + partner + "_commitment"], 0, 4
+            ));
+        }
+        const palacePresidentKey = issue + "_palace_president";
+        if (typeof Q[palacePresidentKey] != "string") {
+            Q[palacePresidentKey] =
+                Q[issue + "_palace_commitment"] > 0
+                    ? Q.president_name
+                    : "";
+        }
+    }
+    Q.abortion_referendum_mandate = Q.abortion_referendum_mandate ? 1 : 0;
+    Q.marriage_referendum_mandate = Q.marriage_referendum_mandate ? 1 : 0;
+    Q.reform_pressure_pending = Q.reform_pressure_pending ? 1 : 0;
+    Q.reform_pressure_referendum_used =
+        Q.reform_pressure_referendum_used ? 1 : 0;
+    Q.reform_pressure_intensity = clamp(
+        Q.reform_pressure_intensity, 0, 100
+    );
+    Q.reform_pressure_illegality = clamp(
+        Q.reform_pressure_illegality, 0, 100
+    );
+    Q.anticlerical_edge = clamp(Q.anticlerical_edge, 0, 100);
+
+    // An enacted historical settlement closes that issue's campaign. The
+    // number records how far the original ambitious bill was forced down; it
+    // is an outcome, not a rung that unlocks another card later.
+    if (!Q.abortion_reform_settled && Q.abortion_law_enacted) {
+        Q.abortion_reform_stage = Math.max(Q.abortion_reform_stage, 2);
+    }
+    if (
+        !Q.abortion_reform_settled &&
+        Q.trz_rights_bill == "Abortion-law restoration" &&
+        Q.trz_rights_bill_outcome == "Passed and signed"
+    ) {
+        Q.abortion_reform_stage = Math.max(Q.abortion_reform_stage, 3);
+    }
+    if (!Q.marriage_reform_settled && Q.partnership_revision_enacted) {
+        Q.marriage_reform_stage = Math.max(Q.marriage_reform_stage, 1);
+    }
+    if (
+        !Q.marriage_reform_settled &&
+        (
+            Q.partnership_presidential_outcome == "Signed" ||
+            Q.partnership_implementation_complete
+        )
+    ) {
+        Q.marriage_reform_stage = Math.max(Q.marriage_reform_stage, 3);
+    }
+    if (
+        !Q.marriage_reform_settled &&
+        Q.trz_rights_bill == "Marriage equality" &&
+        Q.trz_rights_bill_outcome == "Passed and signed"
+    ) {
+        Q.marriage_reform_stage = 4;
+    }
+    if (!Q.labor_reform_settled && Q.pip_law_enacted) {
+        Q.labor_reform_stage = Math.max(Q.labor_reform_stage, 2);
+    }
+    for (const issue of ["abortion", "marriage", "labor"]) {
+        if (Q[issue + "_reform_stage"] > 0) {
+            Q[issue + "_reform_defined"] = 1;
+            Q[issue + "_reform_settled"] = 1;
+            Q[issue + "_reform_proposal_stage"] =
+                Q[issue + "_reform_stage"];
+        }
+    }
+    if (
+        !Q.major_reforms_complete &&
+        Q.abortion_reform_settled &&
+        Q.marriage_reform_settled &&
+        Q.labor_reform_settled
+    ) {
+        Q.major_reforms_complete = 1;
+        Q.left_poll += 2;
+        Q.public_trust += 4;
+        Q.winner_reputation += 5;
+        Q.issue_ownership += 5;
+        for (const group of [
+            "metropolitan_liberals", "liberal_professionals",
+            "public_service_families", "industrial_logistics",
+            "provincial_welfare", "rural_localists",
+            "older_welfare_households", "anti_establishment_youth"
+        ]) {
+            const affinityKey = group + "_left_affinity";
+            Q[affinityKey] = (Number(Q[affinityKey]) || 0) + 2;
+        }
+        Q.news_headline =
+            "Lewica closes the Third Republic's three defining reform disputes";
+    }
+
+    // New project enactments also satisfy the older dated-chain flags. This
+    // is deliberately monotonic: a later historical callback may never veto
+    // or downgrade a stronger law the player has already enacted.
+    if (Q.abortion_reform_stage >= 1) {
+        Q.abortion_law_enacted = 1;
+        Q.abortion_rewrite_pending = 0;
+        Q.abortion_cabinet_deadline = 0;
+        Q.abortion_event_done = 1;
+        Q.strike_event_done = 1;
+        Q.november_2021_sajbor_done = 1;
+        Q.dorota_2023_done = 1;
+    }
+    if (Q.marriage_reform_stage >= 1) {
+        Q.partnership_revision_enacted = 1;
+        Q.partnership_revision_pending = 0;
+        Q.partnership_revision_result =
+            "Superseded by the enacted major-reform settlement";
+    }
+    if (Q.marriage_reform_stage >= 3) {
+        Q.partnership_sejm_passed = 1;
+        Q.partnership_presidential_outcome = "Signed";
+        Q.partnership_implementation_pending = 0;
+        Q.partnership_implementation_complete = 1;
+    }
+    if (Q.labor_reform_stage >= 1) {
+        Q.pip_reform_pending = 0;
+    }
+    if (Q.labor_reform_stage >= 2) {
+        Q.pip_law_enacted = 1;
+        Q.pip_presidential_action =
+            "Superseded by the enacted major-reform settlement";
+    }
+
+    const reformLabels = {
+        abortion: [
+            "No durable reform",
+            "Emergency and clinician decriminalisation",
+            "Limited decriminalisation compromise",
+            "Legal access through twelve weeks",
+            "Canadian-model decriminalisation"
+        ],
+        marriage: [
+            "No national recognition",
+            "Closest-person agreement",
+            "Registered cohabitation",
+            "Civil partnerships",
+            "Marriage equality and adoption"
+        ],
+        labor: [
+            "Existing enforcement settlement",
+            "Funded inspection and token enforcement",
+            "PIP reclassification and enforcement powers",
+            "Contract and labour-law protections",
+            "Full Razem labour package"
+        ]
+    };
+    for (const issue of Object.keys(reformLabels)) {
+        const stage = Q[issue + "_reform_stage"];
+        const goal = Q[issue + "_reform_goal_stage"];
+        const proposal = Q[issue + "_reform_proposal_stage"];
+        Q[issue + "_reform_next_stage"] = proposal;
+        Q[issue + "_reform_stage_label"] = reformLabels[issue][stage];
+        Q[issue + "_reform_goal_label"] = reformLabels[issue][goal];
+        Q[issue + "_reform_next_label"] = reformLabels[issue][proposal];
+    }
+    if (typeof Q.abortion_referendum_result != "string") {
+        Q.abortion_referendum_result = "No referendum campaign";
+    }
+    if (typeof Q.marriage_referendum_result != "string") {
+        Q.marriage_referendum_result = "No referendum campaign";
+    }
+    if (typeof Q.reform_pressure_mode != "string") {
+        Q.reform_pressure_mode = "None";
+    }
+    if (typeof Q.reform_pressure_return_mode != "string") {
+        Q.reform_pressure_return_mode = "card";
+    }
+    if (typeof Q.reform_pressure_actor != "string") {
+        Q.reform_pressure_actor = "";
+    }
+    if (typeof Q.reform_pressure_actor_name != "string") {
+        Q.reform_pressure_actor_name = "No coalition partner";
+    }
+    if (typeof Q.reform_pressure_issue != "string") {
+        Q.reform_pressure_issue = "";
+    }
+    if (typeof Q.reform_pressure_issue_name != "string") {
+        Q.reform_pressure_issue_name = "No reform dispute";
+    }
+    if (typeof Q.reform_pressure_last_result != "string") {
+        Q.reform_pressure_last_result = "No coalition reform pressure yet";
+    }
+    if (!["pis", "ko", "left", "neutral"].includes(Q.public_media_patron)) {
+        const transition = String(Q.public_media_transition || "");
+        Q.public_media_patron =
+            transition.indexOf("KO") >= 0 ||
+            transition.indexOf("Rapid corporate") >= 0
+                ? "ko"
+                : (transition.indexOf("pluralist") >= 0
+                    ? "neutral"
+                    : "pis");
+    }
+
     const rivalNumericDefaults = {
         poland_rival_organisations_timer: 0,
         rival_individual_recruits: 0,
@@ -1070,29 +1376,29 @@ if (Q.started) {
             Boolean(Q.snap_psl_cabinet_committed)
         );
     const democraticCabinetDefaults = {
-        labor: ["KO", "Coalition social-policy nominee"],
-        equality: ["KO", "Coalition equality nominee"],
-        housing: ["KO", "Coalition housing nominee"],
+        labor: ["KO", "Marzena Okła-Drewnowicz"],
+        equality: ["KO", "Monika Rosa"],
+        housing: ["KO", "Krystyna Sibińska"],
         health: ["KO", "Izabela Leszczyna"],
         digital: p2050CabinetEligible
-            ? ["Poland 2050", "Coalition digital nominee"]
-            : ["KO", "Coalition digital nominee"],
-        science: ["KO", "Coalition science nominee"],
+            ? ["Poland 2050", "Michał Gramatyka"]
+            : ["KO", "Jan Grabiec"],
+        science: ["KO", "Barbara Nowacka"],
         interior: ["KO", "Marcin Kierwiński"],
         finance: ["KO", "Andrzej Domański"],
         economy:
             !pslCabinetEligible
-            ? ["KO", "Coalition development nominee"]
+            ? ["KO", "Borys Budka"]
             : ["PSL", "Krzysztof Hetman"],
         justice: ["KO", "Adam Bodnar"],
         foreign: ["KO", "Radosław Sikorski"],
         agriculture:
             !pslCabinetEligible
-            ? ["KO", "Coalition agriculture nominee"]
+            ? ["KO", "Dorota Niedziela"]
             : ["PSL", "Czesław Siekierski"],
         defence:
             !pslCabinetEligible
-            ? ["KO", "Coalition defence nominee"]
+            ? ["KO", "Tomasz Siemoniak"]
             : ["PSL", "Władysław Kosiniak-Kamysz"]
     };
     let cabinetDefaults = democraticCabinetDefaults;
@@ -1116,27 +1422,12 @@ if (Q.started) {
         };
         const cabinetParty =
             cabinetPartyLabels[Q.government_party] || "Cabinet";
-        const cabinetOfficeLabels = {
-            labor: "social-policy",
-            equality: "equality",
-            housing: "housing",
-            health: "health",
-            digital: "digital",
-            science: "science",
-            interior: "interior",
-            finance: "finance",
-            economy: "development",
-            justice: "justice",
-            foreign: "foreign-affairs",
-            agriculture: "agriculture",
-            defence: "defence"
-        };
         const pisCabinetMinisters = {
             labor: "Dorota Bojemska",
-            equality: "PiS equality nominee",
-            housing: "PiS housing nominee",
+            equality: "Anna Schmidt",
+            housing: "Piotr Uściński",
             health: "Ewa Krajewska",
-            digital: "PiS digital-affairs nominee",
+            digital: "Janusz Cieszyński",
             science: "Krzysztof Szczucki",
             interior: "Paweł Szefernaker",
             finance: "Andrzej Kosztowniak",
@@ -1146,6 +1437,41 @@ if (Q.started) {
             agriculture: "Anna Gembicka",
             defence: "Mariusz Błaszczak"
         };
+        const leftCabinetMinisters = {
+            labor: "Agnieszka Dziemianowicz-Bąk",
+            equality: "Katarzyna Kotula",
+            housing: "Magdalena Biejat",
+            health: "Marcelina Zawisza",
+            digital: "Krzysztof Gawkowski",
+            science: "Dariusz Wieczorek",
+            interior: "Wiesław Szczepański",
+            finance: "Dariusz Standerski",
+            economy: "Paulina Matysiak",
+            justice: "Krzysztof Śmiszek",
+            foreign: "Andrzej Szejna",
+            agriculture: "Wiesław Buż",
+            defence: "Marcin Kulasek"
+        };
+        const independentCabinetMinisters = {
+            labor: "Gertruda Uścińska",
+            equality: "Zuzanna Rudzińska-Bluszcz",
+            housing: "Joanna Erbel",
+            health: "Maria Libura",
+            digital: "Alek Tarkowski",
+            science: "Michał Kleiber",
+            interior: "Marek Biernacki",
+            finance: "Paweł Wojciechowski",
+            economy: "Jerzy Hausner",
+            justice: "Ewa Łętowska",
+            foreign: "Jacek Czaputowicz",
+            agriculture: "Monika Stanny",
+            defence: "Stanisław Koziej"
+        };
+        const cabinetMinisters = Q.government_party == "pis"
+            ? pisCabinetMinisters
+            : Q.government_party == "lewica"
+            ? leftCabinetMinisters
+            : independentCabinetMinisters;
         cabinetDefaults = {};
         for (
             const portfolio of Object.keys(
@@ -1154,13 +1480,7 @@ if (Q.started) {
         ) {
             cabinetDefaults[portfolio] = [
                 cabinetParty,
-                Q.government_party == "pis"
-                    ? pisCabinetMinisters[portfolio]
-                    : (
-                        cabinetParty + " " +
-                        cabinetOfficeLabels[portfolio] +
-                        " nominee"
-                    )
+                cabinetMinisters[portfolio]
             ];
         }
         cabinetAllowedParties = [cabinetParty];
@@ -1180,7 +1500,10 @@ if (Q.started) {
             !Q[partyKey].length;
         const ministerMissing =
             typeof Q[ministerKey] != "string" ||
-            !Q[ministerKey].length;
+            !Q[ministerKey].length ||
+            /nominee|unassigned|development ministry/i.test(
+                Q[ministerKey]
+            );
         const authorityVacancy =
             String(Q[ministerKey] || "").includes(
                 "appointment pending"
@@ -1508,6 +1831,8 @@ if (Q.started) {
     }
 
     Q.snap_campaign_active = Q.snap_campaign_active ? 1 : 0;
+    Q.election_2027_terminal = Q.election_2027_terminal ? 1 : 0;
+    Q.election_2027_campaign_open = Q.election_2027_campaign_open ? 1 : 0;
     if (!Number.isFinite(Number(Q.snap_campaign_start_time))) {
         Q.snap_campaign_start_time = -1;
     }
@@ -1519,6 +1844,9 @@ if (Q.started) {
     }
     if (typeof Q.snap_campaign_strategy != "string") {
         Q.snap_campaign_strategy = "No snap campaign";
+    }
+    if (typeof Q.election_2027_campaign_strategy != "string") {
+        Q.election_2027_campaign_strategy = "No 2027 campaign line";
     }
 
     // Budget defeat scenes predate the constitutional scheduler. Record the
@@ -1626,9 +1954,9 @@ if (Q.started) {
         Q.foreign_authority_scope +=
             "; the Palace separately adds representation, ratification, appointments and convening, but no cabinet command";
     }
-    // A compact crisis score opens pragmatic bargaining without making a PiS
-    // cabinet generally friendly. The displayed forecast below is the same
-    // arithmetic used by the negotiation cards.
+    // Bargaining power combines political capacity with the government's need
+    // for votes or cover. Pressure cards move negotiation capital directly;
+    // coalition weakness and media access make those gains politically useful.
     const finitePolitical = function(value, fallback) {
         return Number.isFinite(Number(value)) ? Number(value) : fallback;
     };
@@ -1651,7 +1979,12 @@ if (Q.started) {
         Math.max(0, 45 - finitePolitical(Q.health_capacity, 48)) * 0.34 +
         Math.max(0, 42 - finitePolitical(Q.household_security, 45)) * 0.28;
     Q.national_crisis_pressure = Math.round(
-        clamp(economicCrisis + securityCrisis + serviceCrisis, 0, 100)
+        clamp(
+            economicCrisis + securityCrisis + serviceCrisis +
+                finitePolitical(Q.oath_crisis_pressure, 0),
+            0,
+            100
+        )
     );
     const cohabitationPenalty =
         Q.government_party == "pis" &&
@@ -1675,7 +2008,7 @@ if (Q.started) {
                 (Q.government_party == "pis"
                     ? clamp(finitePolitical(
                         Q.pis_negotiation_hostility_relief, 0
-                    ), 0, 40)
+                    ), -20, 40)
                     : 0) -
                 finitePolitical(Q.negotiation_successes, 0) * 2 +
                 (Q.government_party == "pis" ? enemyFocusHostility : 0),
@@ -1691,36 +2024,81 @@ if (Q.started) {
                 : (Q.government_party == "psl"
                     ? finitePolitical(Q.psl_relation, 24)
                     : finitePolitical(Q.p2050_relation, 20)));
+    const statutoryMajority = Math.max(
+        1,
+        finitePolitical(Q.sejm_statutory_majority, 231)
+    );
+    const governmentMargin =
+        finitePolitical(Q.government_support_seats, statutoryMajority) -
+        statutoryMajority;
+    const leftVoteWeight = clamp(
+        finitePolitical(Q.left_seats, 0) / 50,
+        0,
+        1.2
+    );
+    const parliamentaryNeed = clamp(
+        14 - Math.max(0, governmentMargin) * 1.2 +
+            Math.max(0, -governmentMargin) * 1.5 +
+            Math.max(
+                0,
+                finitePolitical(Q.government_coalition_dissent, 0) - 10
+            ) * 0.2,
+        0,
+        24
+    ) * leftVoteWeight;
+    const earnedGovernmentFavors = clamp(
+        finitePolitical(Q.government_favors, 0) * 4,
+        0,
+        8
+    );
+    const negotiationCapital = clamp(
+        finitePolitical(Q.negotiation_capital, 0),
+        -20,
+        30
+    );
+    Q.negotiation_capital = negotiationCapital;
     const palaceMediation =
         Q.president_name == "Rafał Trzaskowski" ? 14 :
         (finitePolitical(Q.president_relation, 18) >= 55 ? 5 : 0);
     Q.negotiation_leverage = Math.round(
         clamp(
-            finitePolitical(Q.public_trust, 43) * 0.14 +
-                finitePolitical(Q.labor_credibility, 46) * 0.10 +
-                finitePolitical(Q.local_network, 42) * 0.06 +
-                governmentRelation * 0.12 +
-                Q.national_crisis_pressure * 0.30 +
+            parliamentaryNeed + earnedGovernmentFavors +
+                finitePolitical(Q.public_trust, 43) * 0.12 +
+                finitePolitical(Q.labor_credibility, 46) * 0.08 +
+                finitePolitical(Q.local_network, 42) * 0.04 +
+                finitePolitical(Q.media_access, 31) * 0.06 +
+                governmentRelation * 0.08 +
+                Q.national_crisis_pressure * 0.28 +
                 palaceMediation +
-                finitePolitical(Q.negotiation_capital, 0) -
-                Q.government_negotiation_hostility * 0.20,
+                negotiationCapital -
+                Q.government_negotiation_hostility * 0.09,
             0,
             100
         )
     );
-    if (Q.government_party == "pis" && Q.national_crisis_pressure < 30) {
+    if (
+        Q.government_party == "pis" &&
+        Q.national_crisis_pressure < 25 &&
+        Q.negotiation_leverage < 24
+    ) {
         Q.negotiation_forecast =
-            "PiS has little reason to bargain; any routine offer will become political theatre";
+            "PiS can govern without us; build leverage through scrutiny, TVP or its social fault line";
+    } else if (
+        Q.government_party == "pis" &&
+        Q.national_crisis_pressure < 25
+    ) {
+        Q.negotiation_forecast =
+            "Public pressure can now force a bounded concession, though PiS still rejects a broad pact";
     } else if (
         Q.government_party == "pis" &&
         Q.president_name == "Rafał Trzaskowski" &&
-        Q.national_crisis_pressure >= 30
+        Q.national_crisis_pressure >= 25
     ) {
         Q.negotiation_forecast =
             "The crisis opens a path through President Trzaskowski, but only for a concrete deal";
     } else if (
         Q.government_party == "pis" &&
-        Q.national_crisis_pressure >= 30
+        Q.national_crisis_pressure >= 25
     ) {
         Q.negotiation_forecast =
             "The crisis has made PiS listen, though it will demand votes and shared blame";
@@ -1757,6 +2135,11 @@ if (Q.started) {
     Q.last_annual_payout = Number.isFinite(Number(Q.last_annual_payout))
         ? Math.max(0, Number(Q.last_annual_payout))
         : 0;
+    Q.last_midyear_resource_restore_year = Number.isFinite(
+        Number(Q.last_midyear_resource_restore_year)
+    )
+        ? Math.round(Number(Q.last_midyear_resource_restore_year))
+        : (Number(Q.month) >= 7 ? Number(Q.year) : Number(Q.year) - 1);
     Q.budget = Number.isFinite(Number(Q.budget))
         ? Number(Q.budget)
         : 0;
@@ -1855,7 +2238,6 @@ if (Q.started) {
         }
         Q[group + "_left"] = clamp(Q[group + "_left"], 0, 100);
     }
-
     for (const party of [
         "left", "pis", "ko", "psl", "konf", "p2050"
     ]) {
@@ -2499,13 +2881,26 @@ if (Q.started) {
         eu_brussels_mission: 0,
         eu_social_mission: 0,
         eu_eastern_mission: 0,
-        eu_triangle_mission: 0,
         eu_influence: 28,
         eu_institutional_trust: 26,
         eu_left_network: 20,
-        eu_eastern_coalition: 24,
-        germany_relation: 38,
-        france_relation: 32,
+        eu_progressive_headwind: 0,
+        eu_right_shift_done: 0,
+        western_economic_drag: 0,
+        western_economic_shock_done: 0,
+        hungary_relation: 42,
+        hungary_democratic_network: 12,
+        hungary_fidesz_channel: 40,
+        hungary_fidesz_in_power: 1,
+        hungary_election_2022_done: Q.year > 2022 ? 1 : 0,
+        hungary_election_2026_done: 0,
+        hungary_election_2026_score: 0,
+        hungary_tisza_seats: 0,
+        hungary_fidesz_seats: 0,
+        ziobro_whereabouts_stage: 0,
+        ziobro_whereabouts_due_time: -1,
+        ziobro_whereabouts_updates: 0,
+        ziobro_world_tour_updates: 0,
         foreign_pressure: 18,
         foreign_cards_resolved: 0,
         foreign_ministry_override_risk: 0,
@@ -2531,12 +2926,31 @@ if (Q.started) {
             Q[quality] = foreignNumericDefaults[quality];
         }
     }
+    Q.ziobro_whereabouts_stage = Math.round(clamp(
+        Q.ziobro_whereabouts_stage, 0, 6
+    ));
+    Q.ziobro_whereabouts_updates = Math.max(
+        0, Math.round(Q.ziobro_whereabouts_updates)
+    );
+    Q.ziobro_world_tour_updates = Math.round(clamp(
+        Q.ziobro_world_tour_updates, 0, 2
+    ));
+    if (typeof Q.ziobro_whereabouts_last != "string") {
+        Q.ziobro_whereabouts_last = "No post-government sighting";
+    }
+    if (typeof Q.ziobro_rumor_country != "string") {
+        Q.ziobro_rumor_country = "";
+    }
     const foreignMissionFlags = [
         "eu_campaign_complete",
         "eu_brussels_mission",
         "eu_social_mission",
         "eu_eastern_mission",
-        "eu_triangle_mission",
+        "eu_right_shift_done",
+        "western_economic_shock_done",
+        "hungary_fidesz_in_power",
+        "hungary_election_2022_done",
+        "hungary_election_2026_done",
         "us_election_2020_done",
         "us_election_2024_done"
     ];
@@ -2547,20 +2961,29 @@ if (Q.started) {
         Number(Q.eu_campaign_progress) || 0,
         Q.eu_brussels_mission +
             Q.eu_social_mission +
-            Q.eu_eastern_mission +
-            Q.eu_triangle_mission
+            Q.eu_eastern_mission
     );
     Q.eu_campaign_progress = Math.max(
         0,
-        Math.min(4, Math.round(Q.eu_campaign_progress))
+        Math.min(3, Math.round(Q.eu_campaign_progress))
     );
     Q.eu_influence = clamp(Q.eu_influence, 0, 100);
     Q.eu_institutional_trust =
         clamp(Q.eu_institutional_trust, 0, 100);
     Q.eu_left_network = clamp(Q.eu_left_network, 0, 100);
-    Q.eu_eastern_coalition = clamp(Q.eu_eastern_coalition, 0, 100);
-    Q.germany_relation = clamp(Q.germany_relation, 0, 100);
-    Q.france_relation = clamp(Q.france_relation, 0, 100);
+    Q.eu_progressive_headwind = clamp(
+        Q.eu_progressive_headwind, 0, 20
+    );
+    Q.western_economic_drag = clamp(
+        Q.western_economic_drag, 0, 20
+    );
+    Q.hungary_relation = clamp(Q.hungary_relation, 0, 100);
+    Q.hungary_democratic_network = clamp(
+        Q.hungary_democratic_network, 0, 100
+    );
+    Q.hungary_fidesz_channel = clamp(
+        Q.hungary_fidesz_channel, 0, 100
+    );
     Q.foreign_pressure = clamp(Q.foreign_pressure, 0, 100);
     Q.foreign_cards_resolved = Math.max(
         0,
@@ -2590,6 +3013,12 @@ if (Q.started) {
     Q.us_congress_channel = clamp(Q.us_congress_channel, 0, 100);
     Q.left_atlanticist_dissent =
         clamp(Q.left_atlanticist_dissent, 0, 100);
+    Q.western_economic_access = Math.round(clamp(
+        Number(Q.eu_institutional_trust) * 0.55 +
+            Number(Q.us_alliance_reliability) * 0.45,
+        0,
+        100
+    ));
     Q.us_2020_roll = clamp(Q.us_2020_roll, 0, 1);
     Q.us_2024_roll = clamp(Q.us_2024_roll, 0, 1);
     Q.us_2020_democratic_vote =
@@ -2616,12 +3045,19 @@ if (Q.started) {
     }
     if (
         typeof Q.us_2024_republican_candidate !== "string" ||
-        !Q.us_2024_republican_candidate.length
+        !Q.us_2024_republican_candidate.length ||
+        Q.us_2024_republican_candidate == "Republican successor"
     ) {
         Q.us_2024_republican_candidate =
             Q.us_election_2020_winner == "Donald Trump"
-                ? "Republican successor"
+                ? "Nikki Haley"
                 : "Donald Trump";
+    }
+    if (Q.us_election_2024_winner == "Republican successor") {
+        Q.us_election_2024_winner = Q.us_2024_republican_candidate;
+    }
+    if (Q.us_president == "Republican successor") {
+        Q.us_president = Q.us_2024_republican_candidate;
     }
     if (
         typeof Q.us_president !== "string" ||
@@ -2641,18 +3077,31 @@ if (Q.started) {
                 ? "Democratic"
                 : "America First";
     }
+    if (typeof Q.hungary_election_2022_result != "string") {
+        Q.hungary_election_2022_result = Q.hungary_election_2022_done
+            ? "Fidesz–KDNP 135 seats · United for Hungary 57"
+            : "Not held";
+    }
+    if (typeof Q.hungary_election_2026_result != "string") {
+        Q.hungary_election_2026_result = "Not held";
+    }
+    if (typeof Q.hungary_government != "string") {
+        Q.hungary_government = Q.hungary_fidesz_in_power
+            ? "Viktor Orbán — Fidesz–KDNP"
+            : "Péter Magyar — Tisza";
+    }
     if (Q.eu_campaign_complete) {
         Q.eu_campaign_stage =
-            "Warsaw compact — social security, democratic law and eastern defence";
+            "Polish EU settlement — funds, democratic law and social investment";
     } else if (Q.eu_campaign_progress >= 3) {
         Q.eu_campaign_stage =
-            "Compact available — three European missions completed";
+            "Three working channels — democratic, social and Ukraine";
     } else if (Q.eu_campaign_progress == 2) {
         Q.eu_campaign_stage =
-            "Coalition building — two European missions completed";
+            "Two working EU channels";
     } else if (Q.eu_campaign_progress == 1) {
         Q.eu_campaign_stage =
-            "First permanent European channel";
+            "First working EU channel";
     } else {
         Q.eu_campaign_stage = "Opening contacts";
     }
@@ -2713,6 +3162,8 @@ if (Q.started) {
         Math.max(0, Q.poland_pis_social_channel_timer || 0);
     Q.poland_pis_right_faultline_timer =
         Math.max(0, Q.poland_pis_right_faultline_timer || 0);
+    Q.poland_tvp_appearance_timer =
+        Math.max(0, Q.poland_tvp_appearance_timer || 0);
     Q.poland_picking_enemies_timer =
         Math.max(0, Q.poland_picking_enemies_timer || 0);
     Q.poland_inter_party_relations_timer =
@@ -2725,10 +3176,6 @@ if (Q.started) {
     }
     Q.poland_european_campaign_timer =
         Math.max(0, Q.poland_european_campaign_timer || 0);
-    Q.poland_brussels_pressure_timer =
-        Math.max(0, Q.poland_brussels_pressure_timer || 0);
-    Q.poland_berlin_pressure_timer =
-        Math.max(0, Q.poland_berlin_pressure_timer || 0);
     Q.poland_eastern_flank_timer =
         Math.max(0, Q.poland_eastern_flank_timer || 0);
     Q.poland_white_house_pressure_timer =
@@ -2742,7 +3189,7 @@ if (Q.started) {
         : 0;
     Q.pis_negotiation_hostility_relief = Number.isFinite(
         Number(Q.pis_negotiation_hostility_relief)
-    ) ? clamp(Q.pis_negotiation_hostility_relief, 0, 40) : 0;
+    ) ? clamp(Q.pis_negotiation_hostility_relief, -20, 40) : 0;
     Q.negotiation_attempts =
         Math.max(0, Math.round(Number(Q.negotiation_attempts) || 0));
     Q.negotiation_successes =

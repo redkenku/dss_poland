@@ -8,6 +8,69 @@ on-arrival: {!
 Q.deckDescription = "Bring a question to the table";
 Q.handDescription = "Open questions";
 Q.pinnedCardsDescription = "Leadership bureau and standing actions";
+if (!this.polandDecksUseFrequency) {
+    const unweightedDrawFromDeck = this._drawFromDeck;
+    this._drawFromDeck = function(deckId) {
+        const weightedDecks = [
+            "poland_party_deck",
+            "poland_government_deck",
+            "poland_negotiation_deck",
+            "poland_major_reform_deck",
+            "poland_foreign_deck"
+        ];
+        if (weightedDecks.indexOf(deckId) < 0) {
+            return unweightedDrawFromDeck.call(this, deckId);
+        }
+
+        const deck = this.game.scenes[deckId];
+        const currentHand =
+            (this.state.currentHands[this.state.sceneId] || []).map(function(card) {
+                return card.id;
+            });
+        let compiledChoices = this._compileChoices(deck) || [];
+        if (
+            !Q.major_reforms_complete &&
+            (
+                deckId == "poland_government_deck" ||
+                deckId == "poland_negotiation_deck"
+            )
+        ) {
+            compiledChoices = compiledChoices.concat(
+                this._compileChoices(
+                    this.game.scenes.poland_major_reform_deck
+                ) || []
+            );
+        }
+        const seenCards = {};
+        const cards = compiledChoices.filter(function(choice) {
+            const scene = this.game.scenes[choice.id];
+            if (
+                !choice.canChoose || !scene.isCard ||
+                currentHand.indexOf(choice.id) >= 0 ||
+                seenCards[choice.id]
+            ) {
+                return false;
+            }
+            seenCards[choice.id] = true;
+            return true;
+        }, this);
+        const cardFrequency = function(card) {
+            const frequency = this.game.scenes[card.id].frequency;
+            return frequency == null ? 100 : frequency;
+        }.bind(this);
+        const totalFrequency = cards.reduce(function(total, card) {
+            return total + cardFrequency(card);
+        }, 0);
+        let draw = this.random.random() * totalFrequency;
+
+        for (const card of cards) {
+            draw -= cardFrequency(card);
+            if (draw < 0) return card;
+        }
+        return null;
+    };
+    this.polandDecksUseFrequency = true;
+}
 const hubHand =
     (this.state.currentHands &&
         this.state.currentHands["poland_hub"]) || [];
@@ -70,6 +133,7 @@ the consequences outside this room.?]</p>
 - @poland_party_deck
 - @poland_government_deck
 - @poland_negotiation_deck
+- @poland_major_reform_deck
 - @poland_foreign_deck
 - #poland_advisor
 - @poland_manage_advisors

@@ -6,8 +6,8 @@ counterfactual designs remain in the other ledgers.
 ## Scope
 
 The main vertical slice begins in **October 2019**, immediately after Lewica's
-return to the Sejm with 49 deputies, and runs continuously through **December
-2026**. Monthly leadership turns combine a native card hand, factional
+return to the Sejm with 49 deputies, and runs continuously through the
+**autumn 2027 Sejm and Senate elections**. Monthly leadership turns combine a native card hand, factional
 advisors, rival-party AI, public opinion, factional ratification and an
 all-party electorate model.
 
@@ -30,7 +30,7 @@ The active scene flow is:
 root
   -> poland_intro
   -> poland_hub
-       -> draw from Party Affairs or government-only Government Affairs
+       -> draw from Party, Government, Negotiation, Major Reform or Foreign Affairs
        -> persistent three-card agenda
        -> optional advisor portrait / leadership reshuffle
        -> play one dilemma -> poland_card_finish -> poland_advance
@@ -51,7 +51,9 @@ root
   -> January–July 2026 sourced-history scaffold
   -> September–December 2026 labelled scenario horizon
   -> final budget, conditional snap election / prime-minister crisis
-  -> poland_ending
+  -> January–October 2027 election-year campaign and press cycle
+  -> live Sejm and Senate count
+  -> game-over epilogue
 
 root
   -> poland_government_formation.setup
@@ -83,15 +85,17 @@ The campaign deliberately contains two kinds of dated material:
 Every month the player may play **one** strategic dilemma from the engine's
 native persistent hand:
 
-1. **Party Affairs** supplies nineteen cards. **Government Affairs** also
-   supplies sixteen: one card for each of thirteen portfolios, plus Cabinet
-   Reshuffle, Coalition Council and Social Welfare. It appears only for Lewica
-   in a cabinet with confidence and offers portfolio cards for offices it
-   controls. **Negotiation with Government** appears only when Lewica is outside
-   a functioning cabinet and offers PiS social channels and fault-line tactics,
-   crisis cooperation, oversight bargains or presidential mediation. The **External affairs dossier** is the fourth live
-   deck: a staged European campaign appears beside five randomly selected
-   foreign-pressure files.
+1. **Party Affairs** supplies nineteen cards. **Government Affairs** supplies
+   one baseline card for each of thirteen portfolios, plus Cabinet Reshuffle,
+   Coalition Council and Social Welfare. It appears only for Lewica in a cabinet
+   with confidence and offers portfolio cards for offices it controls.
+   **Pressure & Negotiate** appears only when Lewica is outside a functioning
+   cabinet. TVP appearances, committee scrutiny, PiS fault-line tactics and the
+   Party Affairs relationship route build bargaining capital; oversight, crisis
+   and presidential deals spend it only after enough pressure exists. **Major
+   Reforms** and the **External affairs dossier** complete the five live decks.
+   The three persistent reform projects stay in their own deck rather than
+   duplicating Government or Negotiation draws.
 2. Hold at most three cards. Unplayed cards persist between months and can
    become invalid if their conditions stop being true. **Discard an
    opportunity** removes one held card without playing it: no monthly action,
@@ -108,25 +112,87 @@ native persistent hand:
    inspecting an unchanged slate does not. **End month** passes and applies
    neglect pressure.
 
-### European campaign and foreign pressure
+### Major reform projects
 
-The European route follows the inherited Weimar foreign-policy pattern:
-repeatable diplomatic work creates several distinct relationships, elections
-and shocks abroad change the environment, and a larger settlement requires
-earlier preparation.
+Abortion, equal marriage and labour law are whole-campaign projects rather
+than one-off votes. The first card defines the ambitious bill. The four levels
+below are possible final settlements, ordered from the greatest retreat to the
+original goal; the player does not fill them in sequentially:
 
-- Brussels, European-left, eastern-flank and Warsaw–Berlin–Paris missions each
-  create a different asset. Three missions and sufficient influence unlock a
-  Warsaw compact joining social investment, democratic law, Ukrainian
-  sovereignty and eastern security.
-- Brussels conditionality, a German industrial slowdown, eastern-flank
-  demands, White House pressure and a European radical-right wave are separate
-  weighted cards. Every file presents the same facts to every political role,
-  then routes different verbs, costs and consequences through actual
-  authority: ordinary opposition; confidence-and-supply opposition; junior
-  coalition with or without Foreign Affairs; Lewica-led government with or
-  without Foreign Affairs; caretaker; or Left President. They can recur after
-  cooldowns, so foreign affairs is not a one-way influence bonus.
+| Project | Level 1 | Level 2 | Level 3 | Level 4 |
+| --- | --- | --- | --- | --- |
+| Abortion | Emergency/clinician decriminalisation | Limited decriminalisation compromise | Twelve-week access | Canadian model |
+| Equal marriage | Closest-person agreement | Registered cohabitation | Civil partnership | Marriage and adoption |
+| Labour | Token PIP funding | PIP enforcement and reclassification | Contract and labour-law protection | Full Razem package |
+
+Lewica begins by demanding level 4. Coalition and presidential resistance can
+force the live proposal down. If any lower level is enacted, the project closes
+there rather than returning to unlock the next level. An outright defeat or
+withdrawal instead damages trust and preparation, imposes a cooldown, and then
+returns the original ambitious bill for another attempt.
+
+Before entering government, Lewica can spend cards on talks, referendum
+groundwork and coalition expectations. Eligible projects can be drawn from
+Pressure & Negotiate as well as their separate deck. In government, they are
+also injected into Government Affairs; those accumulated assets become passage
+power and can support an authorised national vote.
+Party relations, rival-party wings, Left polling and issue support determine
+how far partners will move; the appropriate Equality, Health, Labour or Justice
+portfolio makes a push easier, while the President remains an independent
+signature gate. A referendum can strengthen the abortion or marriage mandate
+but cannot let opposition enact a law on its own. Limited rights settlements
+are easier to obtain from PiS than the full programme, while PiS solidarists
+are comparatively open to labour reform and market-oriented parties resist it.
+
+An attempted bill can therefore trigger a queued **coalition partner opposes
+our action** crisis when relations are poor. Lewica may spend organisational
+capacity, call in accumulated support, narrow the settlement or retreat; forcing
+the matter raises coalition dissent, break risk and the chance of an early
+election. A delayed count also rechecks that Lewica still belongs to a
+functioning cabinet before it can enact anything.
+
+Coalition partners pursue projects of their own through the monthly rival AI.
+KO and Third Way can demand aggressive judicial changes, a TVP takeover or
+privatisation and market liberalisation. Under hostile presidential
+cohabitation, their judicial demand becomes more desperate and may cross
+procedural limits. PiS can instead demand legal cover for Pegasus-style tools,
+a softer anticlerical line or condemnation of the PZPR past; an extreme memory
+demand can accelerate an SLD-establishment split. Accepting or bargaining over
+the public-media demand changes TVP's persistent patron and therefore its tone
+on the right-side press rail. Sponsors must actually remain in the cabinet;
+completed concessions leave the demand pool, while refusals can return after a
+cooldown.
+
+### Foreign affairs
+
+The recurring deck has four country-level files: the EU, Hungary, the United
+States and Ukraine after Russia's full-scale invasion. Elections and shocks
+change who is available abroad and what that relationship can achieve.
+
+- The EU file lets opposition strengthen Poland's democratic case through
+  European institutions and party networks. A government can additionally
+  negotiate national settlements. The 2024 rightward shift creates a visible
+  passage-power penalty for abortion, equal-marriage and labour reforms;
+  organising can reduce that headwind, but cannot replace a Polish majority.
+- Hungary records Fidesz's 2022 victory and resolves a 2026 election in which
+  Fidesz can fall. Polish democratic and Fidesz channels modestly influence
+  access and the close counterfactual branch without making Warsaw the author
+  of Hungary's result.
+- The US file separates White House, congressional, institutional and security
+  access. The seeded 2020 and 2024 elections alter which of those routes is
+  strongest. PiS benefits from a direct America First relationship; opposition
+  can build a democratic case but cannot promise Polish state action.
+- Ukraine turns foreign policy into weapons, logistics, refugees, accession
+  and reconstruction after February 2022. Opposition can vote, scrutinise and
+  organise; a functioning cabinet can spend and deliver.
+- Persistently poor combined EU and US access triggers a dated, player-visible
+  economic shock. Growth, unemployment and fiscal stress change immediately;
+  opposition can expose the damage, while only government can fund relief or
+  recover part of the national loss through an agreement.
+- Every file routes costs and consequences through actual authority: ordinary
+  opposition; confidence-and-supply opposition; junior coalition with or
+  without Foreign Affairs; Lewica-led government with or without Foreign
+  Affairs; caretaker; or Left President.
 - Opposition uses questions, committee motions, shadow doctrine, party
   diplomacy and public pressure. Confidence-and-supply may condition budget or
   confidence votes. Junior partners use coalition bargaining unless they hold
@@ -204,7 +270,7 @@ The inherited currencies are now separated by political role.
 | June 2020 | Presidential field, two campaign moves, debate, tracking poll and first-round count |
 | July 2020 | Dynamic runoff—or first-round confirmation—with endorsement and support trading |
 | August 2020 | Hołownia converts his breakthrough into Polska 2050; Trzaskowski certification/oath crisis if he wins |
-| September 2020 | SLD–Wiosna/Nowa Lewica architecture |
+| September 2020 | Conditional Witek interregnum, disputed Supreme Court invalidity and imposed presidential rerun; SLD–Wiosna/Nowa Lewica architecture |
 | October 2020 | Constitutional Tribunal abortion ruling; conditional Palace–Tribunal showdown |
 | November 2020 | Women's Strike organisation and programme; pandemic-era Independence Day strategy followed by the riot, apartment fire and police-response reckoning; variable US presidential election |
 | December 2020 | Pandemic draft, two Left priorities, visible faction conference, Sejm vote and Senate amendments |
@@ -248,12 +314,13 @@ The inherited currencies are now separated by political role.
 | November–December 2024 | Variable US presidential election, Independence Day, KO and Left presidential nominations, Christmas Eve labour reform, KPO co-financing and the first full coalition budget |
 | January–March 2025 | Separate Left presidential campaigns, Braun's Konfederacja rupture, religion and health education, asylum suspension, gender-recognition procedure and the spring audit of the movement settlement |
 | April–June 2025 | Braun's Oleśnica hospital confrontation, shorter-working-time pilot, presidential election, cabinet confidence and a gameplay-driven Third Way survival test |
-| July–September 2025 | Hołownia's PiS talks under either a surviving joint council or two separate parties, Braun's separate seven-count indictment, a cabinet reshuffle or post-confidence formation branch, presidential inauguration, Russian drone incursion and Hołownia's announced departure |
+| July–September 2025 | Hołownia's PiS talks under either a surviving joint council or two separate parties, Braun's separate seven-count indictment, a cabinet reshuffle or post-confidence formation branch, a conditional Nawrocki oath crisis and compulsory inauguration, Russian drone incursion and Hołownia's announced departure |
 | October–December 2025 | A six-file KO consolidation convention with persistent component parties and multiple outcomes, KPO review, Marshal rotation, Independence Day, EU marriage recognition, collective bargaining, Left leadership, CJEU–Tribunal collision and the post-presidential budget |
 | January–March 2026 | Poland 2050 chooses Hołownia's successor; a surviving Third Way faces a second gameplay-driven test, while a separated Poland 2050 can itself split; a Trump-dependent ambassador–Marshal crisis or alternate Washington review, competing KRS bills, the de-personalised centrist party and six Tribunal vacancies |
 | April–July 2026 | KO component representation, Rozwój+ association-building and PiS's individual loyalty ultimatum, PIP/KPO enforcement, Kanał Zero television, partnership legislation and veto, Tribunal competence, Braun procedure, centrist rupture, hate crime, appointments and the final KPO window |
 | August–October 2026 | Individual Rozwój+ hearings followed by a conditional club and possible party; **Scenario horizon:** 2027 budget red lines and a possible judicial-status bill at the Palace |
 | November–December 2026 | **Scenario horizon:** Independence Day, a conditional constructive no-confidence motion, final budget, and a conditional snap election followed by presidential and Sejm cabinet attempts |
+| January–October 2027 | **Scenario horizon:** a ten-month press cycle, opening and closing campaign choices, and the parliamentary election; the live vote is apportioned to 460 Sejm seats and 100 Senate districts before the game-over epilogue |
 
 Leadership and party-drama scenes use a common five-part structure: the
 outgoing and incoming authority, the internal bloc behind the change, the
@@ -293,7 +360,9 @@ dated event, displays only the highest-priority tier, and recompiles the list
 after each return. Once that tier is exhausted, the next tier appears. The
 leadership table reopens only when the complete count reaches zero, so resolving
 one crisis cannot silently mark its neighbours complete. These event decisions
-do not grant or consume another leadership-card play.
+do not grant or consume another leadership-card play. After a decision, its
+consequence headline is appended to the event instead of replacing it; an
+explicit return button then opens a clean desk or leadership table.
 
 ## Open primary
 
@@ -321,9 +390,11 @@ The 2020 contest is an election rather than a single Left score check:
 - June samples the full candidate field, gives the player exactly two campaign
   operations, then opens a three-stop debate-night hub. Its refugee/religion,
   rights/health and economy/closing blocks can be resolved in any order without
-  advancing the month. A linear candidate presentation moves from Duda through
-  the rival field to the Left nominee and directly into the electoral-line
-  decision.
+  advancing the month. A linear candidate presentation keeps every profile on
+  one page, names all eleven ballot candidates (with the five smallest
+  committees clearly identified as a mechanical aggregate), and moves from
+  Duda through the rival field to the Left nominee and directly into the
+  electoral-line decision.
 - The debate verdict is stored once. Adrian Zandberg has a higher floor and
   ceiling; any nominee can break through, disappear in the eleven-candidate
   field or concede the dominant clip to Duda, Hołownia or Bosak. Only the
@@ -353,8 +424,10 @@ June routes with a five-stage cohabitation chain:
 
 1. PiS challenges certification and delays the National Assembly. A legal
    front, civic mobilisation or private transition bargain is measured against
-   obstruction pressure. A failed defence can still force the oath, or concede
-   a repeat election and leave the Sejm Marshal as acting president.
+   obstruction pressure. A failed defence can still force the oath, or let
+   Witek claim temporary powers while a disputed Supreme Court panel supplies
+   the invalidity judgment constitutionally required for a repeat election.
+   The Marshal's interregnum always ends at an oath after that ballot.
 2. The abortion judgment tests whether Lewica coordinates a restoration bill
    with the Palace, protects movement autonomy or asks for the old compromise.
 3. The judicial war records vetoes and lets the player choose a common veto
@@ -769,7 +842,12 @@ The 2025 presidential election reuses the all-party polling state rather than
 appointing the historical winner. A debate can move the last poll; the first
 round selects finalists; the inter-round market trades only partial support;
 and the runoff result changes the August inauguration, veto environment and
-post-election confidence crisis.
+post-election confidence crisis. If Nawrocki defeats a functioning non-PiS
+government while Hołownia remains Sejm Marshal, an alleged approach to delay
+the National Assembly becomes playable. The Marshal can reject it, audit named
+precincts without moving the oath, or briefly claim acting powers. A successful
+delay creates severe domestic and foreign-policy damage but cannot reverse the
+certified result: the next event always installs the elected President.
 
 The post-cutoff 2026 crisis uses the same constitutional distinctions:
 

@@ -38,13 +38,18 @@ d3.linegraph = function(noTicks, noDots, parties, partyColors, partyNames, dataM
 
     function linegraph(dataset) {
      dataset.each(function (data) {
+      if (!Array.isArray(data) || !data.length || !parties.length) return;
       const dates = data.map(d => new Date(d.date));
       // Map the data to an array of arrays of {x, y} tuples.
       const series = parties.map(party => data.map(d => ({'x': new Date(d.date), 'y': d[party], 'series': party})));
 
       // Declare the x (horizontal position) scale.
+      const minDate = d3.min(dates);
       const maxDate = d3.max(dates);
-      const xScale = d3.scaleUtc([new Date(1928, 0), addMonths(maxDate, additionalMonths)], [marginLeft, width - marginRight]);
+      const xScale = d3.scaleUtc(
+          [addMonths(minDate, -1), addMonths(maxDate, additionalMonths)],
+          [marginLeft, width - marginRight]
+      );
 
       var xaxis = d3.axisBottom()
         .tickFormat(d3.timeFormat('%b %Y'))
@@ -58,10 +63,12 @@ d3.linegraph = function(noTicks, noDots, parties, partyColors, partyNames, dataM
       }
 
       // Declare the y (vertical position) scale.
-      if (!dataMax) {
-          const maxSPD = d3.max(data, d => d.spd);
-          const maxNSDAP = d3.max(data, d => d.nsdap);
-          dataMax = maxSPD >= maxNSDAP ? maxSPD + 10 : maxNSDAP + 10;
+      if (dataMax === undefined || dataMax === null) {
+          const maximum = d3.max(data, d => d3.max(
+              parties,
+              party => Number(d[party]) || 0
+          ));
+          dataMax = maximum + 10;
           dataMin = 0;
       }
       const yScale = d3.scaleLinear([dataMin, dataMax], [height - marginBottom, marginTop]);
@@ -71,6 +78,7 @@ d3.linegraph = function(noTicks, noDots, parties, partyColors, partyNames, dataM
       //    .attr("width", width)
       //    .attr("height", height);
      var svg = d3.select(this);
+     svg.selectAll("*").remove();
 
 
       // Add the x-axis.

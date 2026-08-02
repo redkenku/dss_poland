@@ -1,0 +1,326 @@
+title: Recognition, Partnership and Equal Marriage
+subtitle: Begin with marriage and adoption; lesser recognition is the price of defeat or compromise.
+new-page: true
+is-card: true
+tags: poland_major_reform_card
+frequency: 135
+view-if: month_actions < max_month_actions and poland_marriage_reform_timer <= 0 and marriage_reform_settled = 0 and reform_pressure_pending = 0
+on-arrival: {!
+Q.month_actions += 1;
+Q.poland_marriage_reform_timer = 3;
+Q.marriage_reform_next_stage = Number(Q.marriage_reform_proposal_stage) || 4;
+const marriageThresholds = [0, 25, 40, 59, 84];
+Q.marriage_reform_threshold =
+    marriageThresholds[Q.marriage_reform_next_stage];
+const ministryBonus =
+    (Q.equality_minister_party == "Lewica" ? 11 : 0) +
+    (Q.justice_minister_party == "Lewica" ? 7 : 0);
+const koCabinet = Q.government_party == "ko" || Q.ministry_ko_in_cabinet;
+const pslCabinet = Q.government_party == "psl" || Q.ministry_psl_in_cabinet;
+const p2050Cabinet =
+    Q.government_party == "p2050" || Q.ministry_p2050_in_cabinet;
+const thirdWayCabinet = pslCabinet || p2050Cabinet;
+const thirdWayRelation = pslCabinet && p2050Cabinet
+    ? Math.min(Number(Q.psl_relation), Number(Q.p2050_relation))
+    : (pslCabinet ? Number(Q.psl_relation) : Number(Q.p2050_relation));
+let partnerBonus = 0;
+if (Q.government_party == "pis") {
+    partnerBonus =
+        Number(Q.pis_relation) * 0.15 +
+        Number(Q.pis_accept_rights) * 0.10 +
+        Number(Q.marriage_pis_commitment) * 7 -
+        Number(Q.pis_cultural_position) * 0.05;
+    if (
+        Q.left_in_government &&
+        Q.president_name == "Rafał Trzaskowski"
+    ) {
+        partnerBonus += 10;
+    }
+} else {
+    partnerBonus =
+        (koCabinet
+            ? Number(Q.ko_relation) * 0.10 +
+                Number(Q.ko_accept_rights) * 0.13 +
+                Number(Q.marriage_ko_commitment) * 6 -
+                Math.max(
+                    0,
+                    Number(Q.ko_classical_liberal_share) - 55
+                ) * 0.10
+            : 0) +
+        (thirdWayCabinet
+            ? Number(Q.marriage_third_way_commitment) * 5 -
+                Math.max(0, 52 - thirdWayRelation) * 0.20 -
+                (pslCabinet ? Number(Q.psl_conservative_share) * 0.05 : 0)
+            : 0) +
+        (Q.marriage_reform_next_stage <= 2
+            ? Number(Q.marriage_pis_commitment) * 3 +
+                Math.max(0, Number(Q.pis_relation) - 50) * 0.04
+            : 0);
+}
+let palaceBonus =
+    Number(Q.president_relation) * 0.08 +
+    (Q.marriage_palace_president == Q.president_name
+        ? Number(Q.marriage_palace_commitment) * 6
+        : 0) +
+    (Q.president_name == "Rafał Trzaskowski" ? 8 : 0) +
+    (Q.trz_marriage_signature ? 8 : 0);
+if (
+    Q.president_name == "Andrzej Duda" &&
+    Q.marriage_reform_next_stage == 1
+) {
+    palaceBonus += 10;
+}
+const publicBonus =
+    (Number(Q.lgbt_equality_support) - 40) * 0.34 +
+    Math.max(0, Number(Q.left_poll) - 5) * 0.55 -
+    Math.max(0, Number(Q.lgbt_equality_backlash) - 55) * 0.12;
+Q.marriage_reform_power = Math.round(Math.max(
+    0,
+    Math.min(
+        140,
+        Number(Q.marriage_reform_progress) * 0.62 +
+        partnerBonus + palaceBonus + publicBonus + ministryBonus +
+        (Q.marriage_referendum_mandate ? 18 : 0) -
+        Number(Q.eu_progressive_headwind)
+    )
+));
+!}
+card-image: img/poland/cards/equality-bill.webp
+
+= An ambitious recognition bill
+
+**Campaign goal:** [? if marriage_reform_defined: [+
+marriage_reform_goal_label +].?][? if not marriage_reform_defined: Not yet
+defined.?]
+[? if marriage_reform_defined: **Bill currently on the table:** [+
+marriage_reform_next_label +].
+**Passage power:** **[+ marriage_reform_power +]**; this bill needs **[+
+marriage_reform_threshold +]**.?][? if not marriage_reform_defined: The first
+project action must define the ambitious bill before preparation or bargaining
+can begin.?]
+
+[? if eu_progressive_headwind > 0: Europe's rightward shift removes **[+
+eu_progressive_headwind +] passage power** from this progressive reform. EU
+social and democratic organising can reduce that headwind; it cannot replace
+a Polish majority.?]
+
+The limited outcomes are not prerequisites. A closest-person agreement,
+registered cohabitation or civil partnership may be worth enacting if Lewica
+is forced down from its goal—but any such law becomes the final settlement of
+this campaign and closes the chapter.
+
+[? if president_name = "Andrzej Duda": Duda's historical openness to a
+closest-person formula makes that fallback easier to save if the maximal bill
+cannot survive the Palace.?]
+[? if equality_minister_party = "Lewica" or justice_minister_party = "Lewica":
+The Equality or Justice Ministry gives Lewica the drafters and implementation
+file needed to make the next compromise credible.?]
+
+- @define_goal
+- @draft
+- @coalition_round
+- @cash_relation
+- @palace
+- @referendum
+- @advance
+
+@define_goal
+title: Define the goal as marriage equality and adoption
+subtitle: The opening bill is maximal; civil partnerships and lesser recognition remain fallback settlements.
+view-if: marriage_reform_defined = 0
+on-arrival: marriage_reform_defined = 1; marriage_reform_goal_stage = 4; marriage_reform_proposal_stage = 4; marriage_reform_next_stage = 4; marriage_reform_progress += 12; progressive_credibility += 4; news_headline = "Lewica defines marriage equality and adoption as its recognition bill"
+
+Every later concession will now be visible as a concession. The campaign does
+not have to earn a closest-person agreement before it is allowed to ask for
+equal marriage.
+
+- #poland_card_finish
+
+@draft
+title: Keep couples, registrars and family lawyers at one table
+subtitle: Free. Preparation +10; preserve the maximal bill and map its fallback clauses.
+view-if: marriage_reform_defined = 1
+on-arrival: marriage_reform_progress += 10; progressive_credibility += 1; news_headline = "Lewica keeps the full equal-marriage bill in legislative form"
+
+The working group records which rights disappear in every narrower fallback.
+That makes compromise possible without letting a coalition press release call
+hospital access the same thing as equal marriage.
+
+- #poland_card_finish
+
+@coalition_round
+title: Negotiate a floor with a possible coalition partner
+subtitle: Cost: 1 resource. Choose KO, the Third Way or PiS and record one pledge.
+choose-if: resources >= 1
+unavailable-subtitle: The coalition round needs one resource.
+view-if: marriage_reform_defined = 1
+new-page: true
+
+Before power, this establishes the minimum for coalition talks. In cabinet,
+it converts a partner's sympathy into a promise tied to one fallback level.
+
+- @round_ko
+- @round_third_way
+- @round_pis
+
+@round_ko
+title: Ask KO to record a civil-partnership and marriage route
+on-arrival: resources -= 1; marriage_reform_progress += 8; marriage_ko_commitment += 1; ko_relation += 4; news_headline = "KO records a minimum same-sex recognition floor"
+
+- #poland_card_finish
+
+@round_third_way
+title: Make the Third Way name the fallback it would permit
+view-if: p2050_emerged = 1 or third_way_active = 1
+on-arrival: resources -= 1; marriage_reform_progress += 8; marriage_third_way_commitment += 1; psl_relation += 3; p2050_relation += 3; news_headline = "The Third Way records a limited legal-recognition pledge"
+
+- #poland_card_finish
+
+@round_pis
+title: Open the closest-person route with PiS
+choose-if: (left_in_government = 1 and government_party = "pis") or pis_relation >= 15 or pis_negotiation_hostility_relief >= 5 or national_crisis_pressure >= 25
+unavailable-subtitle: PiS will not record a recognition pledge without coalition ties, an established channel or national pressure.
+on-arrival: resources -= 1; marriage_reform_progress += 8; marriage_pis_commitment += 1; pis_relation += 4; news_headline = "PiS records a channel for limited same-sex recognition"
+
+- #poland_card_finish
+
+@cash_relation
+title: Turn accumulated trust into a recognition pledge
+subtitle: Choose a 58+ relationship; it falls by 12 and becomes one recorded pledge.
+choose-if: ko_relation >= 58 or pis_relation >= 58 or ((p2050_emerged = 1 or third_way_active = 1) and (psl_relation >= 58 or p2050_relation >= 58))
+unavailable-subtitle: No potential governing partner trusts us enough yet.
+view-if: marriage_reform_defined = 1
+new-page: true
+
+- @cash_ko
+- @cash_third_way
+- @cash_pis
+
+@cash_ko
+title: Spend KO goodwill on the recognition bill
+choose-if: ko_relation >= 58
+on-arrival: ko_relation -= 12; marriage_ko_commitment += 1; marriage_reform_progress += 10; news_headline = "Lewica spends KO goodwill on legal recognition"
+
+- #poland_card_finish
+
+@cash_third_way
+title: Spend Third Way goodwill on a limited recognition pledge
+view-if: p2050_emerged = 1 or third_way_active = 1
+choose-if: psl_relation >= 58 or p2050_relation >= 58
+on-arrival: {!
+if (Number(Q.psl_relation) >= Number(Q.p2050_relation)) {
+    Q.psl_relation -= 12;
+} else {
+    Q.p2050_relation -= 12;
+}
+Q.marriage_third_way_commitment += 1;
+Q.marriage_reform_progress += 10;
+Q.news_headline = "Lewica spends Third Way goodwill on limited recognition";
+!}
+
+- #poland_card_finish
+
+@cash_pis
+title: Spend PiS goodwill on the closest-person route
+choose-if: pis_relation >= 58
+on-arrival: pis_relation -= 12; marriage_pis_commitment += 1; marriage_reform_progress += 10; news_headline = "Lewica spends PiS goodwill on limited legal recognition"
+
+- #poland_card_finish
+
+@palace
+title: Ask the Palace which fallback it would sign
+subtitle: Cost: 1 resource. Presidential commitment +1; preparation +6.
+choose-if: resources >= 1
+unavailable-subtitle: The Palace protocol needs one resource.
+view-if: marriage_reform_defined = 1
+on-arrival: {!
+Q.resources -= 1;
+if (Q.marriage_palace_president != Q.president_name) {
+    Q.marriage_palace_commitment = 0;
+    Q.marriage_palace_president = Q.president_name;
+}
+Q.marriage_palace_commitment += 1;
+Q.marriage_reform_progress += 6;
+Q.president_relation += 3;
+Q.news_headline = "The Palace receives a fallback legal-recognition protocol";
+!}
+
+[? if president_name = "Andrzej Duda": The closest-person route gives Duda a
+limited formula he can defend to his own electorate. Every broader outcome
+requires a more expensive promise.?][? if president_name = "Rafał Trzaskowski":
+Trzaskowski is broadly sympathetic, but an explicit protocol still prevents
+coalition partners from using the Palace as an excuse for delay.?][? if
+president_name != "Andrzej Duda" and president_name != "Rafał Trzaskowski":
+The President must now name a signable floor rather than offer generic respect
+for families.?]
+
+- #poland_card_finish
+
+@referendum
+title: Seek a public mandate for legal recognition
+subtitle: Cost: 1 resource. A difficult route shaped by equality support, polling and backlash.
+choose-if: left_in_government = 1 and government_has_confidence = 1 and caretaker_government = 0 and resources >= 1 and marriage_reform_progress >= 35 and lgbt_equality_support >= 52 and marriage_referendum_mandate = 0
+unavailable-subtitle: Requires governing authority, one resource, 35 preparation and 52% equality support.
+view-if: marriage_reform_defined = 1
+on-arrival: {!
+Q.resources -= 1;
+const referendumVariation =
+    Math.floor((this.random.uint32() / 4294967296) * 11) - 5;
+Q.marriage_referendum_score = Math.round(
+    17 + Number(Q.lgbt_equality_support) * 0.44 +
+    Number(Q.left_poll) * 0.50 +
+    Number(Q.marriage_reform_progress) * 0.16 -
+    Number(Q.lgbt_equality_backlash) * 0.18 +
+    (Number(Q.marriage_ko_commitment) +
+        Number(Q.marriage_pis_commitment) +
+        Number(Q.marriage_third_way_commitment)) * 2 +
+    referendumVariation
+);
+if (Q.marriage_referendum_score >= 50) {
+    Q.marriage_referendum_mandate = 1;
+    Q.marriage_reform_progress += 12;
+    Q.progressive_credibility += 6;
+    Q.public_trust += 2;
+    Q.marriage_referendum_result = "A majority endorsed legal recognition";
+    Q.news_headline = "A national vote gives legal recognition a public mandate";
+} else {
+    Q.marriage_reform_progress = Math.max(
+        Number(Q.marriage_reform_stage) * 20,
+        Number(Q.marriage_reform_progress) - 8
+    );
+    Q.marriage_reform_proposal_stage =
+        Number(Q.marriage_reform_goal_stage) || 4;
+    Q.poland_marriage_reform_timer = 6;
+    Q.progressive_credibility -= 2;
+    Q.public_trust -= 2;
+    Q.lgbt_equality_backlash += 6;
+    Q.marriage_referendum_result = "The recognition mandate fell short";
+    Q.news_headline = "The legal-recognition referendum campaign falls short";
+}
+!}
+go-to: referendum_result
+
+@referendum_result
+title: The recognition count
+new-page: true
+
+**Campaign score: [+ marriage_referendum_score +].** [+
+marriage_referendum_result +].
+
+[? if marriage_referendum_mandate: The mandate weakens every coalition veto
+without pretending that a public campaign has itself rewritten family law.
+The Sejm and President remain the next project rounds.?][? if not
+marriage_referendum_mandate: The loss forces a six-month regroup, but the
+ambitious goal and draft survive. The project card returns afterward: full
+equality is delayed, not erased.?]
+
+- #poland_card_finish
+
+@advance
+title: Table the bill: [+ marriage_reform_next_label +]
+subtitle: Requires government and passage power at or above the displayed threshold; resistance may force a narrower final settlement.
+view-if: marriage_reform_defined = 1
+choose-if: left_in_government = 1 and government_has_confidence = 1 and caretaker_government = 0 and marriage_reform_power >= marriage_reform_threshold
+unavailable-subtitle: We either lack executive access or have not assembled enough coalition, public and presidential power.
+on-arrival: reform_pressure_issue = "marriage"; reform_pressure_target_stage = marriage_reform_proposal_stage; reform_pressure_previous_stage = 0; reform_pressure_return_mode = "card"; reform_pressure_palace_override = 0; reform_pressure_referendum_used = 0
+go-to: poland_major_reforms.resolve

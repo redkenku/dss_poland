@@ -87,10 +87,10 @@ const statusMonth = statusWhole(Q.month, 10);
 Q.status_year = statusYear;
 Q.status_pres_2020_visible =
     Q.pres_2020_active ||
-    (statusYear == 2020 && statusMonth >= 5 && statusMonth <= 7) ? 1 : 0;
+    (statusYear == 2020 && statusMonth >= 5 && statusMonth <= 9) ? 1 : 0;
 Q.status_pres_2025_active =
     (statusYear == 2024 && statusMonth >= 11) ||
-    (statusYear == 2025 && statusMonth <= 6) ? 1 : 0;
+    (statusYear == 2025 && statusMonth <= 8) ? 1 : 0;
 Q.status_pres_visible =
     Q.status_pres_2020_visible || Q.status_pres_2025_active ? 1 : 0;
 Q.status_pres_r1_complete = Q.pres_first_round_complete ? 1 : 0;
@@ -145,9 +145,17 @@ Q.status_pres_2025_candidate = statusText(
     Q.pres_2025_left_candidate,
     "Undecided"
 );
-Q.status_pres_2025_phase = Q.pres_2025_round_one_done
-    ? (Q.pres_2025_runoff_done ? "Result" : "Runoff")
-    : "Campaign";
+Q.status_pres_2025_phase = Q.pres_2025_inaugurated
+    ? "In office"
+    : (Number(Q.pres_2025_oath_crisis) == 2
+        ? "Oath crisis"
+        : (Q.pres_2025_runoff_done
+            ? "President-elect"
+            : (Q.pres_2025_round_one_done ? "Runoff" : "Campaign")));
+Q.status_pres_2025_oath_visible = Q.pres_2025_oath_crisis ? 1 : 0;
+Q.status_pres_2025_oath = Number(Q.pres_2025_oath_crisis) == 3
+    ? "Delay collapsed · " + Q.pres_2025_oath_strategy
+    : statusText(Q.pres_2025_oath_strategy, "No oath challenge");
 Q.status_pres_2025_finalist_a = statusText(
     Q.pres_2025_finalist_a,
     "Undecided"
@@ -171,8 +179,10 @@ Q.status_pres_2025_field_band = statusText(
 );
 Q.status_pres_2025_leadership_defeat =
     Q.pres_2025_leadership_defeat ? 1 : 0;
-Q.status_pres_result_label = Q.trz_blocked
+Q.status_pres_result_label = Q.trz_repeat_election_pending
     ? "Certified winner"
+    : (Q.trz_oath_crisis_launched && Q.trz_repeat_winner == "Andrzej Duda"
+        ? "First result"
     : (Q.pres_runoff_complete &&
         Q.pres_runoff_winner_key != "duda" &&
         (
@@ -180,11 +190,15 @@ Q.status_pres_result_label = Q.trz_blocked
             !Q.trzaskowski_won && !Q.pres_generic_inauguration_done
         )
         ? "President-elect"
-        : "President");
+        : "President"));
 Q.status_trz_route_visible = Q.trzaskowski_won ? 1 : 0;
 Q.status_trz_inauguration = statusText(
     Q.trz_inauguration_status,
     "Certification pending"
+);
+Q.status_trz_oath_crisis = statusText(
+    Q.trz_oath_crisis_outcome,
+    "No Witek interregnum"
 );
 Q.status_trz_temperature = Math.round(
     statusNumber(Q.trz_cohabitation_temperature, 0)
@@ -377,6 +391,9 @@ Q.status_government_party = Q.status_prime_minister_party;
 Q.status_negotiation_leverage = Math.round(
     statusNumber(Q.negotiation_leverage, 0)
 );
+Q.status_negotiation_capital = Math.round(
+    statusNumber(Q.negotiation_capital, 0)
+);
 Q.status_crisis_pressure = Math.round(
     statusNumber(Q.national_crisis_pressure, 0)
 );
@@ -412,6 +429,8 @@ Q.status_psl_poll = statusOneDecimal(Q.psl_poll, 8.6);
 Q.status_konf_poll = statusOneDecimal(Q.konf_poll, 6.8);
 Q.status_p2050_poll = statusOneDecimal(Q.p2050_poll, 0);
 Q.status_other_poll = statusOneDecimal(Q.other_poll, 1.0);
+Q.status_nowa_solidarnosc_visible =
+    Q.nowa_solidarnosc_formed && !Q.nowa_solidarnosc_dissolved ? 1 : 0;
 const dynamicElectionParties = [
     "sld_breakaway",
     "social_patriot",
@@ -1493,7 +1512,7 @@ for (const group of voterGroupsForStatus) {
 
 [? if status_started: <div class="pulse-card pulse-resources">?]
 [? if status_started: <span class="pulse-label">Resources</span>?]
-[? if status_started: <div><strong class="pulse-number">[+ status_resources +]</strong><span class="flow-badge">+[+ status_party_income +]/yr</span></div>?]
+[? if status_started: <div><strong class="pulse-number">[+ status_resources +]</strong><span class="flow-badge">+[+ status_party_income +] Jan/Jul</span></div>?]
 [? if status_started: </div>?]
 
 [? if status_started: <div class="pulse-card pulse-pressure" data-meter="100" data-tone="risk">?]
@@ -1539,7 +1558,7 @@ for (const group of voterGroupsForStatus) {
 <div class="ledger-row"><span>Coalition</span><b>[+ status_coalition_status +]</b></div>
 <div class="ledger-row" data-polarity="risk"><span>Coalition dissent</span><b>[+ status_government_coalition_dissent +]/100</b></div>
 [? if left_in_government and status_government_burden_active: <div class="ledger-row"><span>Government burden</span><b>[+ status_government_burden_completed +] / [+ status_government_burden_required +] goals · [? if status_government_burden_review: review due?][? if not status_government_burden_review: [+ status_government_burden_timer +] months?]</b></div><div class="ledger-subrow">Completed: [+ status_government_burden_goals +].[? if status_government_burden_breached: <span class="meter-warning"> Current window breached by an anti-social settlement.</span>?]</div><div class="ledger-subrow">Record: [+ status_government_achievements +] met · [+ status_government_burden_failures +] missed. [+ status_government_burden_last +].</div>?]
-[? if not left_in_government and government_has_confidence and not caretaker_government: <div class="ledger-row"><span>Negotiating position</span><b>[+ status_negotiation_leverage +] leverage · [+ status_government_hostility +] hostility</b></div><div class="ledger-subrow">Crisis pressure [+ status_crisis_pressure +]/100 · [+ status_negotiation_forecast +]</div><div class="ledger-subrow">Last result: [+ status_negotiation_last +] · [+ status_negotiation_successes +] agreements</div>?]
+[? if not left_in_government and government_has_confidence and not caretaker_government: <div class="ledger-row"><span>Negotiating position</span><b>[+ status_negotiation_leverage +] leverage · [+ status_negotiation_capital +] built capital · [+ status_government_hostility +] hostility</b></div><div class="ledger-subrow">Crisis pressure [+ status_crisis_pressure +]/100 · [+ status_negotiation_forecast +]</div><div class="ledger-subrow">Last result: [+ status_negotiation_last +] · [+ status_negotiation_successes +] agreements</div>?]
 [? if status_president = "Rafał Trzaskowski" and status_government_party = "pis": <div class="ledger-row"><span>PiS cohabitation</span><b>stress [+ status_pis_cohabitation_stress +] · rally [+ status_pis_cohabitation_rally +]</b></div><div class="ledger-subrow">[+ status_pis_cohabitation_state +]</div>?]
 </div>
 </details>
@@ -1751,6 +1770,7 @@ call: status
 <div class="ledger-row"><span>President [+ status_president +]</span><span>[+ status_president_relation : relationships +] · [+ status_president_relation +]</span></div></div>
 
 <div class="ledger-section"><div class="ledger-title">Other party leadership</div>
+[? if status_nowa_solidarnosc_visible: <div class="ledger-row"><span class="party party-nowa-solidarnosc"><b>Nowa Solidarność</b></span><span>Chrystian Szpilski</span></div><div class="ledger-subrow">Newly registered patriotic-left challenger · independent Sejm and Senate campaign</div>?]
 <div class="ledger-row"><span class="party party-pis"><b>PiS</b></span><span>[+ status_pis_leader +]</span></div>
 <div class="ledger-subrow">[+ status_pis_ideology +]</div>
 <div class="ledger-row"><span class="party party-ko"><b>KO</b></span><span>[+ status_ko_leader +]</span></div>
@@ -1923,6 +1943,7 @@ call: status
 <div class="poll-row"><span class="party party-pis"><b>PiS</b></span><span>[+ status_pis_poll +]%</span><span>[+ status_pis_projection +] projected</span></div>
 <div class="poll-row"><span class="party party-ko"><b>KO</b></span><span>[+ status_ko_poll +]%</span><span>[+ status_ko_projection +] projected</span></div>
 <div class="poll-row"><span class="party party-lewica"><b>[+ status_left_party_name +]</b></span><span>[+ status_left_poll +]%</span><span>[+ status_left_projection +] projected</span></div>
+[? if status_nowa_solidarnosc_visible: <div class="poll-row"><span class="party party-nowa-solidarnosc"><b>Nowa Solidarność</b></span><span>&lt;0.1%</span><span>0 projected</span></div>?]
 [? if barons_party_formed: <div class="poll-row"><span class="party party-sld"><b>[+ barons_party_name +]</b></span><span>[+ status_sld_breakaway_poll +]%</span><span>[+ status_sld_breakaway_projection +] projected</span></div>?]
 [? if social_patriot_party_formed: <div class="poll-row"><span class="party party-social-patriot"><b>[+ social_patriot_party_name +]</b></span><span>[+ status_social_patriot_poll +]%</span><span>[+ status_social_patriot_projection +] projected · [+ social_patriot_electoral_strategy +]</span></div>?]
 [? if spring_party_formed: <div class="poll-row"><span class="party party-wiosna"><b>[+ spring_party_name +]</b></span><span>[+ status_spring_breakaway_poll +]%</span><span>[+ status_spring_breakaway_projection +] projected</span></div>?]
@@ -1949,12 +1970,13 @@ call: status
 [? if status_pres_2025_active: <div class="ledger-section"><div class="ledger-title">Presidential election</div><div class="ledger-row"><span>Phase</span><b>[+ status_pres_2025_phase +]</b></div><div class="ledger-row"><span>[+ status_left_party_name +] candidate</span><b>[+ status_pres_2025_candidate +]</b></div>?]
 [? if status_pres_2025_active and status_pres_2025_done: <div class="ledger-row"><span>First ballot</span><b>[+ status_pres_2025_candidate_result +]%</b></div><div class="ledger-subrow">Total Left field: [+ status_pres_2025_field_result +]%</div><div class="ledger-row"><span>Runoff</span><b>[+ status_pres_2025_finalist_a +] · [+ status_pres_2025_finalist_b +]</b></div>?]
 [? if status_pres_2025_active and status_pres_2025_runoff_done: <div class="ledger-row"><span>Winner</span><b>[+ status_pres_2025_winner +]</b></div>?]
+[? if status_pres_2025_active and status_pres_2025_oath_visible: <div class="ledger-row"><span>Oath</span><b>[+ status_pres_2025_oath +]</b></div>?]
 [? if status_pres_2025_active: </div>?]
 
 <div class="ledger-section compact-party-list"><div class="ledger-title">Current Sejm</div>
 <div class="poll-row"><span class="party party-pis"><b>PiS</b></span><span></span><span>[+ status_pis_seats +] seats</span></div>
 <div class="poll-row"><span class="party party-ko"><b>KO</b></span><span></span><span>[+ status_ko_seats +] seats</span></div>
-<div class="poll-row"><span class="party party-lewica" data-short-label="Lewica" aria-label="[+ status_left_party_name +]"><b>[+ status_left_party_name +]</b></span><span></span><span>[+ status_left_seats +] seats</span></div>
+<div class="poll-row"><span class="party party-lewica" data-short-label="Lewica" aria-label="Lewica"><b>[+ status_left_party_name +]</b></span><span></span><span>[+ status_left_seats +] seats</span></div>
 [? if barons_party_formed: <div class="poll-row"><span class="party party-sld"><b>[+ barons_party_name +]</b></span><span></span><span>[+ status_sld_breakaway_seats +] seats</span></div>?]
 [? if social_patriot_party_formed: <div class="poll-row"><span class="party party-social-patriot"><b>[+ social_patriot_party_name +]</b></span><span></span><span>[+ status_social_patriot_seats +] seats</span></div>?]
 [? if spring_party_formed: <div class="poll-row"><span class="party party-wiosna"><b>[+ spring_party_name +]</b></span><span></span><span>[+ status_spring_breakaway_seats +] seats</span></div>?]
@@ -2004,6 +2026,7 @@ call: status
 <div class="poll-row"><span class="party party-pis"><b>PiS</b></span><span>[+ status_pis_poll +]%</span><span>[+ status_pis_projection +] projected</span></div>
 <div class="poll-row"><span class="party party-ko"><b>KO</b></span><span>[+ status_ko_poll +]%</span><span>[+ status_ko_projection +] projected</span></div>
 <div class="poll-row"><span class="party party-lewica"><b>[+ status_left_party_name +]</b></span><span>[+ status_left_poll +]%</span><span>[+ status_left_projection +] projected</span></div>
+[? if status_nowa_solidarnosc_visible: <div class="poll-row"><span class="party party-nowa-solidarnosc"><b>Nowa Solidarność</b></span><span>&lt;0.1%</span><span>0 projected</span></div>?]
 [? if barons_party_formed: <div class="poll-row"><span class="party party-sld"><b>[+ barons_party_name +]</b></span><span>[+ status_sld_breakaway_poll +]%</span><span>[+ status_sld_breakaway_projection +] projected</span></div>?]
 [? if spring_party_formed: <div class="poll-row"><span class="party party-wiosna"><b>[+ spring_party_name +]</b></span><span>[+ status_spring_breakaway_poll +]%</span><span>[+ status_spring_breakaway_projection +] projected</span></div>?]
 [? if labor_party_formed: <div class="poll-row"><span class="party party-left-labor"><b>[+ labor_party_name +]</b></span><span>[+ status_labor_left_poll +]%</span><span>[+ status_labor_left_projection +] projected</span></div>?]
@@ -2027,6 +2050,7 @@ call: status
 [? if status_pres_r1_complete and not status_pres_runoff_complete: <div class="ledger-row"><span>Runoff</span><b>[+ status_pres_finalist_a +] · [+ status_pres_finalist_b +]</b></div><div class="ledger-subrow">Left line: [+ status_pres_endorsement +]</div>?]
 [? if status_pres_runoff_complete: <div class="ledger-row"><span>[+ status_pres_result_label +]</span><b>[+ status_pres_winner +]</b></div><div class="ledger-subrow">[+ status_pres_finalist_a +] [+ status_pres_runoff_a +]% · [+ status_pres_finalist_b +] [+ status_pres_runoff_b +]%</div>?]
 [? if status_trz_route_visible: <div class="ledger-row"><span>Certification</span><b>[+ status_trz_inauguration +]</b></div>?]
+[? if status_trz_route_visible and trz_oath_crisis_launched: <div class="ledger-subrow">[+ status_trz_oath_crisis +]</div>?]
 [? if status_trz_route_visible and trz_inaugurated: <div class="ledger-row"><span>War of the Powers</span><b>[+ status_trz_temperature +] pressure · [+ status_trz_vetoes +] vetoes</b></div><div class="ledger-subrow">United Right fracture [+ status_trz_fragmentation +] · right backlash [+ status_trz_backlash +]</div><div class="ledger-subrow">Abortion: [+ status_trz_abortion +] · marriage: [+ status_trz_marriage +]</div>?]
 [? if status_pres_visible: </div>?]
 

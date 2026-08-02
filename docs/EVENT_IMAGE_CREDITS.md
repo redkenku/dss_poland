@@ -7,7 +7,7 @@ counterfactual outcome. No generative image tools were used.
 
 Copyright and license terms remain with each source image and are not replaced
 by the repository's MIT license. Source and license metadata was checked on
-31 July 2026.
+1 August 2026.
 
 | Local file | Wikimedia Commons source | Creator / credit | License |
 | --- | --- | --- | --- |
@@ -17,6 +17,11 @@ by the repository's MIT license. Source and license metadata was checked on
 | `grzegorz-braun-2025.webp` | [Grzegorz Braun in the European Parliament, 23 January 2025](https://commons.wikimedia.org/wiki/File:Grzegorz_Braun,_2025.01.23_(02).jpg) | European Union | Attribution under the European Commission reuse decision |
 | `kpo.webp` | [European Structural and Investment Funds information board in Poland](https://commons.wikimedia.org/wiki/File:046_European_Structural_and_Investment_Funds_-_European_Regional_Development_Fund_information_board_in_Poland.jpg) | Marek Ślusarczyk (Tupungato) | CC BY 3.0 |
 | `oder-disaster-2022.webp` | [Fish deaths on the Oder, 2022](https://commons.wikimedia.org/wiki/File:Fischsterben-Oder-2.jpg) | Hanno Böck | CC0 |
+| `pres-candidate-bosak.webp` | [Krzysztof Bosak in Poznań, 7 June 2020](https://commons.wikimedia.org/wiki/File:BOSAK_2020_(cropped).jpg) | Enstropia | CC BY-SA 4.0 |
+| `pres-candidate-duda.webp` | [Official portrait of Andrzej Duda, 2019](https://commons.wikimedia.org/wiki/File:Andrzej_Duda_Official_Portrait.jpg) | Jakub Szymczuk / Chancellery of the President of Poland | CC BY-SA 4.0 |
+| `pres-candidate-holownia.webp` | [Szymon Hołownia](https://commons.wikimedia.org/wiki/File:Ho%C5%82ownia.JPG) | Otwarte Klatki | CC BY 2.0 |
+| `pres-candidate-kosiniak.webp` | [Władysław Kosiniak-Kamysz, 2015](https://commons.wikimedia.org/wiki/File:W%C5%82adys%C5%82aw_Kosiniak-Kamysz_3_(21079125704).jpg) | Ministry of Family and Social Policy | CC0 |
+| `pres-candidate-trzaskowski.webp` | [Rafał Trzaskowski, 22 May 2020](https://commons.wikimedia.org/wiki/File:Rafa%C5%82_Trzaskowski_22_May_2020.jpg) | Platforma Obywatelska RP | CC0 |
 | `sejm-menorah.webp` | [Hanukkah in the Sejm, 2015](https://commons.wikimedia.org/wiki/File:Chanuka_Sejm_2015_01.JPG) | Adrian Grycuk | CC BY-SA 3.0 PL |
 | `ukraine-refugees-2022.webp` | [Ukrainian refugees at Przemyśl station, 2022](https://commons.wikimedia.org/wiki/File:Ukrainian_refugees_at_Przemy%C5%9Bl_returning_home.jpg) | 梁柏堅 Pakkin Leung | CC BY 4.0 |
 | `umamusume-global-train.webp` | [JR West 323 series train with *Umamusume: Pretty Derby* wrapping](https://commons.wikimedia.org/wiki/File:JR-West323_Umamusume.jpg) | Mr.ちゅらさん | CC BY-SA 4.0 |

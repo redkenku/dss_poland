@@ -73,7 +73,7 @@ The GitHub workflow performs the same broad operation and publishes
 | `source/info.dry` | Game title, author, IFID, and top-level metadata | Yes |
 | `source/scenes/root.scene.dry` | Entry menu and initial state | Yes, carefully |
 | `source/scenes/poland_hub.scene.dry` | Active Polish hand and pinned system cards | Yes |
-| `source/scenes/cards/` | Contextual Party, Government, Negotiation and Foreign cards | Yes |
+| `source/scenes/cards/` | Contextual Party, Government, Negotiation, Major Reform and Foreign cards | Yes |
 | `source/scenes/poland_advisors.scene.dry` | Twelve directly rendered Polish adviser cards | Yes |
 | `source/scenes/poland_advisor_groups.scene.dry` | Compatibility menus for older saves | Yes, carefully |
 | `source/scenes/poland_advance.scene.dry` | Polish monthly update and dated router | Yes |
@@ -353,25 +353,59 @@ main hand: party/government/adviser actions ◄─────────┘
 
 This is the system that must be converted, not just the opening scene.
 
-The active Polish hand has four contextual live decks:
+The active Polish hand has five contextual live decks:
 
 - **Party Affairs** is always available and draws one of nineteen party cards.
 - **Government Affairs** requires government participation, Sejm confidence,
-  no caretaker cabinet and at least one relevant Lewica-held ministry whose
-  policy opportunity is currently useful and off cooldown. Its sixteen cards
-  comprise one file for each of thirteen portfolios plus Cabinet Reshuffle,
-  Coalition Council and Social Welfare. Portfolio cards repeat the same
-  ownership and cabinet-safety conditions.
-- **Negotiation with Government** appears only while Lewica is outside a
-  functioning cabinet. Two PiS-only cards can cultivate its solidarists or
-  deepen the United Right's social fault line; crisis compact, oversight and
-  presidential-mediation cards publish their score, threshold and likely
-  effect before the player chooses.
-- **Foreign Affairs** remains available in and out of government. A
-  higher-frequency staged European campaign builds distinct institutional,
-  social, eastern and bilateral relationships; five lower-frequency pressure
-  cards recur on independent cooldowns. The 2020 and 2024 US election scenes
-  set the administration used by later Washington and security cards.
+  no caretaker cabinet and at least one Lewica-held ministry. A portfolio
+  opportunity must be useful and off cooldown. Its sixteen cards comprise one
+  file for each of thirteen portfolios plus Cabinet Reshuffle, Coalition
+  Council and Social Welfare. Portfolio cards repeat the same ownership and
+  cabinet-safety conditions.
+- **Pressure & Negotiate** appears only while Lewica is outside a functioning
+  cabinet. TVP appearances, committee scrutiny and United Right fault-line
+  pressure build visible bargaining capital; the Party Affairs relationship
+  route can build a working PiS channel. Crisis compact, oversight and
+  presidential-mediation cards publish their score and threshold, become
+  selectable only when a deal can work, and spend capital on success.
+- **Major Reforms** is a recurring project deck for abortion, equal marriage
+  and labour law. The first project action defines the maximal programme. Four
+  numbered outcomes then measure how far that bill is forced down; they are not
+  sequential unlocks. Enacting any outcome closes that issue at its settlement,
+  while an outright defeat applies trust and momentum losses plus a cooldown
+  before the ambitious bill can return. The projects retain their separate
+  deck, while the weighted draw routine also injects any eligible project into
+  Government Affairs in office and Pressure & Negotiate in opposition. Their
+  135 weight makes them slightly more likely than an ordinary 100-weight card
+  without duplicating tags or permanent hand slots.
+- **Foreign Affairs** remains available in and out of government through four
+  files: the EU, Hungary, the United States and wartime Ukraine. Opposition
+  builds democratic, parliamentary and party channels without implementing
+  state policy; government can negotiate, fund and deliver national policy.
+  Hungarian and US election results change the available partners. A rightward
+  European Parliament adds a visible headwind to progressive-reform passage,
+  while persistently weak EU and US access produces an explicit growth and
+  employment shock.
+
+Major Reform passage scores combine accumulated preparation, public and Left
+poll strength, partner relations and internal rival currents. Holding Labour,
+Equality, Health or Justice, as appropriate, lowers the political threshold;
+the EU progressive headwind is visibly subtracted from all three projects; and
+the President remains a separate signature or veto gate. Abortion and marriage
+can build a referendum mandate, but opposition work only prepares that route.
+Low relations can turn an attempted government bill into a queued coalition
+crisis, where the player must spend capacity, cash in support, narrow the bill
+or withdraw. Narrowing can save a law but makes that compromise the campaign's
+final settlement; withdrawal preserves the original goal for a later attempt.
+
+The monthly rival AI can also open a coalition-pressure decision at month-end.
+KO or Third Way press for aggressive judicial action, control of public media
+or market liberalisation; PiS presses for surveillance powers, religious
+conciliation or a repudiation of the PZPR past. Hostile presidential
+cohabitation makes the democratic camp's judicial proposals more desperate and
+procedurally risky. Public-media outcomes set the persistent TVP patron read by
+the right-side press rail, rather than deriving TVP's line from the incumbent
+government alone.
 
 The cabinet round always displays Labour, Equality, Housing, Health, Digital
 Affairs, Science, Interior, Finance, Development and Technology, Justice,
@@ -460,7 +494,7 @@ As of 30 July 2026:
 | Local HTTP launch | Working through `npm start` |
 | Opening date and Polish caucus qualities | Converted |
 | Status display and interface labels | Converted for the active slice |
-| Native contextual hand and time advancement | Converted; Party, ministry-bound Government and opposition Negotiation decks share one three-card hand with state-neutral held-card discard |
+| Native contextual hand and time advancement | Converted; Party, ministry-bound Government, opposition Negotiation, recurring Major Reform and Foreign decks share one three-card hand with state-neutral held-card discard |
 | Factional advisor bureau and reshuffling | Converted; twelve advisors in five political caucuses, three active cards and a full-slate editor |
 | Dense party/institution/economy/voter ledger | Converted, including Senate, ideologies and voter blocs |
 | Dated events | Continuous October 2019–July 2023 campaign; 45 monthly leadership turns |

@@ -1,0 +1,498 @@
+title: Resolve a major reform vote
+
+@resolve
+title: Verify authority to carry the bill
+go-to: authority_lost if left_in_government = 0 or government_has_confidence = 0 or caretaker_government = 1; count if left_in_government = 1 and government_has_confidence = 1 and caretaker_government = 0
+
+@authority_lost
+title: The mandate disappears before the count
+new-page: true
+on-arrival: {!
+const issue = Q.reform_pressure_issue;
+if (["abortion", "marriage", "labor"].includes(issue)) {
+    Q[issue + "_reform_proposal_stage"] =
+        Number(Q[issue + "_reform_goal_stage"]) || 4;
+}
+Q.reform_pressure_pending = 0;
+Q.reform_pressure_mode = "None";
+Q.reform_pressure_cooldown = 2;
+Q.reform_pressure_due_time = -1;
+Q.reform_pressure_return_mode = "card";
+Q.reform_pressure_last_result =
+    "The bill is deferred because Lewica no longer has governing authority";
+Q.news_headline = Q.reform_pressure_last_result;
+!}
+
+The cabinet lost confidence, entered caretaker status or lost Lewica before
+the delayed confrontation could be resolved. No law is enacted and no project
+momentum is confiscated; the ambitious bill returns when governing authority
+does.
+
+- @poland_polling: Carry the deferred bill into the next month
+
+@count
+title: Count the coalition and the Palace
+on-arrival: {!
+const issue = Q.reform_pressure_issue;
+const target = Math.max(
+    1,
+    Math.min(4, Math.round(Number(Q.reform_pressure_target_stage) || 1))
+);
+if (Q.reform_pressure_return_mode != "pressure") {
+    Q.reform_pressure_forced = 0;
+}
+const hostilePresident = Q.pres_2025_hostile_president || [
+    "Andrzej Duda", "Krzysztof Bosak", "Karol Nawrocki",
+    "Sławomir Mentzen", "Grzegorz Braun"
+].includes(Q.president_name);
+const koInCabinet =
+    Q.government_party == "ko" || Q.ministry_ko_in_cabinet;
+const pslInCabinet =
+    Q.government_party == "psl" || Q.ministry_psl_in_cabinet;
+const p2050InCabinet =
+    Q.government_party == "p2050" || Q.ministry_p2050_in_cabinet;
+const thirdWayActor = pslInCabinet &&
+    (!p2050InCabinet || Number(Q.psl_relation) <= Number(Q.p2050_relation))
+    ? "psl"
+    : "p2050";
+const thirdWayRelation = Number(Q[thirdWayActor + "_relation"]);
+const abortionPalaceCommitment =
+    Q.abortion_palace_president == Q.president_name
+        ? Number(Q.abortion_palace_commitment)
+        : 0;
+const marriagePalaceCommitment =
+    Q.marriage_palace_president == Q.president_name
+        ? Number(Q.marriage_palace_commitment)
+        : 0;
+const laborPalaceCommitment =
+    Q.labor_palace_president == Q.president_name
+        ? Number(Q.labor_palace_commitment)
+        : 0;
+let blocker = "";
+let blockerName = "";
+
+if (issue == "abortion") {
+    if (Q.government_party == "pis") {
+        const pisLimited =
+            Number(Q.pis_relation) >= (target == 1 ? 30 : 52) ||
+            Number(Q.abortion_pis_commitment) >= (target == 1 ? 1 : 2) ||
+            Q.abortion_referendum_mandate;
+        const pisMaximum =
+            Number(Q.abortion_pis_commitment) >= target ||
+            (
+                Number(Q.pis_relation) >= (target == 3 ? 68 : 78) &&
+                Number(Q.abortion_pis_commitment) >= target - 1 &&
+                (
+                    Q.abortion_referendum_mandate ||
+                    Q.president_name == "Rafał Trzaskowski"
+                )
+            );
+        if ((target <= 2 && !pisLimited) || (target >= 3 && !pisMaximum)) {
+            blocker = "pis";
+            blockerName = "PiS";
+        }
+    } else {
+        const pisLimitedSupport =
+            target <= 2 &&
+            Number(Q.pis_relation) >= 55 &&
+            Number(Q.abortion_pis_commitment) >= 2;
+        if (
+            koInCabinet &&
+            target >= 3 &&
+            Number(Q.ko_relation) < 45 &&
+            Number(Q.abortion_ko_commitment) < 2
+        ) {
+            blocker = "ko";
+            blockerName = "KO";
+        } else if (
+            (pslInCabinet || p2050InCabinet) &&
+            target >= 2 &&
+            thirdWayRelation < 48 + Math.max(0, target - 2) * 10 &&
+            Number(Q.abortion_third_way_commitment) < target &&
+            !Q.abortion_referendum_mandate &&
+            !pisLimitedSupport
+        ) {
+            blocker = thirdWayActor;
+            blockerName = "PSL / Third Way";
+        } else if (
+            koInCabinet &&
+            target == 4 &&
+            Number(Q.ko_classical_liberal_share) > 55 &&
+            Number(Q.ko_relation) < 62 &&
+            Number(Q.abortion_ko_commitment) < 3
+        ) {
+            blocker = "ko";
+            blockerName = "KO's conservative-liberal wing";
+        }
+    }
+    if (!blocker && hostilePresident) {
+        const palaceFloor = Q.reform_pressure_palace_override ||
+            abortionPalaceCommitment >= target || target == 1 ||
+            (
+                target == 2 &&
+                (
+                    Number(Q.president_relation) >= 35 ||
+                    abortionPalaceCommitment >= 1 ||
+                    Q.abortion_referendum_mandate
+                )
+            ) ||
+            (
+                target == 3 &&
+                abortionPalaceCommitment >= 2 &&
+                (
+                    Number(Q.president_relation) >= 52 ||
+                    Q.abortion_referendum_mandate
+                )
+            ) ||
+            (
+                target == 4 &&
+                abortionPalaceCommitment >= 3 &&
+                Number(Q.president_relation) >= 68 &&
+                Q.abortion_referendum_mandate
+            );
+        if (!palaceFloor) {
+            blocker = "president";
+            blockerName = "President " + Q.president_name;
+        }
+    }
+} else if (issue == "marriage") {
+    if (Q.government_party == "pis") {
+        const pisLimited =
+            Number(Q.pis_relation) >= (target == 1 ? 28 : 55) ||
+            Number(Q.marriage_pis_commitment) >= (target == 1 ? 1 : 2);
+        const pisMaximum =
+            Number(Q.marriage_pis_commitment) >= target ||
+            (
+                Number(Q.pis_relation) >= (target == 3 ? 72 : 82) &&
+                Number(Q.marriage_pis_commitment) >= target - 1 &&
+                Q.marriage_referendum_mandate &&
+                Q.president_name == "Rafał Trzaskowski"
+            );
+        if ((target <= 2 && !pisLimited) || (target >= 3 && !pisMaximum)) {
+            blocker = "pis";
+            blockerName = "PiS";
+        }
+    } else {
+        const pisLimitedSupport =
+            target <= 2 &&
+            Number(Q.pis_relation) >= 55 &&
+            Number(Q.marriage_pis_commitment) >= 2;
+        if (
+            koInCabinet &&
+            target >= 3 &&
+            Number(Q.ko_relation) < 45 &&
+            Number(Q.marriage_ko_commitment) < 2
+        ) {
+            blocker = "ko";
+            blockerName = "KO";
+        } else if (
+            (pslInCabinet || p2050InCabinet) &&
+            target >= 2 &&
+            thirdWayRelation < 52 + Math.max(0, target - 2) * 10 &&
+            Number(Q.marriage_third_way_commitment) < target &&
+            !Q.marriage_referendum_mandate &&
+            !pisLimitedSupport
+        ) {
+            blocker = thirdWayActor;
+            blockerName = "PSL / Third Way";
+        } else if (
+            koInCabinet &&
+            target == 4 &&
+            Number(Q.ko_classical_liberal_share) > 55 &&
+            Number(Q.ko_relation) < 62 &&
+            Number(Q.marriage_ko_commitment) < 3
+        ) {
+            blocker = "ko";
+            blockerName = "KO's conservative-liberal wing";
+        }
+    }
+    if (!blocker && hostilePresident) {
+        const dudaLimited =
+            Q.president_name == "Andrzej Duda" && target == 1;
+        const palaceFloor = Q.reform_pressure_palace_override ||
+            marriagePalaceCommitment >= target || dudaLimited ||
+            (
+                target == 2 &&
+                (
+                    Number(Q.president_relation) >= 38 ||
+                    marriagePalaceCommitment >= 1
+                )
+            ) ||
+            (
+                target == 3 &&
+                marriagePalaceCommitment >= 2 &&
+                (
+                    Number(Q.president_relation) >= 55 ||
+                    Q.marriage_referendum_mandate
+                )
+            ) ||
+            (
+                target == 4 &&
+                marriagePalaceCommitment >= 3 &&
+                Number(Q.president_relation) >= 70 &&
+                Q.marriage_referendum_mandate
+            );
+        if (!palaceFloor) {
+            blocker = "president";
+            blockerName = "President " + Q.president_name;
+        }
+    }
+} else if (issue == "labor") {
+    if (Q.government_party == "pis") {
+        const solidaristLead =
+            Number(Q.pis_solidarist_share) >=
+            Number(Q.pis_market_hardliner_share);
+        const pisLimited =
+            Number(Q.pis_relation) >= 25 ||
+            Number(Q.labor_pis_commitment) >= target ||
+            (solidaristLead && Number(Q.pis_relation) >= 15);
+        const pisStrong =
+            (
+                Number(Q.pis_relation) >= 40 &&
+                (Number(Q.labor_pis_commitment) >= 1 || solidaristLead)
+            ) || Number(Q.labor_pis_commitment) >= target;
+        const pisMaximum =
+            (
+                Number(Q.pis_relation) >= 50 &&
+                Number(Q.labor_pis_commitment) >= 2 && solidaristLead
+            ) || Number(Q.labor_pis_commitment) >= target;
+        if (
+            (target <= 2 && !pisLimited) ||
+            (target == 3 && !pisStrong) ||
+            (target == 4 && !pisMaximum)
+        ) {
+            blocker = "pis";
+            blockerName = solidaristLead
+                ? "PiS's hostile leadership"
+                : "PiS's market wing";
+        }
+    } else {
+        if (
+            koInCabinet &&
+            target >= 2 &&
+            (
+                Number(Q.ko_relation) < 40 ||
+                Number(Q.ko_classical_liberal_share) >= 60
+            ) &&
+            Number(Q.labor_ko_commitment) < 2
+        ) {
+            blocker = "ko";
+            blockerName = "KO's capitalist wing";
+        } else if (
+            (pslInCabinet || p2050InCabinet) &&
+            target >= 3 &&
+            thirdWayRelation < 45 + Math.max(0, target - 3) * 13 &&
+            Number(Q.labor_third_way_commitment) < target
+        ) {
+            blocker = thirdWayActor;
+            blockerName = "the Third Way's market wing";
+        }
+    }
+    if (
+        !blocker && hostilePresident && Q.government_party != "pis"
+    ) {
+        const palaceFloor = Q.reform_pressure_palace_override ||
+            laborPalaceCommitment >= target || target == 1 ||
+            (
+                target == 2 &&
+                (
+                    Number(Q.president_relation) >= 30 ||
+                    laborPalaceCommitment >= 1
+                )
+            ) ||
+            (
+                target == 3 &&
+                laborPalaceCommitment >= 2 &&
+                Number(Q.president_relation) >= 48
+            ) ||
+            (
+                target == 4 &&
+                laborPalaceCommitment >= 3 &&
+                Number(Q.president_relation) >= 62
+            );
+        if (!palaceFloor) {
+            blocker = "president";
+            blockerName = "President " + Q.president_name;
+        }
+    }
+}
+
+const reformNames = {
+    abortion: "reproductive-rights reform",
+    marriage: "legal recognition and equal marriage",
+    labor: "labour-law reconstruction"
+};
+const settlementLabels = {
+    abortion: [
+        "No settlement", "emergency and clinician decriminalisation",
+        "a limited decriminalisation compromise", "legal access through twelve weeks",
+        "Canadian-model decriminalisation"
+    ],
+    marriage: [
+        "No settlement", "a closest-person agreement",
+        "registered cohabitation", "civil partnerships",
+        "marriage equality and adoption"
+    ],
+    labor: [
+        "No settlement", "funded inspection and token enforcement",
+        "PIP reclassification and enforcement powers",
+        "contract and labour-law protections", "the full Razem labour package"
+    ]
+};
+Q.reform_pressure_issue_name = reformNames[issue];
+if (blocker) {
+    Q[issue + "_reform_proposal_stage"] = target;
+    Q.reform_pressure_pending = 1;
+    Q.reform_pressure_mode = "partner_objection";
+    Q.reform_pressure_actor = blocker;
+    Q.reform_pressure_actor_name = blockerName;
+    Q.reform_pressure_intensity = Math.min(
+        100,
+        32 + target * 12 +
+        (blocker == "president" ? 8 : 0) +
+        (Q.hard_mode ? 8 : 0)
+    );
+    Q.reform_pressure_illegality = 0;
+    Q.reform_pressure_due_time = Number(Q.time) || 0;
+    Q.reform_pressure_objections += 1;
+    Q.news_headline = blockerName + " opposes Lewica's " +
+        reformNames[issue];
+} else {
+    const previous = Number(Q[issue + "_reform_stage"]) || 0;
+    const forced = Q.reform_pressure_forced ? 1 : 0;
+    Q[issue + "_reform_stage"] = target;
+    Q[issue + "_reform_proposal_stage"] = target;
+    Q[issue + "_reform_defined"] = 1;
+    Q[issue + "_reform_settled"] = 1;
+    Q[issue + "_reform_progress"] = Math.max(
+        Number(Q[issue + "_reform_progress"]) || 0,
+        target * 20
+    );
+    const deliveryByStage = [0, -2, 2, 4, 8];
+    const trustByStage = [0, -2, 1, 2, 5];
+    const credibilityByStage = [0, -4, 4, 8, 16];
+    const audienceByStage = [0, -3, 3, 6, 12];
+    const pollByStage = [0, -0.8, 0.6, 1.2, 3.0];
+    const forcedPollBonus = [0, 0.25, 0.5, 0.9, 1.5];
+    const rivalPenaltyByStage = [0, -0.15, 0.10, 0.25, 0.55];
+    const forcedRivalPenalty = [0, 0.05, 0.10, 0.15, 0.20];
+    const opinionByStage = [0, -3, 2, 4, 7];
+    const forcedOpinionBonus = [0, 0, 1, 2, 4];
+    const ownershipByStage = [0, -4, 2, 5, 9];
+    const blocBoostByStage = [0, 0, 0.5, 1, 2];
+    const forcedBlocBonus = [0, 0, 0, 0.5, 1];
+    const voterBlocs = [
+        "metropolitan_liberals", "liberal_professionals",
+        "public_service_families", "industrial_logistics",
+        "provincial_welfare", "rural_localists",
+        "older_welfare_households", "anti_establishment_youth"
+    ];
+    const opinionKeys = {
+        abortion: "abortion_rights",
+        marriage: "lgbt_equality",
+        labor: "social_spending"
+    };
+    const clampOpinion = function(key, change) {
+        Q[key] = Math.max(
+            0,
+            Math.min(100, (Number(Q[key]) || 0) + change)
+        );
+    };
+    const pollSwing = pollByStage[target] +
+        (forced ? forcedPollBonus[target] : 0);
+    const rivalPenalty = rivalPenaltyByStage[target] +
+        (forced ? forcedRivalPenalty[target] : 0);
+    const opinionShift = opinionByStage[target] +
+        (forced ? forcedOpinionBonus[target] : 0);
+    const broadBlocBoost = blocBoostByStage[target] +
+        (forced ? forcedBlocBonus[target] : 0);
+    const opinionKey = opinionKeys[issue];
+    Q.government_delivery += deliveryByStage[target];
+    Q.public_trust += trustByStage[target] +
+        (forced && target >= 3 ? target - 2 : 0);
+    Q.left_poll += pollSwing;
+    for (const rival of ["pis", "ko", "psl", "p2050", "konf"]) {
+        Q[rival + "_poll"] = Math.max(
+            0,
+            (Number(Q[rival + "_poll"]) || 0) - rivalPenalty
+        );
+    }
+    for (const bloc of voterBlocs) {
+        const affinityKey = bloc + "_left_affinity";
+        Q[affinityKey] = (Number(Q[affinityKey]) || 0) + broadBlocBoost;
+    }
+    clampOpinion(opinionKey + "_support", opinionShift);
+    clampOpinion(opinionKey + "_backlash", -opinionShift);
+    clampOpinion(
+        opinionKey + "_left_ownership",
+        ownershipByStage[target] + (forced ? target + 1 : 0)
+    );
+    clampOpinion(
+        opinionKey + "_salience",
+        (target == 1 ? 2 : target) + (forced ? target : 0)
+    );
+    if (issue == "abortion") {
+        Q.feminist_trust += credibilityByStage[target];
+        Q.progressive_credibility += credibilityByStage[target] / 2;
+        Q.government_goal_equality = 1;
+        if (target >= 1) Q.abortion_law_enacted = 1;
+    } else if (issue == "marriage") {
+        Q.progressive_credibility += credibilityByStage[target];
+        Q.minority_safety += audienceByStage[target];
+        Q.government_goal_equality = 1;
+    } else {
+        Q.labor_credibility += credibilityByStage[target];
+        Q.workers_support += audienceByStage[target];
+        Q.government_goal_labor = 1;
+    }
+    Q.last_policy_stage = "Enacted settlement: " +
+        settlementLabels[issue][target];
+    Q.last_policy_authority = Q.reform_pressure_palace_override
+        ? "Three-fifths Sejm veto override"
+        : forced
+            ? "Lewica-forced coalition vote and President " + Q.president_name
+            : "Sejm majority and President " + Q.president_name;
+    Q.last_policy_implementation = 1;
+    Q.news_headline = reformNames[issue] +
+        (forced ? " survives coalition opposition with " : " closes with ") +
+        settlementLabels[issue][target];
+    Q.reform_pressure_forced = 0;
+}
+!}
+go-to: poland_reform_pressure if reform_pressure_return_mode = "pressure" and reform_pressure_pending = 1; pressure_enacted if reform_pressure_return_mode = "pressure" and reform_pressure_pending = 0; objection_queued if reform_pressure_return_mode != "pressure" and reform_pressure_pending = 1; enacted if reform_pressure_return_mode != "pressure" and reform_pressure_pending = 0
+
+@enacted
+title: The reform enters the statute book
+new-page: true
+
+**[+ news_headline +].** This is the final settlement of the campaign. A
+compromise law is not the first rung of a later automatic climb; accepting and
+enacting it closes the chapter at that outcome.
+
+- #poland_card_finish
+
+@objection_queued
+title: A partner withholds its votes
+new-page: true
+
+**[+ reform_pressure_actor_name +] opposes the bill.** The text is ready and
+the numerical passage threshold was met, but a bad relationship or an
+unsettled red line has turned the vote into a coalition-survival question.
+
+The confrontation will arrive when the month closes. Lewica may narrow the
+bill, spend organisational resources, cash in a relationship or force the
+issue and put the coalition under threat.
+
+- #poland_card_finish
+
+@pressure_enacted
+title: The coalition and Palace count closes
+new-page: true
+on-arrival: reform_pressure_last_result = news_headline; reform_pressure_return_mode = "card"; reform_pressure_palace_override = 0
+
+The remaining veto players have been counted in sequence. **[+
+news_headline +].** The enacted settlement closes this project, whether it
+preserved the original ambitious bill or survived only after being forced
+down.
+
+- @poland_polling: Carry the enacted settlement into the new month

@@ -1,251 +1,598 @@
 title: Polish dossier
 new-page: true
 is-special: true
+call: poland_normalize
 go-to: menu
 
 @menu
+on-arrival: {!
+const dossierNumber = function(value, fallback) {
+    const parsed = Number(value);
+    return Number.isFinite(parsed) ? parsed : fallback;
+};
+const dossierWhole = function(value, fallback) {
+    return Math.round(dossierNumber(value, fallback));
+};
+const dossierDecimal = function(value, fallback) {
+    return Math.round(dossierNumber(value, fallback) * 10) / 10;
+};
+const dossierText = function(value, fallback) {
+    return typeof value == "string" && value.trim().length
+        ? value
+        : fallback;
+};
+
+Q.dossier_date = dossierText(Q.date_label, "October 2019");
+Q.dossier_headline = dossierText(
+    Q.news_headline,
+    "The Left returns to the Sejm"
+);
+Q.dossier_left_party = dossierText(Q.left_party_name, "Lewica");
+Q.dossier_left_leader = dossierText(Q.left_leader, "Collective leadership");
+Q.dossier_president = dossierText(Q.president_name, "Andrzej Duda");
+Q.dossier_prime_minister = dossierText(
+    Q.prime_minister,
+    "Mateusz Morawiecki"
+);
+Q.dossier_government = dossierText(Q.government_name, "Government not recorded");
+Q.dossier_left_role = dossierText(Q.left_role, Q.position || "Opposition");
+Q.dossier_sejm_speaker = dossierText(Q.sejm_speaker, "Office not recorded");
+Q.dossier_senate_marshal = dossierText(
+    Q.senate_marshal,
+    "Office not recorded"
+);
+Q.dossier_sejm_total = Math.max(1, dossierWhole(Q.sejm_total, 460));
+Q.dossier_senate_total = Math.max(1, dossierWhole(Q.senate_total, 100));
+Q.dossier_sejm_majority = Math.floor(Q.dossier_sejm_total / 2) + 1;
+Q.dossier_senate_majority = Math.floor(Q.dossier_senate_total / 2) + 1;
+Q.dossier_left_seats = Math.max(0, dossierWhole(Q.left_seats, 49));
+Q.dossier_left_poll = dossierDecimal(Q.left_poll, 12.6);
+Q.dossier_party_unity = dossierWhole(Q.party_unity, 58);
+Q.dossier_resources = dossierWhole(Q.resources, 0);
+Q.dossier_public_trust = dossierWhole(Q.public_trust, 43);
+Q.dossier_ministry_count = dossierWhole(Q.ministry_count, 0);
+Q.dossier_poll_updated = dossierText(Q.poll_last_updated, "Opening baseline");
+Q.dossier_poll_sample = dossierWhole(Q.poll_sample_size, 1400);
+Q.dossier_poll_margin = dossierDecimal(Q.poll_margin_error, 2.6);
+Q.dossier_coalition_seats = Math.max(0, dossierWhole(Q.coalition_seats, 0));
+
+const dossierPortfolioLabels = {
+    labor: "Labour & Social Policy",
+    equality: "Equality",
+    housing: "Housing",
+    health: "Health",
+    digital: "Digital Affairs",
+    science: "Science",
+    interior: "Interior & Administration",
+    finance: "Finance",
+    economy: "Development & Technology",
+    justice: "Justice",
+    foreign: "Foreign Affairs",
+    agriculture: "Agriculture & Rural Development",
+    defence: "National Defence"
+};
+for (const portfolio of Object.keys(dossierPortfolioLabels)) {
+    const minister = dossierText(Q[portfolio + "_minister"], "Unassigned");
+    const party = dossierText(Q[portfolio + "_minister_party"], "Unassigned");
+    const individuallyTracked = minister != "Unassigned" && party != "Unassigned";
+    Q["dossier_" + portfolio + "_label"] =
+        dossierPortfolioLabels[portfolio];
+    Q["dossier_" + portfolio + "_minister"] = individuallyTracked
+        ? minister
+        : "Not individually tracked in this chapter";
+    Q["dossier_" + portfolio + "_party"] = individuallyTracked
+        ? party
+        : "—";
+}
+
+// Old saves did not have a polling ledger. Seed one honest point instead of
+// inventing a trend; future monthly poll rebuilds append to it.
+if (!Array.isArray(Q.poll_history)) Q.poll_history = [];
+if (!Q.poll_history.length) {
+    const month = String(Math.max(1, dossierWhole(Q.month, 10)));
+    Q.poll_history.push({
+        date: dossierWhole(Q.year, 2019) + "-" +
+            (month.length < 2 ? "0" + month : month) + "-01",
+        label: Q.dossier_date,
+        left: dossierDecimal(Q.left_poll, 12.6),
+        pis: dossierDecimal(Q.pis_poll, 43.6),
+        ko: dossierDecimal(Q.ko_poll, 27.4),
+        psl: dossierDecimal(Q.psl_poll, 8.6),
+        p2050: dossierDecimal(Q.p2050_poll, 0),
+        konf: dossierDecimal(Q.konf_poll, 6.8),
+        other: dossierDecimal(Q.other_poll, 1)
+    });
+}
+Q.dossier_poll_points = Q.poll_history.length;
+!}
 
 = Polish dossier
 
-- @situation: The situation in October 2019
-- @factions: Organisations and political caucuses
-- @institutions: Institutions and parties
-- @senate: Sejm, Senate and confidence rules
-- @cabinet: Cabinet and ministries
-- @economy: Party resources and the state budget
-- @polling: Polls, voter blocs and seat projections
-- @foreign: Europe, Washington and foreign pressure
-- @rules: Prototype rules
-- @conversion: What remains from the inherited game
-- @backSpecialScene: Back
-
-@situation
-
-= The situation in October 2019
-
-PiS has won a second term. The Left has returned to the Sejm with 12.56% and
-49 seats on the SLD electoral committee after a four-year parliamentary
-absence. The common delegation brings together SLD, Wiosna, Razem and smaller
-left organisations.
-
-The campaign starts after the election, passes through the July 2021 merger
-revolt and the 2023 transfer of power, and continues through the coalition and
-scenario-horizon crises of December 2026.
-
-- @menu: Back
-
-@factions
-
-= Organisations and political caucuses
-
-**Organisational ancestry** and **political tendency** are separate.
-
-1. SLD provides the legal vehicle, regional machinery and many experienced
-officeholders.
-2. Wiosna provides Biedroń's network and a strongly progressive public brand.
-3. Razem remains a separate party with activists and a costed social programme.
-4. Labour, feminist and younger progressive currents cross those formal lines.
-
-The “barons” are the old SLD elite: organisationally experienced, socially more
-cautious and economically accommodationist. The younger progressive caucus is
-more women-led, secular, feminist and LGBT+ supportive. Katarzyna Kotula is
-Wiosna-derived even when she aligns with that functional caucus.
-
-Rival groups use the same persistent organisation/caucus record. PiS contains
-Kaczyński's apparatus, the Morawiecki network, welfare, security and
-culture-war currents, alongside separately tracked Porozumienie and
-Solidarna/Suwerenna Polska. KO begins as an alliance of PO, Nowoczesna,
-Inicjatywa Polska and the separately allied Greens. A rename, merger talk or
-leadership dispute does not erase those records. Affinity estimates may
-overlap; only completed individual defections create exclusive seats.
-
-- @menu: Back
-
-@institutions
-
-= Institutions and parties
-
-The president can sign, veto or refer ordinary legislation and compete for
-credit. He does not choose routine parliamentary cabinets as Hindenburg could
-in the inherited scenario.
-
-PSL and the later Poland 2050 are coalition hinges, not equivalents of the
-Weimar Centre Party. PiS, Konfederacja and the Braun current are distinct
-competitors. Razem is not the KPD. The Polish Armed Forces and police are
-modelled through professionalism, legality, readiness and public trust—not
-partisan loyalty or militia strength.
-
-- @menu: Back
-
-@senate
-
-= Sejm, Senate and confidence
-
-The Senate is a separate chamber, not a decorative seat total. On an ordinary
-bill it may accept, amend or reject the Sejm text; the Sejm can override that
-position with an absolute majority. On a budget it has twenty days and may
-propose amendments, but it cannot reject the whole act.
-
-The 2019 opposition pact begins with 52 nominal senators but only 51 reliably
-deliverable votes. Lewica has just two senators, so influence comes from keeping
-KO, PSL and independents coordinated, preparing amendments and becoming the
-vote that neither larger camp can take for granted.
-
-Cabinet formation is decided in the Sejm. The President nominates the first
-prime-ministerial candidate. If that cabinet fails, the Sejm may choose a
-candidate. A later constructive vote of no confidence must name a replacement
-and assemble 231 deputies; the Senate does not participate.
-
-- @menu: Back
-
-@cabinet
-view-if: year >= 2023
-
-= Cabinet and ministries
-
-The cabinet round displays all thirteen offices, including portfolios that a
-coalition partner will not readily surrender.
-
-<div class="ministry-grid">
-<div><span>Labour & Social Policy</span><b>[+ labor_minister_party +] · [+ labor_minister +]</b></div>
-<div><span>Equality</span><b>[+ equality_minister_party +] · [+ equality_minister +]</b></div>
-<div><span>Housing</span><b>[+ housing_minister_party +] · [+ housing_minister +]</b></div>
-<div><span>Health</span><b>[+ health_minister_party +] · [+ health_minister +]</b></div>
-<div><span>Digital Affairs</span><b>[+ digital_minister_party +] · [+ digital_minister +]</b></div>
-<div><span>Science</span><b>[+ science_minister_party +] · [+ science_minister +]</b></div>
-<div><span>Interior & Administration</span><b>[+ interior_minister_party +] · [+ interior_minister +]</b></div>
-<div><span>Finance</span><b>[+ finance_minister_party +] · [+ finance_minister +]</b></div>
-<div><span>Development & Technology</span><b>[+ economy_minister_party +] · [+ economy_minister +]</b></div>
-<div><span>Justice</span><b>[+ justice_minister_party +] · [+ justice_minister +]</b></div>
-<div><span>Foreign Affairs</span><b>[+ foreign_minister_party +] · [+ foreign_minister +]</b></div>
-<div><span>Agriculture & Rural Development</span><b>[+ agriculture_minister_party +] · [+ agriculture_minister +]</b></div>
-<div><span>National Defence</span><b>[+ defence_minister_party +] · [+ defence_minister +]</b></div>
+<div class="dossier-hero">
+<span class="dossier-kicker">[+ dossier_date +] · live state</span>
+<b>[+ dossier_headline +]</b>
+<p>This dossier follows the current campaign state. Seats, officeholders,
+polls and ministries update when the political simulation changes.</p>
 </div>
 
-KO enters negotiations treating **Finance** and **Foreign Affairs** as senior
-claims. Taking either usually requires a harsh renegotiation or a different
-balance of power. PSL treats **Agriculture** as a hard coalition claim; Lewica
-cannot simply spend leverage through that veto.
+- @overview: Situation room
+- @parliament: Sejm and Senate charts
+- @cabinet: Council of Ministers
+- @polling: Poll tracker and seat projection
+- @parties: Parties, leaders and Left caucuses
+- @institutions: Constitutional institutions
+- @economy: Party resources and the state budget
+- @foreign: External affairs
+- @rules: How the campaign works
+- @backSpecialScene: Close the dossier
 
-Each portfolio controls one Government Affairs card. **Cabinet Reshuffle**
-reopens the live allocation, **Coalition Council** manages disputes between
-partners, and **Social Welfare** tests collective delivery across ministries.
+@overview
+title: Situation room
+go-to: menu
 
-- @menu: Back
+= Situation room — [+ dossier_date +]
 
-@economy
+<div class="dossier-kpi-grid">
+<div class="dossier-kpi"><span>President</span><b>[+ dossier_president +]</b></div>
+<div class="dossier-kpi"><span>Prime Minister</span><b>[+ dossier_prime_minister +]</b></div>
+<div class="dossier-kpi"><span>Lewica</span><b>[+ dossier_left_seats +] MPs · [+ dossier_left_poll +]%</b></div>
+<div class="dossier-kpi"><span>Party unity</span><b>[+ dossier_party_unity +]/100</b></div>
+</div>
 
-= Two different currencies
+<div class="ledger-section ledger-section-first">
+<div class="ledger-title">Executive and legislature</div>
+<div class="ledger-row"><span>Government</span><b>[+ dossier_government +]</b></div>
+<div class="ledger-row"><span>Lewica's role</span><b>[+ dossier_left_role +]</b></div>
+<div class="ledger-row"><span>Sejm Marshal</span><b>[+ dossier_sejm_speaker +]</b></div>
+<div class="ledger-row"><span>Senate Marshal</span><b>[+ dossier_senate_marshal +]</b></div>
+<div class="ledger-row"><span>Cabinet parties</span><b>[+ coalition_cabinet_parties +]</b></div>
+</div>
 
-**Political resources** represent party cash, organisers, staff capacity,
-volunteers and usable relationships. They are generally uncapped. The alliance
-collects its annual income once when January begins; there is no automatic
-monthly refund. Annual income combines membership dues with a subvention
-calculated from the seats won at the last Sejm election. Raising dues brings an
-immediate receipt and a larger January collection, but burdens the party's
-least affluent base. Emergency appeals share a long cooldown even when a
-different treasurer or adviser makes the call.
+<div class="ledger-section">
+<div class="ledger-title">Political capacity</div>
+<div class="ledger-row"><span>Party resources</span><b>[+ dossier_resources +]</b></div>
+<div class="ledger-row"><span>Public trust</span><b>[+ dossier_public_trust +]/100</b></div>
+<div class="ledger-row"><span>Lewica-held ministries</span><b>[+ dossier_ministry_count +]</b></div>
+<div class="ledger-row"><span>Latest poll</span><b>[+ dossier_poll_updated +]</b></div>
+</div>
 
-**Budget capacity** represents a government's room to fund additional promises.
-It is also uncapped and may be negative after an overcommitted settlement.
-Opposition parties do not control it. Their annual budget game normally ends in
-a vote against the government, a costed alternative, or a deliberately costly
-issue deal. A governing coalition sets the next year's capacity through its
-internal, coalition, Sejm and Senate budget stages.
+- @parliament: Open the chamber charts
+- @polling: Open the poll tracker
+- @menu: Back to index
 
-- @menu: Back
+@parliament
+title: Sejm and Senate
+go-to: menu
+on-arrival: {!
+const dossierSeat = function(value) {
+    const parsed = Number(value);
+    return Number.isFinite(parsed) ? Math.max(0, Math.round(parsed)) : 0;
+};
+const dossierSeatEntry = function(id, legend, name, value) {
+    return {id: id, legend: legend, name: name, seats: dossierSeat(value)};
+};
+const sejmEntries = [
+    dossierSeatEntry("left", "Lewica", Q.left_party_name || "Lewica", Q.left_seats),
+    dossierSeatEntry("sld_breakaway", "SLD", Q.barons_party_name || "SLD breakaway", Q.sld_breakaway_seats),
+    dossierSeatEntry("social_patriot", "LP", Q.social_patriot_party_name || "Lewica Patriotyczna", Q.social_patriot_seats),
+    dossierSeatEntry("spring_breakaway", "Wiosna", Q.spring_party_name || "Wiosna breakaway", Q.spring_breakaway_seats),
+    dossierSeatEntry("labor_left", "Labour", Q.labor_party_name || "Labour Left", Q.labor_left_seats),
+    dossierSeatEntry("young_left", "Young Left", Q.progressives_party_name || "Young Left", Q.young_left_seats),
+    dossierSeatEntry("razem", "Razem", "Razem", Q.razem_party_seats),
+    dossierSeatEntry("pps", "PPS", "PPS", Q.pps_party_seats),
+    dossierSeatEntry("tak_rozwoj", "Tak!", "Tak! Dla Rozwoju", Q.tak_rozwoj_seats),
+    dossierSeatEntry("ko", "KO", "Koalicja Obywatelska", Q.ko_seats),
+    dossierSeatEntry("ko_splinter", "KO split", "KO breakaway", Q.ko_splinter_seats),
+    dossierSeatEntry("p2050", "PL2050", "Polska 2050", Q.p2050_seats),
+    dossierSeatEntry("centrum", "Centrum", "Unia Centrum", Q.centrum_seats),
+    dossierSeatEntry("psl", "PSL", "Polskie Stronnictwo Ludowe", Q.psl_seats),
+    dossierSeatEntry("porozumienie", "Agreement", "Porozumienie", Q.porozumienie_seats),
+    dossierSeatEntry("pis", "PiS", "Prawo i Sprawiedliwość", Q.pis_seats),
+    dossierSeatEntry("rozwoj", "Rozwój+", "Rozwój Plus", Q.rozwoj_seats),
+    dossierSeatEntry("suwerenna", "SP", "Suwerenna Polska", Q.suwerenna_seats),
+    dossierSeatEntry("konf", "Konf.", "Konfederacja", Q.konf_seats),
+    dossierSeatEntry("korona", "Korona", "Korona", Q.korona_seats),
+    dossierSeatEntry("other", "Other", "Other and independent MPs", Q.other_seats)
+];
+Q.dossier_sejm_chart_data = sejmEntries.filter(function(entry) {
+    return entry.seats > 0;
+});
+Q.dossier_sejm_recorded_total = Q.dossier_sejm_chart_data.reduce(
+    function(total, entry) { return total + entry.seats; },
+    0
+);
+Q.dossier_sejm_delta = Q.dossier_sejm_total - Q.dossier_sejm_recorded_total;
+
+const senateEntries = [
+    dossierSeatEntry("left", "Left", Q.left_party_name || "Left", Q.senate_left_seats),
+    dossierSeatEntry("ko", "KO", "Koalicja Obywatelska", Q.senate_ko_seats),
+    dossierSeatEntry("p2050", "PL2050", "Polska 2050", Q.senate_p2050_seats),
+    dossierSeatEntry("psl", "PSL", "Polskie Stronnictwo Ludowe", Q.senate_psl_seats),
+    dossierSeatEntry("independent", "Independent", "Independent senators", Q.senate_independent_seats),
+    dossierSeatEntry("pis", "PiS", "Prawo i Sprawiedliwość", Q.senate_pis_seats),
+    dossierSeatEntry("konf", "Konf.", "Konfederacja", Q.senate_konf_seats)
+];
+Q.dossier_senate_chart_data = senateEntries.filter(function(entry) {
+    return entry.seats > 0;
+});
+Q.dossier_senate_recorded_total = Q.dossier_senate_chart_data.reduce(
+    function(total, entry) { return total + entry.seats; },
+    0
+);
+Q.dossier_senate_delta = Q.dossier_senate_total -
+    Q.dossier_senate_recorded_total;
+!}
+on-display: {!
+const drawDossierParliament = function(selector, data) {
+    if (
+        typeof window == "undefined" ||
+        typeof d3 == "undefined" ||
+        typeof d3.parliament != "function"
+    ) return;
+    const svg = document.querySelector(selector);
+    const content = document.getElementById("content");
+    if (!svg || !content || !data.length) return;
+    const panelWidth = svg.parentElement
+        ? svg.parentElement.clientWidth - 24
+        : content.offsetWidth - 32;
+    const width = Math.max(240, Math.min(500, panelWidth));
+    svg.style.height = Math.round(width / 2) + "px";
+    d3.select(svg).selectAll("*").remove();
+    const parliament = d3.parliament();
+    parliament.width(width).height(width / 2).innerRadiusCoef(0.4);
+    parliament.enter.fromCenter(false).smallToBig(false);
+    parliament.exit.toCenter(false).bigToSmall(false);
+    d3.select(svg).datum(data).call(parliament);
+};
+drawDossierParliament("#dossier-sejm", Q.dossier_sejm_chart_data || []);
+drawDossierParliament("#dossier-senate", Q.dossier_senate_chart_data || []);
+!}
+
+= Parliament — current seats
+
+<div class="dossier-chart-grid">
+<div class="dossier-chart-panel">
+<span class="dossier-kicker">Sejm · [+ dossier_sejm_recorded_total +] recorded</span>
+<h2>Majority: [+ dossier_sejm_majority +]</h2>
+{!<svg id="dossier-sejm" class="poland-sejm-chart dossier-chart" role="img" aria-label="Current distribution of seats in the Sejm"></svg>!}
+</div>
+<div class="dossier-chart-panel">
+<span class="dossier-kicker">Senate · [+ dossier_senate_recorded_total +] recorded</span>
+<h2>Majority: [+ dossier_senate_majority +]</h2>
+{!<svg id="dossier-senate" class="poland-sejm-chart dossier-chart" role="img" aria-label="Current distribution of seats in the Senate"></svg>!}
+</div>
+</div>
+
+[? if dossier_sejm_delta != 0: <div class="dossier-warning">The live Sejm party records differ from the chamber size by **[+ dossier_sejm_delta +]**. The chart shows the recorded party ledgers without silently reallocating MPs.</div>?]
+[? if dossier_senate_delta != 0: <div class="dossier-warning">The live Senate party records differ from the chamber size by **[+ dossier_senate_delta +]**. The chart shows the recorded party ledgers without silently reallocating senators.</div>?]
+
+<div class="ledger-section ledger-section-first">
+<div class="ledger-title">Sejm party ledger</div>
+<div class="poll-row"><span class="party party-lewica"><b>[+ dossier_left_party +]</b></span><span></span><span>[+ left_seats +] seats</span></div>
+[? if sld_breakaway_seats > 0: <div class="poll-row"><span class="party party-sld"><b>[+ barons_party_name +]</b></span><span></span><span>[+ sld_breakaway_seats +] seats</span></div>?]
+[? if social_patriot_seats > 0: <div class="poll-row"><span class="party party-social-patriot"><b>[+ social_patriot_party_name +]</b></span><span></span><span>[+ social_patriot_seats +] seats</span></div>?]
+[? if spring_breakaway_seats > 0: <div class="poll-row"><span class="party party-wiosna"><b>[+ spring_party_name +]</b></span><span></span><span>[+ spring_breakaway_seats +] seats</span></div>?]
+[? if labor_left_seats > 0: <div class="poll-row"><span class="party party-left-labor"><b>[+ labor_party_name +]</b></span><span></span><span>[+ labor_left_seats +] seats</span></div>?]
+[? if young_left_seats > 0: <div class="poll-row"><span class="party party-progressive"><b>[+ progressives_party_name +]</b></span><span></span><span>[+ young_left_seats +] seats</span></div>?]
+[? if razem_party_seats > 0: <div class="poll-row"><span class="party party-razem"><b>Razem</b></span><span></span><span>[+ razem_party_seats +] seats</span></div>?]
+[? if pps_party_seats > 0: <div class="poll-row"><span class="party party-pps"><b>PPS</b></span><span></span><span>[+ pps_party_seats +] seats</span></div>?]
+[? if tak_rozwoj_seats > 0: <div class="poll-row"><span class="party party-razem"><b>Tak! Dla Rozwoju</b></span><span></span><span>[+ tak_rozwoj_seats +] seats</span></div>?]
+<div class="poll-row"><span class="party party-ko"><b>KO</b></span><span></span><span>[+ ko_seats +] seats</span></div>
+[? if ko_splinter_seats > 0: <div class="poll-row"><span class="party party-ko"><b>KO breakaway</b></span><span></span><span>[+ ko_splinter_seats +] seats</span></div>?]
+[? if p2050_seats > 0: <div class="poll-row"><span class="party party-p2050"><b>Polska 2050</b></span><span></span><span>[+ p2050_seats +] seats</span></div>?]
+[? if centrum_seats > 0: <div class="poll-row"><span class="party party-centrum"><b>Unia Centrum</b></span><span></span><span>[+ centrum_seats +] seats</span></div>?]
+<div class="poll-row"><span class="party party-psl"><b>PSL</b></span><span></span><span>[+ psl_seats +] seats</span></div>
+[? if porozumienie_seats > 0: <div class="poll-row"><span class="party party-agreement"><b>Porozumienie</b></span><span></span><span>[+ porozumienie_seats +] seats</span></div>?]
+<div class="poll-row"><span class="party party-pis"><b>PiS</b></span><span></span><span>[+ pis_seats +] seats</span></div>
+[? if rozwoj_seats > 0: <div class="poll-row"><span class="party party-rozwoj"><b>Rozwój Plus</b></span><span></span><span>[+ rozwoj_seats +] seats</span></div>?]
+[? if suwerenna_seats > 0: <div class="poll-row"><span class="party party-sovereign-poland"><b>Suwerenna Polska</b></span><span></span><span>[+ suwerenna_seats +] seats</span></div>?]
+<div class="poll-row"><span class="party party-konf"><b>Konfederacja</b></span><span></span><span>[+ konf_seats +] seats</span></div>
+[? if korona_seats > 0: <div class="poll-row"><span class="party party-korona"><b>Korona</b></span><span></span><span>[+ korona_seats +] seats</span></div>?]
+[? if other_seats > 0: <div class="poll-row"><span><b>Other / independent</b></span><span></span><span>[+ other_seats +] seats</span></div>?]
+</div>
+
+<div class="ledger-section">
+<div class="ledger-title">Senate party ledger</div>
+<div class="ledger-row"><span>Control</span><b>[+ senate_control +]</b></div>
+<div class="ledger-row"><span>Marshal</span><b>[+ dossier_senate_marshal +]</b></div>
+<div class="poll-row"><span class="party party-lewica"><b>Left</b></span><span></span><span>[+ senate_left_seats +] seats</span></div>
+<div class="poll-row"><span class="party party-ko"><b>KO</b></span><span></span><span>[+ senate_ko_seats +] seats</span></div>
+[? if senate_p2050_seats > 0: <div class="poll-row"><span class="party party-p2050"><b>Polska 2050</b></span><span></span><span>[+ senate_p2050_seats +] seats</span></div>?]
+<div class="poll-row"><span class="party party-psl"><b>PSL</b></span><span></span><span>[+ senate_psl_seats +] seats</span></div>
+<div class="poll-row"><span><b>Independent</b></span><span></span><span>[+ senate_independent_seats +] seats</span></div>
+<div class="poll-row"><span class="party party-pis"><b>PiS</b></span><span></span><span>[+ senate_pis_seats +] seats</span></div>
+[? if senate_konf_seats > 0: <div class="poll-row"><span class="party party-konf"><b>Konfederacja</b></span><span></span><span>[+ senate_konf_seats +] seats</span></div>?]
+</div>
+
+The Sejm appoints and removes governments. The Senate reviews legislation but
+does not vote on confidence. An ordinary Senate rejection or amendment can be
+overridden by an absolute Sejm majority; on a budget the Senate may propose
+amendments but cannot reject the act as a whole.
+
+- @polling: Compare with projected seats
+- @menu: Back to index
+
+@cabinet
+title: Council of Ministers
+go-to: menu
+
+= Council of Ministers
+
+<div class="ledger-section ledger-section-first">
+<div class="ledger-row"><span>Prime Minister</span><b>[+ dossier_prime_minister +]</b></div>
+<div class="ledger-row"><span>Government</span><b>[+ dossier_government +]</b></div>
+<div class="ledger-row"><span>Lewica's position</span><b>[+ dossier_left_role +]</b></div>
+<div class="ledger-row"><span>Cabinet parties</span><b>[+ coalition_cabinet_parties +]</b></div>
+<div class="ledger-row"><span>Coalition-party MPs</span><b>[+ dossier_coalition_seats +]</b></div>
+</div>
+
+<div class="ministry-grid dossier-ministry-grid">
+<div><span>[+ dossier_labor_label +]</span><b>[+ dossier_labor_party +] · [+ dossier_labor_minister +]</b></div>
+<div><span>[+ dossier_equality_label +]</span><b>[+ dossier_equality_party +] · [+ dossier_equality_minister +]</b></div>
+<div><span>[+ dossier_housing_label +]</span><b>[+ dossier_housing_party +] · [+ dossier_housing_minister +]</b></div>
+<div><span>[+ dossier_health_label +]</span><b>[+ dossier_health_party +] · [+ dossier_health_minister +]</b></div>
+<div><span>[+ dossier_digital_label +]</span><b>[+ dossier_digital_party +] · [+ dossier_digital_minister +]</b></div>
+<div><span>[+ dossier_science_label +]</span><b>[+ dossier_science_party +] · [+ dossier_science_minister +]</b></div>
+<div><span>[+ dossier_interior_label +]</span><b>[+ dossier_interior_party +] · [+ dossier_interior_minister +]</b></div>
+<div><span>[+ dossier_finance_label +]</span><b>[+ dossier_finance_party +] · [+ dossier_finance_minister +]</b></div>
+<div><span>[+ dossier_economy_label +]</span><b>[+ dossier_economy_party +] · [+ dossier_economy_minister +]</b></div>
+<div><span>[+ dossier_justice_label +]</span><b>[+ dossier_justice_party +] · [+ dossier_justice_minister +]</b></div>
+<div><span>[+ dossier_foreign_label +]</span><b>[+ dossier_foreign_party +] · [+ dossier_foreign_minister +]</b></div>
+<div><span>[+ dossier_agriculture_label +]</span><b>[+ dossier_agriculture_party +] · [+ dossier_agriculture_minister +]</b></div>
+<div><span>[+ dossier_defence_label +]</span><b>[+ dossier_defence_party +] · [+ dossier_defence_minister +]</b></div>
+</div>
+
+[? if year < 2023: The 2019–2022 chapter models the PiS government as an
+institution rather than tracking every historical reshuffle. Individual
+portfolio holders become live records during the 2023 government-formation
+chapter.?]
+[? if year >= 2023: These are live simulation records. A formation,
+reshuffle, resignation or presidential incompatibility changes this page.?]
+
+- @parliament: Check the government's Sejm base
+- @menu: Back to index
 
 @polling
+title: Poll tracker
+go-to: menu
+on-display: {!
+if (
+    typeof window != "undefined" &&
+    typeof d3 != "undefined" &&
+    typeof d3.linegraph == "function"
+) {
+    const svg = document.getElementById("dossier-poll-history");
+    const content = document.getElementById("content");
+    const records = Array.isArray(Q.poll_history) ? Q.poll_history : [];
+    if (svg && content && records.length) {
+        const allSeries = ["left", "ko", "p2050", "psl", "pis", "konf", "other"];
+        const activeSeries = allSeries.filter(function(party) {
+            return records.some(function(record) {
+                return Number(record[party]) > 0;
+            });
+        });
+        const styles = window.getComputedStyle(document.body);
+        const color = function(name, fallback) {
+            return styles.getPropertyValue(name).trim() || fallback;
+        };
+        const colors = {
+            left: color("--party-lewica", "#ac145a"),
+            ko: color("--party-ko", "#cf6200"),
+            p2050: color("--party-p2050", "#806200"),
+            psl: color("--party-psl", "#157a32"),
+            pis: color("--party-pis", "#073a76"),
+            konf: color("--party-konf", "#29384f"),
+            other: color("--party-independent", "#666")
+        };
+        const names = {
+            left: Q.left_party_name || "Lewica",
+            ko: "KO",
+            p2050: "PL2050",
+            psl: "PSL",
+            pis: "PiS",
+            konf: "Konf.",
+            other: "Other"
+        };
+        const maximum = Math.max.apply(null, records.map(function(record) {
+            return Math.max.apply(null, activeSeries.map(function(party) {
+                return Number(record[party]) || 0;
+            }));
+        }));
+        const width = Math.max(300, Math.min(720, content.offsetWidth - 24));
+        const height = Math.max(280, Math.round(width * 0.56));
+        svg.style.height = height + "px";
+        d3.select(svg).selectAll("*").remove();
+        const lines = d3.linegraph(
+            true,
+            records.length > 24,
+            activeSeries,
+            colors,
+            names,
+            Math.max(10, Math.ceil((maximum + 3) / 5) * 5),
+            0,
+            2
+        );
+        lines.width(width).height(height);
+        d3.select(svg).datum(records).call(lines);
+    }
+}
+!}
 
-= Polls and voters
+= Poll tracker
 
-Eight Polish electorate blocs sum to the country: metropolitan liberals,
-liberal professionals, public-service families, industrial and logistics
-voters, provincial welfare voters, rural localists, older welfare households
-and anti-establishment youth.
+**[+ polling_house +]** · sample **[+ dossier_poll_sample +]** · margin of
+error **±[+ dossier_poll_margin +]** · updated **[+ dossier_poll_updated +]**.
 
-Every party competes inside every bloc. Positions, organisation, credibility,
-turnout and campaign actions produce vote intention, a sampled headline poll
-and a national d'Hondt indicator.
+{!<svg id="dossier-poll-history" class="dossier-poll-chart dossier-chart" role="img" aria-label="Polling history by party"></svg>!}
 
-PiS, KO, PSL, Konfederacja and Poland 2050 spend separate organisational pools
-in the background. Their pairwise relations stay hidden; the ledger reports
-only coalition compatibility and projected seats.
+[? if dossier_poll_points = 1: Only one poll has been recorded. The graph will
+become a trend after the next monthly nationwide poll.?]
 
-- @menu: Back
+<div class="election-table dossier-poll-table">
+<div class="election-table-head"><span>Party</span><span>Poll</span><span>Intent</span><span>Projected MPs</span></div>
+<div class="election-table-row"><span class="party party-lewica">[+ dossier_left_party +]</span><b>[+ left_poll +]%</b><span>[+ left_vote_intent +]%</span><b>[+ left_projected_seats +]</b></div>
+<div class="election-table-row"><span class="party party-ko">KO</span><b>[+ ko_poll +]%</b><span>[+ ko_vote_intent +]%</span><b>[+ ko_projected_seats +]</b></div>
+[? if p2050_emerged or p2050_poll > 0: <div class="election-table-row"><span class="party party-p2050">Polska 2050</span><b>[+ p2050_poll +]%</b><span>[+ p2050_vote_intent +]%</span><b>[+ p2050_projected_seats +]</b></div>?]
+<div class="election-table-row"><span class="party party-psl">PSL</span><b>[+ psl_poll +]%</b><span>[+ psl_vote_intent +]%</span><b>[+ psl_projected_seats +]</b></div>
+<div class="election-table-row"><span class="party party-pis">PiS</span><b>[+ pis_poll +]%</b><span>[+ pis_vote_intent +]%</span><b>[+ pis_projected_seats +]</b></div>
+<div class="election-table-row"><span class="party party-konf">Konfederacja</span><b>[+ konf_poll +]%</b><span>[+ konf_vote_intent +]%</span><b>[+ konf_projected_seats +]</b></div>
+<div class="election-table-row"><span>Other</span><b>[+ other_poll +]%</b><span>[+ other_vote_intent +]%</span><b>[+ other_projected_seats +]</b></div>
+</div>
+
+The poll is a seeded sample of the modelled electorate. The intent column is
+the underlying likely-voter estimate; projected seats use a national d'Hondt
+indicator with the filed committee thresholds. It is a forecast, not the
+current composition shown in the Parliament page.
+
+- @parliament: Compare with the current chambers
+- @menu: Back to index
+
+@parties
+title: Parties and caucuses
+go-to: menu
+
+= Parties and caucuses
+
+<div class="ledger-section ledger-section-first">
+<div class="ledger-title">National party leadership</div>
+<div class="ledger-row"><span class="party party-lewica">[+ dossier_left_party +]</span><b>[+ dossier_left_leader +]</b></div>
+<div class="ledger-row"><span class="party party-ko">KO</span><b>[+ ko_leader +]</b></div>
+[? if p2050_emerged: <div class="ledger-row"><span class="party party-p2050">Polska 2050</span><b>[+ p2050_leader +]</b></div>?]
+<div class="ledger-row"><span class="party party-psl">PSL</span><b>[+ psl_leader +]</b></div>
+<div class="ledger-row"><span class="party party-pis">PiS</span><b>[+ pis_leader +]</b></div>
+<div class="ledger-row"><span class="party party-konf">Konfederacja</span><b>[+ konf_leader +]</b></div>
+</div>
+
+<div class="ledger-section">
+<div class="ledger-title">Active Left caucuses</div>
+[? if barons_active: <div class="faction-row"><span class="party party-sld"><b>[+ barons_name +]</b></span><span>strength [+ barons_strength +] · dissent [+ barons_dissent +]</span></div>?]
+[? if spring_active: <div class="faction-row"><span class="party party-wiosna"><b>[+ spring_name +]</b></span><span>strength [+ spring_strength +] · dissent [+ spring_dissent +]</span></div>?]
+[? if labor_active: <div class="faction-row"><span class="party party-left-labor"><b>[+ labor_name +]</b></span><span>strength [+ labor_strength +] · dissent [+ labor_dissent +]</span></div>?]
+[? if progressives_active: <div class="faction-row"><span class="party party-progressive"><b>[+ progressives_name +]</b></span><span>strength [+ progressives_strength +] · dissent [+ progressives_dissent +]</span></div>?]
+[? if razem_active: <div class="faction-row"><span class="party party-razem"><b>Razem</b></span><span>strength [+ razem_strength +] · dissent [+ razem_dissent +]</span></div>?]
+[? if pps_active: <div class="faction-row"><span class="party party-pps"><b>PPS</b></span><span>strength [+ pps_strength +] · dissent [+ pps_dissent +]</span></div>?]
+[? if social_patriot_active: <div class="faction-row"><span class="party party-social-patriot"><b>[+ social_patriot_name +]</b></span><span>strength [+ social_patriot_strength +] · dissent [+ social_patriot_dissent +]</span></div>?]
+</div>
+
+Organisational ancestry and political tendency are separate. SLD/Nowa Lewica,
+Wiosna, Razem and PPS are organisations; labour, feminist, progressive,
+social-patriot and market currents can cross those formal lines. An affinity
+estimate is not a seat transfer: only completed defections alter the chamber
+charts.
+
+- @menu: Back to index
+
+@institutions
+title: Constitutional institutions
+go-to: menu
+
+= Constitutional institutions
+
+Poland is a parliamentary republic with a directly elected president and a
+bicameral legislature. The President signs, vetoes or refers legislation,
+appoints a prime-ministerial candidate in the first formation step and
+represents the state, but does not direct routine cabinet policy.
+
+The Sejm grants confidence to the Council of Ministers. A constructive vote of
+no confidence must name a replacement prime minister and assemble **231
+deputies**. The Senate does not participate in confidence votes.
+
+The courts, prosecution service, National Council of the Judiciary and
+Constitutional Tribunal retain separate legitimacy and appointment records.
+Political control of one office never silently resolves the authority of the
+others.
+
+<div class="ledger-section ledger-section-first">
+<div class="ledger-row"><span>President</span><b>[+ dossier_president +]</b></div>
+<div class="ledger-row"><span>President–Lewica relation</span><b>[+ president_relation +]/100</b></div>
+<div class="ledger-row"><span>Judicial legitimacy</span><b>[+ judicial_legitimacy +]/100</b></div>
+<div class="ledger-row"><span>Constitutional restraint</span><b>[+ constitutional_restraint +]/100</b></div>
+</div>
+
+- @parliament: Open the chamber charts
+- @menu: Back to index
+
+@economy
+title: Resources and budget
+go-to: menu
+
+= Party resources and the state budget
+
+<div class="ledger-section ledger-section-first">
+<div class="ledger-title">Party organisation</div>
+<div class="ledger-row"><span>Available resources</span><b>[+ resources +]</b></div>
+<div class="ledger-row"><span>January/July payout</span><b>[+ party_income +]</b></div>
+<div class="ledger-row"><span>Membership dues</span><b>[+ member_dues +]</b></div>
+<div class="ledger-row"><span>Seat subvention</span><b>[+ seat_subvention +] from [+ seat_subvention_seats +] MPs</b></div>
+</div>
+
+<div class="ledger-section">
+<div class="ledger-title">Public finances</div>
+<div class="ledger-row"><span>Lewica spending capacity</span><b>[+ budget +]</b></div>
+<div class="ledger-row"><span>Authority</span><b>[+ budget_authority +]</b></div>
+<div class="ledger-row"><span>Fiscal stress</span><b>[+ fiscal_stress +]/100</b></div>
+<div class="ledger-row"><span>Inflation</span><b>[+ inflation +]%</b></div>
+<div class="ledger-row"><span>Unemployment</span><b>[+ unemployment +]%</b></div>
+<div class="ledger-row"><span>Public debt</span><b>[+ public_debt +]% GDP</b></div>
+</div>
+
+Party resources represent cash, organisers, staff and usable relationships.
+Budget capacity is separate and exists only when Lewica holds executive
+authority over public spending. Opposition amendments and press releases do
+not create budget capacity.
+
+- @menu: Back to index
 
 @foreign
+title: External affairs
+go-to: menu
 
-= Europe, Washington and foreign pressure
+= External affairs
 
-The External affairs dossier shares the same three-card agenda as domestic
-politics. Drawing a diplomatic opportunity therefore means not drawing an
-organising, media or government-delivery card into that slot.
+<div class="ledger-section ledger-section-first">
+<div class="ledger-row"><span>Lewica's authority</span><b>[+ foreign_authority_label +]</b></div>
+<div class="ledger-subrow">[+ foreign_authority_scope +]</div>
+<div class="ledger-row"><span>EU relationship</span><b>[+ eu_institutional_trust +]/100</b></div>
+<div class="ledger-subrow">Political influence [+ eu_influence +] · progressive headwind [+ eu_progressive_headwind +]/20</div>
+<div class="ledger-row"><span>Hungary</span><b>[+ hungary_relation +]/100</b></div>
+<div class="ledger-subrow">[+ hungary_government +] · [+ hungary_election_2026_result +]</div>
+<div class="ledger-row"><span>United States</span><b>[+ us_alliance_reliability +]/100</b></div>
+<div class="ledger-subrow">President [+ us_president +] · [+ us_administration +]</div>
+<div class="ledger-row"><span>Ukraine partnership</span><b>[+ ukraine_solidarity +]/100</b></div>
+<div class="ledger-row"><span>Western economic access</span><b>[+ western_economic_access +]/100</b></div>
+<div class="ledger-subrow">Recorded growth-and-jobs drag: [+ western_economic_drag +]</div>
+<div class="ledger-row"><span>Last outcome</span><b>[+ foreign_authority_last_outcome +]</b></div>
+</div>
 
-The European campaign builds four distinct assets: a permanent Brussels
-mission, a social-policy network, an eastern security coalition and regular
-Warsaw–Berlin–Paris work. Completing any three with sufficient influence can
-produce a Warsaw compact. It is a political programme, not an automatic treaty
-or a generic relations bonus.
+Opposition can use parliamentary scrutiny, European and American democratic
+channels, party diplomacy and public evidence. Government can negotiate and
+implement national policy. A Left President adds representation, ratification
+and convening, but not cabinet command. If EU and US relationships collapse,
+the resulting loss of funds, investment and orders reaches growth and jobs in
+a dated event.
 
-Five recurring pressure cards cover EU conditionality, German industrial
-demand, the eastern flank, Washington and Europe's radical right. The 2020 and
-2024 American elections are seeded and variable. Their result changes the
-White House administration, NATO reliability, democratic pressure and later
-Ukraine and diplomatic branches. Congress, the ambassador, defence officials
-and the Polish Palace retain separate relationship values.
-
-Every pressure card begins with one factual file and then changes its verbs,
-costs and consequences with Lewica's authority. Ordinary opposition can ask
-questions, move committee business, publish a shadow doctrine, conduct party
-diplomacy and build public pressure. Confidence-and-supply can add limited
-budget or confidence conditions. A junior coalition party without Foreign
-Affairs uses coalition council, pressure, dissent and traded support; with the
-portfolio it operates inside the Prime Minister's mandate and can be
-overruled. A Lewica-led cabinet directs another party's Foreign Minister, or
-acts with full initiative and responsibility when it also holds the
-portfolio. Caretakers preserve continuity and defer irreversible commitments.
-A Left President represents Poland and uses ratification, appointments and
-constitutional influence, never routine cabinet command.
-
-- @menu: Back
+- @menu: Back to index
 
 @rules
+title: Campaign rules
+go-to: menu
 
-= Prototype rules
+= How the campaign works
 
-Each month:
+Each month, draw from Party Affairs and—depending on Lewica's authority—from
+Government Affairs, negotiation or External Affairs. All opportunities share
+one three-card agenda. Play one card, use an adviser if useful, then end the
+month and resolve the dated national event.
 
-1. Draw from the nineteen-card Party Affairs deck; from the sixteen-card Government Affairs deck when
-   Lewica holds office in a functioning cabinet; from Negotiate with Government
-   when Lewica is outside cabinet; or from Foreign Affairs. All four feed one
-   persistent three-card agenda.
-2. Play one card and choose its political resolution. Playing the card spends
-the month; resources return only through choices and the annual income event.
-3. Open one of the three active advisor portraits. All advisor interventions
-share a six-month cooldown.
-4. Use the leadership-bureau card to edit the three-seat slate through the five
-political caucuses. A changed slate locks for six months; an unchanged
-inspection does not. Or deliberately **End month** without acting and accept
-the neglect penalty.
-5. Resolve the dated national event.
+Political resources do not automatically refill every month. Adviser actions
+share a cooldown. Faction dissent reduces campaign effectiveness and can grow
+into public criticism, failed whips, defections and separate parties. Election
+polls are sampled; the underlying intent and projected seats are shown
+separately in the poll tracker.
 
-The separate 2023 route adds election results, coalition arrangements,
-confidence arithmetic, ministry allocation and the first coalition budget.
-The overview and monthly event desk always name the cabinet, prime minister,
-president and Lewica's actual role. Supporting one opposition amendment never
-silently turns Lewica into a governing party.
+The campaign begins after the 2019 election, can pass through the 2023 transfer
+of power, and runs through the scenario horizon to the autumn 2027 Sejm and
+Senate elections. A standalone 2023 formation start is also available from the
+title screen.
 
-- @menu: Back
-
-@conversion
-
-= Conversion boundary
-
-The active Polish root, router and endings remain isolated from inherited
-German events. Selected base-mod patterns have been adapted into Polish
-elections, seat charts, coalition arrangements and ministries. Cabinet
-Reshuffle, Coalition Council and Social Welfare restore reusable government
-patterns with Polish coalition rules and flavour.
-
-- @menu: Back
+- @menu: Back to index

@@ -1,0 +1,503 @@
+title: Coalition reform pressure
+new-page: true
+on-arrival: {!
+const actorNames = {
+    pis: "PiS",
+    ko: "KO",
+    psl: "PSL / Third Way",
+    p2050: "Poland 2050 / Third Way",
+    president: "President " + Q.president_name
+};
+const issueNames = {
+    abortion: "reproductive-rights reform",
+    marriage: "legal recognition and equal marriage",
+    labor: "labour-law reconstruction",
+    judicial_reset: "an accelerated judicial reset",
+    public_media_takeover: "a hostile takeover of public media",
+    marketisation: "privatisation and market liberalisation",
+    pegasus_legalisation: "a legal framework and public defence for Pegasus",
+    clerical_truce: "a truce with the Church and retreat from anticlerical politics",
+    pzpr_condemnation: "a condemnation of the PZPR past"
+};
+if (
+    Q.reform_pressure_mode != "partner_objection" ||
+    !Q.reform_pressure_actor_name
+) {
+    Q.reform_pressure_actor_name =
+        actorNames[Q.reform_pressure_actor] || Q.reform_pressure_actor_name;
+}
+Q.reform_pressure_issue_name =
+    issueNames[Q.reform_pressure_issue] || Q.reform_pressure_issue_name;
+const actor = Q.reform_pressure_actor;
+const issue = Q.reform_pressure_issue;
+Q.reform_pressure_authority_live =
+    Q.left_in_government && Q.government_has_confidence &&
+    !Q.caretaker_government ? 1 : 0;
+Q.reform_pressure_actor_live =
+    (actor == "president" &&
+        Q.reform_pressure_actor_name == "President " + Q.president_name) ||
+    (actor == "pis" && Q.government_party == "pis") ||
+    (actor == "ko" &&
+        (Q.government_party == "ko" || Q.ministry_ko_in_cabinet)) ||
+    (actor == "psl" &&
+        (Q.government_party == "psl" || Q.ministry_psl_in_cabinet)) ||
+    (actor == "p2050" &&
+        (Q.government_party == "p2050" || Q.ministry_p2050_in_cabinet))
+        ? 1 : 0;
+Q.reform_pressure_bargain_available = actor != "president" ? 1 : 0;
+Q.reform_pressure_override_votes = Math.max(
+    Number(Q.coalition_seats) || 0,
+    Math.min(
+        Number(Q.sejm_total) || 460,
+        (Number(Q.government_support_seats) || 0) +
+            (Number(Q.left_committed_seats) || 0)
+    )
+);
+Q.reform_pressure_override_available =
+    Q.reform_pressure_override_votes >= 276 ? 1 : 0;
+!}
+go-to: poland_major_reforms.authority_lost if reform_pressure_pending = 1 and reform_pressure_mode = "partner_objection" and reform_pressure_authority_live = 0; objection_actor_left if reform_pressure_pending = 1 and reform_pressure_mode = "partner_objection" and reform_pressure_authority_live = 1 and reform_pressure_actor_live = 0; demand_lapsed if reform_pressure_pending = 1 and reform_pressure_mode = "partner_demand" and (reform_pressure_authority_live = 0 or reform_pressure_actor_live = 0); objection if reform_pressure_pending = 1 and reform_pressure_mode = "partner_objection" and reform_pressure_authority_live = 1 and reform_pressure_actor_live = 1; demand if reform_pressure_pending = 1 and reform_pressure_mode = "partner_demand" and reform_pressure_authority_live = 1 and reform_pressure_actor_live = 1; poland_polling if reform_pressure_pending = 0
+
+@objection_actor_left
+title: The blocking partner leaves the count
+on-arrival: reform_pressure_pending = 0; reform_pressure_mode = "None"; reform_pressure_return_mode = "pressure"; reform_pressure_last_result = "The former blocker no longer belongs to the governing coalition"; news_headline = reform_pressure_last_result
+go-to: poland_major_reforms.resolve
+
+@demand_lapsed
+title: The partner's demand lapses with the coalition
+new-page: true
+on-arrival: reform_pressure_pending = 0; reform_pressure_mode = "None"; reform_pressure_cooldown = 2; reform_pressure_due_time = -1; reform_pressure_last_result = "The partner's reform demand lapses because its cabinet leverage has disappeared"; news_headline = reform_pressure_last_result
+
+The demand depended on Lewica's votes inside a functioning shared government.
+Once that authority or the sponsoring partner leaves the cabinet, no
+concession is extracted and no agenda outcome is applied.
+
+- @poland_polling: Carry the changed coalition into the next month
+
+@objection
+title: [+ reform_pressure_actor_name +] opposes our action
+new-page: true
+
+= [+ reform_pressure_actor_name +] opposes the reform
+
+Lewica assembled enough public, ministerial and parliamentary power to table
+**[+ reform_pressure_issue_name +]** at fallback level **[+
+reform_pressure_target_stage +]**. [+ reform_pressure_actor_name +] now
+withholds the votes or signature that turns the proposal into law.
+
+This is no longer another drafting round. The coalition must either pay for a
+bargain, surrender accumulated trust, narrow the scope, or discover whether
+the partner's threat to the government is real.
+
+- @objection_bargain
+- @objection_relation
+- @objection_force
+- @palace_reconsider
+- @palace_relation
+- @palace_referendum
+- @palace_override
+- @objection_narrow
+- @objection_withdraw
+
+@objection_bargain
+title: Spend a resource on another coalition bargain
+subtitle: Cost: 1 resource. Raise this actor's commitment by one level and count every veto player again.
+view-if: reform_pressure_actor != "president"
+choose-if: resources >= 1 and reform_pressure_bargain_available = 1
+unavailable-subtitle: This negotiating round requires one resource.
+on-arrival: resources -= 1; reform_pressure_resolution = "bargain"
+go-to: apply_objection
+
+@objection_relation
+title: Cash in the relationship and demand the promised vote
+subtitle: Requires a 58+ relationship; bind this actor to the current bill and spend the accumulated trust.
+view-if: reform_pressure_actor != "president"
+choose-if: (reform_pressure_actor = "pis" and pis_relation >= 58) or (reform_pressure_actor = "ko" and ko_relation >= 58) or (reform_pressure_actor = "psl" and psl_relation >= 58) or (reform_pressure_actor = "p2050" and p2050_relation >= 58)
+unavailable-subtitle: The relationship is not strong enough to cash in.
+on-arrival: reform_pressure_resolution = "relationship"
+go-to: apply_objection
+
+@objection_force
+title: Force the full issue and put the coalition under threat
+subtitle: Cost: 2 resources. Bind this actor to the current bill, then count remaining partners and the Palace.
+view-if: reform_pressure_actor != "president"
+choose-if: resources >= 2
+unavailable-subtitle: A survival confrontation requires two resources.
+on-arrival: resources -= 2; reform_pressure_resolution = "force"
+go-to: apply_objection
+
+@palace_reconsider
+title: Return with a narrower constitutional and implementation brief
+subtitle: Cost: 1 resource. Build one Palace commitment, then submit the bill to the presidential test again.
+view-if: reform_pressure_actor = "president"
+choose-if: resources >= 1
+unavailable-subtitle: A new presidential protocol needs one resource.
+on-arrival: resources -= 1; reform_pressure_resolution = "palace_reconsider"
+go-to: apply_objection
+
+@palace_relation
+title: Cash in the presidential relationship for a written commitment
+subtitle: Requires President relation 58+. Spend that trust on this issue, then count the Palace again.
+view-if: reform_pressure_actor = "president"
+choose-if: president_relation >= 58
+unavailable-subtitle: The President does not trust Lewica enough to make a written commitment.
+on-arrival: reform_pressure_resolution = "palace_relation"
+go-to: apply_objection
+
+@palace_referendum
+title: Put the referendum mandate directly before the President
+subtitle: Use a successful rights referendum as political pressure; it does not itself override a veto.
+view-if: reform_pressure_actor = "president" and reform_pressure_referendum_used = 0 and ((reform_pressure_issue = "abortion" and abortion_referendum_mandate = 1) or (reform_pressure_issue = "marriage" and marriage_referendum_mandate = 1))
+on-arrival: reform_pressure_resolution = "palace_referendum"
+go-to: apply_objection
+
+@palace_override
+title: Override the veto with three-fifths of the Sejm
+subtitle: Cost: 2 resources. Requires 276 votes; current override count [+ reform_pressure_override_votes +].
+view-if: reform_pressure_actor = "president"
+choose-if: resources >= 2 and reform_pressure_override_available = 1
+unavailable-subtitle: A lawful veto override requires two resources and at least 276 votes.
+on-arrival: resources -= 2; reform_pressure_resolution = "palace_override"
+go-to: apply_objection
+
+@objection_narrow
+title: Accept one lower fallback and count the bill again
+subtitle: Free. Preserve the government, but any compromise that passes will close the campaign.
+view-if: reform_pressure_target_stage > 1
+on-arrival: reform_pressure_resolution = "narrow"
+go-to: apply_objection
+
+@objection_withdraw
+title: Take the defeat and regroup around the ambitious bill
+subtitle: Withdraw now. Lose trust and momentum; after a five-month cooldown, the original goal returns.
+on-arrival: reform_pressure_resolution = "withdraw"
+go-to: apply_objection
+
+@apply_objection
+title: Resolve the coalition objection
+on-arrival: {!
+const issue = Q.reform_pressure_issue;
+const previous = Math.max(
+    0,
+    Math.round(Number(Q.reform_pressure_previous_stage) || 0)
+);
+const proposed = Math.max(
+    previous,
+    Math.round(Number(Q.reform_pressure_target_stage) || previous)
+);
+const resolution = Q.reform_pressure_resolution;
+const actor = Q.reform_pressure_actor;
+const relationKey = actor == "president"
+    ? "president_relation"
+    : actor + "_relation";
+const partnerToken = actor == "psl" || actor == "p2050"
+    ? "third_way"
+    : actor;
+const commitmentKey = issue + "_" + partnerToken + "_commitment";
+const palaceKey = issue + "_palace_commitment";
+const palacePresidentKey = issue + "_palace_president";
+if (
+    actor == "president" &&
+    Q[palacePresidentKey] != Q.president_name
+) {
+    Q[palaceKey] = 0;
+    Q[palacePresidentKey] = Q.president_name;
+}
+Q.reform_pressure_abandoned = 0;
+let dissent = 0;
+if (resolution == "bargain") {
+    dissent = 4 + proposed * 2;
+    Q[relationKey] += 3;
+    Q[commitmentKey] = Math.min(4, Number(Q[commitmentKey]) + 1);
+    Q.reform_pressure_last_result =
+        "Another bargain adds one issue-specific coalition commitment";
+} else if (resolution == "relationship") {
+    dissent = 6 + proposed * 2;
+    Q[relationKey] -= 12;
+    Q[commitmentKey] = Math.max(Number(Q[commitmentKey]), proposed);
+    Q.reform_pressure_last_result =
+        "Accumulated trust becomes a binding issue commitment";
+} else if (resolution == "force") {
+    dissent = 12 + proposed * 3;
+    Q[relationKey] -= 10;
+    Q[commitmentKey] = Math.max(Number(Q[commitmentKey]), proposed);
+    Q.reform_pressure_forced = 1;
+    Q.coalition_break_threat = 1;
+    Q.early_election_risk += 10 + proposed * 2;
+    Q.reform_pressure_last_result =
+        "Lewica forces the coalition partner's votes and risks the government";
+} else if (resolution == "palace_reconsider") {
+    Q[palaceKey] = Math.min(4, Number(Q[palaceKey]) + 1);
+    Q.president_relation += 4;
+    Q.reform_pressure_last_result =
+        "The President receives a revised implementation and constitutional brief";
+} else if (resolution == "palace_relation") {
+    Q[palaceKey] = Math.max(Number(Q[palaceKey]), proposed);
+    Q.president_relation -= 15;
+    Q.reform_pressure_last_result =
+        "Lewica cashes in its presidential relationship for a written commitment";
+} else if (resolution == "palace_referendum") {
+    Q.reform_pressure_referendum_used = 1;
+    Q[palaceKey] = Math.min(4, Number(Q[palaceKey]) + 2);
+    Q.reform_pressure_last_result =
+        "The referendum mandate returns the bill to presidential consideration";
+} else if (resolution == "palace_override") {
+    Q.reform_pressure_palace_override = 1;
+    Q.president_relation -= 12;
+    Q.constitutional_restraint += 2;
+    Q.reform_pressure_last_result =
+        "Three-fifths of the Sejm overrides the presidential veto";
+} else if (resolution == "narrow" || resolution == "withdraw") {
+    Q.reform_pressure_target_stage = resolution == "withdraw"
+        ? previous
+        : Math.max(previous, proposed - 1);
+    if (Q.reform_pressure_target_stage <= previous) {
+        Q.reform_pressure_abandoned = 1;
+        const progressKey = issue + "_reform_progress";
+        const timerKey = "poland_" + issue + "_reform_timer";
+        Q[progressKey] = Math.max(
+            previous * 20,
+            Number(Q[progressKey]) - 10
+        );
+        Q[timerKey] = 5;
+        Q[issue + "_reform_proposal_stage"] =
+            Number(Q[issue + "_reform_goal_stage"]) || 4;
+        Q.public_trust -= 1;
+        Q.feminist_trust -= issue == "abortion" ? 4 : 0;
+        Q.progressive_credibility -= issue == "marriage" ? 4 : 1;
+        Q.labor_credibility -= issue == "labor" ? 3 : 0;
+        Q.reform_pressure_last_result =
+            "The bill is withdrawn for a five-month regroup, not abandoned permanently";
+    } else {
+        Q[issue + "_reform_proposal_stage"] =
+            Q.reform_pressure_target_stage;
+        Q.reform_pressure_last_result =
+            "The bill is forced down to fallback level " +
+            Q.reform_pressure_target_stage;
+    }
+}
+if (actor != "president") {
+    Q.government_coalition_dissent += dissent;
+    if (actor == "ko") Q.ko_coalition_dissent += dissent;
+    if (actor == "psl") Q.psl_coalition_dissent += dissent;
+    if (actor == "p2050") Q.p2050_coalition_dissent += dissent;
+    if (actor == "pis") Q.united_right_cohesion -= Math.ceil(dissent / 2);
+}
+Q.reform_pressure_pending = 0;
+Q.reform_pressure_mode = "None";
+Q.reform_pressure_cooldown = 3;
+Q.reform_pressure_due_time = -1;
+Q.reform_pressure_return_mode = Q.reform_pressure_abandoned
+    ? "card"
+    : "pressure";
+Q.news_headline = Q.reform_pressure_last_result;
+!}
+go-to: poland_polling if reform_pressure_abandoned = 1; poland_major_reforms.resolve if reform_pressure_abandoned = 0
+
+@demand
+title: [+ reform_pressure_actor_name +] brings its own major reform
+new-page: true
+
+= A partner's project reaches Lewica
+
+**[+ reform_pressure_actor_name +]** wants Lewica to support **[+
+reform_pressure_issue_name +]**. The proposal's pressure is **[+
+reform_pressure_intensity +]/100**; its procedural-illegality risk is **[+
+reform_pressure_illegality +]/100**.
+
+[? if reform_pressure_issue = "judicial_reset": The coalition calls speed the
+only way to retake institutions. Under hostile cohabitation, resolutions and
+appointments increasingly replace statutes and presidential agreement.?]
+[? if reform_pressure_issue = "public_media_takeover": KO wants public
+television reclaimed now and legal settlement later. The decision will change
+which political camp TVP's news reel serves.?]
+[? if reform_pressure_issue = "marketisation": Finance and economy ministers
+offer cabinet calm in exchange for privatisation, looser markets and a social
+calendar our voters did not join government to postpone.?]
+[? if reform_pressure_issue = "pegasus_legalisation": PiS asks us to turn an
+explanation of state spyware into a legal framework broad enough to vindicate
+its previous use.?]
+[? if reform_pressure_issue = "clerical_truce": PiS wants its voters shown
+that a Left coalition partner will stop treating Church privilege as a
+governing conflict.?]
+[? if reform_pressure_issue = "pzpr_condemnation": PiS demands a revision of
+PZPR memory that makes its unlikely partner safer to defend on the right. The
+SLD establishment hears an ultimatum about its own biography.?]
+
+The partner offers a budget priority for agreement, accepts a lawful or
+narrower version if we spend political capacity, and threatens coalition
+peace if we refuse.
+
+- @demand_accept
+- @demand_amend
+- @demand_refuse
+
+@demand_accept
+title: Take the offered budget priority and support the demand
+subtitle: Cabinet budget +1. Accept the partner's full political and procedural price.
+on-arrival: budget += 1; reform_pressure_resolution = "accept"
+go-to: apply_demand
+
+@demand_amend
+title: Spend a resource to convince them to accept a lawful, narrower version
+subtitle: Cost: 1 resource. Reduce the damage while keeping a coalition agreement.
+choose-if: resources >= 1
+unavailable-subtitle: A counter-draft and coalition campaign need one resource.
+on-arrival: resources -= 1; reform_pressure_resolution = "amend"
+go-to: apply_demand
+
+@demand_refuse
+title: Refuse and make the partner own the threat
+subtitle: Free. Protect Lewica's line; relations, dissent and election risk worsen.
+on-arrival: reform_pressure_resolution = "refuse"
+go-to: apply_demand
+
+@apply_demand
+title: Resolve the partner's project
+on-arrival: {!
+const issue = Q.reform_pressure_issue;
+const actor = Q.reform_pressure_actor;
+const resolution = Q.reform_pressure_resolution;
+const intensity = Number(Q.reform_pressure_intensity) || 50;
+const illegality = Number(Q.reform_pressure_illegality) || 0;
+const relationKey = actor + "_relation";
+
+if (resolution == "accept") {
+    Q[relationKey] += 5;
+    Q.government_coalition_dissent -= 3;
+    if (actor == "ko") Q.ko_coalition_dissent -= 3;
+    if (actor == "psl") Q.psl_coalition_dissent -= 3;
+    if (actor == "p2050") Q.p2050_coalition_dissent -= 3;
+} else if (resolution == "amend") {
+    Q[relationKey] += 1;
+    Q.government_coalition_dissent += 2;
+} else {
+    Q[relationKey] -= 8;
+    Q.government_coalition_dissent += 8;
+    if (actor == "ko") Q.ko_coalition_dissent += 7;
+    if (actor == "psl") Q.psl_coalition_dissent += 7;
+    if (actor == "p2050") Q.p2050_coalition_dissent += 7;
+    Q.early_election_risk += 6;
+    if (intensity >= 70) Q.coalition_break_threat = 1;
+}
+
+if (issue == "judicial_reset") {
+    if (resolution == "accept") {
+        Q.coalition_judicial_pressure_concessions += 2;
+        Q.judicial_repair_mandate += 5;
+        Q.judicial_legitimacy += 2;
+        Q.government_procedural_restraint -= 5 + Math.round(illegality / 20);
+        Q.constitutional_restraint -= 3;
+        Q.legal_dualism += 4 + Math.round(illegality / 20);
+    } else if (resolution == "amend") {
+        Q.coalition_judicial_pressure_concessions += 1;
+        Q.judicial_repair_mandate += 3;
+        Q.judicial_legitimacy += 3;
+        Q.government_procedural_restraint += 2;
+        Q.legal_dualism += 1;
+    } else {
+        Q.constitutional_restraint += 3;
+    }
+} else if (issue == "public_media_takeover") {
+    if (resolution == "accept") {
+        Q.coalition_media_takeover_concessions += 2;
+        Q.public_media_transition = "KO-directed hostile takeover";
+        Q.public_media_patron = "ko";
+        Q.media_capacity += 4;
+        Q.government_procedural_restraint -= 6;
+        Q.legal_dualism += 4;
+        Q.republika_capacity += 6;
+    } else if (resolution == "amend") {
+        Q.coalition_media_takeover_concessions += 1;
+        Q.public_media_transition = "Interim pluralist board";
+        Q.public_media_patron = "neutral";
+        Q.constitutional_restraint += 3;
+        Q.media_capacity += 1;
+    }
+} else if (issue == "marketisation") {
+    if (resolution == "accept") {
+        Q.marketisation_concessions += 2;
+        Q.left_economic_position += 8;
+        Q.labor_credibility -= 7;
+        Q.workers_support -= 5;
+        Q.public_sector_support -= 4;
+        Q.razem_dissent += 8;
+        Q.labor_dissent += 6;
+        Q.government_burden_breached = 1;
+        Q.coalition_blur += 5;
+    } else if (resolution == "amend") {
+        Q.marketisation_concessions += 1;
+        Q.left_economic_position += 3;
+        Q.labor_credibility -= 2;
+        Q.workers_support -= 1;
+        Q.razem_dissent += 3;
+    } else {
+        Q.labor_credibility += 2;
+        Q.workers_support += 1;
+    }
+} else if (issue == "pegasus_legalisation") {
+    if (resolution == "accept") {
+        Q.pegasus_legal_framework = 2;
+        Q.government_procedural_restraint -= 7;
+        Q.constitutional_restraint -= 5;
+        Q.public_trust -= 4;
+        Q.progressives_dissent += 8;
+    } else if (resolution == "amend") {
+        Q.pegasus_legal_framework = Math.min(
+            2,
+            Number(Q.pegasus_legal_framework) + 1
+        );
+        Q.government_procedural_restraint += 2;
+        Q.prosecution_oversight_capacity += 3;
+        Q.public_trust -= 1;
+    } else {
+        Q.constitutional_restraint += 3;
+    }
+} else if (issue == "clerical_truce") {
+    if (resolution == "accept") {
+        Q.anticlerical_edge -= 25;
+        Q.left_cultural_position += 7;
+        Q.progressive_credibility -= 6;
+        Q.spring_dissent += 7;
+        Q.progressives_dissent += 8;
+        Q.razem_dissent += 4;
+    } else if (resolution == "amend") {
+        Q.anticlerical_edge -= 10;
+        Q.left_cultural_position += 3;
+        Q.progressives_dissent += 3;
+    } else {
+        Q.secular_state_support += 2;
+        Q.progressive_credibility += 2;
+    }
+} else if (issue == "pzpr_condemnation") {
+    if (resolution == "accept") {
+        Q.pzpr_history_concessions += 2;
+        Q.barons_dissent += 18;
+        Q.barons_grievance_memory += 24;
+        Q.party_unity -= 6;
+        if (intensity >= 70 || Q.pzpr_history_concessions >= 3) {
+            Q.barons_escalation_stage = 7;
+            Q.barons_defection_readiness = 100;
+            Q.caucus_crisis_pending = 1;
+        }
+    } else if (resolution == "amend") {
+        Q.pzpr_history_concessions += 1;
+        Q.barons_dissent += 8;
+        Q.barons_grievance_memory += 10;
+        Q.party_unity -= 2;
+    } else {
+        Q.barons_dissent -= 2;
+        Q.party_unity += 1;
+    }
+}
+
+Q.reform_pressure_last_result =
+    Q.reform_pressure_actor_name + " — " +
+    Q.reform_pressure_issue_name + ": " + resolution;
+Q.reform_pressure_pending = 0;
+Q.reform_pressure_mode = "None";
+Q.reform_pressure_cooldown = illegality >= 55 ? 3 : 5;
+Q.reform_pressure_due_time = -1;
+Q.news_headline = Q.reform_pressure_last_result;
+!}
+go-to: poland_polling

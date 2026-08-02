@@ -217,8 +217,8 @@ local and organiser capacity, produces contradictory appearances, failed
 whips, adviser resignations and individual defections, and can eventually
 create clubs and competing lists. The player continues as the strategic
 coordinating centre or rump. National election calculations apply each list's
-threshold separately, and the December 2026 assessment scores lists, wasted
-sub-threshold votes and family seats.
+threshold separately, and the autumn 2027 election epilogue scores lists,
+wasted sub-threshold votes and certified family seats.
 
 Rightward change is also organisational. Welfare-conservative, sovereignty
 and order choices accumulate support for a Social-Patriot founding congress.

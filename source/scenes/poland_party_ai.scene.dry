@@ -1975,6 +1975,144 @@ for (const id of rivalParties) {
     Q[id + "_coalition_openness"] = clampAI(openness, 0, 100);
 }
 
+// A governing partner occasionally spends its own AI turn on a project that
+// needs Lewica's votes. These demands use the same relationship and wing
+// scores as ordinary party action, then resolve in a shared coalition-pressure
+// scene after the month closes.
+const rightPresidentsAI = [
+    "Andrzej Duda", "Krzysztof Bosak", "Karol Nawrocki",
+    "Sławomir Mentzen", "Grzegorz Braun"
+];
+const hostileCohabitationAI =
+    Q.government_party != "pis" &&
+    (
+        Q.pres_2025_hostile_president ||
+        rightPresidentsAI.includes(Q.president_name)
+    );
+const reformDemandCadenceAI = hostileCohabitationAI ? 3 : 4;
+const democraticPartnersAI = [];
+if (Q.government_party == "ko" || Q.ministry_ko_in_cabinet) {
+    democraticPartnersAI.push("ko");
+}
+if (Q.government_party == "psl" || Q.ministry_psl_in_cabinet) {
+    democraticPartnersAI.push("psl");
+}
+if (Q.government_party == "p2050" || Q.ministry_p2050_in_cabinet) {
+    democraticPartnersAI.push("p2050");
+}
+const availableReformDemandsAI = [];
+if (Q.government_party == "pis") {
+    if (finiteAI(Q.pegasus_legal_framework, 0) < 2) {
+        availableReformDemandsAI.push("pegasus_legalisation");
+    }
+    if (finiteAI(Q.anticlerical_edge, 70) > 20) {
+        availableReformDemandsAI.push("clerical_truce");
+    }
+    if (
+        finiteAI(Q.pzpr_history_concessions, 0) < 2 &&
+        !Q.barons_party_formed
+    ) {
+        availableReformDemandsAI.push("pzpr_condemnation");
+    }
+} else if (democraticPartnersAI.length) {
+    if (finiteAI(Q.coalition_judicial_pressure_concessions, 0) < 2) {
+        availableReformDemandsAI.push("judicial_reset");
+    }
+    if (
+        finiteAI(Q.coalition_media_takeover_concessions, 0) < 2 &&
+        Q.public_media_patron != "ko"
+    ) {
+        availableReformDemandsAI.push("public_media_takeover");
+    }
+    if (finiteAI(Q.marketisation_concessions, 0) < 2) {
+        availableReformDemandsAI.push("marketisation");
+    }
+}
+if (
+    Q.left_in_government &&
+    Q.government_has_confidence &&
+    !Q.caretaker_government &&
+    !Q.reform_pressure_pending &&
+    finiteAI(Q.reform_pressure_cooldown, 0) <= 0 &&
+    finiteAI(Q.rival_ai_tick, 0) > 0 &&
+    finiteAI(Q.rival_ai_tick, 0) % reformDemandCadenceAI == 0 &&
+    availableReformDemandsAI.length
+) {
+    const demandIndex =
+        Math.floor(finiteAI(Q.rival_ai_tick, 0) / reformDemandCadenceAI) %
+        availableReformDemandsAI.length;
+    const demandIssue = availableReformDemandsAI[demandIndex];
+    Q.reform_pressure_pending = 1;
+    Q.reform_pressure_mode = "partner_demand";
+    Q.reform_pressure_due_time = finiteAI(Q.time, 0);
+    Q.reform_pressure_demands = finiteAI(Q.reform_pressure_demands, 0) + 1;
+    if (Q.government_party == "pis") {
+        Q.reform_pressure_actor = "pis";
+        Q.reform_pressure_actor_name = "PiS";
+        Q.reform_pressure_issue = demandIssue;
+        if (demandIssue == "pegasus_legalisation") {
+            Q.reform_pressure_intensity =
+                58 + Q.pis_market_hardliner_share * 0.15;
+            Q.reform_pressure_illegality =
+                62 + Q.pis_market_hardliner_share * 0.18;
+        } else if (demandIssue == "clerical_truce") {
+            Q.reform_pressure_intensity =
+                54 + Q.pis_cultural_position * 0.18;
+            Q.reform_pressure_illegality = 20;
+        } else {
+            Q.reform_pressure_intensity =
+                74 + Math.max(0, 35 - Q.pis_relation) * 0.20;
+            Q.reform_pressure_illegality = 12;
+        }
+    } else {
+        const thirdWayPartnersAI = democraticPartnersAI.filter(
+            function(id) { return id == "psl" || id == "p2050"; }
+        );
+        let sponsor = democraticPartnersAI.includes("ko")
+            ? "ko"
+            : democraticPartnersAI[0];
+        if (demandIssue == "marketisation" && thirdWayPartnersAI.length) {
+            sponsor = thirdWayPartnersAI[
+                finiteAI(Q.rival_ai_tick, 0) % thirdWayPartnersAI.length
+            ];
+        }
+        Q.reform_pressure_actor = sponsor;
+        Q.reform_pressure_actor_name = sponsor == "ko"
+            ? "KO"
+            : "the Third Way";
+        Q.reform_pressure_issue = demandIssue;
+        if (demandIssue == "judicial_reset") {
+            Q.reform_pressure_intensity =
+                55 + finiteAI(Q.institutional_issue_salience, 40) * 0.20;
+            Q.reform_pressure_illegality = hostileCohabitationAI ? 76 : 34;
+        } else if (demandIssue == "public_media_takeover") {
+            Q.reform_pressure_intensity =
+                58 + finiteAI(Q.media_capacity, 20) * 0.08;
+            Q.reform_pressure_illegality = hostileCohabitationAI ? 76 : 34;
+        } else {
+            const sponsorMarketWing = sponsor == "ko"
+                ? Number(Q.ko_classical_liberal_share)
+                : (sponsor == "psl"
+                    ? Number(Q.psl_agrarian_pragmatist_share)
+                    : 100 - Number(Q.p2050_state_capacity_share));
+            Q.reform_pressure_intensity =
+                48 + sponsorMarketWing * 0.28 +
+                (sponsor == "ko" ? 0 : 6);
+            Q.reform_pressure_illegality = 8;
+        }
+    }
+    Q.reform_pressure_intensity = clampAI(
+        Q.reform_pressure_intensity, 0, 100
+    );
+    Q.reform_pressure_illegality = clampAI(
+        Q.reform_pressure_illegality, 0, 100
+    );
+    headlines.push(
+        Q.reform_pressure_actor_name +
+        " demands Lewica's support for a coalition reform"
+    );
+}
+
 Q.pis_ideology =
     Q.pis_dominant_wing == "Social solidarists"
         ? "National-conservative · social-solidarist wing ascendant"
@@ -2059,4 +2197,4 @@ while (Q.rival_strategy_log.length > 18) {
     Q.rival_strategy_log.shift();
 }
 !}
-go-to: poland_polling
+go-to: poland_reform_pressure if reform_pressure_pending = 1; poland_polling if reform_pressure_pending = 0

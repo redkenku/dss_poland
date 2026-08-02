@@ -70,6 +70,10 @@ if (foreignOverrideRisk > 0) {
 Q.foreign_ministry_override_risk = 0;
 Q.foreign_portfolio_resistance = 0;
 Q.foreign_policy_responsibility = 0;
+Q.oath_crisis_pressure = Math.max(
+    0,
+    (Number(Q.oath_crisis_pressure) || 0) - 4
+);
 
 const advisorRepresentation = {
     barons: Number(Q.barons_advisor_count) || 0,
@@ -192,6 +196,10 @@ const monthlyTimers = [
     "poland_labor_inspection_timer",
     "poland_housing_fund_timer",
     "poland_equality_bill_timer",
+    "poland_abortion_reform_timer",
+    "poland_marriage_reform_timer",
+    "poland_labor_reform_timer",
+    "reform_pressure_cooldown",
     "poland_health_compact_timer",
     "poland_digital_state_timer",
     "poland_science_compact_timer",
@@ -213,9 +221,8 @@ const monthlyTimers = [
     "poland_palace_mediation_timer",
     "poland_pis_social_channel_timer",
     "poland_pis_right_faultline_timer",
+    "poland_tvp_appearance_timer",
     "poland_european_campaign_timer",
-    "poland_brussels_pressure_timer",
-    "poland_berlin_pressure_timer",
     "poland_eastern_flank_timer",
     "poland_white_house_pressure_timer",
     "poland_european_right_timer",
@@ -238,11 +245,35 @@ if (
     !Q.government_burden_review_pending
 ) {
     const burdenGoals = [
-        ["government_goal_health", "public health"],
-        ["government_goal_housing", "housing and tenant security"],
-        ["government_goal_labor", "labour rights"],
-        ["government_goal_welfare", "social welfare"],
-        ["government_goal_equality", "equality"]
+        ["government_goal_health", "public health", [
+            ["public_service_families", 6],
+            ["older_welfare_households", 6],
+            ["rural_localists", 4]
+        ]],
+        ["government_goal_housing", "housing and tenant security", [
+            ["metropolitan_liberals", 6],
+            ["anti_establishment_youth", 6],
+            ["provincial_welfare", 5],
+            ["rural_localists", 2]
+        ]],
+        ["government_goal_labor", "labour rights", [
+            ["industrial_logistics", 6],
+            ["public_service_families", 5],
+            ["provincial_welfare", 4],
+            ["anti_establishment_youth", 4]
+        ]],
+        ["government_goal_welfare", "social welfare", [
+            ["provincial_welfare", 6],
+            ["older_welfare_households", 6],
+            ["public_service_families", 5],
+            ["rural_localists", 5]
+        ]],
+        ["government_goal_equality", "equality", [
+            ["metropolitan_liberals", 6],
+            ["liberal_professionals", 5],
+            ["anti_establishment_youth", 6],
+            ["public_service_families", 3]
+        ]]
     ];
     Q.government_burden_completed = burdenGoals.reduce(
         function(total, goal) {
@@ -275,11 +306,24 @@ if (
             Q.government_achievements += 1;
             Q.party_unity += 1;
             Q.coalition_blur -= 1;
+            Q.left_poll += Q.government_burden_last_completed * 0.6;
+            burdenGoals.forEach(function(goal) {
+                if (Number(Q[goal[0]]) < 1) return;
+                goal[2].forEach(function(reward) {
+                    const affinityKey = reward[0] + "_left_affinity";
+                    Q[affinityKey] =
+                        (Number(Q[affinityKey]) || 0) + reward[1];
+                });
+            });
             Q.government_burden_last_result =
                 "Lewica meets its six-month government burden";
         } else {
             Q.government_burden_failures += 1;
             Q.left_poll -= 0.7;
+            Q.voter_groups.forEach(function(group) {
+                const affinityKey = group + "_left_affinity";
+                Q[affinityKey] = (Number(Q[affinityKey]) || 0) - 3;
+            });
             Q.public_trust -= 3;
             Q.government_delivery -= 2;
             Q.coalition_blur += 5;
@@ -297,6 +341,44 @@ if (
 
 Q.time += 1;
 Q.month += 1;
+const collectPartyIncome = function(periodLabel) {
+    const subsidySeats = Number.isFinite(Number(Q.left_seats))
+        ? Math.max(0, Math.round(Number(Q.left_seats)))
+        : 0;
+    Q.seat_subvention_seats = subsidySeats;
+    Q.seat_subvention = subsidySeats > 0
+        ? Math.max(1, Math.round(subsidySeats / 25))
+        : 0;
+    Q.member_dues = Number.isFinite(Number(Q.member_dues))
+        ? Math.max(1, Math.min(5, Math.round(Number(Q.member_dues))))
+        : 2;
+    Q.party_income = Q.member_dues + Q.seat_subvention;
+    let duesCollected = Q.member_dues;
+    if (Q.internal_dissent <= 20) {
+        duesCollected += 1;
+    } else if (Q.internal_dissent >= 55) {
+        duesCollected -= 1;
+    }
+    const withheldDues = Math.min(
+        Math.max(0, duesCollected),
+        Math.floor(Math.max(0, Number(Q.dues_withheld) || 0))
+    );
+    duesCollected -= withheldDues;
+    Q.dues_withheld = Math.max(
+        0,
+        (Number(Q.dues_withheld) || 0) - withheldDues
+    );
+    Q.lost_dues_total += withheldDues;
+    Q.last_dues_payout = Math.max(0, duesCollected);
+    Q.last_subvention_payout = Q.seat_subvention;
+    Q.last_annual_payout =
+        Q.last_dues_payout + Q.last_subvention_payout;
+    Q.last_annual_payout_label =
+        periodLabel + " " + Q.year + ": " + Q.last_dues_payout +
+        " dues + " + Q.last_subvention_payout + " subvention" +
+        (withheldDues > 0 ? " · " + withheldDues + " withheld" : "");
+    Q.resources += Q.last_annual_payout;
+};
 if (
     Q.partnership_implementation_pending &&
     Number(Q.time) >= Number(Q.partnership_implementation_due_time)
@@ -328,42 +410,7 @@ if (Q.month > 12) {
     Q.month = 1;
     Q.year += 1;
     if (Q.last_resource_restore_year < Q.year) {
-        const subsidySeats = Number.isFinite(Number(Q.left_seats))
-            ? Math.max(0, Math.round(Number(Q.left_seats)))
-            : 0;
-        Q.seat_subvention_seats = subsidySeats;
-        Q.seat_subvention = subsidySeats > 0
-            ? Math.max(1, Math.round(subsidySeats / 25))
-            : 0;
-        Q.member_dues = Number.isFinite(Number(Q.member_dues))
-            ? Math.max(1, Math.min(5, Math.round(Number(Q.member_dues))))
-            : 2;
-        Q.party_income = Q.member_dues + Q.seat_subvention;
-        let duesCollected = Q.member_dues;
-        if (Q.internal_dissent <= 20) {
-            duesCollected += 1;
-        } else if (Q.internal_dissent >= 55) {
-            duesCollected -= 1;
-        }
-        const withheldDues = Math.min(
-            Math.max(0, duesCollected),
-            Math.floor(Math.max(0, Number(Q.dues_withheld) || 0))
-        );
-        duesCollected -= withheldDues;
-        Q.dues_withheld = Math.max(
-            0,
-            (Number(Q.dues_withheld) || 0) - withheldDues
-        );
-        Q.lost_dues_total += withheldDues;
-        Q.last_dues_payout = Math.max(0, duesCollected);
-        Q.last_subvention_payout = Q.seat_subvention;
-        Q.last_annual_payout =
-            Q.last_dues_payout + Q.last_subvention_payout;
-        Q.last_annual_payout_label =
-            Q.year + ": " + Q.last_dues_payout + " dues + " +
-            Q.last_subvention_payout + " subvention" +
-            (withheldDues > 0 ? " · " + withheldDues + " withheld" : "");
-        Q.resources += Q.last_annual_payout;
+        collectPartyIncome("January");
         Q.last_resource_restore_year = Q.year;
     }
     if (
@@ -390,6 +437,14 @@ if (Q.month > 12) {
         Q.last_budget_restore = 0;
         Q.budget_authority = "Opposition — no state spending authority";
     }
+}
+if (
+    Q.month == 7 &&
+    (!Number.isFinite(Number(Q.last_midyear_resource_restore_year)) ||
+        Number(Q.last_midyear_resource_restore_year) < Q.year)
+) {
+    collectPartyIncome("July");
+    Q.last_midyear_resource_restore_year = Q.year;
 }
 
 Q.month_actions = 0;
@@ -754,7 +809,7 @@ Q.date_label = Q.month_name + " " + Q.year;
 // Macroeconomic shocks persist, but they are not permanent constants. Move
 // the crisis variables gradually toward a year-specific baseline while
 // retaining the effect of fiscal stress, delivery and later authored shocks.
-// This mirrors the Weimar model's continuing feedback rather than freezing
+// This keeps the campaign's feedback loop running rather than freezing
 // the COVID/inflation peak for the rest of the campaign.
 if (Q.year >= 2021) {
     const finiteMacro = function(value, fallback) {
@@ -1467,7 +1522,7 @@ if (Q.pres_2025_round_one_done && !Q.historical_presidential_2025_applied) {
     // Candidate and field were scored separately at the count. In particular,
     // the stronger candidate cannot erase a defeat for the backed leadership.
     Q.historical_pressure_last = Q.pres_2025_leadership_defeat
-        ? "Biejat's " + backedResult +
+        ? Q.pres_2025_left_candidate + "'s " + backedResult +
             "% trails Zandberg despite a " + fieldResult +
             "% Left field, opening a leadership challenge"
         : "The backed candidate wins " + backedResult +

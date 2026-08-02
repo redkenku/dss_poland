@@ -125,11 +125,15 @@ const knownPeople = [
   'Magdalena Biejat', 'Agnieszka Dziemianowicz-Bąk', 'Donald Tusk',
   'Borys Budka', 'Grzegorz Schetyna', 'Rafał Trzaskowski',
   'Małgorzata Kidawa-Błońska', 'Szymon Hołownia',
-  'Władysław Kosiniak-Kamysz', 'Mateusz Morawiecki', 'Jarosław Kaczyński',
+  'Władysław Kosiniak-Kamysz', 'Krzysztof Bosak',
+  'Stanisław Żółtek', 'Marek Jakubiak', 'Paweł Tanajno',
+  'Waldemar Witkowski', 'Mirosław Piotrowski',
+  'Mateusz Morawiecki', 'Jarosław Kaczyński', 'Elżbieta Witek',
   'Andrzej Duda', 'Karol Nawrocki', 'Zbigniew Ziobro',
   'Sławomir Mentzen', 'Grzegorz Braun', 'Katarzyna Pełczyńska-Nałęcz',
   'Paulina Hennig-Kloska', 'Radosław Sikorski', 'Adam Bodnar',
   'Mariusz Błaszczak', 'Beata Szydło', 'Przemysław Czarnek',
+  'Chrystian Szpilski', 'Patryk Spaliński', 'Maciej Kozłowski', 'Jan Śpiewak',
 ];
 const knownOrganisations = [
   'Lewica', 'Nowa Lewica', 'Razem', 'PiS', 'Prawo i Sprawiedliwość',
@@ -138,6 +142,7 @@ const knownOrganisations = [
   'European Commission', 'European Union', 'Sejm', 'Senate',
   'Council of Ministers', 'Constitutional Tribunal', 'Supreme Court',
   'National Council of the Judiciary', 'State Labour Inspection',
+  'Nowa Solidarność',
 ];
 
 function mentions(section, dictionary) {
@@ -406,6 +411,40 @@ function validateCorrectnessInvariants() {
     !/sejm_speaker\s*=/.test(sectionNamed('poland_events_2025.scene.dry', 'left_leadership_2025')),
     'A party congress cannot appoint the Sejm Marshal'
   );
+  const oathCrisis2025 = sectionNamed(
+    'poland_events_2025.scene.dry',
+    'presidential_oath_crisis_2025'
+  );
+  const oathInauguration2025 = sectionNamed(
+    'poland_events_2025.scene.dry',
+    'presidential_inauguration_2025'
+  );
+  const oathDelay2025 = sectionNamed(
+    'poland_events_2025.scene.dry',
+    'oath_delay_2025'
+  );
+  const oathActingWindow2025 = sectionNamed(
+    'poland_events_2025.scene.dry',
+    'oath_acting_window_2025'
+  );
+  assert(
+    readProperty(oathCrisis2025, 'view-if').includes(
+      'pres_2025_winner_key = "right"'
+    ),
+    'The 2025 oath crisis must follow Nawrocki\'s adverse result'
+  );
+  assert(
+    [oathDelay2025, oathActingWindow2025].every(function(section) {
+      return section.includes('Q.pres_2025_oath_crisis = 2') &&
+        !section.includes('Q.pres_2025_inaugurated = 1');
+    }),
+    'The oath manoeuvre may create an interregnum, not inaugurate its claimant'
+  );
+  assert(
+    oathInauguration2025.includes('Q.president_name = Q.pres_2025_winner') &&
+      oathInauguration2025.includes('Q.pres_2025_oath_crisis = 3'),
+    'The certified 2025 winner must end any attempted oath interregnum'
+  );
 
   const allSource = files.map(function(file) {
     return fs.readFileSync(file, 'utf8');
@@ -479,8 +518,93 @@ function validateCorrectnessInvariants() {
   assert(events2026.includes('Q.partnership_presidential_score < 50'));
 
   const foreignDeck = read('source/scenes/cards/poland_foreign_deck.scene.dry');
-  assert(foreignDeck.includes('poland_berlin_order_shock_done = 1'));
-  assert(foreignDeck.includes('poland_european_right_shock_done = 1'));
+  for (const arena of ['EU', 'Hungary', 'United States', 'Ukraine']) {
+    assert(
+      foreignDeck.includes(arena),
+      'Foreign Affairs deck omits ' + arena
+    );
+  }
+
+  const ziobroHospital = sectionNamed(
+    'poland_ziobro_whereabouts.scene.dry', 'hospital'
+  );
+  const ziobroPolice = sectionNamed(
+    'poland_ziobro_whereabouts.scene.dry', 'missed_by_police'
+  );
+  const ziobroHungary = sectionNamed(
+    'poland_ziobro_whereabouts.scene.dry', 'hungary'
+  );
+  const ziobroAmerica = sectionNamed(
+    'poland_ziobro_whereabouts.scene.dry', 'united_states'
+  );
+  const ziobroArgentina = sectionNamed(
+    'poland_ziobro_whereabouts.scene.dry', 'argentina'
+  );
+  const ziobroWorldTour = sectionNamed(
+    'poland_ziobro_whereabouts.scene.dry', 'world_tour'
+  );
+  assert(
+    readProperty(ziobroHospital, 'view-if').includes(
+      'government_party != "pis"'
+    ),
+    'The Ziobro chain must begin only after a non-PiS cabinet takes office'
+  );
+  for (const entry of [
+    [ziobroHospital, 0], [ziobroPolice, 1], [ziobroHungary, 2],
+    [ziobroAmerica, 3], [ziobroArgentina, 4], [ziobroWorldTour, 5],
+  ]) {
+    assert(
+      readProperty(entry[0], 'view-if').includes(
+        'ziobro_whereabouts_stage = ' + entry[1]
+      ),
+      'Ziobro whereabouts stages must remain ordered'
+    );
+  }
+  assert(
+    ziobroAmerica.includes(
+      'Q.ziobro_whereabouts_stage = democraticAmerica ? 4 : 5'
+    ) &&
+      readProperty(ziobroArgentina, 'view-if').includes(
+        'us_administration = "Democratic"'
+      ),
+    'Only the Democratic US branch may continue to Argentina'
+  );
+  assert.strictEqual(
+    readProperty(ziobroWorldTour, 'max-visits'), '2',
+    'The satirical world tour must end after two additional rumours'
+  );
+  assert(
+    ziobroWorldTour.includes('ziobro_world_tour_updates = 1') &&
+      ziobroWorldTour.includes('ziobro_world_tour_updates = 2') &&
+      ziobroWorldTour.includes('ziobro_previous_rumor_country') &&
+      ziobroWorldTour.includes('ziobro_previous_rumor_departure'),
+    'The two random Ziobro sightings need distinct, connected prose'
+  );
+  for (const field of [
+    'ziobro_rumor_discovery', 'ziobro_rumor_climate',
+    'ziobro_rumor_mfa', 'ziobro_rumor_departure',
+  ]) {
+    assert(
+      ziobroWorldTour.includes(field),
+      'Each Ziobro destination needs its own ' + field
+    );
+  }
+  for (const country of [
+    'El Salvador', 'South Africa', 'Thailand', 'Japan',
+    'Israel', 'South Korea', 'Turkey',
+  ]) {
+    assert(
+      ziobroWorldTour.includes('["' + country + '"'),
+      'The Ziobro rumour pool omits ' + country
+    );
+  }
+  assert(
+    ziobroWorldTour.includes('< 0.20 ? 1 : 0') &&
+      ziobroWorldTour.includes('["Philippines"') &&
+      ziobroWorldTour.includes('["India"') &&
+      ziobroWorldTour.includes('ziobro_final_escape_triggered = 1'),
+    'The second Ziobro sighting needs its 20% Philippines/India epilogue'
+  );
 
   assert.strictEqual(
     readProperty(sectionNamed('poland_events.scene.dry', 'budget_consequence'), 'go-to'),
@@ -488,8 +612,63 @@ function validateCorrectnessInvariants() {
     'The December 2020 budget cannot bypass the warning-period system'
   );
 
-  const queue = read('source/scenes/poland_event_queue.scene.dry');
-  assert(!/^go-to:.*afterword/m.test(queue), 'The dated queue cannot require a consequence click');
+  const queueRoot = sectionNamed('poland_event_queue.scene.dry', '');
+  assert(
+    !/^new-page:\s*true\b/m.test(queueRoot),
+    'The queue router cannot erase a dated event before its result beat'
+  );
+  assert(
+    /^go-to:.*afterword/m.test(queueRoot),
+    'A dated decision must retain its consequence until the player leaves it'
+  );
+  const afterword = sectionNamed('poland_event_queue.scene.dry', 'afterword');
+  assert(
+    !/^new-page:\s*true\b/m.test(afterword) && afterword.includes('news_headline'),
+    'The queue result beat must append the consequence headline to the event page'
+  );
+  assert(
+    /^new-page:\s*true\b/m.test(
+      sectionNamed('poland_event_queue.scene.dry', 'events_choice')
+    ),
+    'The event desk must open on a clean page'
+  );
+
+  for (const section of sections) {
+    if (/^tags:\s*poland_event\b/m.test(section.source)) {
+      assert(
+        /^new-page:\s*true\b/m.test(section.source),
+        section.id + ' must open a dated event on a clean page'
+      );
+    }
+  }
+
+  const candidateRollout = [
+    'meet_candidates', 'candidate_duda', 'candidate_trzaskowski',
+    'candidate_holownia', 'candidate_bosak', 'candidate_kosiniak',
+    'candidate_other', 'candidate_left', 'candidate_alignment',
+  ];
+  for (const localId of candidateRollout) {
+    assert(
+      !/^new-page:\s*true\b/m.test(
+        sectionNamed('poland_presidential_election.scene.dry', localId)
+      ),
+      'The presidential candidate rollout must retain earlier profiles: ' + localId
+    );
+  }
+  const presidentialElection = read(
+    'source/scenes/poland_presidential_election.scene.dry'
+  );
+  for (const name of [
+    'Andrzej Duda', 'Rafał Trzaskowski', 'Szymon Hołownia',
+    'Krzysztof Bosak', 'Władysław Kosiniak-Kamysz',
+    'Stanisław Żółtek', 'Marek Jakubiak', 'Paweł Tanajno',
+    'Waldemar Witkowski', 'Mirosław Piotrowski',
+  ]) {
+    assert(
+      presidentialElection.includes(name),
+      'The eleven-candidate introduction omits ' + name
+    );
+  }
 
   const reshuffle = sectionNamed('poland_cabinet_reshuffle.scene.dry', 'keep');
   assert(/month_actions\s*\+=\s*1/.test(reshuffle));
@@ -506,8 +685,6 @@ function validateCorrectnessInvariants() {
     }
   }
   for (const relativePath of [
-    'source/scenes/cards/poland_berlin_pressure.scene.dry',
-    'source/scenes/cards/poland_brussels_pressure.scene.dry',
     'source/scenes/cards/poland_eastern_flank.scene.dry',
     'source/scenes/cards/poland_european_right.scene.dry',
   ]) {

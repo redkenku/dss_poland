@@ -25,9 +25,9 @@ government_negotiation_hostility +]**.
 
 @audit
 title: Offer abstention for an audit, deadline and beneficiary register
-subtitle: Cost: 1 resource · score +8 · success at 50 under PiS, 42 otherwise.
-choose-if: resources >= 1
-unavailable-subtitle: Line-by-line drafting and monitoring require one resource.
+subtitle: Cost: 1 resource · score +8 · needs 32 under PiS, 26 otherwise · success spends 4 capital.
+choose-if: resources >= 1 and ((government_party = "pis" and negotiation_leverage >= 24) or (government_party != "pis" and negotiation_leverage >= 18))
+unavailable-subtitle: Requires one resource and 24 base leverage under PiS, 18 otherwise. Build pressure first.
 on-arrival: {!
 Q.resources -= 1;
 Q.negotiation_attempts += 1;
@@ -35,7 +35,7 @@ Q.negotiation_last_score = Math.round(
     (Number(Q.negotiation_leverage) || 0) + 8
 );
 Q.negotiation_last_threshold =
-    Q.government_party == "pis" ? 50 : 42;
+    Q.government_party == "pis" ? 32 : 26;
 Q.negotiation_success =
     Q.negotiation_last_score >= Q.negotiation_last_threshold ? 1 : 0;
 Q.negotiation_last_result = Q.negotiation_success
@@ -43,7 +43,7 @@ Q.negotiation_last_result = Q.negotiation_success
     : "Audit-for-abstention bargain refused";
 if (Q.negotiation_success) {
     Q.negotiation_successes += 1;
-    Q.negotiation_capital += 2;
+    Q.negotiation_capital -= 4;
     Q.government_procedural_restraint += 4;
     Q.public_trust += 3;
     Q.government_delivery += 2;
@@ -53,7 +53,7 @@ if (Q.negotiation_success) {
     Q.news_headline =
         "An opposition audit clause buys a conditional abstention";
 } else {
-    Q.negotiation_capital -= 1;
+    Q.negotiation_capital -= 2;
     Q.media_capacity += 1;
     Q.public_trust += 1;
     Q.news_headline =
@@ -64,14 +64,16 @@ go-to: result
 
 @amendment
 title: Offer votes only for a named labour or service amendment
-subtitle: Score +4 · lower reward, same public threshold: 46 under PiS, 38 otherwise.
+subtitle: Score +4 · needs 28 under PiS, 24 otherwise · success spends 3 capital.
+choose-if: (government_party = "pis" and negotiation_leverage >= 24) or (government_party != "pis" and negotiation_leverage >= 20)
+unavailable-subtitle: Requires 24 base leverage under PiS, 20 otherwise. Use scrutiny, media or a party channel first.
 on-arrival: {!
 Q.negotiation_attempts += 1;
 Q.negotiation_last_score = Math.round(
     (Number(Q.negotiation_leverage) || 0) + 4
 );
 Q.negotiation_last_threshold =
-    Q.government_party == "pis" ? 46 : 38;
+    Q.government_party == "pis" ? 28 : 24;
 Q.negotiation_success =
     Q.negotiation_last_score >= Q.negotiation_last_threshold ? 1 : 0;
 Q.negotiation_last_result = Q.negotiation_success
@@ -79,7 +81,7 @@ Q.negotiation_last_result = Q.negotiation_success
     : "Single implementation amendment refused";
 if (Q.negotiation_success) {
     Q.negotiation_successes += 1;
-    Q.negotiation_capital += 1;
+    Q.negotiation_capital -= 3;
     Q.labor_credibility += 3;
     Q.government_delivery += 1;
     Q.industrial_logistics_left_affinity += 2;
@@ -88,7 +90,7 @@ if (Q.negotiation_success) {
     Q.news_headline =
         "One enforceable opposition amendment enters the government bill";
 } else {
-    Q.negotiation_capital -= 1;
+    Q.negotiation_capital -= 2;
     Q.public_trust -= 1;
     Q.news_headline =
         "The cabinet rejects even a single opposition implementation clause";
@@ -98,8 +100,8 @@ go-to: result
 
 @expose
 title: Withhold support and make the committee hearing the whole strategy
-subtitle: No bargain · +3 media · -2 government relation · no delivery gain.
-on-arrival: negotiation_success = 0; negotiation_last_result = "No bargain — public scrutiny only"; negotiation_last_score = negotiation_leverage; negotiation_last_threshold = 50 if government_party = "pis"; negotiation_last_threshold = 42 if government_party != "pis"; media_capacity += 3; public_trust += 1; pis_relation -= 2; ko_relation -= 2; government_delivery -= 1; news_headline = "The hearing exposes the bill and changes none of its clauses"
+subtitle: Build pressure instead of bargaining · +4 capital · +3 media · no delivery gain.
+on-arrival: negotiation_success = 0; negotiation_capital += 4; negotiation_last_result = "No bargain — public scrutiny builds leverage"; negotiation_last_score = negotiation_leverage; negotiation_last_threshold = 32 if government_party = "pis"; negotiation_last_threshold = 26 if government_party != "pis"; media_capacity += 3; public_trust += 1; pis_relation -= 2; ko_relation -= 2; government_delivery -= 1; news_headline = "The hearing exposes the bill and builds pressure for the next vote"
 go-to: result
 
 @result
@@ -112,7 +114,8 @@ negotiation_last_threshold +]**.
 
 [? if negotiation_success: The concession is written into the measure. Lewica
 can claim the clause; the cabinet still owns the bill and its implementation.?]
-[? if not negotiation_success: Scrutiny can create a later electoral cost. It
+[? if not negotiation_success and negotiation_last_result != "No bargain — public scrutiny builds leverage": Scrutiny can create a later electoral cost. It
 does not create the clause that the cabinet refused today.?]
+[? if negotiation_last_result = "No bargain — public scrutiny builds leverage": No clause was offered today. The hearing's purpose was to make a later refusal more expensive.?]
 
 - #poland_card_finish

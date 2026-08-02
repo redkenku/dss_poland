@@ -1,0 +1,325 @@
+title: The Reproductive-Rights Settlement
+subtitle: Begin with a Canadian-model bill; compromise only when a veto player forces it down.
+new-page: true
+is-card: true
+tags: poland_major_reform_card
+frequency: 135
+view-if: month_actions < max_month_actions and poland_abortion_reform_timer <= 0 and abortion_reform_settled = 0 and reform_pressure_pending = 0
+on-arrival: {!
+Q.month_actions += 1;
+Q.poland_abortion_reform_timer = 3;
+Q.abortion_reform_next_stage = Number(Q.abortion_reform_proposal_stage) || 4;
+const abortionThresholds = [0, 28, 43, 62, 82];
+Q.abortion_reform_threshold =
+    abortionThresholds[Q.abortion_reform_next_stage];
+const ministryBonus =
+    (Q.equality_minister_party == "Lewica" ? 9 : 0) +
+    (Q.health_minister_party == "Lewica" ? 7 : 0) +
+    (Q.justice_minister_party == "Lewica" ? 4 : 0);
+const koCabinet = Q.government_party == "ko" || Q.ministry_ko_in_cabinet;
+const pslCabinet = Q.government_party == "psl" || Q.ministry_psl_in_cabinet;
+const p2050Cabinet =
+    Q.government_party == "p2050" || Q.ministry_p2050_in_cabinet;
+const thirdWayCabinet = pslCabinet || p2050Cabinet;
+const thirdWayRelation = pslCabinet && p2050Cabinet
+    ? Math.min(Number(Q.psl_relation), Number(Q.p2050_relation))
+    : (pslCabinet ? Number(Q.psl_relation) : Number(Q.p2050_relation));
+let partnerBonus = 0;
+if (Q.government_party == "pis") {
+    partnerBonus =
+        Number(Q.pis_relation) * 0.16 +
+        Number(Q.pis_accept_rights) * 0.12 +
+        Number(Q.abortion_pis_commitment) * 7 +
+        Number(Q.pis_solidarist_share) * 0.05 -
+        Number(Q.pis_market_hardliner_share) * 0.03;
+    if (
+        Q.left_in_government &&
+        Q.president_name == "Rafał Trzaskowski"
+    ) {
+        partnerBonus += 9;
+    }
+} else {
+    partnerBonus =
+        (koCabinet
+            ? Number(Q.ko_relation) * 0.10 +
+                Number(Q.ko_accept_rights) * 0.12 +
+                Number(Q.abortion_ko_commitment) * 6
+            : 0) +
+        (thirdWayCabinet
+            ? Number(Q.abortion_third_way_commitment) * 5 -
+                Math.max(0, 48 - thirdWayRelation) * 0.18 -
+                (pslCabinet ? Number(Q.psl_conservative_share) * 0.04 : 0)
+            : 0) +
+        (Q.abortion_reform_next_stage <= 2
+            ? Number(Q.abortion_pis_commitment) * 3 +
+                Math.max(0, Number(Q.pis_relation) - 50) * 0.04
+            : 0);
+}
+const palaceBonus =
+    Number(Q.president_relation) * 0.08 +
+    (Q.abortion_palace_president == Q.president_name
+        ? Number(Q.abortion_palace_commitment) * 6
+        : 0) +
+    (Q.president_name == "Rafał Trzaskowski" ? 7 : 0) +
+    (Q.trz_abortion_signature ? 8 : 0);
+const publicBonus =
+    (Number(Q.abortion_rights_support) - 40) * 0.35 +
+    Math.max(0, Number(Q.left_poll) - 5) * 0.55 -
+    Math.max(0, Number(Q.abortion_rights_backlash) - 55) * 0.12;
+Q.abortion_reform_power = Math.round(Math.max(
+    0,
+    Math.min(
+        140,
+        Number(Q.abortion_reform_progress) * 0.62 +
+        partnerBonus + palaceBonus + publicBonus + ministryBonus +
+        (Q.abortion_referendum_mandate ? 18 : 0) -
+        Number(Q.eu_progressive_headwind)
+    )
+));
+!}
+card-image: img/poland/cards/equality-bill.webp
+
+= Reproductive rights as a whole-game project
+
+**Campaign goal:** [? if abortion_reform_defined: [+
+abortion_reform_goal_label +].?][? if not abortion_reform_defined: Not yet
+defined.?]
+[? if abortion_reform_defined: **Bill currently on the table:** [+
+abortion_reform_next_label +].
+**Passage power:** **[+ abortion_reform_power +]**; this bill needs **[+
+abortion_reform_threshold +]**.?][? if not abortion_reform_defined: The first
+project action must define the ambitious bill before preparation or bargaining
+can begin.?]
+
+The four numbered outcomes are fallback settlements, not steps to fill in.
+Lewica begins at the Canadian model. If resistance knocks the bill down and a
+lesser version passes, that settlement closes this campaign.
+
+[? if eu_progressive_headwind > 0: Europe's rightward shift removes **[+
+eu_progressive_headwind +] passage power** from this progressive reform. EU
+social and democratic organising can reduce that headwind; it cannot replace
+a Polish majority.?]
+
+[? if left_in_government: A cabinet seat lets Lewica table the bill. It does
+not erase KO's conservatives, PSL's conscience clause, PiS's culture-war wing
+or the President.?][? if not left_in_government: We cannot enact a statute
+from opposition. We can make the draft, public mandate and private promises
+survive until the next coalition negotiation.?]
+
+[? if equality_minister_party = "Lewica" or health_minister_party = "Lewica"
+or justice_minister_party = "Lewica": A Lewica-held Equality, Health or Justice
+portfolio turns promises into clauses and lowers the practical price of the
+next vote.?][? if abortion_referendum_mandate: A successful referendum
+campaign supplies an explicit public mandate. Coalition parties and the Palace
+can still resist, but they now pay for doing so.?]
+
+- @define_goal
+- @draft
+- @coalition_round
+- @cash_relation
+- @palace
+- @referendum
+- @advance
+
+@define_goal
+title: Define the goal as Canadian-model decriminalisation
+subtitle: The opening mandate is maximal; narrow decriminalisation compromises are fallback positions, not prerequisites.
+view-if: abortion_reform_defined = 0
+on-arrival: abortion_reform_defined = 1; abortion_reform_goal_stage = 4; abortion_reform_proposal_stage = 4; abortion_reform_next_stage = 4; abortion_reform_progress += 12; feminist_trust += 3; progressive_credibility += 2; news_headline = "Lewica defines Canadian-model decriminalisation as its reproductive-rights bill"
+
+The campaign now has an endpoint against which every negotiation can be
+measured. No one can rebrand the closest available compromise as the original
+programme.
+
+- #poland_card_finish
+
+@draft
+title: Keep the clinical and legal team working
+subtitle: Free. Preparation +10; no party promises a vote yet.
+view-if: abortion_reform_defined = 1
+on-arrival: abortion_reform_progress += 10; feminist_trust += 1; news_headline = "Lewica keeps the reproductive-rights statute ready for the next opening"
+
+Patients, clinicians and criminal lawyers reconcile the bill with the cases
+that a slogan usually omits. The next negotiation begins with text rather than
+another declaration of intent.
+
+- #poland_card_finish
+
+@coalition_round
+title: Put concessions on a possible coalition partner's table
+subtitle: Cost: 1 resource. Choose KO, the Third Way or PiS and record one promise.
+choose-if: resources >= 1
+unavailable-subtitle: A serious negotiating round needs one resource.
+view-if: abortion_reform_defined = 1
+new-page: true
+
+Before power, this sets expectations for coalition talks. In government, it
+turns a general relationship into an issue-specific promise.
+
+- @round_ko
+- @round_third_way
+- @round_pis
+
+@round_ko
+title: Ask KO to record a reproductive-rights floor
+on-arrival: resources -= 1; abortion_reform_progress += 8; abortion_ko_commitment += 1; ko_relation += 4; news_headline = "KO records an abortion-law floor for the next coalition agreement"
+
+- #poland_card_finish
+
+@round_third_way
+title: Make the Third Way name a compromise it would permit
+view-if: p2050_emerged = 1 or third_way_active = 1
+on-arrival: resources -= 1; abortion_reform_progress += 8; abortion_third_way_commitment += 1; psl_relation += 3; p2050_relation += 3; news_headline = "The Third Way records a limited abortion-law compromise"
+
+- #poland_card_finish
+
+@round_pis
+title: Open a limited decriminalisation channel with PiS
+choose-if: (left_in_government = 1 and government_party = "pis") or pis_relation >= 15 or pis_negotiation_hostility_relief >= 5 or national_crisis_pressure >= 25
+unavailable-subtitle: PiS will not record a rights promise without coalition ties, an established channel or national pressure.
+on-arrival: resources -= 1; abortion_reform_progress += 8; abortion_pis_commitment += 1; pis_relation += 4; pis_solidarist_share += 1; news_headline = "PiS records a limited reproductive-rights channel"
+
+- #poland_card_finish
+
+@cash_relation
+title: Cash in a party relationship instead of spending a resource
+subtitle: Choose a 58+ relationship; it falls by 12 and becomes one recorded promise.
+choose-if: ko_relation >= 58 or pis_relation >= 58 or ((p2050_emerged = 1 or third_way_active = 1) and (psl_relation >= 58 or p2050_relation >= 58))
+unavailable-subtitle: No potential governing partner trusts us enough yet.
+view-if: abortion_reform_defined = 1
+new-page: true
+
+- @cash_ko
+- @cash_third_way
+- @cash_pis
+
+@cash_ko
+title: Spend KO goodwill on reproductive rights
+choose-if: ko_relation >= 58
+on-arrival: ko_relation -= 12; abortion_ko_commitment += 1; abortion_reform_progress += 10; news_headline = "Lewica converts KO goodwill into an abortion-law promise"
+
+- #poland_card_finish
+
+@cash_third_way
+title: Spend Third Way goodwill on a limited compromise
+view-if: p2050_emerged = 1 or third_way_active = 1
+choose-if: psl_relation >= 58 or p2050_relation >= 58
+on-arrival: {!
+if (Number(Q.psl_relation) >= Number(Q.p2050_relation)) {
+    Q.psl_relation -= 12;
+} else {
+    Q.p2050_relation -= 12;
+}
+Q.abortion_third_way_commitment += 1;
+Q.abortion_reform_progress += 10;
+Q.news_headline = "Lewica converts Third Way goodwill into an abortion compromise";
+!}
+
+- #poland_card_finish
+
+@cash_pis
+title: Spend PiS goodwill on limited decriminalisation
+choose-if: pis_relation >= 58
+on-arrival: pis_relation -= 12; abortion_pis_commitment += 1; abortion_reform_progress += 10; news_headline = "Lewica converts PiS goodwill into a limited abortion-law promise"
+
+- #poland_card_finish
+
+@palace
+title: Put clinicians and constitutional lawyers before the President
+subtitle: Cost: 1 resource. Build a presidential commitment and preparation.
+choose-if: resources >= 1
+unavailable-subtitle: The Palace delegation needs one resource.
+view-if: abortion_reform_defined = 1
+on-arrival: {!
+Q.resources -= 1;
+if (Q.abortion_palace_president != Q.president_name) {
+    Q.abortion_palace_commitment = 0;
+    Q.abortion_palace_president = Q.president_name;
+}
+Q.abortion_palace_commitment += 1;
+Q.abortion_reform_progress += 6;
+Q.president_relation += 3;
+Q.news_headline = "The President receives the reproductive-rights implementation file";
+!}
+
+[? if president_name = "Andrzej Duda": Duda's office is more willing to discuss
+criminal exposure and medical emergencies than a full access model. That
+limited channel can still become the difference between a law and a veto.?]
+[? if president_name = "Rafał Trzaskowski": Trzaskowski's political sympathy
+shortens the meeting; the file still makes his signature operational rather
+than symbolic.?]
+[? if president_name != "Andrzej Duda" and president_name != "Rafał Trzaskowski":
+The Palace now owns a written account of what assent, veto or referral would
+do to patients and clinicians.?]
+
+- #poland_card_finish
+
+@referendum
+title: Ask the country for an explicit reproductive-rights mandate
+subtitle: Cost: 1 resource. Hard referendum route; preparation, public support and Left polling all count.
+choose-if: left_in_government = 1 and government_has_confidence = 1 and caretaker_government = 0 and resources >= 1 and abortion_reform_progress >= 30 and abortion_rights_support >= 50 and abortion_referendum_mandate = 0
+unavailable-subtitle: Requires governing authority, one resource, 30 preparation and majority public support.
+view-if: abortion_reform_defined = 1
+on-arrival: {!
+Q.resources -= 1;
+const referendumVariation =
+    Math.floor((this.random.uint32() / 4294967296) * 11) - 5;
+Q.abortion_referendum_score = Math.round(
+    18 + Number(Q.abortion_rights_support) * 0.45 +
+    Number(Q.left_poll) * 0.50 +
+    Number(Q.abortion_reform_progress) * 0.15 -
+    Number(Q.abortion_rights_backlash) * 0.18 +
+    (Number(Q.abortion_ko_commitment) +
+        Number(Q.abortion_pis_commitment) +
+        Number(Q.abortion_third_way_commitment)) * 2 +
+    referendumVariation
+);
+if (Q.abortion_referendum_score >= 50) {
+    Q.abortion_referendum_mandate = 1;
+    Q.abortion_reform_progress += 12;
+    Q.feminist_trust += 6;
+    Q.public_trust += 2;
+    Q.abortion_referendum_result = "A majority endorsed the reform mandate";
+    Q.news_headline = "A national vote gives reproductive-rights reform a public mandate";
+} else {
+    Q.abortion_reform_progress = Math.max(
+        Number(Q.abortion_reform_stage) * 20,
+        Number(Q.abortion_reform_progress) - 8
+    );
+    Q.abortion_reform_proposal_stage =
+        Number(Q.abortion_reform_goal_stage) || 4;
+    Q.poland_abortion_reform_timer = 6;
+    Q.feminist_trust -= 2;
+    Q.public_trust -= 2;
+    Q.abortion_rights_backlash += 6;
+    Q.abortion_referendum_result = "The reform mandate fell short";
+    Q.news_headline = "The reproductive-rights referendum campaign falls short";
+}
+!}
+go-to: referendum_result
+
+@referendum_result
+title: The referendum count
+new-page: true
+
+**Campaign score: [+ abortion_referendum_score +].** [+
+abortion_referendum_result +].
+
+[? if abortion_referendum_mandate: A referendum is a mandate, not a magic
+statute. Lewica must still put clauses through the Sejm and onto the
+President's desk, but PSL can no longer call delay the only democratic route.?]
+[? if not abortion_referendum_mandate: The defeat strengthens every veto
+player and forces a six-month regroup. The ambitious goal and drafting work
+survive, and this project card can return after the cooldown for another
+attempt.?]
+
+- #poland_card_finish
+
+@advance
+title: Table the bill: [+ abortion_reform_next_label +]
+subtitle: Requires government and passage power at or above the displayed threshold; resistance may force a narrower final settlement.
+view-if: abortion_reform_defined = 1
+choose-if: left_in_government = 1 and government_has_confidence = 1 and caretaker_government = 0 and abortion_reform_power >= abortion_reform_threshold
+unavailable-subtitle: We either lack executive access or have not assembled enough coalition, public and presidential power.
+on-arrival: reform_pressure_issue = "abortion"; reform_pressure_target_stage = abortion_reform_proposal_stage; reform_pressure_previous_stage = 0; reform_pressure_return_mode = "card"; reform_pressure_palace_override = 0; reform_pressure_referendum_used = 0
+go-to: poland_major_reforms.resolve

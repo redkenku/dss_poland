@@ -2,9 +2,9 @@
 
 Last researched: **29 July 2026**.
 
-Status: **research and design only**. The historical baseline is sourced;
-proposed mechanics and alternate events are not predictions or implemented
-code. Related chains are collected in
+Status: **research and design only**, apart from the implemented press-review
+presentation scaffold. The historical baseline is sourced; proposed mechanics
+and alternate events are not predictions or implemented code. Related chains are collected in
 [SCENARIO_LEDGER.md](SCENARIO_LEDGER.md#the-media-ecosystem) and dated events
 remain in [POLITICAL_TIMELINE.md](POLITICAL_TIMELINE.md).
 
@@ -104,6 +104,61 @@ outlet. Investments can buy staff, training, production, advertising, events or
 a genuinely disclosed party channel. Relationships buy a fair hearing, not a
 guaranteed headline.
 
+## Press-review rail: staged implementation
+
+The desktop interface reserves the right rail for **two or three outlet voices
+per political month**. It rotates source-labelled slots from Onet, WP,
+Rzeczpospolita, TVP, TVN and Republika, with Kanał Zero joining from February
+2024. The selection is deterministic for a given turn so opening a card or
+changing a ledger tab does not make the press cycle flicker. The former
+Objectives panel remains available as the second right-rail tab. Authored copy
+now covers every displayed slot from October 2019 through the autumn 2027
+election epilogue. August 2026–October 2027 openings explicitly say `Scenario
+horizon` so projected endgame coverage cannot be mistaken for a historical
+archive item. The finished ledger spans 97 monthly editions and 237 rotating cards, including
+seven contemporaneous non-political reports with source links and dates.
+
+The content stage should fill each slot with this small record:
+
+| Field | Purpose |
+| --- | --- |
+| `outlet_id` | Selects the masthead treatment and editorial voice. |
+| `turn` | Campaign month for availability and repeat control. |
+| `headline` | Original simulated headline, never copied from the outlet. |
+| `text` | A short opening fragment, visually cut off after two or three lines. |
+| `source_url`, `source_date` | Required only for a contemporaneous real non-political item. |
+
+Copy selection follows a fixed priority: respond to the latest consequential
+in-game event; otherwise comment on the current political balance; otherwise
+adapt a contemporaneous, non-political item researched from that outlet. Real
+items belong in a checked authoring ledger rather than a live browser request:
+the game is static, the campaign date is historical, and a current homepage
+would produce the wrong month. The underlying fact or game outcome must stay
+recognisable even when the presentation is deliberately lurid.
+
+The shared voice direction is: **write unmistakable pastiche, push clickbait,
+conflict and partisan framing as hard as the source character allows, lead with
+the most emotionally or politically loaded interpretation, then stop after a
+short faded opening that implies a full article beyond the rail.**
+Do not invent quotations, criminal allegations or real-world events. A
+counterfactual outcome is reported as part of the simulation; a sourced real
+item is paraphrased and keeps its provenance. Media copy refers to Lewica as a
+whole; it does not name internal currents other than Razem.
+
+| Outlet voice | Maximum-strength direction for the simulated copy |
+| --- | --- |
+| **Onet** | Pro-KO digital urgency. A good KO relationship makes Lewica a tolerable democratic partner; a bad one makes it a spoiler, liability or concealed ally of PiS. |
+| **WP** | The neutral mass-market option: direct consequence, service information and a strong curiosity gap without a permanent party patron. |
+| **Rzeczpospolita** | Partisan hard-right warning: nation, market, order and sovereignty are endangered by Lewica. Better Konfederacja relations can produce tactical tolerance, never left sympathy. |
+| **Kanał Zero** | Pro-PiS or pro-Konfederacja confrontation after February 2024. The active patron and its relation to Lewica decide whether the Left is mocked as an enemy or briefly useful against the centre. |
+| **TVP** | Pro-government. Under PiS it foregrounds PiS delivery and opposition threat; under a KO-led cabinet it foregrounds KO delivery and treats Lewica according to the live KO relationship. |
+| **TVN** | Pro-KO democratic framing. A good KO relationship tolerates Lewica as a partner; a bad one depicts it as an irresponsible obstacle to defeating PiS. |
+| **Republika** | Usually pro-PiS, occasionally pro-Konfederacja, and more aggressively partisan than TVP. It presents Lewica as hostile unless the active right patron finds a temporary tactical use for it. |
+
+These are dramatic game voices, not claims that every report or journalist at
+an outlet follows a single line. Outlet marks remain typographic labels rather
+than copied logos, and all final prose should be original.
+
 ## The monthly communications loop
 
 Each political month gives the player fewer communications actions than there
@@ -159,6 +214,12 @@ The first report is not permanent. Documents, a good hostile interview,
 independent verification and visible policy delivery can change a frame.
 Deletion, denial and attacks on reporters may preserve core supporters while
 making recovery with persuadable voters harder.
+
+The PiS-era TVP appearance card treats access as an adversarial exchange, not
+endorsement or coalition cooperation. TVP wants ratings, opposition conflict
+and proof that the government owns the agenda; Lewica wants an audience it
+cannot otherwise reach. A prepared appearance can create bargaining capital, a
+poor one loses it, and neither outcome changes who controls public media.
 
 The electorate beneath those stories has seven independent latent attitudes:
 acceptance of capitalism and private hierarchy; expectation of welfare

@@ -51,7 +51,9 @@ const formationVotesRecorded =
     Math.max(0, Number(Q.candidate_psl_votes) || 0) +
     Math.max(0, Number(Q.candidate_left_votes) || 0) > 0;
 const snapCommitmentsRecorded = Boolean(Q.snap_cabinet_commitments_recorded);
-const currentRosterRecorded = preserveExisting || (
+const democraticFormation =
+    String(Q.ministry_return_mode || "") == "cabinet_program";
+const currentRosterRecorded = preserveExisting || (!democraticFormation &&
     Boolean(Q.government_has_confidence) &&
     !Boolean(Q.caretaker_government) &&
     String(Q.cabinet_roster_government_party || "") ==
@@ -59,6 +61,7 @@ const currentRosterRecorded = preserveExisting || (
 );
 const formationPslDecision = Number(Q.formation_psl_cabinet_committed);
 const pisInCabinet =
+    !democraticFormation &&
     Q.government_party == "pis" &&
     !Q.caretaker_government &&
     Math.max(0, Number(Q.pis_seats) || 0) > 0;
@@ -131,7 +134,7 @@ const pslInCabinet = !pisInCabinet && !leftHasMajority &&
 const pisCabinetMinisters = {
     labor: "Marlena Maląg",
     equality: "Anna Schmidt",
-    housing: "PiS development ministry",
+    housing: "Piotr Uściński",
     health: "Adam Niedzielski",
     digital: "Janusz Cieszyński",
     science: "Przemysław Czarnek",
@@ -143,62 +146,77 @@ const pisCabinetMinisters = {
     agriculture: "Grzegorz Puda",
     defence: "Mariusz Błaszczak"
 };
-const coalitionDefault = function(portfolio, namedMinister, office) {
+const independentCabinetMinisters = {
+    labor: "Gertruda Uścińska",
+    equality: "Zuzanna Rudzińska-Bluszcz",
+    housing: "Joanna Erbel",
+    health: "Maria Libura",
+    digital: "Alek Tarkowski",
+    science: "Michał Kleiber",
+    interior: "Marek Biernacki",
+    finance: "Paweł Wojciechowski",
+    economy: "Jerzy Hausner",
+    justice: "Ewa Łętowska",
+    foreign: "Jacek Czaputowicz",
+    agriculture: "Monika Stanny",
+    defence: "Stanisław Koziej"
+};
+const coalitionDefault = function(portfolio, namedMinister) {
     if (pisInCabinet) {
         return ["PiS", pisCabinetMinisters[portfolio]];
     }
     return koInCabinet
         ? ["KO", namedMinister]
-        : ["Cabinet", "Non-party " + office + " nominee"];
+        : ["Cabinet", independentCabinetMinisters[portfolio]];
 };
 const defaults = {
     labor: coalitionDefault(
-        "labor", "Coalition social-policy nominee", "labour"
+        "labor", "Marzena Okła-Drewnowicz"
     ),
     equality: coalitionDefault(
-        "equality", "Coalition equality nominee", "equality"
+        "equality", "Monika Rosa"
     ),
     housing: coalitionDefault(
-        "housing", "Coalition housing nominee", "housing"
+        "housing", "Krystyna Sibińska"
     ),
-    health: coalitionDefault("health", "Izabela Leszczyna", "health"),
+    health: coalitionDefault("health", "Izabela Leszczyna"),
     digital: pisInCabinet
         ? ["PiS", pisCabinetMinisters.digital]
         : p2050InCabinet
-        ? ["Poland 2050", "Coalition digital nominee"]
+        ? ["Poland 2050", "Michał Gramatyka"]
         : coalitionDefault(
-            "digital", "Coalition digital nominee", "digital-affairs"
+            "digital", "Jan Grabiec"
         ),
     science: coalitionDefault(
-        "science", "Coalition science nominee", "science"
+        "science", "Barbara Nowacka"
     ),
     interior: coalitionDefault(
-        "interior", "Marcin Kierwiński", "interior"
+        "interior", "Marcin Kierwiński"
     ),
-    finance: coalitionDefault("finance", "Andrzej Domański", "finance"),
+    finance: coalitionDefault("finance", "Andrzej Domański"),
     economy: pisInCabinet
         ? ["PiS", pisCabinetMinisters.economy]
         : pslInCabinet
         ? ["PSL", "Krzysztof Hetman"]
         : coalitionDefault(
-            "economy", "Coalition development nominee", "development"
+            "economy", "Borys Budka"
         ),
-    justice: coalitionDefault("justice", "Adam Bodnar", "justice"),
+    justice: coalitionDefault("justice", "Adam Bodnar"),
     foreign: coalitionDefault(
-        "foreign", "Radosław Sikorski", "foreign-affairs"
+        "foreign", "Radosław Sikorski"
     ),
     agriculture: pisInCabinet
         ? ["PiS", pisCabinetMinisters.agriculture]
         : pslInCabinet
         ? ["PSL", "Czesław Siekierski"]
         : coalitionDefault(
-            "agriculture", "Coalition agriculture nominee", "agriculture"
+            "agriculture", "Dorota Niedziela"
         ),
     defence: pisInCabinet
         ? ["PiS", pisCabinetMinisters.defence]
         : pslInCabinet
         ? ["PSL", "Władysław Kosiniak-Kamysz"]
-        : coalitionDefault("defence", "Coalition defence nominee", "defence")
+        : coalitionDefault("defence", "Tomasz Siemoniak")
 };
 const costs = {
     labor: 5,
@@ -294,10 +312,18 @@ Q.ministry_whole_left_mandate = wholeLeftMandate ? 1 : 0;
 Q.ministry_base_leverage = baseLeverage;
 Q.ministry_left_cabinet_seats = leftCabinetSeats;
 Q.ministry_coalition_seats = cabinetSeats;
+Q.ministry_pis_in_cabinet = pisInCabinet ? 1 : 0;
 Q.ministry_ko_in_cabinet = koInCabinet ? 1 : 0;
 Q.ministry_p2050_in_cabinet = p2050InCabinet ? 1 : 0;
 Q.ministry_psl_in_cabinet = pslInCabinet ? 1 : 0;
 Q.ministry_reshuffle_changes = 0;
+Q.ministry_coalition_partners = [
+    pisInCabinet ? "PiS" : "",
+    koInCabinet ? "KO" : "",
+    p2050InCabinet ? "Polska 2050" : "",
+    pslInCabinet ? "PSL" : "",
+    Q.left_cabinet_committed ? "Lewica" : ""
+].filter(Boolean).join(" · ");
 
 for (const portfolio of portfolios) {
     const partyKey = portfolio + "_minister_party";
@@ -305,7 +331,10 @@ for (const portfolio of portfolios) {
     const missing =
         typeof Q[partyKey] != "string" ||
         !Q[partyKey].length ||
-        Q[partyKey] == "Unassigned";
+        Q[partyKey] == "Unassigned" ||
+        typeof Q[ministerKey] != "string" ||
+        !Q[ministerKey].length ||
+        /nominee|unassigned|development ministry/i.test(Q[ministerKey]);
     if (!preserveExisting || missing) {
         Q[partyKey] = defaults[portfolio][0];
         Q[ministerKey] = defaults[portfolio][1];
@@ -356,13 +385,15 @@ Lewica premiership.
 "event_reshuffle": This is a live reshuffle. Existing Lewica offices remain in
 place; return one to recover its leverage, then bargain for another.?]
 
-[? if government_party = "pis": Kaczyński will bargain over social policy,
+[? if ministry_pis_in_cabinet = 1: Kaczyński will bargain over social policy,
 public services, digital administration, science and the development office.
 Interior, Finance, Justice, Foreign Affairs, Agriculture and Defence remain
 PiS red lines in this coalition.?]
-[? if government_party != "pis": KO treats Finance and Foreign Affairs as
-senior claims. PSL treats Agriculture as a hard coalition red line, while
-Defence is available only in an exceptionally strong negotiation.?]
+[? if ministry_pis_in_cabinet = 0: This table belongs to **[+
+ministry_coalition_partners +]**. KO treats Finance and Foreign Affairs as
+senior claims. PSL treats Agriculture as a hard coalition red line when it
+joins the cabinet, while Defence is available only in an exceptionally strong
+negotiation.?]
 
 <div class="ministry-grid">
 <div><span>Labour & Social Policy</span><b>[+ labor_minister_party +] · [+ labor_minister +]</b></div>
@@ -419,7 +450,7 @@ title: Take Health
 subtitle: 7 leverage · [+ ministry_health_nominee +]
 tags: poland_ministry_take
 view-if: health_minister_party != "Lewica"
-choose-if: ministry_leverage >= 7 and ((razem_in_left_club = 1 and razem_split = 0) or government_party = "pis")
+choose-if: ministry_leverage >= 7 and ((razem_in_left_club = 1 and razem_split = 0) or ministry_pis_in_cabinet = 1)
 unavailable-subtitle: Requires seven leverage. Outside the PiS accession route, Health also requires Razem's participation in the Left delegation.
 on-arrival: ministry_leverage -= 7; ministry_count += 1; ministry_reshuffle_changes += 1; health_minister_party = "Lewica"; health_minister = ministry_health_nominee
 go-to: menu
@@ -449,8 +480,8 @@ title: Take Interior & Administration
 subtitle: 5 leverage · [+ ministry_interior_nominee +] · senior-partner dissent
 tags: poland_ministry_take
 view-if: interior_minister_party != "Lewica"
-choose-if: ministry_leverage >= 5 and government_party != "pis"
-unavailable-subtitle: Requires five leverage. PiS will not release Interior in the 2021 accession agreement.
+choose-if: ministry_leverage >= 5 and ministry_pis_in_cabinet = 0
+unavailable-subtitle: Requires five leverage. [? if ministry_pis_in_cabinet = 1: PiS will not release Interior in the 2021 accession agreement.?][? if ministry_pis_in_cabinet = 0: [+ ministry_interior_default_party +] currently holds Interior.?]
 on-arrival: ministry_leverage -= 5; ministry_count += 1; ministry_reshuffle_changes += 1; interior_minister_party = "Lewica"; interior_minister = ministry_interior_nominee; ko_relation -= 3 if ministry_ko_in_cabinet = 1; ko_coalition_dissent += 5 if ministry_ko_in_cabinet = 1; government_coalition_dissent += 2 if ministry_ko_in_cabinet = 1
 go-to: menu
 
@@ -459,8 +490,8 @@ title: Demand the Finance Ministry
 subtitle: 10 leverage · [+ ministry_finance_nominee +] · senior-partner veto
 tags: poland_ministry_take
 view-if: finance_minister_party != "Lewica"
-choose-if: ministry_leverage >= 10 and government_party != "pis" and (ministry_ko_in_cabinet = 0 or ministry_maximal_mandate = 1)
-unavailable-subtitle: Requires ten leverage. PiS reserves Finance; a governing KO delegation also blocks it unless the Left entered on the strongest programme-bound mandate.
+choose-if: ministry_leverage >= 10 and ministry_pis_in_cabinet = 0 and (ministry_ko_in_cabinet = 0 or ministry_maximal_mandate = 1)
+unavailable-subtitle: Requires ten leverage. [? if ministry_pis_in_cabinet = 1: PiS reserves Finance in this accession agreement.?][? if ministry_pis_in_cabinet = 0: [+ ministry_finance_default_party +] currently holds Finance; KO releases it only to the strongest programme-bound Left delegation.?]
 on-arrival: ministry_leverage -= 10; ministry_count += 1; ministry_reshuffle_changes += 1; finance_minister_party = "Lewica"; finance_minister = ministry_finance_nominee; ko_relation -= 10 if ministry_ko_in_cabinet = 1; ko_coalition_dissent += 14 if ministry_ko_in_cabinet = 1; government_coalition_dissent += 6 if ministry_ko_in_cabinet = 1
 go-to: menu
 
@@ -471,7 +502,7 @@ tags: poland_ministry_take
 view-if: economy_minister_party != "Lewica"
 choose-if: ministry_leverage >= 10
 unavailable-subtitle: Requires ten leverage.
-on-arrival: ministry_leverage -= 10; ministry_count += 1; ministry_reshuffle_changes += 1; economy_minister_party = "Lewica"; economy_minister = ministry_economy_nominee; psl_relation -= 4 if ministry_psl_in_cabinet = 1; psl_coalition_dissent += 8 if ministry_psl_in_cabinet = 1; government_coalition_dissent += 3 if ministry_psl_in_cabinet = 1; pis_relation -= 4 if government_party = "pis"; government_coalition_dissent += 5 if government_party = "pis"
+on-arrival: ministry_leverage -= 10; ministry_count += 1; ministry_reshuffle_changes += 1; economy_minister_party = "Lewica"; economy_minister = ministry_economy_nominee; psl_relation -= 4 if ministry_psl_in_cabinet = 1; psl_coalition_dissent += 8 if ministry_psl_in_cabinet = 1; government_coalition_dissent += 3 if ministry_psl_in_cabinet = 1; pis_relation -= 4 if ministry_pis_in_cabinet = 1; government_coalition_dissent += 5 if ministry_pis_in_cabinet = 1
 go-to: menu
 
 @take_justice
@@ -479,8 +510,8 @@ title: Take Justice
 subtitle: 10 leverage · [+ ministry_justice_nominee +] · senior-partner veto
 tags: poland_ministry_take
 view-if: justice_minister_party != "Lewica"
-choose-if: ministry_leverage >= 10 and government_party != "pis"
-unavailable-subtitle: Requires ten leverage. PiS and Solidarna Polska will not release Justice in this accession agreement.
+choose-if: ministry_leverage >= 10 and ministry_pis_in_cabinet = 0
+unavailable-subtitle: Requires ten leverage. [? if ministry_pis_in_cabinet = 1: PiS and Solidarna Polska will not release Justice in this accession agreement.?][? if ministry_pis_in_cabinet = 0: [+ ministry_justice_default_party +] currently holds Justice.?]
 on-arrival: ministry_leverage -= 10; ministry_count += 1; ministry_reshuffle_changes += 1; justice_minister_party = "Lewica"; justice_minister = ministry_justice_nominee; ko_relation -= 5 if ministry_ko_in_cabinet = 1; ko_coalition_dissent += 8 if ministry_ko_in_cabinet = 1; government_coalition_dissent += 4 if ministry_ko_in_cabinet = 1
 go-to: menu
 
@@ -489,8 +520,8 @@ title: Demand Foreign Affairs
 subtitle: 10 leverage · [+ ministry_foreign_nominee +] · senior-partner veto
 tags: poland_ministry_take
 view-if: foreign_minister_party != "Lewica"
-choose-if: ministry_leverage >= 10 and government_party != "pis" and (ministry_ko_in_cabinet = 0 or ministry_maximal_mandate = 1 or (ministry_whole_left_mandate = 1 and ko_relation >= 50))
-unavailable-subtitle: Requires ten leverage. PiS reserves Foreign Affairs; KO releases it only to an exceptionally strong Left delegation.
+choose-if: ministry_leverage >= 10 and ministry_pis_in_cabinet = 0 and (ministry_ko_in_cabinet = 0 or ministry_maximal_mandate = 1 or (ministry_whole_left_mandate = 1 and ko_relation >= 50))
+unavailable-subtitle: Requires ten leverage. [? if ministry_pis_in_cabinet = 1: PiS reserves Foreign Affairs in this accession agreement.?][? if ministry_pis_in_cabinet = 0: [+ ministry_foreign_default_party +] currently holds Foreign Affairs; KO releases it only to an exceptionally strong Left delegation.?]
 on-arrival: ministry_leverage -= 10; ministry_count += 1; ministry_reshuffle_changes += 1; foreign_minister_party = "Lewica"; foreign_minister = ministry_foreign_nominee; ko_relation -= 8 if ministry_ko_in_cabinet = 1; ko_coalition_dissent += 12 if ministry_ko_in_cabinet = 1; government_coalition_dissent += 5 if ministry_ko_in_cabinet = 1
 go-to: menu
 
@@ -499,8 +530,8 @@ title: Demand Agriculture & Rural Development
 subtitle: 10 leverage · [+ ministry_agriculture_nominee +] · senior-partner veto
 tags: poland_ministry_take
 view-if: agriculture_minister_party != "Lewica"
-choose-if: ministry_leverage >= 10 and government_party != "pis" and (ministry_psl_in_cabinet = 0 or psl_agriculture_released = 1)
-unavailable-subtitle: Requires ten leverage. PiS reserves Agriculture; a governing PSL delegation must explicitly release its claim.
+choose-if: ministry_leverage >= 10 and ministry_pis_in_cabinet = 0 and (ministry_psl_in_cabinet = 0 or psl_agriculture_released = 1)
+unavailable-subtitle: Requires ten leverage. [? if ministry_pis_in_cabinet = 1: PiS reserves Agriculture in this accession agreement.?][? if ministry_pis_in_cabinet = 0: [+ ministry_agriculture_default_party +] currently holds Agriculture; PSL must explicitly release its claim.?]
 on-arrival: ministry_leverage -= 10; ministry_count += 1; ministry_reshuffle_changes += 1; agriculture_minister_party = "Lewica"; agriculture_minister = ministry_agriculture_nominee; psl_relation -= 10 if ministry_psl_in_cabinet = 1; psl_coalition_dissent += 16 if ministry_psl_in_cabinet = 1; government_coalition_dissent += 7 if ministry_psl_in_cabinet = 1
 go-to: menu
 
@@ -509,8 +540,8 @@ title: Demand National Defence
 subtitle: 15 leverage · [+ ministry_defence_nominee +] · senior-partner veto
 tags: poland_ministry_take
 view-if: defence_minister_party != "Lewica"
-choose-if: ministry_leverage >= 15 and government_party != "pis" and (ministry_psl_in_cabinet = 0 or (ministry_maximal_mandate = 1 and psl_relation >= 40))
-unavailable-subtitle: Requires fifteen leverage. PiS reserves Defence; with PSL in cabinet, only a maximal Left mandate can dislodge its claim.
+choose-if: ministry_leverage >= 15 and ministry_pis_in_cabinet = 0 and (ministry_psl_in_cabinet = 0 or (ministry_maximal_mandate = 1 and psl_relation >= 40))
+unavailable-subtitle: Requires fifteen leverage. [? if ministry_pis_in_cabinet = 1: PiS reserves Defence in this accession agreement.?][? if ministry_pis_in_cabinet = 0: [+ ministry_defence_default_party +] currently holds Defence; with PSL in cabinet, only a maximal Left mandate can dislodge its claim.?]
 on-arrival: ministry_leverage -= 15; ministry_count += 1; ministry_reshuffle_changes += 1; defence_minister_party = "Lewica"; defence_minister = ministry_defence_nominee; psl_relation -= 10 if ministry_psl_in_cabinet = 1; psl_coalition_dissent += 14 if ministry_psl_in_cabinet = 1; government_coalition_dissent += 6 if ministry_psl_in_cabinet = 1
 go-to: menu
 
@@ -591,7 +622,7 @@ if (Q.ministry_psl_in_cabinet) {
     Q.psl_coalition_dissent -= 8;
     Q.government_coalition_dissent -= 3;
 }
-if (Q.government_party == "pis") {
+if (Q.ministry_pis_in_cabinet) {
     Q.pis_relation += 4;
     Q.government_coalition_dissent -= 5;
 }

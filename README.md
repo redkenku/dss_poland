@@ -38,6 +38,7 @@ Pages workflow still uses Node 16.
 | `npm run smoke:braun` | Build and run the focused Braun legal-chain fixture |
 | `npm run smoke:lists` | Build and test right-turn caucuses plus the 2023 list negotiation |
 | `npm run smoke:senate` | Build and run the Senate election and budget-correction fixtures |
+| `npm run smoke:dossier` | Build and test the live dossier, chamber charts, cabinet roster and polling history |
 | `npm run smoke:phase7` | Build and run the focused persistent PiS/KO organisation fixtures |
 | `npm run serve` | Serve the existing build without recompiling |
 | `npm run serve -- 3000` | Serve the existing build on port 3000 |
@@ -51,7 +52,8 @@ the old compiler and UI carefully.
 ## Project status
 
 This is a playable research build of **Polish Red Autumn**. The main campaign
-runs continuously from **October 2019 through December 2026**. The title screen
+runs continuously from **October 2019 through the autumn 2027 parliamentary
+election**. The title screen
 also retains an October 2023 transfer-of-power drill for testing formation
 mechanics without replaying the earlier campaign.
 
@@ -67,23 +69,25 @@ mechanics without replaying the earlier campaign.
   together, the desk shows the most urgent tier, then reveals lower-priority
   files as it is cleared. Resolving one event cannot discard the rest, and the
   next leadership card is unavailable until every pending issue is addressed.
-- Four contextual decks feed one persistent three-card agenda: Party Affairs;
+- Five contextual decks feed one persistent three-card agenda: Party Affairs;
   the sixteen-card Government Affairs deck while Lewica holds office in a
-  functioning cabinet; Negotiate with Government while Lewica is outside
-  cabinet; and Foreign Affairs throughout the campaign. Government Affairs has
-  one card for each of thirteen portfolios plus Cabinet Reshuffle, Coalition
-  Council and Social Welfare.
-  PiS is normally hostile, but social channels and internal fault-line tactics
-  can strengthen its solidarists, while a costed crisis proposal—especially
-  one mediated by a Trzaskowski presidency—can produce a narrow, public bargain. A pinned
+  functioning cabinet; Pressure & Negotiate while Lewica is outside cabinet;
+  Major Reforms; and Foreign Affairs throughout the campaign. Government
+  Affairs has one card for each of thirteen portfolios plus Cabinet Reshuffle,
+  Coalition Council and Social Welfare.
+  Under PiS, TVP appearances, public hearings and party channels first build
+  visible bargaining capital. Oversight, crisis and presidential deals then
+  spend that capital on bounded concessions instead of assuming either side
+  wants a coalition bargain. A pinned
   discard action removes one held opportunity without consuming time or
   changing political state.
-- Foreign Affairs adapts the inherited Weimar relationship ladder. Four
-  European missions can culminate in a Warsaw compact, while random Brussels,
-  Berlin, eastern-flank, Washington and radical-right pressure cards compete
-  for the same hand. Seeded 2020 and 2024 US elections have variable winners;
-  their administrations alter NATO reliability, Ukraine politics,
-  rule-of-law pressure, EU autonomy and the later ambassador crisis.
+- Foreign Affairs now has four legible files: the EU, Hungary, the United
+  States and Ukraine after the full-scale invasion. Opposition uses European
+  democratic, parliamentary and party channels; government can negotiate and
+  spend on Poland's behalf. US and Hungarian elections change the available
+  partners, a rightward EU adds a visible penalty to progressive-reform
+  passage scores, and sustained EU–US isolation damages growth and jobs in a
+  dated event rather than remaining a hidden relationship malus.
 - Party resources are uncapped organisational capacity and receive one annual
   dues-and-seat-subvention payout. State-budget capacity is a separate,
   government-only currency. Every playable December ends in a budget line or
@@ -141,7 +145,9 @@ mechanics without replaying the earlier campaign.
   abstention and support bargaining. Candidate and total-field benchmarks
   drive decaying voter-consideration, turnout and party-organisation feedback;
   results also alter the Palace relationship, veto environment and later
-  coalition crises.
+  coalition crises. Adverse results can trigger mirrored Witek (2020) or
+  Hołownia (2025) oath delays; either Marshal can briefly create an interregnum,
+  but neither can retain the presidency or erase the elected winner by fiat.
 - Every dated Polish event is indexed in a generated authority manifest. Run
   `npm run manifest` after event edits and `npm run check-events` to enforce
   event coverage, policy-stage authority and the core constitutional and
@@ -174,6 +180,11 @@ mechanics without replaying the earlier campaign.
   coalition arithmetic, Left factions, ministries, media, the Palace, Senate,
   judiciary and KPO. The active route does not enter the inherited German
   cabinet, election, paramilitary or historical-event systems.
+- The pinned Polish dossier is a live reference dashboard rather than a static
+  rules appendix. It renders current Sejm and Senate seat charts, the simulated
+  Council of Ministers, a monthly polling graph with vote intent and projected
+  seats, party and caucus leadership, institutional authority, public finances
+  and external-affairs capacity.
 
 The chronology has an explicit research boundary. Events through **July 2026**
 use the sourced historical scaffolding in the political timeline, while player
@@ -181,7 +192,10 @@ choices can already produce counterfactual outcomes. Events after that cutoff
 are labelled **scenario horizon** in their titles or text: the 2027 budget
 draft, a possible judicial-status bill, the November march and constructive
 motion, and the conditional December snap election and prime-minister crisis
-are plausible continuations, not claims about recorded history.
+are plausible continuations, not claims about recorded history. The 2027 press
+cycle and election campaign are likewise scenario material; the final Sejm and
+Senate results come from the player's live electorate and party system, then
+open the end-game epilogue.
 
 Hundreds of original scenes remain in the repository as dormant conversion
 reference. Start a **new save** after pulling this version because its IFID and

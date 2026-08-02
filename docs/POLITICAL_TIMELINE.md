@@ -397,6 +397,14 @@ removed the dual structure in 2025.
   ([Razem statement](https://partiarazem.pl/stanowiska/2022/03/08/left-solidarity-with-ukraine);
   [European Journal of Political Research political-data review](https://onlinelibrary.wiley.com/doi/full/10.1111/2047-8852.12419))
 
+- **3 April — Fidesz–KDNP wins another two-thirds majority in Hungary.** The
+  governing alliance won 135 of 199 seats, against 57 for the six-party United
+  for Hungary opposition list.
+  **Adaptation value:** PiS keeps an allied government and direct party route,
+  while the Polish opposition can learn from a broad alliance that failed and
+  invest in durable links to Hungarian parties, media and election monitors.
+  ([Hungarian National Election Office](https://vtr.valasztas.hu/ogy2022/orszaggyules-osszetetele))
+
 - **17 June — the Council approves Poland's KPO, but payment remains
   conditional.** EU finance ministers approved the Commission's positive
   assessment of Poland's recovery and resilience plan. The decision did not
@@ -1086,6 +1094,14 @@ removed the dual structure in 2025.
   liberal and organisational secretary would each change KO's coalition offers
   and internal defectors.
   ([PAP](https://www.pap.pl/aktualnosci/rada-krajowa-ko-wybrala-15-wiceprzewodniczacych-sekretarza-generalnego-i-skarbnika))
+
+- **12 April — Tisza defeats Fidesz in Hungary.** Tisza won 141 of 199 seats,
+  while Fidesz–KDNP fell to 52, ending Viktor Orbán's government.
+  **Adaptation value:** this is the historical campaign baseline, with a bounded
+  counterfactual branch in which Fidesz survives. Polish democratic and Fidesz
+  networks affect future access and can move only a close margin; they do not
+  decide a Hungarian election.
+  ([Inter-Parliamentary Union election record](https://data.ipu.org/parliament/HU/HU-LC01/election/HU-LC01-E20260412/))
 
 - **20 May — Kanał Zero launches its television channel.** The project had
   already received a satellite licence in October 2025 and opened Zero.pl in

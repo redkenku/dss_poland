@@ -91,9 +91,9 @@ if (Q.merger_resolution == "Five-current truce" ||
 if (Q.leadership_actions_taken >= 38) Q.ending_score += 1;
 if (Q.leadership_actions_taken >= 43) Q.ending_score += 1;
 
-if (Q.trz_blocked) {
+if (Q.trz_oath_crisis_launched && Q.trz_repeat_winner == "Andrzej Duda") {
     Q.ending_presidential_route =
-        "Trzaskowski won the count; PiS blocked the oath and forced a repeat election";
+        "Trzaskowski won the count; Witek's interregnum and a disputed court invalidity forced a repeat election";
 } else if (Q.trz_inaugurated) {
     Q.ending_presidential_route =
         "Trzaskowski was sworn in; cohabitation pressure " +
@@ -159,9 +159,13 @@ truce. ?]
 not the same as unity. The Left survives the year and carries every unresolved
 argument into the merger. ?]
 
-[? if trz_blocked: The certified presidential result never became an oath.
+[? if trz_oath_crisis_launched and trz_repeat_winner = "Andrzej Duda": The certified presidential result never became an oath.
 PiS proved that institutional control could defeat an election result; every
 opposition strategy now begins with that failure. ?]
+
+[? if trz_oath_crisis_launched and trz_inaugurated: Witek's acting claim did
+not survive the imposed rerun, but the institutional and foreign-policy damage
+did. Trzaskowski enters the Palace after winning the presidency twice.?]
 
 [? if trz_inaugurated: The Palace survived the certification fight and became
 a hostile centre of power inside PiS government. Its vetoes split the United
@@ -189,10 +193,13 @@ const endingNumber = function(value, fallback) {
 const endingClamp = function(value, low, high) {
     return Math.max(low, Math.min(high, value));
 };
+const snapResultAvailable = Q.snap_election_complete && Q.snap_election_held;
 const votedOut = Q.ending_exit_type == "Voted out" ||
-    (Q.election_2023_seen && endingNumber(Q.left_seats, 0) == 0);
-const lostByThreshold = votedOut &&
-    endingNumber(Q.election_2023_filed_committee_seats, 0) == 0;
+    ((Q.election_2023_seen || snapResultAvailable) &&
+        endingNumber(Q.left_seats, 0) == 0);
+const lostByThreshold = votedOut && (snapResultAvailable
+    ? endingNumber(Q.snap_election_left_vote, 0) < 5
+    : endingNumber(Q.election_2023_filed_committee_seats, 0) == 0);
 Q.prototype_complete = 1;
 Q.poland_event_phase = 0;
 Q.timeline_complete = votedOut ? 0 : 1;
@@ -286,11 +293,13 @@ const endingCommitteeThreshold = {
 };
 const endingVote = function(id) {
     return endingNumber(
-        Q["election_2023_" + id + "_vote"],
+        Q[(snapResultAvailable ? "snap_election_" : "election_2023_") +
+            id + "_vote"],
         endingNumber(Q[id + "_vote_intent"], 0)
     );
 };
 const endingCommitteeVote = function(id) {
+    if (snapResultAvailable) return endingVote(id);
     return endingNumber(
         Q["election_2023_" + id + "_committee_vote"],
         endingVote(id)
@@ -298,7 +307,9 @@ const endingCommitteeVote = function(id) {
 };
 const endingLeftCommittees = [];
 for (const organisation of endingLeftOrganisations) {
-    const committee = endingCommitteeFor[organisation[0]] || organisation[0];
+    const committee = snapResultAvailable
+        ? organisation[0]
+        : (endingCommitteeFor[organisation[0]] || organisation[0]);
     if (!endingLeftCommittees.includes(committee)) {
         endingLeftCommittees.push(committee);
     }
@@ -338,7 +349,7 @@ const actualLeftFamilySeats = [
 ].reduce(function(total, quality) {
     return total + Math.max(0, endingNumber(Q[quality], 0));
 }, 0);
-Q.ending_family_seats = Math.max(0, Math.round(votedOut
+Q.ending_family_seats = Math.max(0, Math.round(votedOut || snapResultAvailable
     ? actualLeftFamilySeats
     : endingNumber(Q.left_family_projected_seats, actualLeftFamilySeats)));
 const endingCleanName = function(value) {
@@ -415,7 +426,8 @@ Q.ending_chamber_result =
     endingThirdWayText + ", and Konfederacja " +
     Math.max(0, endingNumber(Q.konf_seats, 0)) + ". The whole Left family " +
     "holds " + actualLeftFamilySeats + ". Every majority will therefore be " +
-    "assembled without the organisation your leadership spent four years building.";
+    "assembled without the organisation your leadership spent " +
+    Q.ending_campaign_years + " years building.";
 
 const endingMajority = Math.max(
     1,
@@ -508,6 +520,10 @@ if (votedOut && endingWasInGovernment) {
 Q.ending_fragmentation_penalty =
     Math.max(0, Q.ending_fragmentation_lists - 1) * 2 +
     Q.ending_threshold_losses * 2;
+Q.ending_major_reform_score =
+    endingNumber(Q.abortion_reform_stage, 0) +
+    endingNumber(Q.marriage_reform_stage, 0) +
+    endingNumber(Q.labor_reform_stage, 0);
 Q.ending_score =
     Math.round(endingNumber(Q.party_unity, 0) / 10) +
     Math.round(endingNumber(Q.ending_family_vote, 0) / 2) +
@@ -518,6 +534,7 @@ Q.ending_score =
     ) +
     Q.ending_budget_wins * 3 +
     Math.round(Q.ending_judiciary_score / 12) +
+    Math.round(Q.ending_major_reform_score / 2) +
     (Q.left_in_government ? 4 : 0) +
     (Q.pres_2025_round_one_done &&
         Q.pres_2025_winner == Q.pres_2025_left_candidate ? 6 : 0) -
@@ -626,14 +643,25 @@ if (Q.ending_budget_wins >= 3) {
 if (Q.ending_judiciary_score >= 60) {
     achievements.push("the judicial settlement left the courts more coherent and legitimate");
 }
-if (Q.abortion_law_enacted) {
-    achievements.push("reproductive-rights reform became law rather than a manifesto line");
+if (endingNumber(Q.abortion_reform_stage, 0) >= 1) {
+    achievements.push(
+        "reproductive-rights reform closed with " +
+        Q.abortion_reform_stage_label
+    );
 }
-if (Q.partnership_revision_enacted || Q.partnership_presidential_outcome == "Signed") {
-    achievements.push("a partnership settlement survived both coalition bargaining and the Palace");
+if (endingNumber(Q.marriage_reform_stage, 0) >= 1) {
+    achievements.push(
+        "legal recognition reached " + Q.marriage_reform_stage_label
+    );
 }
-if (endingNumber(Q.labor_credibility, 0) >= 60) {
-    achievements.push("labour institutions and public-service politics again carried a recognisable Left signature");
+if (endingNumber(Q.labor_reform_stage, 0) >= 1) {
+    achievements.push(
+        "labour reconstruction closed with " + Q.labor_reform_stage_label
+    );
+} else if (endingNumber(Q.labor_credibility, 0) >= 60) {
+    achievements.push(
+        "labour credibility survived without a national reform settlement"
+    );
 }
 if (endingNumber(Q.media_capacity, 0) + endingNumber(Q.local_network, 0) >= 110) {
     achievements.push("a durable local and media organisation outlived the campaign cycle");
@@ -670,6 +698,11 @@ if (endingNumber(Q.coalition_blur, 0) >= 60) {
 }
 if (endingNumber(Q.organised_left_splits, 0) >= 2) {
     failures.push("repeated organised splits turned internal pluralism into electoral competition");
+}
+if (Number(Q.pres_2025_oath_crisis) == 3) {
+    failures.push(
+        "the Hołownia oath delay collapsed only after a constitutional and foreign-policy crisis"
+    );
 }
 if (!failures.length) {
     failures.push("success never resolved the tension between movement autonomy, party discipline and coalition office");
@@ -773,23 +806,35 @@ if (votedOut) {
     Q.news_headline = Q.ending_player_party_name +
         " is eliminated from the Sejm";
 } else {
-    Q.ending_opening = Q.snap_campaign_active
-        ? "December 2026. The playable horizon closes while a constitutionally scheduled snap campaign is still underway. There is no invented polling-day result—only the country and organisation you carry into it."
-        : "December 2026. The last budget folders close, ministers and opposition leaders leave the chamber, and the playable years become a political record rather than another decision waiting on the desk.";
+    Q.ending_opening = Q.election_2027_terminal
+        ? Q.ending_exit_date + ". The Sejm and Senate counts are certified. " +
+            "The playable campaign ends where its accumulated alliances, " +
+            "splits and governing record meet the electorate."
+        : (Q.snap_campaign_active
+        ? Q.ending_exit_date + ". The playable horizon closes while a " +
+            "constitutionally scheduled campaign is still underway. There " +
+            "is no invented polling-day result—only the country and " +
+            "organisation you carry into it."
+        : Q.ending_exit_date + ". The constitutional horizon closes without " +
+            "inventing an election after an earlier dissolution reset the " +
+            "parliamentary term.");
     Q.ending_coda = Q.ending_future_strength >= 50
         ? "You do not leave behind a finished Left. You leave behind one with a future large enough to fight over."
         : "History does not preserve the plan as you wrote it. It preserves the institutions, grudges and people still capable of trying again.";
-    Q.news_headline = Q.snap_campaign_active
+    Q.news_headline = Q.election_2027_terminal
+        ? "The 2027 parliamentary election closes the playable campaign"
+        : (Q.snap_campaign_active
         ? "The campaign ends with a constitutionally scheduled snap election still underway"
-        : "The 2026 budget closes the playable campaign";
+        : "The 2027 horizon closes after an earlier election reset the term");
 }
 !}
 
 @final_assessment
-title: Epilogue — December 2026
+title: Epilogue — autumn 2027
 new-page: true
-on-arrival: ending_exit_type = "Natural conclusion"
-call: prepare_epilogue
+game-over: true
+on-arrival: game_over = 1; ending_exit_type = "Natural conclusion"
+call: poland_ending.prepare_epilogue
 
 = [+ ending_name +]
 
@@ -827,15 +872,19 @@ Left electoral family: **[+ ending_family_vote +]% across [+
 ending_fragmentation_lists +] lists**<br>
 Lists clearing their filed threshold: **[+ ending_lists_above_threshold +]**;
 sub-threshold
-lists: **[+ ending_threshold_losses +]**; projected family seats: **[+
+lists: **[+ ending_threshold_losses +]**; certified family seats: **[+
 ending_family_seats +]**<br>
 Alliance unity: **[+ party_unity +]/100**  
 Current position: **[+ position +]**  
 Budgets carried since the transfer of power: **[+ ending_budget_wins +]/4**  
 Judicial settlement quality: **[+ ending_judiciary_score +]/100**  
+Major settlements: **abortion — [+ abortion_reform_stage_label +] ·
+recognition — [+ marriage_reform_stage_label +] · labour — [+
+labor_reform_stage_label +]**
 2025 president: **[+ pres_2025_winner +]**  
+[? if pres_2025_oath_crisis: 2025 oath: **[+ pres_2025_oath_strategy +]**[? if pres_2025_oath_crisis = 3:  · delay collapsed?]  ?]
 Media and local capacity: **[+ media_capacity +] + [+ local_network +]**  
-Leadership months used: **[+ leadership_actions_taken +]/87**  
+Leadership months used: **[+ leadership_actions_taken +]/97**
 Neglected months: **[+ neglected_months +]**
 
 [? if snap_campaign_active: **Constitutional horizon:** [+
