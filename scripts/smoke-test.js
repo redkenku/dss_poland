@@ -14524,6 +14524,12 @@ function runSmoke(game) {
     qualities.year = 2026;
     qualities.month = 2;
     qualities.p2050_emerged = 1;
+    qualities.third_way_split = 1;
+    qualities.p2050_formal_split_chain = 1;
+    qualities.p2050_joined_left = 0;
+    qualities.p2050_leader = 'Katarzyna Pełczyńska-Nałęcz';
+    qualities.left_poll = 11.8;
+    qualities.p2050_coalition_dissent = 30;
     qualities.p2050_seats = 33;
     qualities.centrum_seats = 0;
     engine.goToScene('poland_events_2026.p2050_split_2026');

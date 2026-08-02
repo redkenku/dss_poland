@@ -1,4 +1,76 @@
 title: Commit the decision
 tags: poland_card_finish
+on-arrival: {!
+const previousSceneId = this.state.prevSceneId || "";
+const previousScene = this.game.scenes[previousSceneId];
+const previousTags = previousScene && previousScene.tags
+	? String(previousScene.tags)
+	: "";
+const isGovernmentCard =
+	previousTags.split(/\s+/).indexOf("poland_government_card") >= 0;
+
+if (Q.started && isGovernmentCard && Q.left_in_government) {
+	const ministerialCards = {
+		poland_labor_inspection: 1,
+		poland_housing_fund: 1,
+		poland_equality_bill: 1,
+		poland_health_compact: 1,
+		poland_digital_state: 1,
+		poland_science_compact: 1,
+		poland_internal_security: 1,
+		poland_fiscal_policy: 1,
+		poland_economic_programme: 1,
+		poland_justice_repair: 1,
+		poland_foreign_ministry_line: 1,
+		poland_agricultural_bargain: 1,
+		poland_defence_policy: 1
+	};
+	const socialPortfolios = {
+		poland_labor_inspection: 1,
+		poland_housing_fund: 1,
+		poland_equality_bill: 1,
+		poland_health_compact: 1,
+		poland_social_welfare_review: 1
+	};
+	const capacityPortfolios = {
+		poland_digital_state: 1,
+		poland_science_compact: 1,
+		poland_internal_security: 1,
+		poland_fiscal_policy: 1,
+		poland_economic_programme: 1,
+		poland_justice_repair: 1,
+		poland_foreign_ministry_line: 1,
+		poland_agricultural_bargain: 1,
+		poland_defence_policy: 1,
+		poland_cabinet_reshuffle: 1,
+		poland_coalition_council: 1
+	};
+
+	const isMinisterial = Boolean(ministerialCards[previousSceneId]);
+
+	// Government card play now always carries visible political side effects.
+	Q.left_poll += isMinisterial ? 0.14 : 0.08;
+	Q.public_trust -= isMinisterial ? 0.10 : 0.06;
+	Q.government_coalition_dissent += isMinisterial ? 1.6 : 1.0;
+
+	if (socialPortfolios[previousSceneId]) {
+		Q.ko_relation -= 0.8;
+		Q.psl_relation -= 0.6;
+		Q.p2050_relation -= 0.6;
+		Q.progressives_dissent -= 0.6;
+		Q.barons_dissent += 0.4;
+	} else if (capacityPortfolios[previousSceneId]) {
+		Q.ko_relation += 0.8;
+		Q.psl_relation += 0.3;
+		Q.p2050_relation += 0.5;
+		Q.progressives_dissent += 0.8;
+		Q.razem_dissent += 0.5;
+	} else {
+		Q.ko_relation += 0.2;
+		Q.psl_relation -= 0.2;
+		Q.p2050_relation += 0.2;
+	}
+}
+!}
 call: poland_normalize
 go-to: poland_advance

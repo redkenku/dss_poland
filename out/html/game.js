@@ -1359,8 +1359,8 @@ window.disableGrayMode = function() {
     },
     202007: {
       onet: pressStory(
-        'Duda wins narrowly. The opposition now has to account for every vote it failed to unite',
-        'KO came close to the Palace; Lewica must explain whether its campaign built a transfer bridge or another barrier.'
+        'The runoff is settled by a narrow margin. The opposition now has to account for every vote it failed to unite',
+        'The democratic camp came close to the Palace; Lewica must explain whether its campaign built a transfer bridge or another barrier.'
       ),
       wp: pressStory(
         'The election is over. The result leaves two Polands and no easy route between them',
@@ -1373,12 +1373,12 @@ window.disableGrayMode = function() {
     },
     202008: {
       rzeczpospolita: pressStory(
-        'A second Duda term begins. The Left remains trapped outside the national majority',
-        'The oath confirms a conservative presidency and leaves Lewica searching for influence through protests and parliamentary bargains.'
+        'A new presidential term begins. The Left remains trapped outside the national majority',
+        'The oath confirms the next presidency and leaves Lewica searching for influence through protests and parliamentary bargains.'
       ),
       tvp: pressStory(
-        'President Duda takes the oath. Poland chooses continuity over opposition chaos',
-        'The head of state begins a second term with a democratic mandate and a promise to protect family and national development.'
+        'The President takes the oath. Poland chooses continuity over opposition chaos',
+        'The head of state begins the new term with a democratic mandate and a promise to protect family and national development.'
       )
     },
     202009: {
@@ -2495,6 +2495,87 @@ window.disableGrayMode = function() {
     };
   };
 
+  var pressNarrativeBeat = function(outlet, qualities, dateKey, turn) {
+    var beatsByOutlet = {
+      onet: [
+        'Editors frame the next forty-eight hours as a coalition stress test.',
+        'The desk tracks who can still coordinate after the latest parliamentary clash.',
+        'Coverage leans into tactical consequences rather than party mythology.'
+      ],
+      wp: [
+        'Producers follow logistics first: calendar math, signatures and vote margins.',
+        'The bulletin treats implementation capacity as the real plot behind speeches.',
+        'The newsroom watches institutions as systems, not only as campaign stages.'
+      ],
+      rzeczpospolita: [
+        'Columnists translate every promise into mandate, cost and enforceability.',
+        'Commentary asks which actor can carry legal risk once slogans expire.',
+        'Analysis reframes applause lines as long-run institutional commitments.'
+      ],
+      'kanal-zero': [
+        'Panel television blurs reporting and performance, amplifying personality over paperwork.',
+        'Stream-format debate turns procedural disputes into audience theatre.',
+        'The format rewards confrontation clips before committee detail.'
+      ],
+      tvp: [
+        'The public bulletin casts procedural choices as a mandate question.',
+        'Broadcast framing centers continuity, state capacity and cabinet authority.',
+        'Coverage packages institutional friction as a test of governing competence.'
+      ],
+      tvn: [
+        'Evening segments chase documentary detail before accepting cabinet spin.',
+        'Reporters foreground witness accounts and procedural contradictions.',
+        'The editorial line treats oversight as part of democratic normality.'
+      ],
+      republika: [
+        'Commentary prioritizes identity conflict over inter-party compromise mechanics.',
+        'Producers push the argument toward values, sovereignty and cultural threat.',
+        'The segment style rewards rhetorical escalation over coalition arithmetic.'
+      ]
+    };
+    var commonBeats = [
+      'By evening, every caucus must convert tone into a countable majority.',
+      'Before the next sitting, party discipline matters more than conference rhetoric.',
+      'The next vote will test not the slogan, but the machinery behind it.',
+      'The morning line is loud; the legislative calendar is louder.',
+      'As the cycle closes, visible momentum and legal durability are no longer the same thing.'
+    ];
+    var seasonalBeats = [
+      'Campaign tempo is rising faster than coalition trust can regenerate.',
+      'Policy bandwidth narrows as concurrent crises compete for administrative attention.',
+      'Media oxygen now rewards clear sequencing over maximalist demand lists.',
+      'Institutional fatigue is becoming a political variable of its own.'
+    ];
+
+    var outletBeats = beatsByOutlet[outlet.id] || commonBeats;
+    var seed = Math.abs((Number(turn) || 0) * 17 + (Number(dateKey) || 0) +
+      (outlet.id ? outlet.id.length * 11 : 0));
+    var outletLine = outletBeats[seed % outletBeats.length];
+    var commonLine = commonBeats[(seed + 3) % commonBeats.length];
+    var seasonalLine = seasonalBeats[(seed + 5) % seasonalBeats.length];
+
+    if (qualities.left_in_government) {
+      return outletLine + ' ' + commonLine;
+    }
+    return outletLine + ' ' + seasonalLine;
+  };
+
+  var pressComposeTease = function(outlet, story, frame, qualities, dateKey, turn) {
+    if (!story) {
+      return '';
+    }
+    if (story.sourceUrl) {
+      return story.text;
+    }
+
+    var parts = [story.text];
+    if (frame && frame.text) {
+      parts.push(frame.text);
+    }
+    parts.push(pressNarrativeBeat(outlet, qualities, dateKey, turn));
+    return parts.join(' ');
+  };
+
   var appendPressSkeleton = function(host, className, widths) {
     var skeleton = document.createElement('span');
     skeleton.className = className;
@@ -2582,8 +2663,14 @@ window.disableGrayMode = function() {
         headline.textContent = story.headline;
         var tease = document.createElement('p');
         tease.className = 'press-tease';
-        tease.textContent = story.text +
-          (story.sourceUrl || !frame.text ? '' : ' ' + frame.text);
+        tease.textContent = pressComposeTease(
+          outlet,
+          story,
+          frame,
+          qualities,
+          dateKey,
+          turn
+        );
         article.appendChild(headline);
         article.appendChild(tease);
       } else {

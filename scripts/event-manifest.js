@@ -392,6 +392,11 @@ function validateArchitecture() {
   }
 }
 
+function isPureRoutingChoice(section) {
+  const title = readProperty(section.source, 'title');
+  return /^(Return|Close|Begin|Continue|Remove)\b/.test(title);
+}
+
 function validateCorrectnessInvariants() {
   const read = function(relativePath) {
     return fs.readFileSync(path.join(projectRoot, relativePath), 'utf8');
@@ -632,6 +637,21 @@ function validateCorrectnessInvariants() {
     ),
     'The event desk must open on a clean page'
   );
+
+  for (const section of sections) {
+    const route = readProperty(section.source, 'go-to');
+    if (!route || route.includes(';')) continue;
+    const target = sectionById.get(section.rootId + '.' + route) ||
+      sectionById.get(route);
+    if (!target || !target.localId || !/_hub$/.test(target.localId)) continue;
+    if (!/^new-page:\s*true\b/m.test(target.source)) continue;
+    if (/^=\s+/m.test(section.source) || isPureRoutingChoice(section)) continue;
+    assert.fail(
+      section.id +
+        ' jumps straight into the clean hub page ' + target.id +
+        ' without a visible aftermath beat'
+    );
+  }
 
   for (const section of sections) {
     if (/^tags:\s*poland_event\b/m.test(section.source)) {

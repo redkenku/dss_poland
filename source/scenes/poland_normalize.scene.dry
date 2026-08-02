@@ -1337,6 +1337,80 @@ if (Q.started) {
         }
     }
 
+    // The 2026 Poland 2050 chain defaults to a formal split path; the
+    // internal-wing variant remains an explicit fallback for custom branches.
+    if (!Number.isFinite(Number(Q.p2050_formal_split_chain))) {
+        Q.p2050_formal_split_chain = 1;
+    }
+    if (
+        Number(Q.p2050_formal_split_chain) === 0 &&
+        !Q.p2050_split_occurred &&
+        !Q.unia_centrum_formed
+    ) {
+        Q.p2050_formal_split_chain = 1;
+    }
+    Q.p2050_formal_split_chain = Q.p2050_formal_split_chain ? 1 : 0;
+    if (!Number.isFinite(Number(Q.p2050_internal_split))) {
+        Q.p2050_internal_split = 0;
+    }
+    Q.p2050_internal_split = Q.p2050_internal_split ? 1 : 0;
+    if (!Number.isFinite(Number(Q.p2050_internal_split_month))) {
+        Q.p2050_internal_split_month = -1;
+    }
+    if (typeof Q.p2050_internal_split_leader != "string") {
+        Q.p2050_internal_split_leader = "No organised internal wing";
+    }
+    if (typeof Q.p2050_internal_split_status != "string") {
+        Q.p2050_internal_split_status = "No internal split";
+    }
+    const p2050LeaderName = String(Q.p2050_leader || "");
+    const p2050LeaderLower = p2050LeaderName.toLowerCase();
+    const p2050LeaderSettled =
+        p2050LeaderName.length > 0 &&
+        !p2050LeaderLower.includes("vacant") &&
+        !p2050LeaderLower.includes("pending");
+    const p2050InternalSplitWindow =
+        Number(Q.year) > 2026 ||
+        (Number(Q.year) == 2026 && Number(Q.month) >= 2);
+    if (
+        !Q.p2050_formal_split_chain &&
+        !Q.p2050_split &&
+        !Q.p2050_internal_split &&
+        Q.third_way_split &&
+        p2050LeaderSettled &&
+        p2050InternalSplitWindow
+    ) {
+        Q.p2050_internal_split = 1;
+        Q.p2050_internal_split_month = Number(Q.time) || 0;
+        Q.p2050_internal_split_leader =
+            p2050LeaderName == "Katarzyna Pełczyńska-Nałęcz"
+                ? "Paulina Hennig-Kloska"
+                : "Katarzyna Pełczyńska-Nałęcz";
+        Q.p2050_internal_split_status =
+            "Competing internal platform inside Poland 2050";
+        Q.p2050_coalition_dissent += 6;
+        Q.p2050_relation -= 3;
+        if (
+            Q.government_has_confidence &&
+            !Q.caretaker_government &&
+            (
+                Q.government_party == "p2050" ||
+                Boolean(Q.ministry_p2050_in_cabinet)
+            )
+        ) {
+            Q.government_coalition_dissent += 2;
+        }
+        Q.news_headline =
+            "Poland 2050 enters an internal split under " +
+            Q.p2050_internal_split_leader +
+            " without creating a separate party";
+    }
+    if (Q.p2050_split) {
+        Q.p2050_internal_split = 0;
+        Q.p2050_internal_split_status =
+            "Escalated beyond an internal split";
+    }
+
     // A politician who has left the Left delegation—or taken the
     // presidency—cannot remain available as a Lewica minister.
     if (
@@ -1452,6 +1526,21 @@ if (Q.started) {
             agriculture: "Wiesław Buż",
             defence: "Marcin Kulasek"
         };
+        const razemCabinetMinisters = {
+            labor: "Agnieszka Dziemianowicz-Bąk",
+            equality: "Katarzyna Kotula",
+            housing: "Magdalena Biejat",
+            health: "Marcelina Zawisza",
+            digital: "Krzysztof Gawkowski",
+            science: "Maciej Gdula",
+            interior: "Wiesław Szczepański",
+            finance: "Dariusz Standerski",
+            economy: "Paulina Matysiak",
+            justice: "Katarzyna Ueberhan",
+            foreign: "Andrzej Szejna",
+            agriculture: "Wiesław Buż",
+            defence: "Marcin Kulasek"
+        };
         const independentCabinetMinisters = {
             labor: "Gertruda Uścińska",
             equality: "Zuzanna Rudzińska-Bluszcz",
@@ -1467,10 +1556,13 @@ if (Q.started) {
             agriculture: "Monika Stanny",
             defence: "Stanisław Koziej"
         };
+        const leadingLeftCaucus = String(strongestLeftCaucus || "").trim();
         const cabinetMinisters = Q.government_party == "pis"
             ? pisCabinetMinisters
             : Q.government_party == "lewica"
-            ? leftCabinetMinisters
+            ? (leadingLeftCaucus == "razem"
+                ? razemCabinetMinisters
+                : leftCabinetMinisters)
             : independentCabinetMinisters;
         cabinetDefaults = {};
         for (
@@ -3139,6 +3231,7 @@ if (Q.started) {
         "poland_defence_policy_timer",
         "poland_cabinet_reshuffle_timer",
         "poland_coalition_council_timer",
+        "poland_coalition_affairs_timer",
         "poland_social_welfare_review_timer"
     ]) {
         Q[cabinetTimer] = Math.max(
@@ -3168,6 +3261,8 @@ if (Q.started) {
         Math.max(0, Q.poland_picking_enemies_timer || 0);
     Q.poland_inter_party_relations_timer =
         Math.max(0, Q.poland_inter_party_relations_timer || 0);
+    Q.poland_coalition_affairs_timer =
+        Math.max(0, Q.poland_coalition_affairs_timer || 0);
     if (typeof Q.poland_enemy_focus != "string") {
         Q.poland_enemy_focus = "No fixed enemy";
     }

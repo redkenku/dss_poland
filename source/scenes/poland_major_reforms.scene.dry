@@ -71,7 +71,52 @@ const laborPalaceCommitment =
 let blocker = "";
 let blockerName = "";
 
-if (issue == "abortion") {
+const leftHoldsPremiership =
+    Q.government_party == "lewica" ||
+    Q.prime_minister_party == "lewica";
+const pisPalace = [
+    "Andrzej Duda",
+    "Karol Nawrocki",
+    "Mateusz Morawiecki",
+    "Beata Szydło",
+    "Przemysław Czarnek"
+].includes(Q.president_name);
+const trzaskowskiPalace = Q.president_name == "Rafał Trzaskowski";
+const veryFriendlyPresident = Number(Q.president_relation) >= 58;
+
+let hardTierCap = 4;
+
+// If Lewica does not hold the PM post, tier 4 cannot be tabled.
+if (!leftHoldsPremiership) {
+    hardTierCap = Math.min(hardTierCap, 3);
+}
+
+// Presidential profile hard-caps available settlement tiers.
+if (pisPalace) {
+    hardTierCap = Math.min(
+        hardTierCap,
+        issue == "labor" ? 3 : 2
+    );
+} else if (trzaskowskiPalace) {
+    hardTierCap = Math.min(
+        hardTierCap,
+        issue == "labor" ? 2 : 3
+    );
+} else if (!veryFriendlyPresident) {
+    hardTierCap = Math.min(hardTierCap, 2);
+}
+
+if (target > hardTierCap) {
+    if (!leftHoldsPremiership && target >= 4) {
+        blocker = Q.government_party;
+        blockerName = "Prime Minister " + Q.prime_minister;
+    } else {
+        blocker = "president";
+        blockerName = "President " + Q.president_name;
+    }
+}
+
+if (!blocker && issue == "abortion") {
     if (Q.government_party == "pis") {
         const pisLimited =
             Number(Q.pis_relation) >= (target == 1 ? 30 : 52) ||
@@ -155,7 +200,7 @@ if (issue == "abortion") {
             blockerName = "President " + Q.president_name;
         }
     }
-} else if (issue == "marriage") {
+} else if (!blocker && issue == "marriage") {
     if (Q.government_party == "pis") {
         const pisLimited =
             Number(Q.pis_relation) >= (target == 1 ? 28 : 55) ||
@@ -237,7 +282,7 @@ if (issue == "abortion") {
             blockerName = "President " + Q.president_name;
         }
     }
-} else if (issue == "labor") {
+} else if (!blocker && issue == "labor") {
     if (Q.government_party == "pis") {
         const solidaristLead =
             Number(Q.pis_solidarist_share) >=

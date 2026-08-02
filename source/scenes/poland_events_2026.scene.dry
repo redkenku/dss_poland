@@ -378,7 +378,7 @@ tags: poland_event
 priority: 34
 order: 11
 max-visits: 1
-view-if: continuous_campaign = 1 and year = 2026 and month = 2 and third_way_split = 1 and p2050_split = 0 and p2050_seats >= 3 and (p2050_coalition_dissent >= 28 or p2050_relation <= 30)
+view-if: continuous_campaign = 1 and year = 2026 and month = 2 and third_way_split = 1 and p2050_formal_split_chain = 1 and p2050_joined_left = 0 and p2050_split = 0 and p2050_leader = "Katarzyna Pełczyńska-Nałęcz" and left_poll <= 12.5 and p2050_seats >= 3 and (p2050_coalition_dissent >= 24 or p2050_relation <= 35)
 on-arrival: {!
 Q.p2050_split = 1;
 Q.p2050_split_occurred = 1;
@@ -391,7 +391,7 @@ const splitShare = Math.min(
     0.24 +
         Math.max(0, (Number(Q.p2050_coalition_dissent) || 28) - 28) / 120 +
         Math.max(0, 30 - (Number(Q.p2050_relation) || 30)) / 100 +
-        Math.max(0, (Number(Q.left_poll) || 0) - 14) / 100 +
+    Math.max(0, 12 - (Number(Q.left_poll) || 0)) / 80 +
         Math.max(0, Number(Q.party_system_left_pull) || 0) / 500
 );
 const centrumDefectors = Math.min(
@@ -5595,18 +5595,57 @@ const rightClaim = Math.max(
     0,
     Number(Q.right_committed_seats) || 0
 );
+const leftPresidentInPalace =
+    Boolean(Q.left_president) ||
+    [
+        "Adrian Zandberg",
+        "Magdalena Biejat",
+        "Agnieszka Dziemianowicz-Bąk",
+        "Krzysztof Gawkowski",
+        "Katarzyna Kotula",
+        "Włodzimierz Czarzasty",
+        "Robert Biedroń"
+    ].includes(Q.president_name);
 Q.snap_left_cabinet_commitment = 0;
 if (
     !hostilePalace &&
     democraticClaim >= 231 &&
     democraticClaim > rightClaim
 ) {
-    Q.snap_pm_candidate = Q.ko_leader || "KO nominee";
-    Q.snap_pm_party = "ko";
+    if (leftPresidentInPalace) {
+        const leftOrNeutralNominee = [
+            Q.pres_2025_left_candidate,
+            "Magdalena Biejat",
+            "Agnieszka Dziemianowicz-Bąk",
+            "Barbara Nowacka",
+            "Władysław Kosiniak-Kamysz"
+        ].find(function(name) {
+            return (
+                name &&
+                name != "Undecided" &&
+                name != Q.president_name
+            );
+        });
+        Q.snap_pm_candidate = leftOrNeutralNominee ||
+            Q.ko_leader || "KO nominee";
+        Q.snap_pm_party =
+            Q.snap_pm_candidate == "Barbara Nowacka"
+                ? "ko"
+                : (
+                    Q.snap_pm_candidate == "Władysław Kosiniak-Kamysz"
+                        ? "psl"
+                        : "lewica"
+                );
+        Q.snap_nomination_reason =
+            "A left presidency with a democratic majority prefers a neutral or left compromise nominee over an automatic KO designation.";
+    } else {
+        Q.snap_pm_candidate = Q.ko_leader || "KO nominee";
+        Q.snap_pm_party = "ko";
+        Q.snap_nomination_reason =
+            "A non-hostile Palace recognises the bloc that can demonstrate a clear democratic majority.";
+    }
     Q.snap_pm_is_right = 0;
     Q.snap_pm_base = democraticCore;
-    Q.snap_nomination_reason =
-        "A non-hostile Palace recognises the bloc that can demonstrate a clear democratic majority.";
 } else if (Q.pis_split || morawieckiCamp >= 25) {
     Q.snap_pm_candidate = "Mateusz Morawiecki";
     Q.snap_pm_party = "pis";

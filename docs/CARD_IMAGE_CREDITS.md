@@ -5,7 +5,7 @@ WebP derivatives of the Wikimedia Commons sources listed below. No generative
 image tools were used for these covers. Copyright and license terms remain
 with each source image and are not replaced by the repository's MIT license.
 
-Source and license metadata was checked on 30 July 2026. Follow the source
+Source and license metadata was checked on 2 August 2026. Follow the source
 links for the complete license text, attribution requirements and source
 history.
 
@@ -24,6 +24,7 @@ history.
 | `advisor-zawisza.webp` | [Marcelina Zawisza (51715722344) (cropped).jpg](https://commons.wikimedia.org/wiki/File:Marcelina_Zawisza_%2851715722344%29_%28cropped%29.jpg) | Klub Lewicy | Public domain |
 | `advisor-zukowska.webp` | [Anna Maria Żukowska 2025.jpg](https://commons.wikimedia.org/wiki/File:Anna_Maria_%C5%BBukowska_2025.jpg) | Klub Lewicy | Public domain |
 | `campaigning.webp` | [KonwencjaLewicaZrobimyToLepiej6.jpg](https://commons.wikimedia.org/wiki/File:KonwencjaLewicaZrobimyToLepiej6.jpg) | Lewica | CC BY-SA 4.0 |
+| `coalition-council.webp` | [Third Government of Donald Tusk.jpg](https://commons.wikimedia.org/wiki/File:Third_Government_of_Donald_Tusk.jpg) | Chancellery of the Prime Minister of Poland | CC BY 3.0 PL |
 | `cost-programme.webp` | [Calculator.JPG](https://commons.wikimedia.org/wiki/File:Calculator.JPG) | The-thing | CC BY-SA 3.0 |
 | `crisis-compact.webp` | [Sztab Kryzysowy 2024 Donald Tusk.jpg](https://commons.wikimedia.org/wiki/File:Sztab_Kryzysowy_2024_Donald_Tusk.jpg) | Chancellery of the Prime Minister of Poland | CC BY 3.0 PL |
 | `discard.webp` | [Wastepaperbin.jpg](https://commons.wikimedia.org/wiki/File:Wastepaperbin.jpg) | Dfrg.msc | CC BY-SA 3.0 |

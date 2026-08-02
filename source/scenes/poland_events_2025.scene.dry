@@ -17,6 +17,20 @@ if (!Q.pres_2025_left_candidate ||
     Q.pres_2025_left_candidate = "Magdalena Biejat";
 }
 Q.pres_2025_candidate = Q.pres_2025_left_candidate;
+Q.pres_2025_active = 1;
+Q.pres_2025_phase = "First-round campaign";
+Q.pres_2025_round_one_done = 0;
+Q.pres_2025_first_round_winner = 0;
+Q.pres_2025_first_round_winner_share = 0;
+Q.pres_2025_runoff_done = 0;
+Q.pres_2025_feedback_applied = 0;
+Q.pres_2025_transfer_strategy = "Not chosen";
+Q.pres_2025_transfer_strength = 0;
+Q.pres_2025_runoff_support_target = "none";
+Q.pres_2025_winner = "";
+Q.pres_2025_winner_key = "";
+Q.pres_2025_hostile_president = 0;
+Q.pres_2025_campaign_strength = 0;
 if (!Q.pres_2025_ko_candidate ||
     Q.pres_2025_ko_candidate == "Undecided") {
     Q.pres_2025_ko_candidate = "Rafał Trzaskowski";
@@ -63,6 +77,12 @@ Q.news_headline =
         ? "A common Left candidate opens the presidential year"
         : Q.pres_2025_left_candidate +
             " and Zandberg prepare to measure two Left strategies";
+Q.pres_2025_r1_turnout_shock =
+    (this.random.uint32() / 4294967296 - 0.5) *
+    (Q.hard_mode ? 1.4 : 1.0);
+Q.pres_2025_runoff_turnout_shock =
+    (this.random.uint32() / 4294967296 - 0.5) *
+    (Q.hard_mode ? 1.6 : 1.2);
 !}
 
 = January 2025 — Government record or opposition programme
@@ -711,7 +731,7 @@ priority: 24
 order: 10
 max-visits: 1
 face-image: img/poland/events/belarus-border-2021.webp
-view-if: continuous_campaign = 1 and year = 2025 and month = 3
+view-if: continuous_campaign = 1 and year = 2025 and month = 3 and prime_minister_party != "lewica"
 on-arrival: {!
 const carriedBorderPressure =
     (Number(Q.border_permission_pressure) || 0) +
@@ -1803,6 +1823,12 @@ const finitePres25 = function(value, fallback) {
 const clampPres25 = function(value, low, high) {
     return Math.max(low, Math.min(high, value));
 };
+const formatVotesPres25 = function(value) {
+    return String(Math.round(value)).replace(
+        /\B(?=(\d{3})+(?!\d))/g,
+        " "
+    );
+};
 const noise = function(scale) {
     return (
         (this.random.uint32() / 4294967296) * 2 - 1
@@ -1948,7 +1974,15 @@ for (const key of Object.keys(raw)) {
     raw[key] = raw[key] * 100 / total;
     Q["pres_2025_r1_" + key] =
         Math.round(raw[key] * 100) / 100;
+    Q["pres_2025_r1_display_" + key] =
+        Math.round(raw[key] * 10) / 10;
 }
+const displayTotal = Object.keys(raw).reduce(function(sum, key) {
+    return sum + (Number(Q["pres_2025_r1_display_" + key]) || 0);
+}, 0);
+Q.pres_2025_r1_display_other = Math.round(
+    ((Number(Q.pres_2025_r1_display_other) || 0) + 100 - displayTotal) * 10
+) / 10;
 const candidateNames = {
     ko: Q.pres_2025_ko_candidate || "Rafał Trzaskowski",
     right: "Karol Nawrocki",
@@ -2009,6 +2043,39 @@ Q.pres_2025_runoff_support_target = Q.pres_2025_player_finalist
     : (Q.pres_2025_razem_finalist
         ? "razem"
         : (ranked[0] == "ko" || ranked[1] == "ko" ? "ko" : ranked[0]));
+const turnout25 = clampPres25(
+    67.31 +
+        ((Number(Q.turnout_readiness) || 58) - 58) * 0.035 +
+        ((Number(Q.pres_2025_campaign_strength) || 0) - 4) * 0.08 +
+        (Number(Q.pres_2025_r1_turnout_shock) || 0),
+    58,
+    76
+);
+Q.pres_2025_r1_turnout = Math.round(turnout25 * 100) / 100;
+Q.pres_2025_r1_valid_votes = Math.round(
+    19848000 * turnout25 / 67.31
+);
+const firstRoundVotes = {};
+let allocatedVotes = 0;
+const firstRoundKeys = [
+    "ko", "right", "left", "razem", "mentzen",
+    "braun", "holownia", "stanowski", "other"
+];
+for (const key of firstRoundKeys) {
+    firstRoundVotes[key] = Math.floor(
+        Q.pres_2025_r1_valid_votes * raw[key] / 100
+    );
+    allocatedVotes += firstRoundVotes[key];
+}
+firstRoundVotes[ranked[0]] +=
+    Q.pres_2025_r1_valid_votes - allocatedVotes;
+for (const key of firstRoundKeys) {
+    Q["pres_2025_r1_votes_" + key] = firstRoundVotes[key];
+    Q["pres_2025_r1_votes_" + key + "_display"] =
+        formatVotesPres25(firstRoundVotes[key]);
+}
+Q.pres_2025_r1_valid_votes_display =
+    formatVotesPres25(Q.pres_2025_r1_valid_votes);
 Q.pres_2025_candidate_historical =
     Q.pres_2025_left_candidate == "Magdalena Biejat" ? 4.23 :
     (Q.pres_2025_left_candidate == "Adrian Zandberg" ? 4.86 : 4.55);
@@ -2255,16 +2322,20 @@ Q.news_headline = Q.pres_2025_first_round_winner
 
 = 18 May 2025 — First-round result
 
+Turnout: **[+ pres_2025_r1_turnout +]%** ·
+Valid votes: **[+ pres_2025_r1_valid_votes_display +]**
+
 <div class="election-table">
-<div class="election-table-head"><span>Candidate</span><span>Camp</span><span>Vote</span><span>Status</span></div>
-<div class="election-table-row"><span>[+ pres_2025_ko_candidate +]</span><span class="party party-ko">KO</span><b>[+ pres_2025_r1_ko +]%</b><span>[? if pres_2025_first_round_winner = 1 and pres_2025_winner_key = "ko": elected?][? if pres_2025_first_round_winner = 0 and (pres_2025_finalist_a_key = "ko" or pres_2025_finalist_b_key = "ko"): runoff?]</span></div>
-<div class="election-table-row"><span>Karol Nawrocki</span><span class="party party-pis">PiS-backed</span><b>[+ pres_2025_r1_right +]%</b><span>[? if pres_2025_first_round_winner = 1 and pres_2025_winner_key = "right": elected?][? if pres_2025_first_round_winner = 0 and (pres_2025_finalist_a_key = "right" or pres_2025_finalist_b_key = "right"): runoff?]</span></div>
-<div class="election-table-row"><span>[+ pres_2025_left_candidate +]</span><span class="party party-lewica">Lewica</span><b>[+ pres_2025_r1_left +]%</b><span>[? if pres_2025_first_round_winner = 1 and pres_2025_winner_key = "left": elected?][? if pres_2025_first_round_winner = 0 and (pres_2025_finalist_a_key = "left" or pres_2025_finalist_b_key = "left"): runoff?]</span></div>
-[? if not pres_2025_united_left: <div class="election-table-row"><span>[+ pres_2025_razem_candidate +]</span><span class="party party-razem">Razem</span><b>[+ pres_2025_r1_razem +]%</b><span>[? if pres_2025_first_round_winner = 1 and pres_2025_winner_key = "razem": elected?][? if pres_2025_first_round_winner = 0 and (pres_2025_finalist_a_key = "razem" or pres_2025_finalist_b_key = "razem"): runoff?]</span></div>?]
-<div class="election-table-row"><span>Sławomir Mentzen</span><span class="party party-konf">Konf.</span><b>[+ pres_2025_r1_mentzen +]%</b><span>[? if pres_2025_first_round_winner = 1 and pres_2025_winner_key = "mentzen": elected?][? if pres_2025_first_round_winner = 0 and (pres_2025_finalist_a_key = "mentzen" or pres_2025_finalist_b_key = "mentzen"): runoff?]</span></div>
-<div class="election-table-row"><span>Grzegorz Braun</span><span class="party party-kkp">KKP</span><b>[+ pres_2025_r1_braun +]%</b><span>[? if pres_2025_first_round_winner = 1 and pres_2025_winner_key = "braun": elected?][? if pres_2025_first_round_winner = 0 and (pres_2025_finalist_a_key = "braun" or pres_2025_finalist_b_key = "braun"): runoff?]</span></div>
-<div class="election-table-row"><span>Szymon Hołownia</span><span class="party party-p2050">PL2050</span><b>[+ pres_2025_r1_holownia +]%</b><span>[? if pres_2025_first_round_winner = 1 and pres_2025_winner_key = "holownia": elected?][? if pres_2025_first_round_winner = 0 and (pres_2025_finalist_a_key = "holownia" or pres_2025_finalist_b_key = "holownia"): runoff?]</span></div>
-<div class="election-table-row"><span>Krzysztof Stanowski</span><span>independent</span><b>[+ pres_2025_r1_stanowski +]%</b><span>[? if pres_2025_first_round_winner = 1 and pres_2025_winner_key = "stanowski": elected?][? if pres_2025_first_round_winner = 0 and (pres_2025_finalist_a_key = "stanowski" or pres_2025_finalist_b_key = "stanowski"): runoff?]</span></div>
+<div class="election-table-head"><span>Candidate</span><span>Camp</span><span>Vote</span><span>Votes</span><span>Status</span></div>
+<div class="election-table-row"><span>[+ pres_2025_ko_candidate +]</span><span class="party party-ko">KO</span><b>[+ pres_2025_r1_display_ko +]%</b><span>[+ pres_2025_r1_votes_ko_display +]</span><span>[+ pres_2025_status_ko +]</span></div>
+<div class="election-table-row"><span>Karol Nawrocki</span><span class="party party-pis">PiS-backed</span><b>[+ pres_2025_r1_display_right +]%</b><span>[+ pres_2025_r1_votes_right_display +]</span><span>[+ pres_2025_status_right +]</span></div>
+<div class="election-table-row"><span>[+ pres_2025_left_candidate +]</span><span class="party party-lewica">Lewica</span><b>[+ pres_2025_r1_display_left +]%</b><span>[+ pres_2025_r1_votes_left_display +]</span><span>[+ pres_2025_status_left +]</span></div>
+[? if not pres_2025_united_left: <div class="election-table-row"><span>[+ pres_2025_razem_candidate +]</span><span class="party party-razem">Razem</span><b>[+ pres_2025_r1_display_razem +]%</b><span>[+ pres_2025_r1_votes_razem_display +]</span><span>[+ pres_2025_status_razem +]</span></div>?]
+<div class="election-table-row"><span>Sławomir Mentzen</span><span class="party party-konf">Konf.</span><b>[+ pres_2025_r1_display_mentzen +]%</b><span>[+ pres_2025_r1_votes_mentzen_display +]</span><span>[+ pres_2025_status_mentzen +]</span></div>
+<div class="election-table-row"><span>Grzegorz Braun</span><span class="party party-kkp">KKP</span><b>[+ pres_2025_r1_display_braun +]%</b><span>[+ pres_2025_r1_votes_braun_display +]</span><span>[+ pres_2025_status_braun +]</span></div>
+<div class="election-table-row"><span>Szymon Hołownia</span><span class="party party-p2050">PL2050</span><b>[+ pres_2025_r1_display_holownia +]%</b><span>[+ pres_2025_r1_votes_holownia_display +]</span><span>[+ pres_2025_status_holownia +]</span></div>
+<div class="election-table-row"><span>Krzysztof Stanowski</span><span>independent</span><b>[+ pres_2025_r1_display_stanowski +]%</b><span>[+ pres_2025_r1_votes_stanowski_display +]</span><span>[+ pres_2025_status_stanowski +]</span></div>
+<div class="election-table-row"><span>Five smaller committees</span><span>combined</span><b>[+ pres_2025_r1_display_other +]%</b><span>[+ pres_2025_r1_votes_other_display +]</span><span>eliminated</span></div>
 </div>
 
 Our candidate, **[+ pres_2025_left_candidate +]**, finishes on **[+
@@ -2580,6 +2651,41 @@ Q.pres_2025_runoff_a_share =
     Math.round(resultAShare * 100) / 100;
 Q.pres_2025_runoff_b_share =
     Math.round(resultBShare * 100) / 100;
+const clampRunoffTurnout25 = function(value, low, high) {
+    return Math.max(low, Math.min(high, Number(value) || 0));
+};
+const formatRunoffVotes25 = function(value) {
+    return String(Math.round(value)).replace(
+        /\B(?=(\d{3})+(?!\d))/g,
+        " "
+    );
+};
+const turnoutRunoff25 = clampRunoffTurnout25(
+    69.2 +
+        ((Number(Q.turnout_readiness) || 58) - 58) * 0.042 +
+        (Number(Q.pres_2025_transfer_strength) || 0) * 0.28 +
+        (Number(Q.pres_2025_runoff_turnout_shock) || 0),
+    60,
+    78
+);
+Q.pres_2025_runoff_turnout = Math.round(turnoutRunoff25 * 100) / 100;
+Q.pres_2025_runoff_valid_votes = Math.round(
+    20950000 * turnoutRunoff25 / 69.2
+);
+Q.pres_2025_runoff_votes_a = Math.floor(
+    Q.pres_2025_runoff_valid_votes * resultAShare / 100
+);
+Q.pres_2025_runoff_votes_b =
+    Q.pres_2025_runoff_valid_votes - Q.pres_2025_runoff_votes_a;
+Q.pres_2025_runoff_votes_a_display =
+    formatRunoffVotes25(Q.pres_2025_runoff_votes_a);
+Q.pres_2025_runoff_votes_b_display =
+    formatRunoffVotes25(Q.pres_2025_runoff_votes_b);
+Q.pres_2025_runoff_valid_votes_display =
+    formatRunoffVotes25(Q.pres_2025_runoff_valid_votes);
+Q.pres_2025_runoff_margin = Math.round(
+    Math.abs(resultAShare - resultBShare) * 100
+) / 100;
 if (resultAShare > 50) {
     Q.pres_2025_winner = Q.pres_2025_runoff_a_name;
     Q.pres_2025_winner_key = resultAKey;
@@ -2593,13 +2699,45 @@ Q.pres_2025_hostile_president =
     Q.pres_2025_winner_key == "braun" ? 1 : 0;
 Q.pres_2025_runoff_done = 1;
 Q.news_headline =
+const statusByKey = {};
+for (const key of [
+    "ko", "right", "left", "razem", "mentzen",
+    "braun", "holownia", "stanowski"
+]) {
+    if (Q.pres_2025_first_round_winner && Q.pres_2025_winner_key == key) {
+        statusByKey[key] = "elected";
+    } else if (
+        !Q.pres_2025_first_round_winner &&
+        (Q.pres_2025_finalist_a_key == key ||
+            Q.pres_2025_finalist_b_key == key)
+    ) {
+        statusByKey[key] = "runoff";
+    } else {
+        statusByKey[key] = "eliminated";
+    }
+}
+Q.pres_2025_status_ko = statusByKey.ko;
+Q.pres_2025_status_right = statusByKey.right;
+Q.pres_2025_status_left = statusByKey.left;
+Q.pres_2025_status_razem = statusByKey.razem;
+Q.pres_2025_status_mentzen = statusByKey.mentzen;
+Q.pres_2025_status_braun = statusByKey.braun;
+Q.pres_2025_status_holownia = statusByKey.holownia;
+Q.pres_2025_status_stanowski = statusByKey.stanowski;
     Q.pres_2025_winner + " wins the presidential runoff";
 !}
 
 = 1 June 2025 — Poland chooses the Palace
 
-**[+ pres_2025_runoff_a_name +] [+ pres_2025_runoff_a_share +]%**  
+Turnout: **[+ pres_2025_runoff_turnout +]%** ·
+Valid votes: **[+ pres_2025_runoff_valid_votes_display +]**
+
+**[+ pres_2025_runoff_a_name +] [+ pres_2025_runoff_a_share +]%**
+([+ pres_2025_runoff_votes_a_display +])  
 **[+ pres_2025_runoff_b_name +] [+ pres_2025_runoff_b_share +]%**
+([+ pres_2025_runoff_votes_b_display +])
+
+Margin: **[+ pres_2025_runoff_margin +] points**
 
 President-elect: **[+ pres_2025_winner +]**.
 
