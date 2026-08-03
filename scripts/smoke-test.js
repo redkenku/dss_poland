@@ -8161,7 +8161,7 @@ function runSmoke(game) {
     qualities.year = 2021;
     qualities.month = 8;
     qualities.august_2021_done = 0;
-    engine.goToScene('poland_events_2021_2023');
+    engine.goToScene('poland_events_2021_2023.august_2021');
     assert.strictEqual(engine.state.sceneId, 'poland_events_2021_2023.august_2021');
     assert(currentChoices().some(function(choice) {
       return choice.id === 'poland_events_2021_2023.aug21_restore_miller';
@@ -11233,6 +11233,70 @@ function runSmoke(game) {
       0,
       'Requesting election talks improperly dismissed the cabinet'
     );
+
+    startStandard('coalition-affairs-hidden-in-opposition');
+    qualities = engine.state.qualities;
+    qualities.left_in_government = 0;
+    qualities.internal_dissent = 35;
+    qualities.government_coalition_dissent = 30;
+    qualities.early_election_risk = 80;
+    qualities.month_actions = 0;
+    qualities.max_month_actions = 1;
+    qualities.poland_coalition_affairs_timer = 0;
+    engine.goToScene('poland_party_deck');
+    assert(
+      !currentChoices().some(function(choice) {
+        return choice.id === 'poland_coalition_affairs';
+      }),
+      'Coalition Affairs remained available while Lewica was in opposition'
+    );
+
+    startStandard('coalition-affairs-snap-launches-campaign');
+    qualities = engine.state.qualities;
+    qualities.left_in_government = 1;
+    qualities.government_has_confidence = 1;
+    qualities.caretaker_government = 0;
+    qualities.month_actions = 0;
+    qualities.max_month_actions = 1;
+    qualities.poland_coalition_affairs_timer = 0;
+    qualities.internal_dissent = 28;
+    qualities.government_coalition_dissent = 15;
+    qualities.early_election_risk = 60;
+    qualities.snap_election_requested = 0;
+    qualities.snap_campaign_active = 0;
+    qualities.snap_election_held = 0;
+    qualities.snap_event_deferred_time = -1;
+    qualities.continuous_campaign = 1;
+    engine.goToScene('poland_coalition_affairs');
+    choose('poland_coalition_affairs.snap');
+    assert.strictEqual(
+      engine.state.sceneId,
+      'poland_events_2026.snap_campaign_launch',
+      'Coalition Affairs snap failed to open the snap campaign launch'
+    );
+    assert.strictEqual(qualities.snap_election_requested, 1);
+    assert.strictEqual(qualities.snap_campaign_active, 1);
+    assert(qualities.snap_election_request_time >= 0);
+
+    startStandard('coalition-affairs-stale-opposition-safe-exit');
+    qualities = engine.state.qualities;
+    qualities.left_in_government = 0;
+    qualities.resources = 0;
+    qualities.month_actions = 1;
+    qualities.max_month_actions = 1;
+    engine.goToScene('poland_coalition_affairs');
+    const staleChoices = currentChoices().map(function(choice) {
+      return choice.id;
+    });
+    assert(staleChoices.includes('poland_coalition_affairs.stand_down'));
+    choose('poland_coalition_affairs.stand_down');
+    assert.strictEqual(engine.state.sceneId, 'poland_card_finish');
+    assert.strictEqual(
+      qualities.month_actions,
+      0,
+      'Stale opposition entry to Coalition Affairs still consumed the turn'
+    );
+
     qualities.left_committed_seats = 26;
     qualities.ko_seats = 100;
     qualities.psl_seats = 25;

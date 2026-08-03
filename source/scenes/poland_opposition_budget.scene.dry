@@ -88,6 +88,31 @@ const oppositionDraft = oppositionDrafts[oppositionYear] || oppositionDrafts[202
 Q.opposition_budget_draft_title = oppositionDraft.title;
 Q.opposition_budget_draft_priorities = oppositionDraft.priorities;
 Q.opposition_budget_draft_omissions = oppositionDraft.omissions;
+const oppositionBudgetProfiles = {
+    pis: {social: 18.6, defence: 4.9, deficit: 5.8},
+    ko: {social: 17.4, defence: 4.8, deficit: 4.5},
+    psl: {social: 16.8, defence: 5.0, deficit: 4.0},
+    p2050: {social: 16.9, defence: 4.6, deficit: 3.9},
+    default: {social: 17.2, defence: 4.7, deficit: 4.6}
+};
+const roundOppositionShare = function(value) {
+    return Math.round(Number(value) * 10) / 10;
+};
+const oppositionBudgetFrame =
+    oppositionBudgetProfiles[Q.government_party] ||
+    oppositionBudgetProfiles.default;
+Q.annual_budget_draft_social_share =
+    roundOppositionShare(oppositionBudgetFrame.social);
+Q.annual_budget_draft_defence_share =
+    roundOppositionShare(oppositionBudgetFrame.defence);
+Q.annual_budget_draft_deficit_share =
+    roundOppositionShare(oppositionBudgetFrame.deficit);
+Q.annual_budget_social_share = Q.annual_budget_draft_social_share;
+Q.annual_budget_defence_share = Q.annual_budget_draft_defence_share;
+Q.annual_budget_deficit_share = Q.annual_budget_draft_deficit_share;
+Q.annual_budget_projected_balance =
+    roundOppositionShare(-Q.annual_budget_deficit_share);
+Q.annual_budget_outrageous_support = 0;
 
 const chamberTotal = Math.max(1, Math.round(Number(Q.sejm_total) || 460));
 const leftSeats = Math.max(
@@ -315,6 +340,12 @@ on-arrival: opposition_budget_stage = 1
 
 The government's actual priorities are **[+ opposition_budget_draft_priorities
 +]**. Its draft leaves **[+ opposition_budget_draft_omissions +]** exposed.
+
+<div class="ledger-section ledger-section-first"><div class="ledger-title">Draft fiscal frame (% of GDP)</div>
+<div class="ledger-row"><span>Social spending</span><b>[+ annual_budget_social_share +]%</b></div>
+<div class="ledger-row"><span>Defence spending</span><b>[+ annual_budget_defence_share +]%</b></div>
+<div class="ledger-row"><span>Deficit</span><b>[+ annual_budget_deficit_share +]%</b></div>
+<div class="ledger-subrow">Left and PiS seek higher social; PiS, KO and PSL seek higher defence; KO, PSL and Konfederacja seek lower deficit.</div></div>
 
 <div class="ledger-notice"><b>Your task:</b> choose two demands, settle the
 club line, then choose whether to bargain, abstain or oppose. The final screen
@@ -750,9 +781,19 @@ const conferenceBonus = Q.opposition_budget_conference_code == 1
     ? 8
     : (Q.opposition_budget_conference_code == 4 ? 3 : 0);
 const pivotalBonus = Q.opposition_budget_left_is_pivotal ? 16 : 0;
+const leftPowerShare = Math.max(
+    0,
+    Math.min(
+        1,
+        (Number(Q.opposition_budget_left_seats) || 0) /
+            Math.max(1, Number(Q.sejm_total) || 460)
+    )
+);
+const powerBonus = Math.round(leftPowerShare * 24);
 Q.opposition_budget_negotiation_score = Math.round(
     (Number(Q.negotiation_leverage) || 0) * 0.55 +
-    relationByGovernment * 0.35 + conferenceBonus + pivotalBonus
+    relationByGovernment * 0.35 + conferenceBonus +
+    pivotalBonus + powerBonus
 );
 Q.opposition_budget_negotiation_threshold =
     Q.government_party == "pis" ? 54 : 46;
@@ -824,26 +865,98 @@ Q.annual_budget_government_yes =
     Q.opposition_budget_government_seats - governmentDefections;
 Q.annual_budget_government_abstain = governmentDefections;
 
-const rebels = Math.min(
-    leftSeats,
-    Math.max(0, Number(Q.opposition_budget_rebel_count) || 0)
-);
-if (Q.annual_budget_posture == "Conditional support") {
-    Q.annual_budget_left_yes = leftSeats - rebels;
-    Q.annual_budget_left_no = rebels;
-    Q.annual_budget_left_abstain = 0;
-} else if (
-    Q.annual_budget_posture == "Abstain" ||
-    Q.annual_budget_posture == "Abstain on named concession"
-) {
-    Q.annual_budget_left_yes = 0;
-    Q.annual_budget_left_no = rebels;
-    Q.annual_budget_left_abstain = leftSeats - rebels;
-} else {
-    Q.annual_budget_left_yes = 0;
-    Q.annual_budget_left_no = leftSeats - rebels;
-    Q.annual_budget_left_abstain = rebels;
+const socialShare = Number(Q.annual_budget_social_share) || 17;
+const defenceShare = Number(Q.annual_budget_defence_share) || 4.6;
+const deficitShare = Number(Q.annual_budget_deficit_share) || 4.5;
+const socialEnough =
+    socialShare >= 18.0 ||
+    (Number(Q.annual_budget_year) == 2020 && socialShare >= 17.6);
+const outrageousFrame =
+    (socialShare < 16.8 && deficitShare > 5.3) ||
+    (socialShare < 17.2 && defenceShare > 5.6);
+if (Q.annual_budget_posture == "Conditional support" && !socialEnough) {
+    Q.annual_budget_posture =
+        "Abstain on named concession";
 }
+const factionVotes = [
+    {id: "barons", seatsKey: "left_barons_seats", social: 17.2, defence: 4.8, deficit: 4.2},
+    {id: "spring", seatsKey: "left_spring_seats", social: 19.5, defence: 4.2, deficit: 5.0},
+    {id: "labor", seatsKey: "left_labor_seats", social: 20.2, defence: 4.0, deficit: 5.6},
+    {id: "progressives", seatsKey: "left_progressives_seats", social: 19.2, defence: 4.1, deficit: 5.1},
+    {id: "razem", seatsKey: "razem_seats", social: 20.6, defence: 3.9, deficit: 5.8},
+    {id: "pps", seatsKey: "left_pps_seats", social: 19.6, defence: 4.3, deficit: 5.3}
+];
+let autoLeftYes = 0;
+let autoLeftNo = 0;
+let autoLeftAbstain = 0;
+for (const faction of factionVotes) {
+    if (!Q[faction.id + "_active"] || !Q[faction.id + "_in_left"]) continue;
+    const seats = Math.max(0, Math.round(Number(Q[faction.seatsKey]) || 0));
+    if (seats <= 0) continue;
+    const dissent = Math.max(0, Number(Q[faction.id + "_dissent"]) || 0);
+    let alignment =
+        100 -
+        Math.abs(socialShare - faction.social) * 14 -
+        Math.abs(defenceShare - faction.defence) * 22 -
+        Math.abs(deficitShare - faction.deficit) * 12 -
+        dissent * 0.30;
+    if (Q.opposition_budget_conference_code == 1) alignment += 4;
+    if (Q.opposition_budget_conference_code == 4) alignment -= 4;
+    alignment = Math.max(0, Math.min(100, alignment));
+    if (Q.annual_budget_posture == "Conditional support") {
+        const yesSeats = Math.max(0, Math.round(seats * alignment / 100));
+        autoLeftYes += yesSeats;
+        autoLeftNo += Math.max(0, seats - yesSeats);
+    } else if (
+        Q.annual_budget_posture == "Abstain" ||
+        Q.annual_budget_posture == "Abstain on named concession"
+    ) {
+        const yesSeats = socialEnough && alignment >= 75
+            ? Math.round(seats * 0.25)
+            : 0;
+        const noSeats = alignment < 35
+            ? Math.round(seats * 0.55)
+            : Math.round(seats * 0.25);
+        autoLeftYes += Math.max(0, Math.min(seats, yesSeats));
+        autoLeftNo += Math.max(
+            0,
+            Math.min(seats - yesSeats, noSeats)
+        );
+        autoLeftAbstain += Math.max(
+            0,
+            seats - yesSeats - noSeats
+        );
+    } else {
+        const noSeats = Math.max(0, Math.round(seats * 0.70));
+        const abstainSeats = seats - noSeats;
+        autoLeftNo += noSeats;
+        autoLeftAbstain += Math.max(0, abstainSeats);
+    }
+}
+const assignedLeftSeats = autoLeftYes + autoLeftNo + autoLeftAbstain;
+if (assignedLeftSeats < leftSeats) {
+    autoLeftAbstain += leftSeats - assignedLeftSeats;
+}
+Q.annual_budget_left_yes = Math.max(0, Math.min(leftSeats, autoLeftYes));
+Q.annual_budget_left_no = Math.max(
+    0,
+    Math.min(leftSeats - Q.annual_budget_left_yes, autoLeftNo)
+);
+Q.annual_budget_left_abstain = Math.max(
+    0,
+    leftSeats - Q.annual_budget_left_yes - Q.annual_budget_left_no
+);
+if (Q.annual_budget_left_yes > 0 && outrageousFrame) {
+    Q.annual_budget_outrageous_support = 1;
+    Q.party_unity -= 4;
+    Q.public_trust -= 3;
+    Q.razem_dissent += 8;
+    Q.labor_credibility -= 4;
+}
+const rebels = Math.max(
+    0,
+    leftSeats - Q.annual_budget_left_yes
+);
 let externalYes = Math.max(
     0,
     Number(Q.opposition_budget_preview_external_yes) || 0
@@ -1041,6 +1154,8 @@ Q.opposition_budget_next_step = Q.annual_budget_passed
 
 **[+ annual_budget_abstain +] abstained. [+ annual_budget_threshold +] yes votes
 were required.**
+
+Fiscal frame: **Social [+ annual_budget_social_share +]% · Defence [+ annual_budget_defence_share +]% · Deficit [+ annual_budget_deficit_share +]% GDP**.
 
 <div class="ledger-notice">[+ opposition_budget_result_summary +]</div>
 

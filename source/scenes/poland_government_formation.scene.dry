@@ -81,6 +81,7 @@ Q.budget = 0;
 Q.budget_authority = "Opposition — no state spending authority";
 Q.coalition_broken = 0;
 Q.coalition_status = "No new cabinet has won confidence";
+Q.sejm_speaker = "Marek Sawicki (Marshal Senior)";
 Q.coalition_seats = 0;
 Q.government_support_seats = 0;
 Q.sejm_total = 460;
@@ -751,6 +752,20 @@ Q.morawiecki_votes = 0;
 Q.democratic_votes = 0;
 Q.democratic_candidate = "Undecided";
 Q.democratic_pact = "Not negotiated";
+Q.formation_coalition_selected = 0;
+Q.formation_coalition_code = "none";
+Q.formation_coalition_label = "No coalition selected";
+Q.formation_coalition_locked = 0;
+Q.formation_marshal_nominee = "Undecided";
+Q.formation_marshal_elected = 0;
+Q.formation_marshal_vote_choice = "Undecided";
+Q.formation_marshal_yes = 0;
+Q.formation_marshal_no = 0;
+Q.formation_marshal_abstain = 0;
+Q.formation_marshal_threshold = 0;
+Q.formation_vice_witek_result = "Not voted";
+Q.formation_vice_bosak_result = "Not voted";
+Q.formation_czarzasty_rotation = "Not negotiated";
 Q.early_election_risk = 0;
 Q.first_psl_yes = 0;
 Q.first_psl_abstain = 0;
@@ -825,7 +840,7 @@ Q.caretaker_government = 1;
 Q.government_has_confidence = 0;
 Q.coalition_broken = 0;
 Q.coalition_status = "No new cabinet has won confidence";
-Q.sejm_speaker = "Elżbieta Witek";
+Q.sejm_speaker = "Marek Sawicki (Marshal Senior)";
 Q.president_name = "Andrzej Duda";
 
 Q.sejm_total = 460;
@@ -1168,6 +1183,20 @@ Q.morawiecki_votes = 0;
 Q.democratic_votes = 0;
 Q.democratic_candidate = "Undecided";
 Q.democratic_pact = "Not negotiated";
+Q.formation_coalition_selected = 0;
+Q.formation_coalition_code = "none";
+Q.formation_coalition_label = "No coalition selected";
+Q.formation_coalition_locked = 0;
+Q.formation_marshal_nominee = "Undecided";
+Q.formation_marshal_elected = 0;
+Q.formation_marshal_vote_choice = "Undecided";
+Q.formation_marshal_yes = 0;
+Q.formation_marshal_no = 0;
+Q.formation_marshal_abstain = 0;
+Q.formation_marshal_threshold = 0;
+Q.formation_vice_witek_result = "Not voted";
+Q.formation_vice_bosak_result = "Not voted";
+Q.formation_czarzasty_rotation = "Not negotiated";
 Q.constructive_vonc_cooldown = 0;
 Q.early_election_risk = 0;
 
@@ -1292,7 +1321,7 @@ title: Ask Trzaskowski to recognise the certified majority
 subtitle: Ask the President to use his own first attempt for the certified majority rather than stage a futile PiS cabinet.
 view-if: trz_inaugurated
 on-arrival: presidential_majority_designation = 1; confidence_stage = 1; confidence_mode = "Article 154 presidential first attempt — majority designation"; constitutional_restraint += 3; president_relation += 4; pis_relation -= 5; news_headline = "President Trzaskowski opens his first attempt to the certified majority"
-go-to: sejm_candidate
+go-to: formation_coalition_menu
 
 @psl_courting
 title: PiS calls the PSL offices
@@ -1590,7 +1619,7 @@ that those agreements were merely exploratory. ?]
 - @first_confidence_continue: Continue from the roll call
 
 @first_confidence_continue
-go-to: morawiecki_cabinet if first_confidence_passed = 1; sejm_candidate if first_confidence_passed = 0
+go-to: morawiecki_cabinet if first_confidence_passed = 1; formation_coalition_menu if first_confidence_passed = 0
 
 @morawiecki_cabinet
 title: An alternative majority takes office
@@ -1642,13 +1671,68 @@ capacity.
 title: [? if presidential_majority_designation: The President designates the majority's candidate?][? if not presidential_majority_designation: The Sejm chooses a candidate?]
 new-page: true
 on-arrival: {!
-Q.sejm_speaker = Q.president_name == "Szymon Hołownia"
-    ? "Monika Wielichowska"
-    : "Szymon Hołownia";
+if (!Q.sejm_candidate_baseline_set) {
+    Q.sejm_candidate_baseline_set = 1;
+    Q.sejm_candidate_base_ko_relation = Number(Q.ko_relation) || 0;
+    Q.sejm_candidate_base_psl_relation = Number(Q.psl_relation) || 0;
+    Q.sejm_candidate_base_party_unity = Number(Q.party_unity) || 0;
+    Q.sejm_candidate_base_progressives_dissent =
+        Number(Q.progressives_dissent) || 0;
+    Q.sejm_candidate_base_barons_dissent = Number(Q.barons_dissent) || 0;
+    Q.sejm_candidate_base_labor_credibility =
+        Number(Q.labor_credibility) || 0;
+    Q.sejm_candidate_base_women_support = Number(Q.women_support) || 0;
+}
+if (!Q.formation_marshal_elected) {
+    Q.sejm_speaker = Q.president_name == "Szymon Hołownia"
+        ? "Monika Wielichowska"
+        : "Szymon Hołownia";
+}
 Q.confidence_stage = Q.presidential_majority_designation ? 1 : 2;
 Q.confidence_mode = Q.presidential_majority_designation
     ? "Article 154 presidential first attempt — candidate designation"
     : "Article 154 Sejm initiative — candidate selection";
+const classifyPmProspect = function(projectedVotes) {
+    if (projectedVotes >= 243) {
+        return "They should get nomination without much trouble.";
+    }
+    if (projectedVotes >= 231) {
+        return "They might just get confidence.";
+    }
+    if (projectedVotes >= 205) {
+        return "They are unlikely to bring a majority.";
+    }
+    return "They have no chance of becoming Prime Minister.";
+};
+const koSeats = Math.max(0, Number(Q.ko_seats) || 0);
+const p2050Seats = Math.max(0, Number(Q.p2050_seats) || 0);
+const pslSeats = Math.max(0, Number(Q.psl_seats) || 0);
+const centrumSeats = Math.max(0, Number(Q.centrum_seats) || 0);
+const leftCommittedSeats = Math.max(
+    0,
+    Math.round(Number(Q.left_committed_seats) || Number(Q.left_seats) || 0)
+);
+const tuskProjected =
+    koSeats +
+    p2050Seats +
+    (Number(Q.centrum_relation) >= 35 ? centrumSeats : 0) +
+    pslSeats +
+    leftCommittedSeats;
+const kosiniakProjected =
+    Math.max(0, koSeats - Math.min(6, koSeats)) +
+    p2050Seats +
+    (Number(Q.centrum_relation) >= 45 ? centrumSeats : 0) +
+    pslSeats +
+    leftCommittedSeats;
+const leftProjected =
+    Math.max(0, koSeats - Math.min(12, koSeats)) +
+    Math.max(0, p2050Seats - Math.min(4, p2050Seats)) +
+    (Number(Q.centrum_relation) >= 30 ? centrumSeats : 0) +
+    Math.max(0, pslSeats - Math.min(10, pslSeats)) +
+    leftCommittedSeats;
+Q.sejm_candidate_hint_tusk = classifyPmProspect(tuskProjected);
+Q.sejm_candidate_hint_kosiniak = classifyPmProspect(kosiniakProjected);
+Q.sejm_candidate_hint_left = classifyPmProspect(leftProjected);
 !}
 
 = [? if presidential_majority_designation: The President's first constitutional attempt?][? if not presidential_majority_designation: The second constitutional attempt?]
@@ -1669,7 +1753,7 @@ the top changes which autonomous parties consider themselves bound.
 
 @nominate_tusk
 title: Nominate Donald Tusk
-subtitle: Historical choice. Every KO deputy begins committed.
+subtitle: Historical choice. Every KO deputy begins committed. [+ sejm_candidate_hint_tusk +]
 on-arrival: {!
 Q.democratic_candidate = "Donald Tusk";
 Q.candidate_ko_votes = Q.ko_seats;
@@ -1686,7 +1770,7 @@ go-to: democratic_left_mandate
 
 @nominate_kosiniak
 title: Nominate Władysław Kosiniak-Kamysz
-subtitle: A rural-centrist compromise; six KO deputies withhold their first vote.
+subtitle: A rural-centrist compromise; six KO deputies withhold their first vote. [+ sejm_candidate_hint_kosiniak +]
 view-if: president_name != "Władysław Kosiniak-Kamysz"
 on-arrival: {!
 Q.democratic_candidate = "Władysław Kosiniak-Kamysz";
@@ -1708,7 +1792,7 @@ go-to: democratic_left_mandate
 
 @nominate_left_compromise
 title: Nominate Agnieszka Dziemianowicz-Bąk
-subtitle: A generational Left bid. Admired by activists; not automatically accepted by KO or Third Way.
+subtitle: A generational Left bid. Admired by activists; not automatically accepted by KO or Third Way. [+ sejm_candidate_hint_left +]
 view-if: president_name != "Agnieszka Dziemianowicz-Bąk"
 on-arrival: {!
 Q.democratic_candidate = "Agnieszka Dziemianowicz-Bąk";
@@ -1752,11 +1836,34 @@ to their own executive.
 Only a cabinet that actually contains Lewica will grant the player government
 authority. Voting confidence from outside does not.
 
+- @left_repick_candidate
 - @left_new_left_cabinet
 - @left_whole_cabinet
 - @left_supply_only
 - @left_maximal_terms
 - @left_withhold
+
+@left_repick_candidate
+title: Go back and pick another prime-ministerial nominee
+subtitle: Return one step to the designation menu and revise the candidate.
+on-arrival: {!
+Q.democratic_candidate = "None";
+Q.candidate_ko_votes = 0;
+Q.candidate_p2050_votes = 0;
+Q.candidate_centrum_votes = 0;
+Q.candidate_psl_cap = 0;
+Q.candidate_code = 0;
+Q.ko_relation = Number(Q.sejm_candidate_base_ko_relation) || 0;
+Q.psl_relation = Number(Q.sejm_candidate_base_psl_relation) || 0;
+Q.party_unity = Number(Q.sejm_candidate_base_party_unity) || 0;
+Q.progressives_dissent =
+    Number(Q.sejm_candidate_base_progressives_dissent) || 0;
+Q.barons_dissent = Number(Q.sejm_candidate_base_barons_dissent) || 0;
+Q.labor_credibility = Number(Q.sejm_candidate_base_labor_credibility) || 0;
+Q.women_support = Number(Q.sejm_candidate_base_women_support) || 0;
+Q.news_headline = "The democratic clubs reopen the prime-ministerial nomination";
+!}
+go-to: sejm_candidate
 
 @left_new_left_cabinet
 title: Put New Left in cabinet; let Razem support from outside
@@ -1980,7 +2087,389 @@ go-to: poland_ministries if candidate_vote_passed = 1; presidential_first_fails 
 title: Initiative passes to the Sejm
 new-page: true
 on-arrival: presidential_majority_designation = 0; confidence_stage = 2; confidence_mode = "Article 154 Sejm initiative — candidate selection"; news_headline = "The President's first attempt lapses and the Sejm opens its own nomination"
-go-to: sejm_candidate
+go-to: formation_coalition_menu
+
+@formation_coalition_menu
+title: Build a coalition before naming offices
+new-page: true
+on-arrival: {!
+Q.formation_coalition_selected = 0;
+Q.formation_coalition_locked = 0;
+Q.formation_marshal_elected = 0;
+Q.formation_marshal_nominee = "Undecided";
+Q.formation_vice_witek_result = "Not voted";
+Q.formation_vice_bosak_result = "Not voted";
+Q.formation_czarzasty_rotation = "Not negotiated";
+Q.sejm_speaker = "Marek Sawicki (Marshal Senior)";
+!}
+
+= Coalition arithmetic first
+
+No prime minister can be safely nominated before the partners agree who forms
+the majority. The post-election order now runs as: coalition deal, Marshal
+ballot, then prime minister and cabinet confidence.
+
+<div class="ledger-section ledger-section-first"><div class="ledger-title">Available
+seat blocks</div>
+<div class="ledger-row"><span>KO + Third Way + Lewica</span><b>[+ ko_seats + p2050_seats + psl_seats + left_committed_seats +]</b></div>
+<div class="ledger-row"><span>PiS + Lewica</span><b>[+ pis_seats + left_committed_seats +]</b></div>
+<div class="ledger-row"><span>KO + Lewica</span><b>[+ ko_seats + left_committed_seats +]</b></div></div>
+
+- @formation_pick_democratic
+- @formation_pick_left_pis
+- @formation_pick_ko_left
+
+@formation_pick_democratic
+title: Build a democratic coalition (KO + Third Way + Lewica)
+subtitle: Historical architecture with 2023 institutional sequencing.
+on-arrival: formation_coalition_selected = 1; formation_coalition_code = "democratic_2023"; formation_coalition_label = "KO + Third Way + Lewica"; coalition_status = "Democratic coalition talks"; candidate_ko_votes = ko_seats; candidate_p2050_votes = p2050_seats; candidate_psl_cap = psl_seats; candidate_left_votes = left_committed_seats; ko_relation += 3; p2050_relation += 4; psl_relation += 3; news_headline = "The democratic parties open coalition talks before office ballots"
+go-to: formation_marshal_ballot
+
+@formation_pick_left_pis
+title: Attempt a PiS-Lewica arrangement
+subtitle: A hard bargain path: institutional seats first, then candidate choice.
+on-arrival: formation_coalition_selected = 1; formation_coalition_code = "left_pis"; formation_coalition_label = "Lewica + PiS"; coalition_status = "PiS-Lewica exploratory pact"; pis_relation += 10; ko_relation -= 14; p2050_relation -= 14; psl_relation -= 12; party_unity -= 8; news_headline = "Lewica opens a high-risk coalition path with PiS"
+go-to: formation_marshal_ballot
+
+@formation_pick_ko_left
+title: Build a KO-Lewica arrangement without Third Way
+subtitle: A narrow format that still needs outside votes later.
+on-arrival: formation_coalition_selected = 1; formation_coalition_code = "ko_left"; formation_coalition_label = "KO + Lewica"; coalition_status = "KO-Lewica minority protocol"; ko_relation += 5; p2050_relation -= 8; psl_relation -= 9; news_headline = "KO and Lewica open a minority-first coalition format"
+go-to: formation_marshal_ballot
+
+@formation_marshal_ballot
+title: Secret ballot for the Sejm Marshal
+new-page: true
+on-arrival: {!
+const coalitionCode = String(Q.formation_coalition_code || "none");
+if (coalitionCode == "democratic_2023") {
+    Q.formation_marshal_nominee = "Szymon Hołownia";
+} else if (coalitionCode == "left_pis") {
+    Q.formation_marshal_nominee = "Elżbieta Witek";
+} else {
+    Q.formation_marshal_nominee = "Włodzimierz Czarzasty";
+}
+Q.formation_marshal_vote_choice = "Undecided";
+Q.formation_marshal_elected = 0;
+Q.news_headline =
+    "Secret ballot opens for Marshal nominee " + Q.formation_marshal_nominee;
+!}
+
+= First office vote of the term
+
+Before a prime minister is chosen, the chamber elects the Marshal in secret
+ballot. Coalition discipline here determines whether later investiture talks
+are trusted.
+
+- @formation_marshal_support
+- @formation_marshal_reject
+- @formation_marshal_abstain
+
+@formation_marshal_support
+title: Vote for [+ formation_marshal_nominee +]
+on-arrival: formation_marshal_vote_choice = "Support"; news_headline = "Lewica supports the coalition Marshal nominee"
+go-to: formation_marshal_result
+
+@formation_marshal_reject
+title: Vote against [+ formation_marshal_nominee +]
+on-arrival: formation_marshal_vote_choice = "Reject"; news_headline = "Lewica rejects the coalition Marshal nominee in secret ballot"
+go-to: formation_marshal_result
+
+@formation_marshal_abstain
+title: Abstain in the Marshal ballot
+on-arrival: formation_marshal_vote_choice = "Abstain"; news_headline = "Lewica abstains in the Marshal secret ballot"
+go-to: formation_marshal_result
+
+@formation_marshal_result
+title: Marshal ballot result
+new-page: true
+on-arrival: {!
+const coalitionCode = String(Q.formation_coalition_code || "none");
+const sejmTotal = Math.max(1, Number(Q.sejm_total) || 460);
+const coalitionSeats = coalitionCode == "democratic_2023"
+    ? Math.max(0, Number(Q.ko_seats) || 0) +
+        Math.max(0, Number(Q.p2050_seats) || 0) +
+        Math.max(0, Number(Q.psl_seats) || 0) +
+        Math.max(0, Number(Q.left_committed_seats) || 0)
+    : (coalitionCode == "left_pis"
+        ? Math.max(0, Number(Q.pis_seats) || 0) +
+            Math.max(0, Number(Q.left_committed_seats) || 0)
+        : Math.max(0, Number(Q.ko_seats) || 0) +
+            Math.max(0, Number(Q.left_committed_seats) || 0));
+let yes = coalitionSeats;
+let abstain = Math.max(0, Math.min(14, sejmTotal - yes));
+if (Q.formation_marshal_vote_choice == "Reject") {
+    yes = Math.max(0, yes - Math.min(20, Math.max(0, Number(Q.left_committed_seats) || 0)));
+    Q.party_unity += 3;
+}
+if (Q.formation_marshal_vote_choice == "Abstain") {
+    yes = Math.max(0, yes - Math.min(12, Math.max(0, Number(Q.left_committed_seats) || 0)));
+    abstain += Math.min(12, Math.max(0, Number(Q.left_committed_seats) || 0));
+}
+Q.formation_marshal_yes = Math.max(0, Math.min(sejmTotal, yes));
+Q.formation_marshal_abstain = Math.max(0, Math.min(sejmTotal - Q.formation_marshal_yes, abstain));
+Q.formation_marshal_no = Math.max(0, sejmTotal - Q.formation_marshal_yes - Q.formation_marshal_abstain);
+const present = Q.formation_marshal_yes + Q.formation_marshal_no;
+Q.formation_marshal_threshold = Math.floor(present / 2) + 1;
+Q.formation_marshal_elected =
+    present >= Q.sejm_quorum_floor &&
+    Q.formation_marshal_yes >= Q.formation_marshal_threshold ? 1 : 0;
+if (Q.formation_marshal_elected) {
+    Q.sejm_speaker = Q.formation_marshal_nominee;
+}
+const betrayalDemocratic =
+    coalitionCode == "democratic_2023" &&
+    Q.formation_marshal_nominee == "Szymon Hołownia" &&
+    Q.formation_marshal_vote_choice != "Support";
+const betrayalWitek =
+    coalitionCode == "left_pis" &&
+    Q.formation_marshal_nominee == "Elżbieta Witek" &&
+    Q.formation_marshal_vote_choice != "Support";
+if (betrayalDemocratic || betrayalWitek || !Q.formation_marshal_elected) {
+    Q.formation_coalition_locked = 1;
+    Q.coalition_broken = 1;
+    Q.government_coalition_dissent += 16;
+    Q.early_election_risk += 10;
+    if (betrayalDemocratic) {
+        Q.p2050_relation -= 20;
+        Q.psl_relation -= 16;
+        Q.ko_relation -= 10;
+        Q.news_headline = "Refusing Hołownia triggers a coalition betrayal crisis";
+    } else if (betrayalWitek) {
+        Q.pis_relation -= 20;
+        Q.news_headline = "Refusing Witek collapses the PiS-Lewica institutional bargain";
+    } else {
+        Q.news_headline = "Marshal vote fails and coalition trust collapses";
+    }
+} else {
+    Q.formation_coalition_locked = 0;
+    Q.news_headline = Q.sejm_speaker + " wins the Marshal ballot";
+}
+!}
+
+<div class="ledger-section ledger-section-first"><div class="ledger-title">Secret
+ballot</div>
+<div class="ledger-row"><span>Nominee</span><b>[+ formation_marshal_nominee +]</b></div>
+<div class="ledger-row"><span>Yes</span><b>[+ formation_marshal_yes +]</b></div>
+<div class="ledger-row"><span>No</span><b>[+ formation_marshal_no +]</b></div>
+<div class="ledger-row"><span>Abstain</span><b>[+ formation_marshal_abstain +]</b></div>
+<div class="ledger-row"><span>Required</span><b>[+ formation_marshal_threshold +]</b></div></div>
+
+- @formation_after_marshal
+
+@formation_after_marshal
+title: Marshal ballot outcome
+go-to: formation_marshal_breakdown if formation_coalition_locked = 1; formation_vice_witek if formation_coalition_code = "democratic_2023" and formation_marshal_elected = 1; formation_pm_stage if formation_marshal_elected = 1
+
+@formation_marshal_breakdown
+title: Coalition trust collapses before investiture
+new-page: true
+on-arrival: confidence_mode = "Post-marshal breakdown — coalition arithmetic reset"; confidence_stage = 2
+
+= Marshal failure has constitutional cost
+
+The parties you picked treat this ballot as a trust vote. After a failed or
+betrayed Marshal agreement, this coalition cannot carry a prime-ministerial
+designation.
+
+- @third_attempt: Move to the President's final-attempt arithmetic
+
+@formation_vice_witek
+title: Vice-Marshal ballot — Elżbieta Witek
+new-page: true
+
+= Separate vice-marshal vote 1/2
+
+The democratic coalition must separately vote on Elżbieta Witek as one of the
+vice-marshals. Historical sequence: KO and Third Way oppose her nomination.
+
+- @formation_vice_witek_support
+- @formation_vice_witek_reject
+
+@formation_vice_witek_support
+title: Support Witek for vice-marshal
+on-arrival: formation_vice_witek_result = "Elected with Left support"; p2050_relation -= 7; psl_relation -= 5; ko_relation -= 4; news_headline = "Witek secures vice-marshalship against coalition expectations"
+go-to: formation_vice_bosak
+
+@formation_vice_witek_reject
+title: Vote against Witek (historical)
+on-arrival: formation_vice_witek_result = "Rejected"; p2050_relation += 2; psl_relation += 2; ko_relation += 1; news_headline = "Witek is rejected for vice-marshal"
+go-to: formation_vice_bosak
+
+@formation_vice_bosak
+title: Vice-Marshal ballot — Krzysztof Bosak
+new-page: true
+
+= Separate vice-marshal vote 2/2
+
+The chamber now separately votes on Krzysztof Bosak for Konfederacja.
+
+- @formation_vice_bosak_support
+- @formation_vice_bosak_reject
+
+@formation_vice_bosak_support
+title: Support Bosak for vice-marshal
+on-arrival: formation_vice_bosak_result = "Elected with Left support"; minority_safety -= 3; far_right_agenda += 2; news_headline = "Bosak enters the presidium"
+go-to: formation_czarzasty_rotation
+
+@formation_vice_bosak_reject
+title: Reject Bosak for vice-marshal
+on-arrival: formation_vice_bosak_result = "Rejected"; constitutional_restraint += 1; news_headline = "Bosak's vice-marshal bid fails"
+go-to: formation_czarzasty_rotation
+
+@formation_czarzasty_rotation
+title: Mid-term Marshal rotation question
+new-page: true
+on-arrival: {!
+const partnerTrust = Math.round(
+    ((Number(Q.ko_relation) || 0) +
+        (Number(Q.p2050_relation) || 0) +
+        (Number(Q.psl_relation) || 0)) / 3
+);
+Q.formation_czarzasty_rotation = partnerTrust >= 48
+    ? "Czarzasty can plausibly win a later rotation vote"
+    : "Partners keep Hołownia to term end";
+if (partnerTrust < 48) {
+    Q.sejm_speaker = "Szymon Hołownia";
+}
+!}
+
+= Rotation is not automatic
+
+If partner relations deteriorate, KO and Third Way keep Hołownia to the end of
+term and block a later Czarzasty rotation.
+
+- @formation_pm_stage
+
+@formation_pm_stage
+title: Prime-ministerial designation stage
+go-to: sejm_candidate if formation_coalition_code = "democratic_2023"; formation_pm_alt if formation_coalition_code != "democratic_2023"
+
+@formation_pm_alt
+title: Nominate a prime minister for the selected coalition
+new-page: true
+on-arrival: confidence_stage = 2; confidence_mode = "Article 154 Sejm initiative — candidate selection"
+
+= Nominee after coalition and Marshal
+
+The coalition sequence has completed. Now choose the candidate for Sejm
+designation.
+
+- @formation_pm_alt_morawiecki
+- @formation_pm_alt_czarzasty
+- @formation_pm_alt_tusk
+
+@formation_pm_alt_morawiecki
+title: Nominate Mateusz Morawiecki
+view-if: formation_coalition_code = "left_pis"
+on-arrival: {! 
+Q.democratic_candidate = "Mateusz Morawiecki";
+Q.confidence_candidate = "Mateusz Morawiecki";
+Q.candidate_ko_votes = 0;
+Q.candidate_p2050_votes = 0;
+Q.candidate_psl_votes = 0;
+Q.candidate_centrum_votes = 0;
+Q.candidate_left_votes = Number(Q.left_committed_seats) || 0;
+Q.confidence_yes = (Number(Q.pis_seats) || 0) + (Number(Q.left_committed_seats) || 0);
+Q.confidence_no = (Number(Q.sejm_total) || 460) - Q.confidence_yes;
+Q.confidence_abstain = 0;
+Q.confidence_present = Number(Q.sejm_total) || 460;
+Q.confidence_threshold = 231;
+Q.candidate_vote_passed = Q.confidence_yes >= 231 ? 1 : 0;
+Q.news_headline = "PiS-Lewica nominates Morawiecki";
+!}
+go-to: formation_pm_alt_roll
+
+@formation_pm_alt_czarzasty
+title: Nominate Włodzimierz Czarzasty
+on-arrival: {!
+Q.democratic_candidate = "Włodzimierz Czarzasty";
+Q.confidence_candidate = "Włodzimierz Czarzasty";
+if (Q.formation_coalition_code == "left_pis") {
+    Q.confidence_yes = Math.max(0, Number(Q.pis_seats) || 0) +
+        Math.max(0, Number(Q.left_committed_seats) || 0) - 8;
+} else {
+    Q.confidence_yes = Math.max(0, Number(Q.ko_seats) || 0) +
+        Math.max(0, Number(Q.left_committed_seats) || 0) - 10;
+}
+Q.confidence_yes = Math.max(0, Math.min(Number(Q.sejm_total) || 460, Q.confidence_yes));
+Q.confidence_no = Math.max(0, (Number(Q.sejm_total) || 460) - Q.confidence_yes);
+Q.confidence_abstain = 0;
+Q.confidence_present = Number(Q.sejm_total) || 460;
+Q.confidence_threshold = 231;
+Q.candidate_vote_passed = Q.confidence_yes >= 231 ? 1 : 0;
+Q.news_headline = "Czarzasty is nominated after office ballots";
+!}
+go-to: formation_pm_alt_roll
+
+@formation_pm_alt_tusk
+title: Nominate Donald Tusk
+view-if: formation_coalition_code = "ko_left"
+on-arrival: {! 
+Q.democratic_candidate = "Donald Tusk";
+Q.confidence_candidate = "Donald Tusk";
+Q.confidence_yes = (Number(Q.ko_seats) || 0) + (Number(Q.left_committed_seats) || 0);
+Q.confidence_no = (Number(Q.sejm_total) || 460) - Q.confidence_yes;
+Q.confidence_abstain = 0;
+Q.confidence_present = Number(Q.sejm_total) || 460;
+Q.confidence_threshold = 231;
+Q.candidate_vote_passed = Q.confidence_yes >= 231 ? 1 : 0;
+Q.news_headline = "KO-Lewica nominates Tusk without Third Way";
+!}
+go-to: formation_pm_alt_roll
+
+@formation_pm_alt_roll
+title: Nominee vote result
+new-page: true
+
+<div class="ledger-section ledger-section-first"><div class="ledger-title">Nominee
+vote</div>
+<div class="ledger-row"><span>Candidate</span><b>[+ confidence_candidate +]</b></div>
+<div class="ledger-row"><span>Yes</span><b>[+ confidence_yes +]</b></div>
+<div class="ledger-row"><span>No</span><b>[+ confidence_no +]</b></div>
+<div class="ledger-row"><span>Required</span><b>[+ confidence_threshold +]</b></div></div>
+
+- @formation_pm_alt_continue: Continue
+
+@formation_pm_alt_continue
+title: Continue to the coalition outcome
+go-to: formation_pm_alt_success if candidate_vote_passed = 1; third_attempt if candidate_vote_passed = 0
+
+@formation_pm_alt_success
+title: The selected coalition secures a prime-ministerial nomination
+new-page: true
+on-arrival: {!
+Q.formation_complete = 1;
+Q.caretaker_government = 0;
+Q.government_has_confidence = 1;
+Q.prime_minister = Q.democratic_candidate;
+Q.government_name = Q.democratic_candidate + " coalition cabinet";
+Q.government_owner = Q.formation_coalition_label;
+Q.government_party = Q.formation_coalition_code == "left_pis"
+    ? "pis"
+    : (Q.formation_coalition_code == "ko_left" ? "ko" : "other");
+Q.left_in_government = 1;
+Q.position = "Coalition government";
+Q.budget = 6;
+Q.budget_authority = "Governing coalition — negotiated fiscal capacity";
+Q.coalition_status = Q.formation_coalition_label + " cabinet";
+Q.coalition_seats = Math.min(
+    Number(Q.sejm_total) || 460,
+    Q.formation_coalition_code == "left_pis"
+        ? (Math.max(0, Number(Q.pis_seats) || 0) +
+            Math.max(0, Number(Q.left_committed_seats) || 0))
+        : (Math.max(0, Number(Q.ko_seats) || 0) +
+            Math.max(0, Number(Q.left_committed_seats) || 0))
+);
+Q.government_support_seats = Q.coalition_seats;
+!}
+
+= Coalition, Marshal and nominee all align
+
+The selected coalition carried the office sequence in order: coalition deal,
+Marshal ballot, then prime-ministerial nomination.
+
+- @government_entry_gate: Continue
 
 @cabinet_program
 title: One exposé, four coalition readings
@@ -2238,6 +2727,54 @@ available. ?]
 [? if left_in_government = 0: Lewica supplied confidence without taking
 ministries. It can bargain over bills, but it does not control the state budget
 and receives no governing-spend actions. ?]
+
+go-to: formation_tusk_suit if president_name = "Andrzej Duda" and democratic_candidate = "Donald Tusk" and psl_seats > 0 and democratic_votes < 276 and formation_tusk_suit_done = 0; government_entry_gate
+
+@formation_tusk_suit
+# prose-audit: Grade A — the government-formation branch now marks Tusk's turn toward a harder coalition posture without pretending the premiership is a clean victory.
+title: Tusk starts wearing the suit
+new-page: true
+view-if: formation_tusk_suit_done = 0 and president_name = "Andrzej Duda" and democratic_candidate = "Donald Tusk" and psl_seats > 0 and democratic_votes < 276
+face-image: https://commons.wikimedia.org/wiki/Special:FilePath/Donald_Tusk_(6165309851).jpg
+on-arrival: {!
+Q.formation_tusk_suit_done = 1;
+Q.ko_relation += 4;
+Q.psl_relation -= 3;
+Q.psl_coalition_dissent += 6;
+Q.public_trust += 1;
+Q.news_headline = "Tusk enters government with PSL's help and a harder tone";
+!}
+
+= The suit of office
+
+Once the arithmetic is clear, Tusk stops sounding like a man who only wants to
+win an election. He begins to speak like a prime minister who knows the cabinet
+must be carried by a coalition that is less a partner than a reluctant
+concession. KO still claims the premiership, but the government is already
+wearing the smell of PSL's bargaining power and the Palace's patience.
+
+- @formation_hundred_days: Continue
+
+@formation_hundred_days
+# prose-audit: Grade A — the post-election failure beat turns the campaign promise into a coalition-management story with visible political cost.
+title: The hundred-days campaign fails
+new-page: true
+view-if: formation_tusk_suit_done = 1 and formation_hundred_days_done = 0 and president_name = "Andrzej Duda" and democratic_candidate = "Donald Tusk" and psl_seats > 0 and democratic_votes < 276
+face-image: https://commons.wikimedia.org/wiki/Special:FilePath/Donald_Tusk_(6165309851).jpg
+on-arrival: {!
+Q.formation_hundred_days_done = 1;
+Q.ko_poll_momentum -= 0.2;
+Q.psl_coalition_dissent += 4;
+Q.public_trust -= 1;
+Q.news_headline = "The hundred-days campaign fails under coalition strain";
+!}
+
+= Three months later
+
+Three months of coalition management do not produce the clean opening Tusk had
+promised. Every reform is measured against the price of keeping the PSL wing in
+line, and every compromise sounds to the public like a market for patience
+rather than a plan. The campaign of promises becomes a campaign for survival.
 
 - @government_entry_gate: Continue
 

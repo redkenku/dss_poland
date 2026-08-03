@@ -185,6 +185,45 @@ Q.annual_budget_preview_reject_no =
     Q.annual_budget_preview_other_no + previewLeft;
 Q.annual_budget_preview_support_yes =
     Q.annual_budget_preview_government_yes + previewLeft;
+const budgetDraftProfiles = {
+    pis: {social: 18.6, defence: 4.9, deficit: 5.8},
+    ko: {social: 17.4, defence: 4.8, deficit: 4.5},
+    psl: {social: 16.8, defence: 5.0, deficit: 4.0},
+    p2050: {social: 16.9, defence: 4.6, deficit: 3.9},
+    default: {social: 17.2, defence: 4.7, deficit: 4.6}
+};
+const budgetDraft =
+    budgetDraftProfiles[Q.government_party] ||
+    budgetDraftProfiles.default;
+const roundBudgetShare = function(value) {
+    return Math.round(Number(value) * 10) / 10;
+};
+Q.annual_budget_draft_social_share = roundBudgetShare(budgetDraft.social);
+Q.annual_budget_draft_defence_share = roundBudgetShare(budgetDraft.defence);
+Q.annual_budget_draft_deficit_share = roundBudgetShare(budgetDraft.deficit);
+Q.annual_budget_social_share = Q.annual_budget_draft_social_share;
+Q.annual_budget_defence_share = Q.annual_budget_draft_defence_share;
+Q.annual_budget_deficit_share = Q.annual_budget_draft_deficit_share;
+Q.annual_budget_projected_balance =
+    roundBudgetShare(-Q.annual_budget_deficit_share);
+Q.annual_budget_finance_control =
+    Q.annual_budget_left_cabinet_authority &&
+    Q.finance_minister_party == "Lewica" ? 1 : 0;
+const annualBudgetPowerBase =
+    Math.max(0, Math.round(Number(Q.negotiation_leverage) || 0)) * 0.40 +
+    Math.max(0, Math.round(Number(Q.left_seats) || 0)) * 0.22 +
+    Math.max(0, Math.round(Number(Q.ko_relation) || 0)) * 0.10 +
+    Math.max(0, Math.round(Number(Q.psl_relation) || 0)) * 0.12 +
+    (Q.annual_budget_left_is_pivotal ? 10 : 0);
+Q.annual_budget_player_power = Math.max(
+    0,
+    Math.min(100, Math.round(annualBudgetPowerBase / 2.4))
+);
+Q.annual_budget_bargain_points = 0;
+Q.annual_budget_demands_text = "No demands filed";
+Q.annual_budget_outrageous_support = 0;
+Q.annual_budget_pandemic_social_exception =
+    Number(Q.annual_budget_year) == 2020 ? 1 : 0;
 !}
 
 = December [+ annual_budget_year +] — fiscal year [+ annual_budget_fiscal_year +]
@@ -212,6 +251,15 @@ it does not pass automatically because Lewica is outside cabinet.?]
 An ordinary bill passes only when yes exceeds no with a quorum. The estimate
 shows the direct consequence of each posture before any agreement is signed.?]
 
+<div class="ledger-section"><div class="ledger-title">Draft fiscal frame (% of GDP)</div>
+<div class="ledger-row"><span>Social spending</span><b>[+ annual_budget_social_share +]%</b></div>
+<div class="ledger-row"><span>Defence spending</span><b>[+ annual_budget_defence_share +]%</b></div>
+<div class="ledger-row"><span>Deficit</span><b>[+ annual_budget_deficit_share +]%</b></div>
+<div class="ledger-subrow">Party goals: Left and PiS seek higher social; PiS, KO and PSL seek higher defence; KO, PSL and Konfederacja seek lower deficit.</div></div>
+
+[? if annual_budget_left_cabinet_authority and annual_budget_finance_control: Lewica controls Finance and can set the three shares directly through a budget profile.?]
+[? if annual_budget_left_cabinet_authority and not annual_budget_finance_control: Lewica does not control Finance and can only make demands. Expected bargaining power this round: **[+ annual_budget_player_power +]/100**.?]
+
 The draft was recorded as submitted in **September [+ budget_submission_year
 +]**, so the constitutional budget clock expires in **[+ budget_deadline_label
 +]**. A defeat today does not itself dismiss the cabinet or dissolve the Sejm.
@@ -220,78 +268,239 @@ The draft was recorded as submitted in **September [+ budget_submission_year
 - @government_rural_compact
 - @government_minimum
 - @government_dare
+- @government_demand_social_floor
+- @government_demand_defence_trade
+- @government_demand_debt_guardrail
+- @government_accept_draft
 - @poland_opposition_budget.audit: Audit last year's enacted opposition clauses
 - @poland_opposition_budget.start: Read the government draft and open the four-step opposition process
 
 @government_social_protocol
-title: Bind housing, health, labour inspection and wages into one protocol
-subtitle: Cost: 3 budget capacity. Strongest Left settlement; hardest PSL–KO negotiation.
-view-if: annual_budget_left_cabinet_authority = 1 and (opposition_budget_audit_pending = 0 or opposition_budget_audit_year >= annual_budget_year)
+title: Set profile: High social investment
+subtitle: Finance control only. Raises social share; accepts a wider deficit.
+view-if: annual_budget_left_cabinet_authority = 1 and annual_budget_finance_control = 1 and (opposition_budget_audit_pending = 0 or opposition_budget_audit_year >= annual_budget_year)
 choose-if: annual_budget_left_cabinet_authority = 1 and budget >= 3
 unavailable-subtitle: The governing reserve cannot finance the protocol.
 on-arrival: {!
 Q.budget -= 3;
-Q.annual_budget_strategy = "Funded social protocol";
+Q.annual_budget_strategy = "Finance profile — high social";
 Q.annual_budget_package_code = 1;
+Q.annual_budget_social_share = 20.6;
+Q.annual_budget_defence_share = 4.4;
+Q.annual_budget_deficit_share = 5.6;
+Q.annual_budget_projected_balance = -5.6;
+Q.annual_budget_bargain_points = 6;
+Q.annual_budget_demands_text =
+    "Health, housing and social floor prioritised";
 Q.labor_credibility += 6;
 Q.progressive_credibility += 3;
 Q.razem_cooperation += 5;
 Q.psl_relation -= 4;
 Q.ko_relation -= 2;
-Q.news_headline = "The Left turns its coalition promises into costed budget lines";
+Q.news_headline =
+    "Lewica's Finance ministry sets a social-heavy GDP budget profile";
 !}
 go-to: internal_ratification
 
 @government_rural_compact
-title: Exchange rural investment for care, housing and workplace enforcement
-subtitle: Cost: 2 budget capacity. Stabilises PSL; compromises the programme.
-view-if: annual_budget_left_cabinet_authority = 1 and (opposition_budget_audit_pending = 0 or opposition_budget_audit_year >= annual_budget_year)
+title: Set profile: Coalition security balance
+subtitle: Finance control only. Keeps social and defence both high enough for coalition partners.
+view-if: annual_budget_left_cabinet_authority = 1 and annual_budget_finance_control = 1 and (opposition_budget_audit_pending = 0 or opposition_budget_audit_year >= annual_budget_year)
 choose-if: annual_budget_left_cabinet_authority = 1 and budget >= 2
 unavailable-subtitle: The governing reserve cannot carry both sides of the bargain.
 on-arrival: {!
 Q.budget -= 2;
-Q.annual_budget_strategy = "Rural-social compact";
+Q.annual_budget_strategy = "Finance profile — coalition security";
 Q.annual_budget_package_code = 2;
+Q.annual_budget_social_share = 19.3;
+Q.annual_budget_defence_share = 5.0;
+Q.annual_budget_deficit_share = 4.8;
+Q.annual_budget_projected_balance = -4.8;
+Q.annual_budget_bargain_points = 8;
+Q.annual_budget_demands_text =
+    "Defence uplift tied to social and local guarantees";
 Q.psl_relation += 8;
 Q.rural_support += 4;
 Q.progressives_dissent += 3;
 Q.razem_dissent += 4;
-Q.news_headline = "A rural-social compact gives PSL a reason not to pull the pin";
+Q.news_headline =
+    "Lewica sets a coalition budget with high defence and social floors";
 !}
 go-to: internal_ratification
 
 @government_minimum
-title: Protect existing benefits and postpone the expensive promises
-subtitle: Cost: 1 budget capacity. Easier coalition arithmetic; severe movement cost.
-view-if: annual_budget_left_cabinet_authority = 1 and (opposition_budget_audit_pending = 0 or opposition_budget_audit_year >= annual_budget_year)
+title: Set profile: Debt-brake year
+subtitle: Finance control only. Narrows deficit to satisfy KO/PSL debt hawks.
+view-if: annual_budget_left_cabinet_authority = 1 and annual_budget_finance_control = 1 and (opposition_budget_audit_pending = 0 or opposition_budget_audit_year >= annual_budget_year)
 choose-if: annual_budget_left_cabinet_authority = 1 and budget >= 1
 unavailable-subtitle: Even the minimum package lacks a reserve.
 on-arrival: {!
 Q.budget -= 1;
-Q.annual_budget_strategy = "Fiscal minimum";
+Q.annual_budget_strategy = "Finance profile — debt brake";
 Q.annual_budget_package_code = 3;
+Q.annual_budget_social_share = 17.8;
+Q.annual_budget_defence_share = 4.8;
+Q.annual_budget_deficit_share = 3.3;
+Q.annual_budget_projected_balance = -3.3;
+Q.annual_budget_bargain_points = 5;
+Q.annual_budget_demands_text =
+    "Debt-first settlement with protected core spending";
 Q.ko_relation += 5;
 Q.psl_relation += 3;
 Q.labor_credibility -= 4;
 Q.razem_cooperation -= 7;
 Q.budget_breaches += 2;
-Q.news_headline = "The cabinet protects its floor and pushes the Left's deadlines away";
+Q.news_headline =
+    "Lewica's Finance profile prioritises lower debt over expansion";
 !}
 go-to: internal_ratification
 
 @government_dare
-title: Table the Left draft and dare partners to defeat the government
-subtitle: No budget cost. Converts policy dissent into a confidence crisis.
-view-if: annual_budget_left_cabinet_authority = 1 and (opposition_budget_audit_pending = 0 or opposition_budget_audit_year >= annual_budget_year)
+title: Set profile: Maximal Left ask
+subtitle: Finance control only. Highest social target and sharp coalition friction.
+view-if: annual_budget_left_cabinet_authority = 1 and annual_budget_finance_control = 1 and (opposition_budget_audit_pending = 0 or opposition_budget_audit_year >= annual_budget_year)
 on-arrival: {!
-Q.annual_budget_strategy = "Coalition dare";
+Q.annual_budget_strategy = "Finance profile — maximal Left";
 Q.annual_budget_package_code = 4;
+Q.annual_budget_social_share = 21.2;
+Q.annual_budget_defence_share = 4.2;
+Q.annual_budget_deficit_share = 6.1;
+Q.annual_budget_projected_balance = -6.1;
+Q.annual_budget_bargain_points = 3;
+Q.annual_budget_demands_text =
+    "Left programme first; coalition must adapt";
 Q.party_unity += 2;
 Q.psl_relation -= 12;
 Q.ko_relation -= 8;
 Q.government_coalition_dissent += 14;
 Q.coalition_break_threat = 1;
-Q.news_headline = "The Left turns the budget into a roll-call on coalition survival";
+Q.news_headline =
+    "Lewica tables a maximal social GDP budget and dares partners to revolt";
+!}
+go-to: internal_ratification
+
+@government_demand_social_floor
+title: Demand a social floor in the budget
+subtitle: No Finance control. Prioritise social share and acceptable pandemic protection.
+view-if: annual_budget_left_cabinet_authority = 1 and annual_budget_finance_control = 0 and (opposition_budget_audit_pending = 0 or opposition_budget_audit_year >= annual_budget_year)
+on-arrival: {!
+const demandPower = Math.max(0, Math.min(1, Number(Q.annual_budget_player_power) / 100));
+const roundDemandShare = function(value) {
+    return Math.round(value * 10) / 10;
+};
+Q.annual_budget_strategy = "Demand mode — social floor";
+Q.annual_budget_package_code = 1;
+Q.annual_budget_social_share = roundDemandShare(
+    Number(Q.annual_budget_draft_social_share) + 0.6 + 1.1 * demandPower
+);
+Q.annual_budget_defence_share = roundDemandShare(
+    Number(Q.annual_budget_draft_defence_share) - 0.1 + 0.2 * demandPower
+);
+Q.annual_budget_deficit_share = roundDemandShare(
+    Number(Q.annual_budget_draft_deficit_share) + 0.2 + 0.6 * demandPower
+);
+Q.annual_budget_projected_balance = -Q.annual_budget_deficit_share;
+Q.annual_budget_bargain_points = Math.round(3 + 5 * demandPower);
+Q.annual_budget_demands_text =
+    "Social spending floor and health shielding";
+Q.labor_credibility += 3;
+Q.razem_cooperation += 2;
+Q.psl_relation -= 2;
+Q.news_headline =
+    "Lewica demands a social GDP floor from a Finance ministry it does not control";
+!}
+go-to: internal_ratification
+
+@government_demand_defence_trade
+title: Trade support for defence and local guarantees
+subtitle: No Finance control. Improves defence line while preserving a moderate social floor.
+view-if: annual_budget_left_cabinet_authority = 1 and annual_budget_finance_control = 0 and (opposition_budget_audit_pending = 0 or opposition_budget_audit_year >= annual_budget_year)
+on-arrival: {!
+const demandPower = Math.max(0, Math.min(1, Number(Q.annual_budget_player_power) / 100));
+const roundDemandShare = function(value) {
+    return Math.round(value * 10) / 10;
+};
+Q.annual_budget_strategy = "Demand mode — defence trade";
+Q.annual_budget_package_code = 2;
+Q.annual_budget_social_share = roundDemandShare(
+    Number(Q.annual_budget_draft_social_share) + 0.3 + 0.6 * demandPower
+);
+Q.annual_budget_defence_share = roundDemandShare(
+    Number(Q.annual_budget_draft_defence_share) + 0.4 + 0.8 * demandPower
+);
+Q.annual_budget_deficit_share = roundDemandShare(
+    Number(Q.annual_budget_draft_deficit_share) - 0.1 + 0.3 * demandPower
+);
+Q.annual_budget_projected_balance = -Q.annual_budget_deficit_share;
+Q.annual_budget_bargain_points = Math.round(4 + 6 * demandPower);
+Q.annual_budget_demands_text =
+    "Defence and local funding tied to social guarantees";
+Q.psl_relation += 4;
+Q.ko_relation += 2;
+Q.progressives_dissent += 1;
+Q.news_headline =
+    "Lewica trades support for a defence-heavy budget plus social guarantees";
+!}
+go-to: internal_ratification
+
+@government_demand_debt_guardrail
+title: Demand a debt guardrail before support
+subtitle: No Finance control. Reduce deficit and keep enough social legitimacy.
+view-if: annual_budget_left_cabinet_authority = 1 and annual_budget_finance_control = 0 and (opposition_budget_audit_pending = 0 or opposition_budget_audit_year >= annual_budget_year)
+on-arrival: {!
+const demandPower = Math.max(0, Math.min(1, Number(Q.annual_budget_player_power) / 100));
+const roundDemandShare = function(value) {
+    return Math.round(value * 10) / 10;
+};
+Q.annual_budget_strategy = "Demand mode — debt guardrail";
+Q.annual_budget_package_code = 3;
+Q.annual_budget_social_share = roundDemandShare(
+    Number(Q.annual_budget_draft_social_share) - 0.2 + 0.5 * demandPower
+);
+Q.annual_budget_defence_share = roundDemandShare(
+    Number(Q.annual_budget_draft_defence_share) + 0.1 + 0.4 * demandPower
+);
+Q.annual_budget_deficit_share = roundDemandShare(
+    Number(Q.annual_budget_draft_deficit_share) - 0.4 - 0.6 * demandPower
+);
+Q.annual_budget_projected_balance = -Q.annual_budget_deficit_share;
+Q.annual_budget_bargain_points = Math.round(2 + 4 * demandPower);
+Q.annual_budget_demands_text =
+    "Lower annual deficit with preserved core social services";
+Q.ko_relation += 3;
+Q.psl_relation += 3;
+Q.labor_credibility -= 2;
+Q.news_headline =
+    "Lewica conditions support on a lower-deficit annual budget";
+!}
+go-to: internal_ratification
+
+@government_accept_draft
+title: Accept the cabinet draft with minimal changes
+subtitle: No Finance control. Fastest route, but own the political cost.
+view-if: annual_budget_left_cabinet_authority = 1 and annual_budget_finance_control = 0 and (opposition_budget_audit_pending = 0 or opposition_budget_audit_year >= annual_budget_year)
+on-arrival: {!
+Q.annual_budget_strategy = "Demand mode — accept cabinet draft";
+Q.annual_budget_package_code = 4;
+Q.annual_budget_social_share = Number(Q.annual_budget_draft_social_share);
+Q.annual_budget_defence_share = Number(Q.annual_budget_draft_defence_share);
+Q.annual_budget_deficit_share = Number(Q.annual_budget_draft_deficit_share);
+Q.annual_budget_projected_balance = -Q.annual_budget_deficit_share;
+Q.annual_budget_bargain_points = 0;
+Q.annual_budget_demands_text =
+    "No additional demand beyond coalition stability";
+Q.annual_budget_outrageous_support =
+    Q.annual_budget_social_share < 17.0 &&
+    Q.annual_budget_deficit_share > 5.4 ? 1 : 0;
+if (Q.annual_budget_outrageous_support) {
+    Q.party_unity -= 4;
+    Q.public_trust -= 3;
+    Q.razem_dissent += 8;
+    Q.labor_credibility -= 4;
+}
+Q.news_headline = Q.annual_budget_outrageous_support
+    ? "Lewica backs an austerity-leaning budget and pays an immediate movement cost"
+    : "Lewica backs the cabinet draft for coalition stability";
 !}
 go-to: internal_ratification
 
@@ -309,7 +518,7 @@ const razemBudgetSeats = Math.max(
     Math.round(Number(Q.razem_seats) || 0)
 );
 const razemRedLineCrossed =
-    Number(Q.annual_budget_package_code) == 3 ||
+    (Number(Q.annual_budget_social_share) || 0) < 18.0 ||
     Boolean(Q.government_burden_breached);
 if (
     razemRedLineCrossed &&
@@ -346,32 +555,35 @@ if (
         Q.coalition_break_threat = 1;
     }
 }
-const profiles = {
-    1: {
-        barons: 66, spring: 86, labor: 92,
-        progressives: 89, razem: 94, pps: 90, social_patriot: 74
-    },
-    2: {
-        barons: 82, spring: 70, labor: 80,
-        progressives: 63, razem: 64, pps: 84, social_patriot: 88
-    },
-    3: {
-        barons: 86, spring: 46, labor: 32,
-        progressives: 28, razem: 17, pps: 38, social_patriot: 91
-    },
-    4: {
-        barons: 58, spring: 68, labor: 75,
-        progressives: 78, razem: 82, pps: 76, social_patriot: 62
-    }
+const caucusTargets = {
+    barons: {social: 17.2, defence: 4.8, deficit: 4.2},
+    spring: {social: 19.5, defence: 4.2, deficit: 5.0},
+    labor: {social: 20.2, defence: 4.0, deficit: 5.6},
+    progressives: {social: 19.2, defence: 4.1, deficit: 5.1},
+    razem: {social: 20.6, defence: 3.9, deficit: 5.8},
+    pps: {social: 19.6, defence: 4.3, deficit: 5.3},
+    social_patriot: {social: 16.8, defence: 5.1, deficit: 3.7}
 };
-const profile =
-    profiles[Number(Q.annual_budget_package_code) || 4];
+const socialShare = Number(Q.annual_budget_social_share) || 17;
+const defenceShare = Number(Q.annual_budget_defence_share) || 4.6;
+const deficitShare = Number(Q.annual_budget_deficit_share) || 4.5;
+Q.annual_budget_outrageous_support =
+    (socialShare < 16.8 && deficitShare > 5.4) ||
+    (socialShare < 17.2 && defenceShare > 5.6)
+        ? 1 : Q.annual_budget_outrageous_support;
 let weightedBacking = 0;
 let activeStrength = 0;
 let vetoes = 0;
 for (const caucus of Q.factions) {
+    const target = caucusTargets[caucus] || caucusTargets.barons;
+    const distancePenalty =
+        Math.abs(socialShare - target.social) * 14 +
+        Math.abs(defenceShare - target.defence) * 22 +
+        Math.abs(deficitShare - target.deficit) * 12;
+    const demandBonus = Number(Q.annual_budget_bargain_points) || 0;
     let support = clampInternalBudget(
-        profile[caucus] +
+        100 - distancePenalty +
+            demandBonus +
             (Number(Q.party_unity) || 0) * 0.12 -
             (Number(Q[caucus + "_dissent"]) || 0) * 0.42
     );
@@ -392,6 +604,9 @@ for (const caucus of Q.factions) {
     activeStrength += strength;
     if (support < 35 && strength >= 2) vetoes += 1;
 }
+Q.annual_budget_party_goal_report =
+    "Social " + socialShare + "% · Defence " + defenceShare +
+    "% · Deficit " + deficitShare + "% GDP";
 Q.annual_budget_internal_backing = Math.round(
     weightedBacking / Math.max(1, activeStrength)
 );
@@ -403,6 +618,7 @@ Q.annual_budget_internal_vetoes = vetoes;
 The package receives **[+ annual_budget_internal_backing +]% weighted
 backing** from the caucuses that still belong to **[+ left_party_name +]**.
 There are **[+ annual_budget_internal_vetoes +] active red-line vetoes**.
+Current frame: **[+ annual_budget_party_goal_report +]**.
 Merged and departed organisations cast no votes here; their independent MPs
 enter the Sejm arithmetic under their own party agreements.
 [? if razem_red_line_broken: Razem has withdrawn from cabinet responsibility
@@ -812,13 +1028,30 @@ const partnerDefections = Math.max(
     0,
     Math.round((coalitionStress - 34) / 5)
 );
-const strategyBonus =
-    Q.annual_budget_strategy == "Rural-social compact" ? 7 :
-    (Q.annual_budget_strategy == "Funded social protocol" ? 2 :
-    (Q.annual_budget_strategy == "Fiscal minimum" ? 5 : -4));
+const coalitionGoalPenalty =
+    Math.max(0, (Number(Q.annual_budget_deficit_share) || 0) - 4.4) * 2.2 +
+    Math.max(0, 4.5 - (Number(Q.annual_budget_defence_share) || 0)) * 2.0;
+const leftProgrammePenalty =
+    Math.max(0, 18.8 - (Number(Q.annual_budget_social_share) || 0)) * 2.8;
+const fiscalCredibilityBonus =
+    Math.max(0, 4.2 - (Number(Q.annual_budget_deficit_share) || 0)) * 1.8;
 const initialDefectors = Math.min(
     governingSeats,
-    leftRebels + partnerDefections + Math.max(0, -strategyBonus)
+    leftRebels + partnerDefections +
+        Math.max(
+            0,
+            Math.round(
+                coalitionGoalPenalty + leftProgrammePenalty -
+                fiscalCredibilityBonus
+            )
+        )
+);
+const strategyBonus = Math.max(
+    0,
+    Math.round(
+        (Number(Q.annual_budget_bargain_points) || 0) / 2 +
+        ((Number(Q.annual_budget_player_power) || 0) - 50) / 20
+    )
 );
 const recoveredDefectors = Math.min(
     initialDefectors,
@@ -872,6 +1105,9 @@ Q.budget_deadline_active = Q.annual_budget_passed ? 0 : 1;
 **Yes [+ annual_budget_yes +] · No [+ annual_budget_no +] · Abstain
 [+ annual_budget_abstain +]**
 
+Frame: **Social [+ annual_budget_social_share +]% · Defence [+ annual_budget_defence_share +]% · Deficit [+ annual_budget_deficit_share +]% GDP**.
+[? if annual_budget_demands_text != "No demands filed": Demand/bargain line: **[+ annual_budget_demands_text +]**.?]
+
 [? if annual_budget_passed: The budget carries with **[+
 annual_budget_margin +] more yes than no**.?]
 [? if not annual_budget_passed: The bill falls **[+
@@ -890,15 +1126,24 @@ view-if: annual_budget_left_cabinet_authority = 1 and annual_budget_passed = 1
 on-arrival: {!
 Q.budget_deadline_active = 0;
 Q.government_delivery += 4;
-if (Q.annual_budget_package_code == 1) {
-    Q.government_delivery += 5;
-    Q.fiscal_stress += 6;
-} else if (Q.annual_budget_package_code == 2) {
-    Q.household_security += 4;
-    Q.government_delivery += 3;
-    Q.fiscal_stress += 3;
-} else if (Q.annual_budget_package_code == 3) {
-    Q.fiscal_stress -= 3;
+const socialShare = Number(Q.annual_budget_social_share) || 17;
+const defenceShare = Number(Q.annual_budget_defence_share) || 4.6;
+const deficitShare = Number(Q.annual_budget_deficit_share) || 4.5;
+const socialImpulse = socialShare - 17.0;
+const defenceImpulse = defenceShare - 4.4;
+const deficitImpulse = deficitShare - 4.2;
+Q.household_security += Math.round(Math.max(0, socialImpulse * 1.4));
+Q.military_trust += Math.round(Math.max(0, defenceImpulse * 1.8));
+Q.fiscal_stress +=
+    Math.round(deficitImpulse * 2 + Math.max(0, socialImpulse) * 0.8);
+Q.budget_balance = Math.round(-deficitShare * 10) / 10;
+Q.public_debt += Math.round((deficitShare - 3.4) * 7) / 10;
+Q.economic_growth +=
+    Math.round((socialImpulse * 0.06 + defenceImpulse * 0.04 - deficitImpulse * 0.05) * 10) / 10;
+if (Q.annual_budget_outrageous_support) {
+    Q.party_unity -= 2;
+    Q.public_trust -= 2;
+    Q.razem_dissent += 5;
 }
 Q.public_trust += 2;
 Q.government_coalition_dissent -= 3;

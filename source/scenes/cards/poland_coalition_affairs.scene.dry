@@ -4,7 +4,7 @@ new-page: true
 is-card: true
 tags: poland_party_card
 frequency: 160
-view-if: month_actions < max_month_actions and poland_coalition_affairs_timer <= 0 and (internal_dissent >= 20 or government_coalition_dissent >= 8 or early_election_risk >= 30 or left_in_government = 1)
+view-if: month_actions < max_month_actions and left_in_government = 1 and poland_coalition_affairs_timer <= 0 and (internal_dissent >= 20 or government_coalition_dissent >= 8 or early_election_risk >= 30)
 on-arrival: month_actions += 1; poland_coalition_affairs_timer = 4
 card-image: img/poland/cards/coalition-council.webp
 
@@ -17,6 +17,7 @@ extremes.
 
 - @stabilise
 - @snap
+- @stand_down
 
 @stabilise
 title: Spend 1 resource on a coalition-calming package
@@ -33,16 +34,17 @@ caucus leaves with fewer reasons to defect this month.
 @snap
 title: Force self-dissolution and open a snap election
 subtitle: Immediate election campaign; government polling takes a hit and the radical right gets a boost.
+choose-if: left_in_government = 1
+unavailable-subtitle: Only a sitting governing caucus can trigger this route.
 on-arrival: {! 
-Q.snap_election_requested = 0;
+Q.snap_election_requested = 1;
 Q.snap_election_request_time = Number(Q.time) || 0;
 Q.snap_election_request_year = Number(Q.year) || 0;
 Q.snap_election_request_month = Number(Q.month) || 0;
 Q.snap_election_reason = "Coalition-affairs snap election";
 Q.snap_election_trigger = "Coalition-affairs self-dissolution vote";
+Q.snap_event_deferred_time = -1;
 Q.snap_self_dissolution_support = 307;
-Q.position = "Snap-election campaign";
-Q.coalition_status = "Self-dissolution after coalition affairs showdown";
 Q.early_election_risk = 100;
 Q.public_trust -= 3;
 Q.left_poll -= 1.0;
@@ -62,3 +64,16 @@ Q.far_right_agenda += 5;
 Q.news_headline = "Coalition affairs ends in self-dissolution and a snap-election campaign";
 !}
 go-to: poland_events_2026.snap_campaign_launch
+
+@stand_down
+title: Stand down and preserve the current line
+subtitle: Keep the coalition file open, but do not trigger a dissolution move this month.
+on-arrival: {!
+if (!Q.left_in_government && Number(Q.month_actions) > 0) {
+    // Stale hand safety: do not consume the turn if this governing card was
+    // opened after losing office.
+    Q.month_actions = Math.max(0, Number(Q.month_actions) - 1);
+}
+Q.news_headline = "Coalition affairs is postponed";
+!}
+go-to: poland_card_finish

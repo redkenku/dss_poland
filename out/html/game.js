@@ -1222,6 +1222,15 @@ window.disableGrayMode = function() {
       patron: 'pis-or-konf'
     },
     {
+      id: 'rownosc',
+      name: 'Równość',
+      mark: 'RÓWNOŚĆ',
+      accent: '#b0005a',
+      from: 202605,
+      patron: 'left-friendly',
+      requires: 'rownosc_media_active'
+    },
+    {
       id: 'tvp', name: 'TVP', mark: 'TVP', accent: '#18549a',
       from: 0, patron: 'government'
     },
@@ -2430,6 +2439,13 @@ window.disableGrayMode = function() {
 
   var pressRelationshipFrame = function(outlet, qualities) {
     var party = pressPatronParty(outlet, qualities);
+    if (party === 'left-friendly') {
+      return {
+        kicker: 'HARD-LEFT LINE',
+        label: 'HARD LEFT · FRIENDLY',
+        text: 'Równość treats Lewica’s media investment as proof that the Left is finally building power of its own.'
+      };
+    }
     if (party === 'neutral') {
       return {kicker: 'NEWS DESK', label: 'NEUTRAL', text: ''};
     }
@@ -2604,7 +2620,8 @@ window.disableGrayMode = function() {
     var turn = Number(qualities.time) || 0;
     var dateKey = year * 100 + month;
     var available = pressReviewOutlets.filter(function(outlet) {
-      return outlet.from <= dateKey;
+      return outlet.from <= dateKey &&
+        (!outlet.requires || qualities[outlet.requires]);
     });
     var count = Math.min(available.length, 2 + Math.abs(turn % 2));
     var start = Math.abs(turn * 2) % available.length;
@@ -2627,6 +2644,12 @@ window.disableGrayMode = function() {
       var outlet = available[(start + i) % available.length];
       var stories = pressReviewStories[dateKey] || {};
       var story = pressTVPStory(outlet, stories[outlet.id], qualities);
+      if (!story && outlet.id === 'rownosc') {
+        story = pressStory(
+          'The Left finally has a media network willing to fight for its own side',
+          'Równość praises the shared broadcaster for putting tenants, workers and organisers on air without asking liberal editors for permission.'
+        );
+      }
       var frame = pressRelationshipFrame(outlet, qualities);
       var article = document.createElement('article');
       article.className = 'press-card press-' + outlet.id;
