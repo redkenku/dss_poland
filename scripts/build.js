@@ -39,6 +39,19 @@ if (result.status !== 0) {
   process.exit(result.status === null ? 1 : result.status);
 }
 
+// The bundled DendryNexus template contains a few CSS declarations that are
+// harmless in browsers but reported as compile errors by VS Code's CSS
+// validator. Normalize the generated stylesheet so a fresh build remains
+// diagnostics-clean without modifying node_modules.
+const browserCss = path.join(projectRoot, 'out', 'html', 'game.css');
+if (fs.existsSync(browserCss)) {
+  const css = fs.readFileSync(browserCss, 'utf8')
+    .replace(/\n\.(?:b|save_button|delete_button|hand|pinned-cards|deck) \{\}\n/g, '\n')
+    .replace(/(float:\s*(?:left|right);\n)\s*display:\s*inline-block;\n/g, '$1')
+    .replace(/\bmarginRight\s*:/g, 'margin-right:');
+  fs.writeFileSync(browserCss, css);
+}
+
 if (legacyRadio.length) {
   fs.mkdirSync(legacyRadioDirectory, {recursive: true});
   legacyRadio.forEach(function(asset) {

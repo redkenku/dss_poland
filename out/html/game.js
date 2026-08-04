@@ -308,6 +308,35 @@ window.disableGrayMode = function() {
    */
   var partyDefinitions = [
     {
+      id: 'us-dem',
+      className: 'party-us-dem',
+      explanation: 'The Democratic Party is one of the two major political parties in the United States.',
+      aliases: [
+        ['Democratic Party', 'Democratic Party'],
+        ['Democrats', 'Democrats']
+      ]
+    },
+    {
+      id: 'us-gop',
+      className: 'party-us-gop',
+      explanation: 'The Republican Party, or GOP, is one of the two major political parties in the United States.',
+      aliases: [
+        ['Republican Party', 'Republican Party'],
+        ['Republicans', 'Republicans'],
+        ['GOP', 'GOP']
+      ]
+    },
+    {
+      id: 'knp',
+      className: 'party-knp',
+      explanation: 'Congress of the New Right (KNP) is a historically significant Polish libertarian and national-conservative party associated with Janusz Korwin-Mikke and Stanisław Żółtek.',
+      aliases: [
+        ['Congress of the New Right', 'Kongres Nowej Prawicy'],
+        ['Kongres Nowej Prawicy', 'Kongres Nowej Prawicy'],
+        ['KNP', 'KNP']
+      ]
+    },
+    {
       id: 'nowa-solidarnosc',
       className: 'party-nowa-solidarnosc',
       explanation: 'New Solidarity — the short-lived patriotic-left challenger launched in June 2023.',
@@ -407,7 +436,10 @@ window.disableGrayMode = function() {
       explanation: 'Młoda Lewica (Young Left) — a possible progressive splinter in the scenario.',
       aliases: [
         ['Young Left', 'Młoda Lewica'],
-        ['Młoda Lewica', 'Młoda Lewica']
+        ['Młoda Lewica', 'Młoda Lewica'],
+        ['Younger progressives', 'Younger progressives'],
+        ['Younger progressive', 'Younger progressives'],
+        ['Young progressives', 'Young progressives']
       ]
     },
     {
@@ -710,6 +742,16 @@ window.disableGrayMode = function() {
       aliases: ['KPO', 'National Recovery Plan']
     },
     {
+      id: 'pip',
+      explanation: 'PIP (Państwowa Inspekcja Pracy) is Poland\'s state labour-inspection authority. It checks compliance with labour law, occupational safety, employment documentation and related worker protections, and can issue orders, fines and other enforcement measures within its legal powers.',
+      aliases: [
+        'PIP',
+        'Państwowa Inspekcja Pracy',
+        'State Labour Inspection',
+        'State Labour Inspectorate'
+      ]
+    },
+    {
       id: 'zelensky',
       explanation: 'Volodymyr Zelensky is the president of Ukraine during Russia\'s full-scale invasion and a central wartime diplomatic figure.',
       aliases: ['Zelensky', 'Zelenskyy', 'Volodymyr Zelensky', 'Volodymyr Zelenskyy']
@@ -749,6 +791,46 @@ window.disableGrayMode = function() {
       aliases: ['Independence Day']
     },
     {
+      id: 'independence_march_association',
+      explanation: 'The Independence March Association is the nationalist organising body behind Warsaw\'s annual 11 November Independence March and its route, stage and public-facing coalition of organisers.',
+      aliases: ['Independence March Association']
+    },
+    {
+      id: 'daszynski',
+      explanation: 'Ignacy Daszyński was a Polish socialist leader, co-founder of the Polish Socialist Party and the first prime minister of independent Poland in November 1918.',
+      aliases: ['Ignacy Daszyński', 'Ignacy Daszynski', 'Daszyński', 'Daszynski']
+    },
+    {
+      id: 'jakubiak',
+      explanation: 'Marek Jakubiak is a Polish entrepreneur and former MP who combines a business background with national-conservative politics.',
+      aliases: ['Marek Jakubiak', 'Jakubiak']
+    },
+    {
+      id: 'tanajno',
+      explanation: 'Paweł Tanajno is an independent Polish entrepreneur and anti-establishment activist who has run for national office outside the main parties.',
+      aliases: ['Paweł Tanajno', 'Pawel Tanajno', 'Tanajno']
+    },
+    {
+      id: 'witkowski',
+      explanation: 'Waldemar Witkowski is a Polish labour politician and housing-cooperative manager who leads the historic Labour Union (Unia Pracy) tradition.',
+      aliases: ['Waldemar Witkowski', 'Witkowski']
+    },
+    {
+      id: 'piotrowski',
+      explanation: 'Mirosław Piotrowski is a Polish academic and former MEP associated with the Movement of True Europe and socially conservative politics.',
+      aliases: ['Mirosław Piotrowski', 'Miroslaw Piotrowski', 'Piotrowski']
+    },
+    {
+      id: 'federation_for_the_republic',
+      explanation: 'Federation for the Republic is the national-conservative political organisation associated with Marek Jakubiak and his presidential candidacy.',
+      aliases: ['Federation for the Republic', 'Federacja dla Rzeczypospolitej']
+    },
+    {
+      id: 'movement_of_true_europe',
+      explanation: 'The Movement of True Europe is a socially conservative political formation associated with academic and former MEP Mirosław Piotrowski.',
+      aliases: ['Movement of True Europe', 'Ruch Prawdziwa Europa']
+    },
+    {
       id: 'gutowski',
       explanation: 'Marcin Gutowski is a Polish investigative journalist associated with major public-interest reporting projects.',
       aliases: ['Marcin Gutowski', 'Gutowski']
@@ -777,6 +859,18 @@ window.disableGrayMode = function() {
       className: 'party-pis',
       explanation: 'Andrzej Duda is the Polish president elected in 2015 and re-elected in 2020 with support from PiS.',
       aliases: ['Andrzej Duda', 'Duda']
+    },
+    {
+      id: 'nawrocki',
+      className: 'party-pis',
+      explanation: 'Karol Nawrocki is a PiS-backed Polish politician and historian who led the 2025 presidential campaign on a civic committee ticket.',
+      aliases: ['Karol Nawrocki', 'Nawrocki']
+    },
+    {
+      id: 'bielan',
+      className: 'party-pis',
+      explanation: 'Adam Bielan is a Polish PiS politician and European Parliament member associated with the party’s organisational and campaign apparatus.',
+      aliases: ['Adam Bielan', 'Bielan']
     },
     {
       id: 'kaczynski',
@@ -1156,6 +1250,18 @@ window.disableGrayMode = function() {
       ]
     },
     {
+      id: 'zoltek',
+      className: 'party-knp',
+      explanation: 'Stanisław Żółtek is a Polish libertarian-right politician associated with the Congress of the New Right and a small anti-establishment presidential campaign.',
+      aliases: ['Stanisław Żółtek', 'Stanislaw Zoltek', 'Żółtek', 'Zoltek']
+    },
+    {
+      id: 'witkowski',
+      className: 'party-unia-pracy',
+      explanation: 'Waldemar Witkowski is a Polish labour politician and housing-cooperative manager who leads the historic Labour Union (Unia Pracy) tradition.',
+      aliases: ['Waldemar Witkowski', 'Witkowski']
+    },
+    {
       id: 'biden',
       className: 'party-us-dem',
       explanation: 'Joe Biden served as the 46th president of the United States and is identified with the Democratic Party.',
@@ -1327,6 +1433,7 @@ window.disableGrayMode = function() {
     'wiosna': true,
     'razem': true,
     'pps': true,
+    'unia-pracy': true,
     'left-labor': true,
     'young-left': true,
     'tak-dla-rozwoju': true,
@@ -1347,7 +1454,10 @@ window.disableGrayMode = function() {
     'sovereign-poland': true,
     'solidary-poland': true,
     'rozwoj-plus': true,
-    'partia-zero': true
+    'partia-zero': true,
+    'us-dem': true,
+    'us-gop': true,
+    'knp': true
   };
 
   var partyMarkup = function(alias) {
@@ -3732,6 +3842,188 @@ window.disableGrayMode = function() {
       var content = document.getElementById('content');
       window.enhancePartyElements(content);
       if (content) {
+        var engine = window.dendryUI && window.dendryUI.dendryEngine;
+        var state = engine && engine.state;
+        var candidateImages = {
+          'Robert Biedroń': 'img/poland/cards/advisor-biedron.webp',
+          'Adrian Zandberg': 'img/poland/cards/advisor-zandberg.webp',
+          'Agnieszka Dziemianowicz-Bąk': 'img/poland/cards/advisor-dziemianowicz-bak.webp',
+          'Anna-Maria Żukowska': 'img/poland/cards/advisor-zukowska.webp',
+          'Katarzyna Kotula': 'img/poland/cards/advisor-kotula.webp',
+          'Magdalena Biejat': 'img/poland/cards/advisor-biejat.webp'
+        };
+        var currentSceneId = state && state.sceneId;
+        var isLeftCandidatePage = currentSceneId &&
+          currentSceneId.indexOf('poland_presidential_election.candidate_left') !== -1;
+        if (isLeftCandidatePage) {
+          var candidateName = state.qualities &&
+            state.qualities.presidential_candidate;
+          if (!candidateName) {
+            var knownCandidates = Object.keys(candidateImages);
+            var pageText = content.textContent;
+            for (var nameIndex = 0; nameIndex < knownCandidates.length;
+              nameIndex++) {
+              if (pageText.indexOf(knownCandidates[nameIndex]) !== -1) {
+                candidateName = knownCandidates[nameIndex];
+                break;
+              }
+            }
+          }
+          var candidateImage = candidateImages[candidateName];
+          if (candidateImage) {
+            var candidateFigure = content.querySelector(
+              '[data-candidate-figure="left"]'
+            );
+            var candidateFace;
+            if (!candidateFigure) {
+              candidateFigure = document.createElement('div');
+              candidateFigure.className = 'face-figure';
+              candidateFigure.setAttribute('data-candidate-figure', 'left');
+              candidateFace = document.createElement('img');
+              candidateFace.className = 'face-img';
+              candidateFigure.appendChild(candidateFace);
+              var candidateHeading = null;
+              var candidateParagraphs = content.querySelectorAll('p');
+              for (var paragraphIndex = candidateParagraphs.length - 1;
+                paragraphIndex >= 0; paragraphIndex--) {
+                var paragraphText = candidateParagraphs[paragraphIndex]
+                  .textContent.trim();
+                if (/lewica.?s nominee/i.test(paragraphText)) {
+                  candidateHeading = candidateParagraphs[paragraphIndex];
+                  break;
+                }
+              }
+              if (candidateHeading && candidateHeading.parentNode) {
+                candidateHeading.parentNode.insertBefore(
+                  candidateFigure,
+                  candidateHeading
+                );
+              } else {
+                content.appendChild(candidateFigure);
+              }
+            } else {
+              candidateFace = candidateFigure.querySelector('.face-img');
+            }
+            if (candidateFace) {
+              candidateFace.src = candidateImage;
+              candidateFace.setAttribute('data-candidate-image', 'true');
+            }
+            var candidateStrong = null;
+            var candidateStrongElements = content.querySelectorAll('b, strong');
+            for (var strongIndex = candidateStrongElements.length - 1;
+              strongIndex >= 0; strongIndex--) {
+              if (/lewica.?s nominee/i.test(
+                candidateStrongElements[strongIndex].textContent.trim()
+              )) {
+                candidateStrong = candidateStrongElements[strongIndex];
+                break;
+              }
+            }
+            if (candidateStrong && candidateStrong.nextSibling &&
+              candidateStrong.nextSibling.nodeType === 1 &&
+              candidateStrong.nextSibling.classList.contains('candidate-break')) {
+              candidateStrong.nextSibling.setAttribute(
+                'data-candidate-break', 'true'
+              );
+            } else if (candidateStrong) {
+              var candidateBreak = document.createElement('div');
+              candidateBreak.className = 'candidate-break';
+              candidateBreak.setAttribute('data-candidate-break', 'true');
+              candidateStrong.parentNode.insertBefore(
+                candidateBreak,
+                candidateStrong.nextSibling
+              );
+            } else {
+              var candidateHeadings = content.querySelectorAll('h1, h2, p');
+              for (var headingIndex = candidateHeadings.length - 1;
+                headingIndex >= 0; headingIndex--) {
+                if (/lewica.?s nominee/i.test(
+                  candidateHeadings[headingIndex].textContent.trim()
+                )) {
+                  var headingBreak = document.createElement('div');
+                  headingBreak.className = 'candidate-break';
+                  headingBreak.setAttribute(
+                    'data-candidate-break', 'true'
+                  );
+                  candidateHeadings[headingIndex].appendChild(headingBreak);
+                  break;
+                }
+              }
+            }
+          }
+        }
+        var candidatePageNames = [
+          'Andrzej Duda',
+          'Rafał Trzaskowski',
+          'Szymon Hołownia',
+          'Krzysztof Bosak',
+          'Władysław Kosiniak-Kamysz'
+        ];
+        var isMajorCandidatePage = currentSceneId &&
+          /poland_presidential_election\.candidate_(duda|trzaskowski|holownia|bosak|kosiniak)/
+            .test(currentSceneId);
+        if (isMajorCandidatePage) {
+          var candidateIntro = null;
+          var candidateBoldElements = content.querySelectorAll('b, strong');
+          for (var candidateBoldIndex = candidateBoldElements.length - 1;
+            candidateBoldIndex >= 0; candidateBoldIndex--) {
+            var candidateBoldText = candidateBoldElements[candidateBoldIndex]
+              .textContent.trim();
+            for (var candidateNameIndex = 0;
+              candidateNameIndex < candidatePageNames.length;
+              candidateNameIndex++) {
+              if (candidateBoldText.indexOf(candidatePageNames[candidateNameIndex]) === 0) {
+                candidateIntro = candidateBoldElements[candidateBoldIndex];
+                break;
+              }
+            }
+            if (candidateIntro) {
+              break;
+            }
+          }
+          if (candidateIntro) {
+            candidateIntro.style.display = 'block';
+            var candidateSeparator = candidateIntro.nextSibling;
+            if (!candidateSeparator || candidateSeparator.nodeType !== 1 ||
+              !candidateSeparator.classList.contains('candidate-break')) {
+              candidateSeparator = document.createElement('div');
+              candidateSeparator.className = 'candidate-break';
+              candidateSeparator.setAttribute('data-candidate-break', 'true');
+              candidateIntro.parentNode.insertBefore(
+                candidateSeparator,
+                candidateIntro.nextSibling
+              );
+            }
+          }
+        }
+        var nomineeHeading = null;
+        var nomineeElements = content.querySelectorAll('b, strong');
+        for (var nomineeIndex = nomineeElements.length - 1;
+          nomineeIndex >= 0; nomineeIndex--) {
+          if (/lewica.?s nominee/i.test(
+            nomineeElements[nomineeIndex].textContent.trim()
+          )) {
+            nomineeHeading = nomineeElements[nomineeIndex];
+            break;
+          }
+        }
+        if (nomineeHeading) {
+          nomineeHeading.style.display = 'block';
+          nomineeHeading.setAttribute('data-candidate-heading', 'true');
+          var nomineeBreak = nomineeHeading.nextSibling;
+          if (!nomineeBreak || nomineeBreak.nodeType !== 1 ||
+            !nomineeBreak.classList.contains('candidate-break')) {
+            nomineeBreak = document.createElement('div');
+            nomineeBreak.className = 'candidate-break';
+            nomineeBreak.setAttribute('data-candidate-break', 'true');
+            nomineeHeading.parentNode.insertBefore(
+              nomineeBreak,
+              nomineeHeading.nextSibling
+            );
+          } else {
+            nomineeBreak.setAttribute('data-candidate-break', 'true');
+          }
+        }
         var heading = content.querySelector('h1, h2');
         var sceneImages = content.querySelectorAll('.face-img:not([alt])');
         for (var imageIndex = 0; imageIndex < sceneImages.length; imageIndex++) {

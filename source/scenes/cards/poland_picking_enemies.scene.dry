@@ -5,7 +5,100 @@ is-card: true
 tags: poland_party_card
 frequency: 200
 view-if: month_actions < max_month_actions and poland_picking_enemies_timer <= 0
-on-arrival: month_actions += 1; poland_picking_enemies_timer = 18
+on-arrival: {!
+const active = function(value) {
+	return !!value;
+};
+const joinNames = function(names, fallback) {
+	if (!names.length) return fallback;
+	if (names.length == 1) return names[0];
+	if (names.length == 2) return names[0] + " and " + names[1];
+	return names.slice(0, -1).join(", ") + ", and " + names[names.length - 1];
+};
+const recordName = function(id, fallback) {
+	const record = (Q.rival_group_records || []).find(function(candidate) {
+		return candidate.id == id;
+	});
+	return record && record.name ? record.name : fallback;
+};
+
+const antiDemocratic = [];
+if (active(Q.pis_seats) || active(Q.pis_poll)) antiDemocratic.push("PiS");
+if (active(Q.konf_seats) || active(Q.konf_poll)) antiDemocratic.push("Konfederacja");
+if (active(Q.p0_formed) || active(Q.p0_seats) || active(Q.p0_poll)) {
+	antiDemocratic.push(Q.p0_name || "Partia Zero");
+}
+if (active(Q.far_right_split) || active(Q.korona_seats) || active(Q.korona_poll)) {
+	antiDemocratic.push("Korona");
+}
+if (active(Q.suwerenna_walkout) || String(Q.suwerenna_merger_result || "") == "Merger refused") {
+	antiDemocratic.push("Suwerenna Polska");
+}
+Q.inter_enemy_anti_democratic_targets = joinNames(antiDemocratic, "the anti-democratic right");
+
+const radicalRight = [];
+if (active(Q.konf_seats) || active(Q.konf_poll)) radicalRight.push("Konfederacja");
+if (active(Q.p0_formed) || active(Q.p0_seats) || active(Q.p0_poll)) {
+	radicalRight.push(Q.p0_name || "Partia Zero");
+}
+if (active(Q.far_right_split) || active(Q.korona_seats) || active(Q.korona_poll)) {
+	radicalRight.push("Korona");
+}
+if (active(Q.suwerenna_walkout) || String(Q.suwerenna_merger_result || "") == "Merger refused") {
+	radicalRight.push("Suwerenna Polska");
+}
+Q.inter_enemy_radical_right_targets = joinNames(radicalRight, "the radical right");
+
+const capitalistCentre = [];
+if (active(Q.ko_seats) || active(Q.ko_poll)) capitalistCentre.push("KO");
+if (active(Q.ko_splinter_active)) {
+	capitalistCentre.push((Q.ko_splinter_type || "Independent") + " KO splinter");
+}
+const greens = (Q.rival_group_records || []).find(function(record) {
+	return record.id == "greens";
+});
+if (greens && active(greens.active) && !active(Q.greens_joined_left)) {
+	capitalistCentre.push(greens.name || "Zieloni");
+}
+const thirdWayJoint = active(Q.p2050_emerged) &&
+	(active(Q.third_way_active) || active(Q.third_way_2023_done)) &&
+	!active(Q.third_way_split) && Q.sejm_list_outcome != "third_host_5";
+if (thirdWayJoint) {
+	capitalistCentre.push("Trzecia Droga");
+} else {
+	if (active(Q.psl_seats) || active(Q.psl_poll)) capitalistCentre.push("PSL");
+	if (!active(Q.p2050_joined_left) && (active(Q.p2050_seats) || active(Q.p2050_poll) || active(Q.p2050_emerged))) {
+		capitalistCentre.push("Polska 2050");
+	}
+}
+if (active(Q.unia_centrum_formed) || active(Q.centrum_seats) || active(Q.centrum_poll)) {
+	capitalistCentre.push("Centrum");
+}
+if (active(Q.porozumienie_active)) capitalistCentre.push("Porozumienie");
+Q.inter_enemy_capitalist_targets = joinNames(capitalistCentre, "the capitalist centre");
+
+const leftBreakaways = [];
+const breakawayFields = [
+	["barons_party_formed", "barons_party_name", "the barons' breakaway"],
+	["social_patriot_party_formed", "social_patriot_party_name", "Lewica Patriotyczna"],
+	["spring_party_formed", "spring_party_name", "Spring"],
+	["labor_party_formed", "labor_party_name", "Labour Left"],
+	["progressives_party_formed", "progressives_party_name", "Young Left"],
+	["razem_party_formed", "razem_party_name", "Razem"],
+	["pps_party_formed", "pps_party_name", "PPS"],
+	["tak_dla_rozwoju_party_formed", "tak_dla_rozwoju_party_name", "Tak dla Rozwoju"]
+];
+for (const field of breakawayFields) {
+	if (active(Q[field[0]])) leftBreakaways.push(Q[field[1]] || field[2]);
+}
+Q.inter_enemy_left_breakaway_targets = joinNames(leftBreakaways, "the active Left breakaways");
+
+Q.inter_enemy_pis_targets = active(Q.pis_seats) || active(Q.pis_poll)
+	? "PiS"
+	: "the PiS apparatus";
+month_actions += 1;
+poland_picking_enemies_timer = 18;
+!}
 max-visits: 3
 card-image: img/poland/cards/hostile-interview.webp
 
@@ -27,8 +120,8 @@ voters bear the campaign's pressure. ?]
 - @no_fixed_enemy
 
 @anti_democratic
-title: The anti-democratic right in PiS and Konfederacja
-subtitle: A constitutional front improves liberal relations but closes channels to the whole right.
+title: Make [+ inter_enemy_anti_democratic_targets +] the constitutional enemy
+subtitle: A front against [+ inter_enemy_anti_democratic_targets +] improves liberal relations but closes channels to every named right-wing organisation.
 view-if: pis_seats > 0 or pis_poll > 0 or konf_seats > 0 or konf_poll > 0 or p0_formed = 1 or p0_seats > 0 or p0_poll > 0 or far_right_split = 1 or korona_seats > 0 or korona_poll > 0
 on-arrival: {!
 Q.poland_enemy_focus = "the anti-democratic right";
@@ -57,16 +150,16 @@ Q.news_headline =
 	"Lewica names the anti-democratic right as its principal enemy";
 !}
 
-The line joins institutional defence to opposition coordination. It also lets
-every PiS current claim that Lewica refuses to distinguish welfare policy from
-constitutional capture.
+The line joins institutional defence to opposition coordination against
+[+ inter_enemy_anti_democratic_targets +]. It also lets every PiS current claim
+that Lewica refuses to distinguish welfare policy from constitutional capture.
 
 - #poland_card_finish
 
 
 @far_right
-title: The active radical-right network around Konfederacja and its splinters
-subtitle: Concentrate fire beyond PiS; progressive organisers approve and PiS hostility eases slightly.
+title: Concentrate fire on [+ inter_enemy_radical_right_targets +]
+subtitle: Attack [+ inter_enemy_radical_right_targets +] beyond PiS; progressive organisers approve and PiS hostility eases slightly.
 view-if: konf_seats > 0 or konf_poll > 0 or p0_formed = 1 or p0_seats > 0 or p0_poll > 0 or far_right_split = 1 or korona_seats > 0 or korona_poll > 0
 on-arrival: {!
 Q.poland_enemy_focus = "the radical right";
@@ -92,27 +185,29 @@ Q.young_support += 1;
 Q.news_headline = "Lewica concentrates its campaign on the radical right";
 !}
 
-The distinction contests Konfederacja's anti-system electorate without
-pretending that PiS is democratic on every institutional question.
+The distinction contests the anti-system electorate of
+[+ inter_enemy_radical_right_targets +] without pretending that PiS is
+democratic on every institutional question.
 
 - #poland_card_finish
 
 
 @pis
-title: PiS alone—the governing apparatus and its whole record
-subtitle: Opposition relations improve; PiS closes ranks and negotiations become more hostile.
+title: Make [+ inter_enemy_pis_targets +] answer for the governing record
+subtitle: Opposition relations improve; [+ inter_enemy_pis_targets +] closes ranks and negotiations become more hostile.
 view-if: pis_seats > 0 or pis_poll > 0
 on-arrival: poland_enemy_focus = "PiS"; pis_relation -= 12; ko_relation += 3; p2050_relation += 2; psl_relation += 1; government_negotiation_hostility += 6 if government_party = "pis"; united_right_cohesion += 3; progressive_credibility += 2; party_unity += 2; news_headline = "Lewica makes the PiS governing record its single campaign target"
 
-The message is simple enough to repeat everywhere. It gives PiS solidarists no
-reason to break publicly with their market and culture-war allies.
+The message is simple enough to repeat everywhere. It makes [+ inter_enemy_pis_targets +]
+answer for the whole record and gives PiS solidarists no reason to break publicly
+with their market and culture-war allies.
 
 - #poland_card_finish
 
 
 @konf
-title: Konfederacja and active hard-right breakaways
-subtitle: Compete for workers and younger voters; PiS relations improve at a cost to anti-PiS unity.
+title: Name [+ inter_enemy_radical_right_targets +] as the anti-social right
+subtitle: Compete for workers and younger voters against [+ inter_enemy_radical_right_targets +]; PiS relations improve at a cost to anti-PiS unity.
 view-if: konf_seats > 0 or konf_poll > 0 or p0_formed = 1 or p0_seats > 0 or p0_poll > 0 or far_right_split = 1 or korona_seats > 0 or korona_poll > 0
 on-arrival: {!
 Q.poland_enemy_focus = "Konfederacja";
@@ -137,15 +232,15 @@ Q.news_headline = "Lewica identifies Konfederacja as the anti-social right";
 !}
 
 The campaign contests taxes, labour rights, housing and privatisation rather
-than competing on Konfederacja's culture-war terrain. Liberal allies suspect a
-deliberate opening toward PiS voters.
+than competing on [+ inter_enemy_radical_right_targets +]'s culture-war
+terrain. Liberal allies suspect a deliberate opening toward PiS voters.
 
 - #poland_card_finish
 
 
 @capitalist
-title: The active capitalist centre
-subtitle: Relations with the liberal centre fall; PiS solidarists find more room to answer from the social side.
+title: Make [+ inter_enemy_capitalist_targets +] the capitalist centre
+subtitle: Relations with [+ inter_enemy_capitalist_targets +] fall; PiS solidarists find more room to answer from the social side.
 view-if: ko_seats > 0 or ko_poll > 0 or p2050_seats > 0 or p2050_poll > 0 or p2050_emerged = 1 or psl_seats > 0 or psl_poll > 0 or unia_centrum_formed = 1 or centrum_seats > 0 or centrum_poll > 0
 on-arrival: {!
 Q.poland_enemy_focus = "the capitalist parties";
@@ -187,16 +282,17 @@ Q.barons_dissent += 4;
 Q.news_headline = "Lewica turns its campaign against the capitalist centre";
 !}
 
-The sharper class line pleases the socialist left and damages the relationships
-most likely to produce a liberal-led cabinet. PiS can now compete by defending
-its own social transfers instead of answering only from the right.
+The sharper class line targets [+ inter_enemy_capitalist_targets +], pleasing
+the socialist left and damaging the relationships most likely to produce a
+liberal-led cabinet. PiS can now compete by defending its own social transfers
+instead of answering only from the right.
 
 - #poland_card_finish
 
 
 @left_breakaways
-title: Left breakaways that now contest the same electorate
-subtitle: Treat breakaway parties as direct competitors; some core voters welcome clarity while reunification channels collapse.
+title: Treat [+ inter_enemy_left_breakaway_targets +] as direct competitors
+subtitle: Put [+ inter_enemy_left_breakaway_targets +] on the other side of the campaign; some core voters welcome clarity while reunification channels collapse.
 view-if: barons_party_formed = 1 or social_patriot_party_formed = 1 or spring_party_formed = 1 or labor_party_formed = 1 or progressives_party_formed = 1 or razem_party_formed = 1 or pps_party_formed = 1 or tak_dla_rozwoju_party_formed = 1
 on-arrival: {!
 Q.poland_enemy_focus = "Left breakaways";
@@ -218,8 +314,9 @@ Q.news_headline =
 	"Lewica frames breakaway Left parties as direct electoral rivals";
 !}
 
-This can simplify message discipline inside the rump, but it burns most routes
-back to coordinated lists before threshold arithmetic has been resolved.
+This can simplify message discipline inside the rump by naming
+[+ inter_enemy_left_breakaway_targets +], but it burns most routes back to
+coordinated lists before threshold arithmetic has been resolved.
 
 - #poland_card_finish
 

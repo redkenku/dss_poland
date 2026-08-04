@@ -325,11 +325,19 @@ if (Q.started) {
         porozumienie_seats: 0,
         porozumienie_active: 1,
         porozumienie_exit_done: 0,
+        porozumienie_threshold_resolved: 0,
+        porozumienie_poll: 0,
+        porozumienie_vote_intent: 0,
+        porozumienie_projected_seats: 0,
         suwerenna_merge_support: 48,
         suwerenna_merge_dissent: 24,
         suwerenna_renamed: 0,
         suwerenna_merged: 0,
         suwerenna_individual_joiners: 0,
+        suwerenna_walkout: 0,
+        suwerenna_poll: 0,
+        suwerenna_vote_intent: 0,
+        suwerenna_projected_seats: 0,
         ko_merger_stage: 0,
         ko_merger_integration: 48,
         ko_merger_federalism: 34,
@@ -355,6 +363,9 @@ if (Q.started) {
         rozwoj_club_formed: 0,
         rozwoj_party_formed: 0,
         rozwoj_chain_stage: 0,
+        rozwoj_split_blocked: 0,
+        rozwoj_early_route: 0,
+        rozwoj_internal_pis: 0,
         left_realign_formed: 0,
         left_realign_invite_p2050: 0,
         left_realign_invite_greens: 0,
@@ -381,6 +392,17 @@ if (Q.started) {
             Q[key] = rivalNumericDefaults[key];
         }
     }
+    const pisIdeology = String(Q.pis_ideology || "").toLowerCase();
+    const rightWingPiS = pisIdeology.indexOf("right-wing") >= 0 ||
+        Number(Q.pis_solidarist_share) < 45;
+    Q.rozwoj_split_blocked =
+        Q.prime_minister == "Mateusz Morawiecki" ||
+        Q.prime_minister == "Beata Szydło" ||
+        (Q.government_party == "pis" && Q.left_in_government) ? 1 : 0;
+    Q.rozwoj_early_route =
+        (!Q.suwerenna_walkout && !Q.suwerenna_merged &&
+            String(Q.suwerenna_merger_result || "") != "Merger refused") ||
+        rightWingPiS ? 1 : 0;
     if (typeof Q.suwerenna_merger_result != "string") {
         Q.suwerenna_merger_result = "No merger talks yet";
     }
@@ -583,6 +605,17 @@ if (Q.started) {
     }
     const solidarnaRecord = rivalGroup("solidarna");
     if (Q.suwerenna_renamed) solidarnaRecord.name = "Suwerenna Polska";
+    if (Q.suwerenna_walkout) {
+        solidarnaRecord.active = 1;
+        solidarnaRecord.allied = 0;
+        solidarnaRecord.legal_status = "independent party after walkout";
+        solidarnaRecord.exclusive_seats = Math.max(
+            0,
+            Math.round(Number(Q.suwerenna_seats) || 0)
+        );
+        solidarnaRecord.sejm_mps = solidarnaRecord.exclusive_seats;
+        solidarnaRecord.mp_count = solidarnaRecord.exclusive_seats;
+    }
     if (Q.suwerenna_merged) {
         solidarnaRecord.active = 0;
         solidarnaRecord.allied = 1;
@@ -610,6 +643,15 @@ if (Q.started) {
         rozwojRecord.kind = "current";
         rozwojRecord.parent = Q.left_realign_name || "Nowa Solidarność";
         rozwojRecord.legal_status = "internal developmental current";
+        rozwojRecord.exclusive_seats = 0;
+    }
+    if (Q.rozwoj_internal_pis && !Q.rozwoj_party_formed &&
+        !Q.rozwoj_joined_left) {
+        rozwojRecord.bloc = "pis";
+        rozwojRecord.kind = "current";
+        rozwojRecord.parent = "Prawo i Sprawiedliwość";
+        rozwojRecord.allied = 1;
+        rozwojRecord.legal_status = "internal PiS sub-party/current";
         rozwojRecord.exclusive_seats = 0;
     }
     rozwojRecord.mp_count = Math.max(
@@ -1061,10 +1103,19 @@ if (Q.started) {
                     : "Dual chairs"));
     }
     Q.razem_in_left_club = Q.razem_active ? 1 : 0;
+    Q.matysiak_caucus_actions = Math.max(
+        0,
+        Math.round(Number(Q.matysiak_caucus_actions) || 0)
+    );
     Q.razem_breakaway_protected =
         Q.razem_active &&
         Q.razem_in_left &&
         (
+            (
+                Q.matysiak_party == "Razem" &&
+                Q.matysiak_caucus_actions >= 4 &&
+                Number(Q.razem_right_score) >= 50
+            ) ||
             (Q.razem_merged && Q.merger_leader == "Razem") ||
             (
                 Number(Q.razem_cooperation) >= 60 &&
@@ -3726,4 +3777,9 @@ if (Q.started) {
     Q.left_coalition_dissent =
         clamp(Q.left_coalition_dissent, 0, 100);
 }
+    Q.third_way_display_name = !Q.p2050_emerged
+        ? "PSL"
+        : ((Q.third_way_active || Q.third_way_2023_done) && !Q.third_way_split
+            ? "Trzecia Droga"
+            : "PSL and Poland 2050");
 !}

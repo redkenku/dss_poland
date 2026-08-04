@@ -5,7 +5,79 @@ is-card: true
 tags: poland_party_card
 frequency: 200
 view-if: month_actions < max_month_actions and poland_inter_party_relations_timer <= 0
-on-arrival: month_actions += 1; poland_inter_party_relations_timer = 6
+on-arrival: {!
+const active = function(value) {
+    return !!value;
+};
+const joinNames = function(names, fallback) {
+    if (!names.length) return fallback;
+    if (names.length == 1) return names[0];
+    if (names.length == 2) return names[0] + " and " + names[1];
+    return names.slice(0, -1).join(", ") + ", and " + names[names.length - 1];
+};
+
+const centristPartners = [];
+const thirdWayJoint = active(Q.p2050_emerged) &&
+    (active(Q.third_way_active) || active(Q.third_way_2023_done)) &&
+    !active(Q.third_way_split);
+if (thirdWayJoint) {
+    centristPartners.push("Trzecia Droga");
+} else {
+    if (active(Q.psl_seats) || active(Q.psl_poll)) centristPartners.push("PSL");
+    if (
+        !active(Q.p2050_joined_left) &&
+        (active(Q.p2050_seats) || active(Q.p2050_poll) || active(Q.p2050_emerged))
+    ) {
+        centristPartners.push("Polska 2050");
+    }
+}
+if (active(Q.unia_centrum_formed) || active(Q.centrum_seats) || active(Q.centrum_poll)) {
+    centristPartners.push("Centrum");
+}
+if (active(Q.porozumienie_exit_done) && active(Q.porozumienie_active)) {
+    centristPartners.push("Porozumienie");
+}
+if (
+    active(Q.rozwoj_party_formed) &&
+    !active(Q.rozwoj_internal_pis) &&
+    !active(Q.rozwoj_joined_left)
+) {
+    centristPartners.push("Rozwój+");
+}
+Q.inter_party_centrist_targets = joinNames(centristPartners, "the active centrist parties");
+
+const koSplitters = [];
+if (active(Q.ko_splinter_active)) {
+    koSplitters.push((Q.ko_splinter_type || "Independent") + " KO splinter");
+}
+const greens = (Q.rival_group_records || []).find(function(record) {
+    return record.id == "greens";
+});
+if (greens && active(greens.active) && !active(Q.greens_joined_left)) {
+    koSplitters.push(greens.name || "Zieloni");
+}
+Q.inter_party_ko_targets = joinNames(koSplitters, "no independent KO splinter");
+
+const radicalRight = [];
+if (active(Q.konf_seats) || active(Q.konf_poll)) radicalRight.push("Konfederacja");
+if (active(Q.far_right_split) || active(Q.korona_seats) || active(Q.korona_poll)) {
+    radicalRight.push("Korona");
+}
+if (
+    active(Q.suwerenna_walkout) ||
+    String(Q.suwerenna_merger_result || "") == "Merger refused"
+) {
+    radicalRight.push("Suwerenna Polska");
+}
+Q.inter_party_radical_right_targets = joinNames(radicalRight, "the active radical-right parties");
+Q.inter_party_pis_targets = active(Q.rozwoj_party_formed) &&
+    !active(Q.rozwoj_internal_pis) &&
+    !active(Q.rozwoj_joined_left)
+    ? "PiS's social-solidarist current and Rozwój+"
+    : "PiS's social-solidarist current";
+month_actions += 1;
+poland_inter_party_relations_timer = 6;
+!}
 card-image: img/poland/cards/coalition-council.webp
 
 = Inter-party relations
@@ -22,23 +94,23 @@ about the coalition it may prefer later.
 - @stand_alone
 
 @ko
-title: Strengthen the working relationship with KO
-subtitle: Cost: 1 resource. KO relation +8; socialist dissent rises.
+title: Strengthen the working relationship with KO; keep an eye on [+ inter_party_ko_targets +]
+subtitle: Cost: 1 resource. KO relation +8; socialist dissent rises while [+ inter_party_ko_targets +] remain outside the main channel.
 view-if: ko_seats > 0 or ko_poll > 0
 choose-if: resources >= 1
 unavailable-subtitle: A permanent parliamentary liaison requires one resource.
 on-arrival: resources -= 1; poland_inter_party_focus = "KO"; ko_relation += 8; p2050_relation += 1; constitutional_restraint += 2; judicial_legitimacy += 2; razem_dissent += 4; labor_dissent += 2; party_unity -= 1; news_headline = "Lewica and KO strengthen their permanent parliamentary channel"
 
-Procedure, courts and European policy provide quick common ground. Economic
-policy remains harder, while the socialist wing warns that coordination with
-the largest liberal party easily becomes dependence.
+Procedure, courts and European policy provide quick common ground with KO.
+[+ inter_party_ko_targets +] make the liberal camp less unified, so the socialist
+wing warns that coordination with the largest liberal party can become dependence.
 
 - #poland_card_finish
 
 
 @third_way
-title: Build a rural and state-capacity channel with active centrist partners
-subtitle: Cost: 1 resource. Strengthens relations with whichever of PSL, Poland 2050 and Centrum are active.
+title: Build a rural and state-capacity channel with [+ inter_party_centrist_targets +]
+subtitle: Cost: 1 resource. Strengthens relations with [+ inter_party_centrist_targets +].
 view-if: psl_seats > 0 or psl_poll > 0 or p2050_seats > 0 or p2050_poll > 0 or p2050_emerged = 1 or unia_centrum_formed = 1 or centrum_seats > 0 or centrum_poll > 0
 choose-if: resources >= 1
 unavailable-subtitle: Rural, local-government and parliamentary liaison requires one resource.
@@ -85,16 +157,16 @@ Q.news_headline = partners.length
     : "Lewica opens a centrist and rural liaison channel";
 !}
 
-The talks begin with clinics, transport, local finance and administrative
-capacity. Rights policy is not abandoned; it is also not permitted to lead the
-meeting.
+The talks with [+ inter_party_centrist_targets +] begin with clinics, transport,
+local finance and administrative capacity. Rights policy is not abandoned; it
+is also not permitted to lead the meeting.
 
 - #poland_card_finish
 
 
 @pis_solidarists
-title: Open a working channel to PiS's social-solidarist current
-subtitle: Cost: 1 resource. Bargaining capital +6, PiS relation +8 and hostility −10; the liberal opposition and PiS right object.
+title: Open a working channel to [+ inter_party_pis_targets +]
+subtitle: Cost: 1 resource. Bargaining capital +6 and PiS relation +8; Rozwój+ is also part of the political arithmetic when it is independent.
 view-if: pis_seats > 0 or pis_poll > 0
 choose-if: resources >= 1
 unavailable-subtitle: A serious social-policy channel requires one resource.
@@ -124,6 +196,7 @@ for (const id of ["solidarna", "pis_security", "pis_culture"]) {
     if (current) {
         current.cohesion -= 3;
         current.grievance_memory += 8;
+        if (id == "solidarna") Q.suwerenna_merge_dissent += 4;
     }
 }
 const welfare = (Q.rival_group_records || []).find(function(record) {
@@ -138,16 +211,16 @@ Q.news_headline =
 !}
 
 Pensions, wages, public services and state investment provide a real basis for
-conversation. KO, Poland 2050 and PSL see an attack on the capitalist centre.
-The PiS market, security and culture-war currents see the social wing acquire
-an outside partner and record their dissent.
+conversation with [+ inter_party_pis_targets +]. KO, Poland 2050 and PSL see an
+attack on the capitalist centre. The PiS market, security and culture-war
+currents see the social wing acquire an outside partner and record their dissent.
 
 - #poland_card_finish
 
 
 @konf
-title: Open a narrow anti-privatisation channel to the active radical-right family
-subtitle: Cost: 1 resource. Improves relations with active Konf-family parties; democratic and progressive relationships suffer.
+title: Open a narrow anti-privatisation channel to [+ inter_party_radical_right_targets +]
+subtitle: Cost: 1 resource. Improves relations with [+ inter_party_radical_right_targets +]; democratic and progressive relationships suffer.
 view-if: konf_seats > 0 or konf_poll > 0 or p0_formed = 1 or p0_seats > 0 or p0_poll > 0 or far_right_split = 1 or korona_seats > 0 or korona_poll > 0
 choose-if: resources >= 1
 unavailable-subtitle: Vetting a narrow parliamentary channel requires one resource.
@@ -181,8 +254,9 @@ Q.news_headline = channels.length
     : "A narrow anti-privatisation vote opens an argument across Lewica";
 !}
 
-One vote on public ownership does not erase the radical right's programme.
-Many inside Lewica regard even a bounded channel as normalisation.
+One vote on public ownership does not erase the programmes of
+[+ inter_party_radical_right_targets +]. Many inside Lewica regard even a
+bounded channel as normalisation.
 
 - #poland_card_finish
 

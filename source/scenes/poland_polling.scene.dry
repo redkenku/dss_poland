@@ -911,6 +911,8 @@ for (const id of partyIds) {
             budgetCrisisPenalty(id) + economyCorrection(id)
     );
 }
+corrected.suwerenna = 0;
+corrected.porozumienie = 0;
 
 // In crisis months, anti-system anger should lift Konfederacja by draining
 // support across the full party field, not only from the governing party.
@@ -1085,7 +1087,9 @@ const dynamicPartyIds = [
     "centrum",
     "rozwoj",
     "korona",
-    "ko_splinter"
+    "ko_splinter",
+    "suwerenna",
+    "porozumienie"
 ];
 const electionPartyIds = partyIds.concat(dynamicPartyIds);
 for (const id of dynamicPartyIds) corrected[id] = 0;
@@ -1197,7 +1201,7 @@ if (Q.unia_centrum_formed) {
         corrected.p2050 -= corrected.centrum;
     }
 }
-if (Q.rozwoj_party_formed && !Q.rozwoj_joined_left) {
+if (Q.rozwoj_party_formed && !Q.rozwoj_internal_pis && !Q.rozwoj_joined_left) {
     const pisSeatsNow = Math.max(1, finitePolling(Q.pis_seats, 194));
     const rozwojShare = clampPolling(
         finitePolling(Q.pis_morawiecki_camp, 38) /
@@ -1253,6 +1257,53 @@ if (Q.ko_splinter_active) {
     corrected.ko_splinter = corrected.ko * koSplinterShare;
     corrected.ko -= corrected.ko_splinter;
 }
+const suwerennaIndependent = !!Q.suwerenna_walkout ||
+    String(Q.suwerenna_merger_result || "") == "Merger refused";
+if (suwerennaIndependent) {
+    const suwerennaShare = clampPolling(
+        0.07 + Math.max(0, finitePolling(Q.suwerenna_merge_dissent, 24) - 34) * 0.002,
+        0.07,
+        0.16
+    );
+    corrected.suwerenna = corrected.pis * suwerennaShare;
+    corrected.pis -= corrected.suwerenna;
+}
+if (Q.porozumienie_exit_done && Q.porozumienie_active) {
+    const porozumienieShare = clampPolling(
+        0.045 + Math.max(0, finitePolling(Q.porozumienie_relation, 22) - 35) * 0.0015,
+        0.02,
+        0.08
+    );
+    corrected.porozumienie = corrected.pis * porozumienieShare;
+    corrected.pis -= corrected.porozumienie;
+    if (isFormationEra && finitePolling(Q.year, 0) == 2023 &&
+        !Q.porozumienie_threshold_resolved) {
+        const totalBeforeThreshold = Object.keys(corrected).reduce(
+            function(total, id) { return total + Math.max(0, corrected[id] || 0); },
+            0
+        );
+        const porozumieniePercent = corrected.porozumienie * 100 /
+            Math.max(1, totalBeforeThreshold);
+        Q.porozumienie_threshold_resolved = 1;
+        if (porozumieniePercent < 5) {
+            corrected.pis += corrected.porozumienie * 0.62;
+            corrected.konf += corrected.porozumienie * 0.38;
+            corrected.porozumienie = 0;
+            Q.porozumienie_active = 0;
+            Q.porozumienie_seats = 0;
+            const porozumienieRecord = (Q.rival_group_records || []).find(
+                function(record) { return record.id == "porozumienie"; }
+            );
+            if (porozumienieRecord) {
+                porozumienieRecord.active = 0;
+                porozumienieRecord.legal_status = "below-threshold electoral disappearance";
+                porozumienieRecord.exclusive_seats = 0;
+                porozumienieRecord.mp_count = 0;
+                porozumienieRecord.sejm_mps = 0;
+            }
+        }
+    }
+}
 
 let thirdWayJoint =
     !!Q.p2050_emerged &&
@@ -1264,11 +1315,13 @@ const activeSourceParty = function(id) {
     if (partyIds.includes(id)) return activeParty(id);
     if (id == "centrum") return !!Q.unia_centrum_formed;
     if (id == "rozwoj") {
-        return !!Q.rozwoj_party_formed && !Q.rozwoj_joined_left;
+        return !!Q.rozwoj_party_formed && !Q.rozwoj_internal_pis && !Q.rozwoj_joined_left;
     }
     if (id == "tak_rozwoj") return !!Q.tak_dla_rozwoju_party_formed;
     if (id == "korona") return !!Q.far_right_split;
     if (id == "ko_splinter") return !!Q.ko_splinter_active;
+    if (id == "suwerenna") return suwerennaIndependent;
+    if (id == "porozumienie") return !!Q.porozumienie_active;
     return activeLeftBreakaways.some(function(entry) {
         return entry.id == id;
     });
@@ -1337,8 +1390,10 @@ for (const id of electionPartyIds) {
 }
 const activeCommittees = [];
 for (const id of electionPartyIds) {
-    if (!activeSourceParty(id) || componentCorrected[id] <= 0) continue;
     const committee = committeeFor[id] || id;
+    if (!activeSourceParty(id) || Math.max(0, corrected[committee] || 0) <= 0) {
+        continue;
+    }
     if (!activeCommittees.includes(committee)) activeCommittees.push(committee);
 }
 const activeElectionParty = function(id) {
@@ -1354,7 +1409,9 @@ for (const id of electionPartyIds) {
         corrected[id] * 100 / Math.max(1, correctedTotal);
 }
 Q.third_way_joint_list = thirdWayJoint ? 1 : 0;
-if (!thirdWayJoint) Q.third_way_vote_intent = 0;
+Q.third_way_vote_intent = thirdWayJoint
+    ? corrected.third_way * 100 / Math.max(1, correctedTotal)
+    : 0;
 Q.third_way_threshold = thirdWayJoint ? 8 : 0;
 
 // The published poll is a seeded sample, not omniscience. Noise is applied to
@@ -1380,9 +1437,12 @@ for (const id of electionPartyIds) {
         sampled[id] * 1000 / Math.max(1, sampledTotal)
     ) / 10;
 }
+Q.third_way_poll = thirdWayJoint
+    ? Math.round(Q.third_way_vote_intent * 10) / 10
+    : 0;
 const roundedTotal = electionPartyIds.reduce(function(total, id) {
     return total + Q[id + "_poll"];
-}, 0);
+}, Q.third_way_poll);
 const roundingResidual = Math.round((100 - roundedTotal) * 10) / 10;
 let residualParty = "other";
 if (Q.other_poll + roundingResidual < 0) {
@@ -1418,6 +1478,8 @@ const thresholds = {
     rozwoj: 5,
     korona: 5,
     ko_splinter: 5,
+    suwerenna: 5,
+    porozumienie: 5,
     third_way: 8
 };
 if (Q.ko_consolidated || sejmListOutcome == "ko_5") thresholds.ko = 5;
@@ -1466,6 +1528,8 @@ const seatProjection = {
     rozwoj: 0,
     korona: 0,
     ko_splinter: 0,
+    suwerenna: 0,
+    porozumienie: 0,
     third_way: 0
 };
 for (let seat = 0; seat < 460; seat += 1) {

@@ -1398,7 +1398,7 @@ const successorParties = [
     },
     {
         id: "rozwoj",
-        active: !!Q.rozwoj_party_formed && !Q.rozwoj_joined_left,
+        active: !!Q.rozwoj_party_formed && !Q.rozwoj_internal_pis && !Q.rozwoj_joined_left,
         parent: "pis",
         seats: "rozwoj_seats",
         founding: "rozwoj_association_members",
@@ -1740,6 +1740,25 @@ const autonomousGroups = (Q.rival_group_records || []).filter(
         return record.active && autonomousGroupIds.includes(record.id);
     }
 );
+for (const independentId of ["solidarna", "porozumienie"]) {
+    const independent = autonomousGroups.find(function(record) {
+        return record.id == independentId &&
+            ((independentId == "solidarna" &&
+                (Q.suwerenna_walkout ||
+                    String(Q.suwerenna_merger_result || "") == "Merger refused")) ||
+                (independentId == "porozumienie" && Q.porozumienie_exit_done));
+    });
+    if (independent) {
+        independent.electoral_outside_option = "independent parliamentary party";
+        independent.organisation = Math.min(
+            100,
+            (Number(independent.organisation) || 0) + 1
+        );
+        Q.rival_group_month_action = independent.name +
+            " builds an independent parliamentary organisation";
+        headlines.push(Q.rival_group_month_action);
+    }
+}
 if (autonomousGroups.length) {
     const groupIndex = Math.abs(Number(Q.rival_ai_tick) || 0) %
         autonomousGroups.length;
@@ -2107,7 +2126,7 @@ if (
         Q.reform_pressure_actor = sponsor;
         Q.reform_pressure_actor_name = sponsor == "ko"
             ? "KO"
-            : "the Third Way";
+            : "the " + Q.third_way_display_name;
         Q.reform_pressure_issue = demandIssue;
         if (demandIssue == "judicial_reset") {
             Q.reform_pressure_intensity =

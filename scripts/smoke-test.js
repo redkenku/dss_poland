@@ -1332,7 +1332,8 @@ function testPartyPresentationAssets() {
     ['nowa-lewica', 'party-nowa-lewica', 'Nowa Lewica – Odnowa'],
   ].forEach(function(expected) {
     assert(
-      rendered.includes('class="party ' + expected[1] + '"') &&
+      (rendered.includes('class="party ' + expected[1] + '"') ||
+        rendered.includes('class="party party-name ' + expected[1] + '"')) &&
         rendered.includes('data-party="' + expected[0] + '"') &&
         rendered.includes('>' + expected[2] + '</span>'),
       'Party alias was not translated and colored: ' + expected[2]
@@ -2503,7 +2504,7 @@ function runSmoke(game) {
     engine.goToScene('poland_faction_congress');
     checkNumbers();
     assert.strictEqual(engine.state.sceneId, 'poland_faction_congress');
-    choose('poland_faction_congress.new_generation');
+    choose('poland_faction_congress.progressive_timetable');
     choose('poland_card_finish');
     assert.strictEqual(engine.state.sceneId, 'poland_events.candidate');
     assert.strictEqual(engine.state.qualities.primary_new_generation, 1);

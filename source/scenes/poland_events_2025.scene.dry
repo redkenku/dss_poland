@@ -5997,7 +5997,7 @@ liberal.
 @matysiak_leadership
 title: Replace Zandberg with Matysiak and make development the new dividing line
 subtitle: Requires a developed internal base and a less culture-led electorate.
-choose-if: matysiak_development_score >= 46 and cultural_issue_salience <= 50
+choose-if: matysiak_caucus_actions >= 4 or (matysiak_development_score >= 46 and cultural_issue_salience <= 50)
 unavailable-subtitle: Matysiak has a platform but not a majority inside Razem.
 on-arrival: {!
 Q.razem_leader = "Paulina Matysiak";
@@ -6025,7 +6025,7 @@ must decide whether the party they built still speaks for them.
 @matysiak_own_party
 title: Let Zandberg's original-left wing split as Akcja Socjalistyczna
 subtitle: Matysiak keeps Razem; the defeated original-left faction leaves under Zandberg.
-choose-if: matysiak_development_score >= 42
+choose-if: matysiak_caucus_actions >= 3 or matysiak_development_score >= 42
 unavailable-subtitle: Matysiak's camp is not strong enough to force a durable factional split.
 on-arrival: matysiak_exit_choice = "Akcja Socjalistyczna"; tak_dla_rozwoju_party_formed = 1
 go-to: matysiak_exit_result
@@ -6033,6 +6033,8 @@ go-to: matysiak_exit_result
 @matysiak_expulsion
 title: Enforce party discipline and expel Matysiak
 subtitle: Expulsion hardens her network into Tak! Dla Rozwoju under her own label.
+choose-if: matysiak_caucus_actions < 3
+unavailable-subtitle: Three Matysiak caucus actions have secured her leadership of Razem; the original-left faction leaves under Zandberg instead.
 on-arrival: matysiak_exit_choice = "Tak! Dla Rozwoju"; tak_dla_rozwoju_party_formed = 1
 go-to: matysiak_exit_result
 
@@ -6058,6 +6060,8 @@ Q.razem_dissent = Math.max(0, (Number(Q.razem_dissent) || 0) - 7);
 Q.razem_cohesion = Math.min(100, (Number(Q.razem_cohesion) || 0) + 6);
 Q.razem_cooperation = Math.min(100, (Number(Q.razem_cooperation) || 0) + 4);
 if (Q.matysiak_exit_choice == "Akcja Socjalistyczna") {
+    Q.zandberg_advisor = 0;
+    Q.advisor_reshuffle_removed_zandberg = 1;
     Q.tak_rozwoj_seats = (Number(Q.tak_rozwoj_seats) || 0) + movedSeat;
     Q.tak_rozwoj_party_name = "Akcja Socjalistyczna";
     Q.razem_leader = "Paulina Matysiak";
@@ -6440,18 +6444,48 @@ const leadershipCandidates = [
     {
         name: "Krzysztof Gawkowski",
         key: "gawkowski",
-        eligible: Q.progressives_active,
-        score: (Number(Q.progressives_strength) || 0) +
+        eligible: true,
+        score: Q.progressives_active
+            ? (Number(Q.progressives_strength) || 0) +
             (Number(Q.progressive_credibility) || 0) * 0.08 +
             (Number(Q.media_capacity) || 0) * 0.05 -
             (Number(Q.progressives_dissent) || 0) * 0.12
+            : 0
+    },
+    {
+        name: "Magdalena Biejat",
+        key: "biejat",
+        eligible: Q.razem_active && Q.razem_in_left,
+        score: (Number(Q.labor_strength) || 0) * 0.65 +
+            (Number(Q.workers_support) || 0) * 0.20 +
+            (Number(Q.local_network) || 0) * 0.10 -
+            (Number(Q.razem_dissent) || 0) * 0.12
+    },
+    {
+        name: "Adrian Zandberg",
+        key: "zandberg",
+        eligible: Q.razem_active && Q.razem_in_left &&
+            Q.razem_leader == "Adrian Zandberg" &&
+            !Q.advisor_reshuffle_removed_zandberg,
+        score: (Number(Q.razem_strength) || 0) +
+            (Number(Q.razem_cooperation) || 0) * 0.10 -
+            (Number(Q.razem_dissent) || 0) * 0.15
+    },
+    {
+        name: "Anna-Maria Żukowska",
+        key: "zukowska",
+        eligible: Q.progressives_active,
+        score: (Number(Q.progressives_strength) || 0) +
+            (Number(Q.progressive_credibility) || 0) * 0.12 +
+            (Number(Q.media_capacity) || 0) * 0.06 -
+            (Number(Q.progressives_dissent) || 0) * 0.10
     },
     {
         name: "Paulina Matysiak",
         key: "matysiak",
-        eligible: Q.social_patriot_active &&
-            Q.matysiak_party != "tak_rozwoj" &&
-            Q.matysiak_party != "independent",
+        eligible: Q.razem_active && Q.razem_in_left &&
+            Q.razem_leader == "Paulina Matysiak" &&
+            Q.matysiak_party == "Razem",
         score: (Number(Q.social_patriot_strength) || 0) +
             (Number(Q.social_patriot_local_organisation) || 0) * 0.08 +
             (Number(Q.rural_support) || 0) * 0.05 -
@@ -6502,6 +6536,18 @@ if (winner.key == "czarzasty") {
 } else if (winner.key == "gawkowski") {
     Q.progressives_strength += 4;
     Q.media_capacity += 2;
+} else if (winner.key == "biejat") {
+    Q.labor_strength += 3;
+    Q.workers_support += 3;
+    Q.razem_cooperation += 2;
+} else if (winner.key == "zandberg") {
+    Q.razem_strength += 4;
+    Q.razem_cooperation += 3;
+    Q.razem_dissent = Math.max(0, (Number(Q.razem_dissent) || 0) - 3);
+} else if (winner.key == "zukowska") {
+    Q.progressives_strength += 4;
+    Q.progressive_credibility += 3;
+    Q.media_capacity += 2;
 } else {
     Q.social_patriot_strength += 4;
     Q.rural_support += 2;
@@ -6524,6 +6570,18 @@ terms.?]
 [? if left_primary_winner = "Krzysztof Gawkowski": Gawkowski's progressive
 and media network wins the open contest. Labour and the old machine now bargain
 with a chair whose authority came from neither founder's protected half.?]
+[? if left_primary_winner = "Magdalena Biejat": Biejat turns Razem's social
+and housing credibility into a common-party chairmanship. Her mandate keeps
+the party's welfare language visible while making its parliamentary work more
+legible to the wider Left.?]
+[? if left_primary_winner = "Adrian Zandberg": Zandberg carries Razem's
+opposition-left programme into the common party. The congress accepts a chair
+whose authority comes from the live Razem organisation rather than a merger
+settlement.?]
+[? if left_primary_winner = "Anna-Maria Żukowska": Żukowska's progressive
+wing wins the chair and turns media discipline into a programme mandate. The
+old machine and labour organisers must now negotiate with a sharper public
+voice.?]
 [? if left_primary_winner = "Paulina Matysiak": Lewica Patriotyczna supplies
 the winning organisation and the common party adopts a developmental,
 welfare-sovereignty centre under Matysiak.?]

@@ -636,7 +636,7 @@ tags: poland_event
 priority: 23
 order: 11
 max-visits: 1
-view-if: continuous_campaign = 1 and year = 2026 and month = 4 and rozwoj_association_active = 0 and pis_seats >= 5
+view-if: continuous_campaign = 1 and ((year = 2026 and month = 4) or (year = 2026 and month = 1 and rozwoj_early_route)) and rozwoj_association_active = 0 and pis_seats >= 5
 on-arrival: {!
 Q.rozwoj_association_active = 1;
 Q.rozwoj_departure_pressure +=
@@ -2095,7 +2095,7 @@ tags: poland_event
 priority: 28
 order: 13
 max-visits: 1
-view-if: continuous_campaign = 1 and year = 2026 and month = 7 and rozwoj_association_active = 1 and pis_seats >= 5
+view-if: continuous_campaign = 1 and ((year = 2026 and month = 7) or (year = 2026 and month = 2 and rozwoj_early_route)) and rozwoj_association_active = 1 and pis_seats >= 5
 on-arrival: {!
 Q.rozwoj_association_active = 1;
 const livePisCaucus = Math.max(
@@ -2296,7 +2296,7 @@ tags: poland_event
 priority: 27
 order: 12
 max-visits: 1
-view-if: continuous_campaign = 1 and year = 2026 and month = 8 and rozwoj_chain_stage = 2
+view-if: continuous_campaign = 1 and ((year = 2026 and month = 8) or (year = 2026 and month = 3 and rozwoj_early_route)) and rozwoj_chain_stage = 2
 on-arrival: {!
 const unresolved = Math.max(
     0,
@@ -2304,7 +2304,7 @@ const unresolved = Math.max(
         (Number(Q.rozwoj_definitive_departures) || 0)
 );
 const hearingBatch = Math.min(
-    unresolved,
+    Q.rozwoj_split_blocked ? 0 : unresolved,
     Math.max(0, Number(Q.pis_seats) || 0),
     Math.max(6, Math.min(14, Math.round((
         (Number(Q.rozwoj_departure_pressure) || 0) +
@@ -2431,9 +2431,10 @@ tags: poland_event
 priority: 27
 order: 12
 max-visits: 1
-view-if: continuous_campaign = 1 and year = 2026 and month = 9 and rozwoj_chain_stage = 3
+view-if: continuous_campaign = 1 and ((year = 2026 and month = 9) or (year = 2026 and month = 4 and rozwoj_early_route)) and rozwoj_chain_stage = 3
 on-arrival: {!
-Q.rozwoj_club_formed = Q.rozwoj_definitive_departures >= 15 ? 1 : 0;
+Q.rozwoj_club_formed = !Q.rozwoj_split_blocked &&
+    Q.rozwoj_definitive_departures >= 15 ? 1 : 0;
 Q.pis_split = Q.rozwoj_club_formed;
 Q.pis_split_crisis = Q.rozwoj_club_formed ? 0 : 1;
 if (Q.rozwoj_club_formed) {
@@ -2535,6 +2536,52 @@ discipline.?]
 
 - @poland_event_queue: Return to the event desk
 
+@rozwoj_internal_pis_2026
+# prose-audit: Grade B — The blocked branch preserves the named organisation as an internal PiS current, records why no seats moved, and prevents an external party result.
+title: Rozwój+ remains a PiS internal current
+subtitle: The premiership, Szydło's leadership or a PiS–Lewica coalition closes the route to a separate party
+new-page: true
+tags: poland_event
+priority: 28
+order: 12
+max-visits: 1
+view-if: continuous_campaign = 1 and ((year = 2026 and month = 10) or (year = 2026 and month = 5 and rozwoj_early_route)) and rozwoj_chain_stage = 4 and rozwoj_split_blocked
+on-arrival: {!
+Q.rozwoj_internal_pis = 1;
+Q.rozwoj_club_formed = 0;
+Q.rozwoj_party_formed = 0;
+Q.pis_split = 0;
+Q.pis_split_crisis = 0;
+Q.rozwoj_chain_stage = 5;
+const association = (Q.rival_group_records || []).find(function(record) {
+    return record.id == "rozwoj_plus";
+});
+if (association) {
+    association.active = 1;
+    association.kind = "current";
+    association.bloc = "pis";
+    association.parent = "Prawo i Sprawiedliwość";
+    association.allied = 1;
+    association.legal_status = "internal PiS sub-party/current";
+    association.exclusive_seats = 0;
+}
+Q.rozwoj_party_result =
+    "Rozwój+ remains an internal PiS sub-party/current; no external split";
+Q.news_headline = Q.rozwoj_party_result;
+!}
+
+= [+ rozwoj_party_result +]
+
+Rozwój+ keeps its name, organisers and developmental programme, but it does not
+become a separate parliamentary party. With **[+ prime_minister +]** leading,
+or with PiS and Lewica sharing a cabinet, an external Morawiecki bloc would
+either fracture the governing mandate or make the coalition unworkable.
+
+The named MPs retain their PiS seats. The record is therefore a PiS internal
+current, not a transfer to `other_seats` and not a new electoral row.
+
+- @poland_event_queue: Return to the event desk
+
 @pis_party_2026
 # prose-audit: Grade A — Morawiecki, Kaczyński, the named parliamentary network and Matysiak now carry each registration outcome, an association, club and party remain distinct, and all four Lewica responses receive branch-specific political aftermaths.
 title: Rozwój+ decides whether to register a party
@@ -2544,7 +2591,7 @@ tags: poland_event
 priority: 27
 order: 12
 max-visits: 1
-view-if: continuous_campaign = 1 and year = 2026 and month = 10 and rozwoj_chain_stage = 4
+view-if: continuous_campaign = 1 and ((year = 2026 and month = 10) or (year = 2026 and month = 5 and rozwoj_early_route)) and rozwoj_chain_stage = 4 and not rozwoj_split_blocked
 on-arrival: {!
 const association = (Q.rival_group_records || []).find(function(record) {
     return record.id == "rozwoj_plus";
@@ -6126,7 +6173,7 @@ fresh campaign; the parties do not simply inherit the previous count.?]
 [? if young_left_seats > 0 or progressives_party_formed = 1: <div class="election-table-row"><span class="party party-progressive">[+ progressives_party_name +]</span><span>[+ snap_election_young_left_vote +]%</span><b>[+ young_left_seats +]</b><span>breakaway</span></div>?]
 [? if razem_party_seats > 0 or razem_party_formed = 1: <div class="election-table-row"><span class="party party-razem">Razem</span><span>[+ snap_election_razem_vote +]%</span><b>[+ razem_party_seats +]</b><span>independent list</span></div>?]
 [? if pps_party_seats > 0 or pps_party_formed = 1: <div class="election-table-row"><span class="party party-pps">PPS</span><span>[+ snap_election_pps_vote +]%</span><b>[+ pps_party_seats +]</b><span>independent list</span></div>?]
-[? if tak_rozwoj_seats > 0 or tak_dla_rozwoju_party_formed = 1: <div class="election-table-row"><span class="party party-razem">[+ tak_rozwoj_party_name +]</span><span>[+ snap_election_tak_rozwoj_vote +]%</span><b>[+ tak_rozwoj_seats +]</b><span>Matysiak splitter</span></div>?]
+[? if tak_rozwoj_seats > 0 or tak_dla_rozwoju_party_formed = 1: <div class="election-table-row"><span class="party party-razem">[+ tak_rozwoj_party_name +]</span><span>[+ snap_election_tak_rozwoj_vote +]%</span><b>[+ tak_rozwoj_seats +]</b><span>[? if tak_rozwoj_party_name = "Akcja Socjalistyczna": Zandberg-led split?][? if tak_rozwoj_party_name != "Akcja Socjalistyczna": Matysiak splitter?]</span></div>?]
 [? if centrum_seats > 0 or unia_centrum_formed = 1: <div class="election-table-row"><span class="party party-centrum">Unia Centrum</span><span>[+ snap_election_centrum_vote +]%</span><b>[+ centrum_seats +]</b><span>PL2050 split</span></div>?]
 [? if ko_splinter_seats > 0 or ko_splinter_active = 1: <div class="election-table-row"><span class="party party-ko">[+ ko_splinter_type +] KO splinter</span><span>[+ snap_election_ko_splinter_vote +]%</span><b>[+ ko_splinter_seats +]</b><span>KO split</span></div>?]
 [? if rozwoj_seats > 0 or rozwoj_party_formed = 1: <div class="election-table-row"><span class="party party-rozwoj">Rozwój Plus</span><span>[+ snap_election_rozwoj_vote +]%</span><b>[+ rozwoj_seats +]</b><span>PiS split</span></div>?]
@@ -6156,7 +6203,7 @@ go-to: snap_palace_pick
 
 @snap_palace_pick
 title: The President receives the first move
-view-if: left_seats > 0 and snap_senate_marshal_return = 0 and election_2027_terminal = 0
+view-if: snap_senate_marshal_return = 0 and election_2027_terminal = 0
 new-page: true
 on-arrival: {!
 Q.snap_senate_marshal_return = 0;
@@ -6293,7 +6340,7 @@ The nominee begins with **[+ snap_pm_base +]** expected votes outside Lewica
 and still needs 231. Lewica now decides whether its votes also entail cabinet
 responsibility.
 
-- @snap_left_offer: Receive the nominee's approach
+- @poland_government_formation.formation_coalition_menu: Open the coalition-first formation sequence
 
 @election_2027_epilogue
 title: Read the end-game epilogue

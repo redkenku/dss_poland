@@ -610,9 +610,28 @@ Q.status_pis_cohabitation_state = statusText(
 
 Q.status_pis_poll = statusOneDecimal(Q.pis_poll, 43.6);
 Q.status_ko_poll = statusOneDecimal(Q.ko_poll, 27.4);
-Q.status_psl_poll = statusOneDecimal(Q.psl_poll, 8.6);
+Q.status_suwerenna_poll = statusOneDecimal(Q.suwerenna_poll, 0);
+Q.status_porozumienie_poll = statusOneDecimal(Q.porozumienie_poll, 0);
+Q.status_third_way_visible =
+    Q.p2050_emerged &&
+    (Q.third_way_active || Q.third_way_2023_done) &&
+    !Q.third_way_split &&
+    String(Q.sejm_list_outcome || "left_5") != "third_host_5" ? 1 : 0;
+Q.status_third_way_poll = statusOneDecimal(
+    Q.third_way_poll,
+    Q.status_third_way_visible
+        ? statusOneDecimal(Q.third_way_vote_intent, 0)
+        : 0
+);
+Q.status_psl_poll = statusOneDecimal(
+    Q.status_third_way_visible ? 0 : Q.psl_poll,
+    8.6
+);
 Q.status_konf_poll = statusOneDecimal(Q.konf_poll, 6.8);
-Q.status_p2050_poll = statusOneDecimal(Q.p2050_poll, 0);
+Q.status_p2050_poll = statusOneDecimal(
+    Q.status_third_way_visible ? 0 : Q.p2050_poll,
+    0
+);
 Q.status_p0_poll = statusOneDecimal(Q.p0_poll, 0);
 Q.status_other_poll = statusOneDecimal(Q.other_poll, 1.0);
 Q.status_nowa_solidarnosc_visible =
@@ -629,7 +648,9 @@ const dynamicElectionParties = [
     "centrum",
     "rozwoj",
     "korona",
-    "ko_splinter"
+    "ko_splinter",
+    "suwerenna",
+    "porozumienie"
 ];
 for (const party of dynamicElectionParties) {
     Q["status_" + party + "_poll"] =
@@ -671,10 +692,17 @@ Q.status_other_intent = statusOneDecimal(Q.other_vote_intent, 1.0);
 Q.status_left_projection = statusWhole(Q.left_projected_seats, 49);
 Q.status_pis_projection = statusWhole(Q.pis_projected_seats, 235);
 Q.status_ko_projection = statusWhole(Q.ko_projected_seats, 134);
-Q.status_psl_projection = statusWhole(Q.psl_projected_seats, 30);
+Q.status_psl_projection = statusWhole(
+    Q.status_third_way_visible ? 0 : Q.psl_projected_seats,
+    30
+);
 Q.status_konf_projection = statusWhole(Q.konf_projected_seats, 11);
 Q.status_p2050_projection = statusWhole(
-    Q.p2050_projected_seats,
+    Q.status_third_way_visible ? 0 : Q.p2050_projected_seats,
+    0
+);
+Q.status_third_way_projection = statusWhole(
+    Q.status_third_way_visible ? Q.third_way_projected_seats : 0,
     0
 );
 Q.status_p0_projection = statusWhole(Q.p0_projected_seats, 0);
@@ -689,6 +717,7 @@ Q.status_poll_total = statusOneDecimal(
         Q.status_psl_poll +
         Q.status_konf_poll +
         Q.status_p2050_poll +
+        Q.status_third_way_poll +
         Q.status_p0_poll +
         Q.status_other_poll +
         dynamicElectionParties.reduce(function(total, party) {
@@ -697,6 +726,7 @@ Q.status_poll_total = statusOneDecimal(
     100
 );
 Q.status_p2050_visible =
+    !Q.status_third_way_visible &&
     !Q.p2050_joined_left &&
     (Q.p2050_emerged || Q.status_p2050_poll > 0) ? 1 : 0;
 Q.status_p0_visible =
@@ -2050,10 +2080,12 @@ call: status
 
 <div class="ledger-section"><div class="ledger-title">PiS and related parties</div>
 <div class="faction-row"><span class="party party-pis"><b>PiS</b></span><span>[+ status_rival_pis_apparatus_org_band +] organisation · [+ status_rival_pis_apparatus_cohesion_band +]</span></div>
-[? if status_rival_porozumienie_active: <div class="faction-row"><span class="party party-pis"><b>[+ status_rival_porozumienie_name +]</b></span><span>[+ status_rival_porozumienie_legal +] · [+ status_rival_porozumienie_seats +] exclusive seats · relation [+ status_rival_porozumienie_relation +]</span></div>?]
-[? if status_rival_solidarna_active: <div class="faction-row"><span class="party party-pis"><b>[+ status_rival_solidarna_name +]</b></span><span>[+ status_rival_solidarna_legal +] · [+ status_rival_solidarna_org_band +] organisation · [+ status_rival_solidarna_cohesion_band +]</span></div>?]
+[? if status_rival_porozumienie_active and not porozumienie_exit_done: <div class="faction-row"><span class="party party-pis"><b>[+ status_rival_porozumienie_name +]</b></span><span>[+ status_rival_porozumienie_legal +] · [+ status_rival_porozumienie_seats +] exclusive seats · relation [+ status_rival_porozumienie_relation +]</span></div>?]
+[? if status_rival_solidarna_active and not suwerenna_walkout and suwerenna_merger_result != "Merger refused" and not suwerenna_merged: <div class="faction-row"><span class="party party-pis"><b>[+ status_rival_solidarna_name +]</b></span><span>[+ status_rival_solidarna_legal +] · [+ status_rival_solidarna_org_band +] organisation · [+ status_rival_solidarna_cohesion_band +]</span></div>?]
+[? if suwerenna_walkout or suwerenna_merger_result = "Merger refused": <div class="faction-row"><span class="party party-sovereign-poland"><b>Suwerenna Polska</b></span><span>independent party · [+ status_suwerenna_poll +]% poll · relation [+ status_rival_solidarna_relation +]</span></div>?]
+[? if porozumienie_exit_done and status_rival_porozumienie_active: <div class="faction-row"><span class="party party-agreement"><b>Porozumienie</b></span><span>independent party · [+ status_porozumienie_poll +]% poll · relation [+ status_rival_porozumienie_relation +]</span></div>?]
 [? if suwerenna_merged: <div class="faction-row"><span class="party party-sovereign-poland"><b>Suwerenna Polska current</b></span><span>Merged into the PiS caucus as an internal current</span></div>?]
-[? if status_rival_rozwoj_plus_active and rozwoj_party_formed and not rozwoj_joined_left: <div class="faction-row"><span class="party party-pis"><b>[+ status_rival_rozwoj_plus_name +]</b></span><span>[+ status_rival_rozwoj_plus_legal +] · [+ status_rival_rozwoj_plus_seats +] seats</span></div>?]</div>
+[? if status_rival_rozwoj_plus_active and rozwoj_party_formed and not rozwoj_joined_left: <div class="faction-row"><span class="party party-pis"><b>[+ status_rival_rozwoj_plus_name +]</b></span><span>[+ status_rival_rozwoj_plus_legal +] · [+ status_rival_rozwoj_plus_seats +] seats</span></div>?][? if status_rival_rozwoj_plus_active and rozwoj_internal_pis and not rozwoj_joined_left: <div class="faction-row"><span class="party party-pis"><b>[+ status_rival_rozwoj_plus_name +]</b></span><span>internal PiS sub-party/current · no separate seats</span></div>?]</div>
 
 <div class="ledger-section"><div class="ledger-title">KO component organisations</div>
 [? if status_rival_po_active: <div class="faction-row"><span class="party party-ko"><b>[+ status_rival_po_name +]</b></span><span>[+ status_rival_po_legal +] · org [+ status_rival_po_org +] · cohesion [+ status_rival_po_cohesion +]</span></div>?]
@@ -2174,8 +2206,10 @@ call: status
 
 <details class="ledger-disclosure"><summary>PiS and related parties</summary>
 <div class="ledger-section"><div class="faction-row"><span class="party party-pis"><b>PiS</b></span><span>[+ status_rival_pis_apparatus_org_band +] organisation · [+ status_rival_pis_apparatus_cohesion_band +]</span></div>
-[? if status_rival_porozumienie_active: <div class="faction-row"><span class="party party-pis"><b>[+ status_rival_porozumienie_name +]</b></span><span>[+ status_rival_porozumienie_legal +] · [+ status_rival_porozumienie_relation : relationships +] relation</span></div>?]
-[? if status_rival_solidarna_active: <div class="faction-row"><span class="party party-pis"><b>[+ status_rival_solidarna_name +]</b></span><span>[+ status_rival_solidarna_legal +] · [+ status_rival_solidarna_org_band +] organisation · [+ status_rival_solidarna_cohesion_band +]</span></div>?]
+[? if status_rival_porozumienie_active and not porozumienie_exit_done: <div class="faction-row"><span class="party party-pis"><b>[+ status_rival_porozumienie_name +]</b></span><span>[+ status_rival_porozumienie_legal +] · [+ status_rival_porozumienie_relation : relationships +] relation</span></div>?]
+[? if status_rival_solidarna_active and not suwerenna_walkout and suwerenna_merger_result != "Merger refused" and not suwerenna_merged: <div class="faction-row"><span class="party party-pis"><b>[+ status_rival_solidarna_name +]</b></span><span>[+ status_rival_solidarna_legal +] · [+ status_rival_solidarna_org_band +] organisation · [+ status_rival_solidarna_cohesion_band +]</span></div>?]
+[? if suwerenna_walkout or suwerenna_merger_result = "Merger refused": <div class="faction-row"><span class="party party-sovereign-poland"><b>Suwerenna Polska</b></span><span>independent party · relation [+ status_rival_solidarna_relation : relationships +]</span></div>?]
+[? if porozumienie_exit_done and status_rival_porozumienie_active: <div class="faction-row"><span class="party party-agreement"><b>Porozumienie</b></span><span>independent party · relation [+ status_rival_porozumienie_relation : relationships +]</span></div>?]
 [? if suwerenna_merged: <div class="faction-row"><span class="party party-sovereign-poland"><b>Suwerenna Polska current</b></span><span>Merged into the PiS caucus as an internal current</span></div>?]
 [? if status_rival_rozwoj_plus_active and rozwoj_party_formed and not rozwoj_joined_left: <div class="faction-row"><span class="party party-pis"><b>[+ status_rival_rozwoj_plus_name +]</b></span><span>[+ status_rival_rozwoj_plus_legal +]</span></div>?]</div>
 </details>
@@ -2284,8 +2318,11 @@ call: status
 
 <div class="ledger-section ledger-section-first"><div class="ledger-title">Likely-voter poll</div>
 <div class="poll-row"><span class="party party-pis"><b>PiS</b></span><span>[+ status_pis_poll +]%</span><span>[+ status_pis_projection +] projected</span></div>
+[? if suwerenna_walkout or suwerenna_merger_result = "Merger refused": <div class="poll-row"><span class="party party-sovereign-poland"><b>Suwerenna Polska</b></span><span>[+ status_suwerenna_poll +]%</span><span>[+ status_suwerenna_projection +] projected</span></div>?]
+[? if porozumienie_exit_done and porozumienie_active: <div class="poll-row"><span class="party party-agreement"><b>Porozumienie</b></span><span>[+ status_porozumienie_poll +]%</span><span>[+ status_porozumienie_projection +] projected</span></div>?]
 <div class="poll-row"><span class="party party-ko"><b>KO</b></span><span>[+ status_ko_poll +]%</span><span>[+ status_ko_projection +] projected</span></div>
 <div class="poll-row"><span class="party party-lewica"><b>[+ status_left_party_name +]</b></span><span>[+ status_left_poll +]%</span><span>[+ status_left_projection +] projected</span></div>
+[? if status_third_way_visible: <div class="poll-row"><span class="party party-third-way"><b>[+ third_way_display_name +]</b></span><span>[+ status_third_way_poll +]%</span><span>[+ status_third_way_projection +] projected</span></div>?]
 [? if status_nowa_solidarnosc_visible: <div class="poll-row"><span class="party party-nowa-solidarnosc"><b>Nowa Solidarność</b></span><span>&lt;0.1%</span><span>0 projected</span></div>?]
 [? if barons_party_formed: <div class="poll-row"><span class="party party-sld"><b>[+ barons_party_name +]</b></span><span>[+ status_sld_breakaway_poll +]%</span><span>[+ status_sld_breakaway_projection +] projected</span></div>?]
 [? if social_patriot_party_formed: <div class="poll-row"><span class="party party-social-patriot"><b>[+ social_patriot_party_name +]</b></span><span>[+ status_social_patriot_poll +]%</span><span>[+ status_social_patriot_projection +] projected · [+ social_patriot_electoral_strategy +]</span></div>?]
@@ -2295,7 +2332,7 @@ call: status
 [? if razem_party_formed: <div class="poll-row"><span class="party party-razem"><b>Razem</b></span><span>[+ status_razem_poll +]%</span><span>[+ status_razem_projection +] projected</span></div>?]
 [? if pps_party_formed: <div class="poll-row"><span class="party party-pps"><b>PPS</b></span><span>[+ status_pps_poll +]%</span><span>[+ status_pps_projection +] projected</span></div>?]
 [? if tak_dla_rozwoju_party_formed: <div class="poll-row"><span class="party party-razem"><b>[+ status_tak_rozwoj_party_name +]</b></span><span>[+ status_tak_rozwoj_poll +]%</span><span>[+ status_tak_rozwoj_projection +] projected</span></div>?]
-<div class="poll-row"><span class="party party-psl"><b>PSL</b></span><span>[+ status_psl_poll +]%</span><span>[+ status_psl_projection +] projected</span></div>
+[? if not status_third_way_visible: <div class="poll-row"><span class="party party-psl"><b>PSL</b></span><span>[+ status_psl_poll +]%</span><span>[+ status_psl_projection +] projected</span></div>?]
 [? if status_p2050_visible: <div class="poll-row"><span class="party party-p2050"><b>Poland 2050</b></span><span>[+ status_p2050_poll +]%</span><span>[+ status_p2050_projection +] projected</span></div>?]
 <div class="poll-row"><span class="party party-konf"><b>Konfederacja</b></span><span>[+ status_konf_poll +]%</span><span>[+ status_konf_projection +] projected</span></div>
 [? if status_p0_visible: <div class="poll-row"><span><b>[+ p0_name +]</b></span><span>[+ status_p0_poll +]%</span><span>[+ status_p0_projection +] projected</span></div>?]
@@ -2379,7 +2416,7 @@ call: status
 [? if razem_party_formed: <div class="poll-row"><span class="party party-razem"><b>Razem</b></span><span>[+ status_razem_poll +]%</span><span>[+ status_razem_projection +] projected</span></div>?]
 [? if pps_party_formed: <div class="poll-row"><span class="party party-pps"><b>PPS</b></span><span>[+ status_pps_poll +]%</span><span>[+ status_pps_projection +] projected</span></div>?]
 [? if tak_dla_rozwoju_party_formed: <div class="poll-row"><span class="party party-razem"><b>[+ status_tak_rozwoj_party_name +]</b></span><span>[+ status_tak_rozwoj_poll +]%</span><span>[+ status_tak_rozwoj_projection +] projected</span></div>?]
-<div class="poll-row"><span class="party party-psl"><b>PSL</b></span><span>[+ status_psl_poll +]%</span><span>[+ status_psl_projection +] projected</span></div>
+[? if not status_third_way_visible: <div class="poll-row"><span class="party party-psl"><b>PSL</b></span><span>[+ status_psl_poll +]%</span><span>[+ status_psl_projection +] projected</span></div>?]
 [? if status_p2050_visible: <div class="poll-row"><span class="party party-p2050"><b>PL2050</b></span><span>[+ status_p2050_poll +]%</span><span>[+ status_p2050_projection +] projected</span></div>?]
 <div class="poll-row"><span class="party party-konf"><b>Konf.</b></span><span>[+ status_konf_poll +]%</span><span>[+ status_konf_projection +] projected</span></div>
 [? if status_p0_visible: <div class="poll-row"><span><b>[+ p0_short_name +]</b></span><span>[+ status_p0_poll +]%</span><span>[+ status_p0_projection +] projected</span></div>?]
