@@ -618,6 +618,30 @@ window.disableGrayMode = function() {
       aliases: [['Rozwój Plus', 'Rozwój Plus']]
     },
     {
+      id: 'tak-dla-rozwoju',
+      className: 'party-tak-rozwoj',
+      explanation: 'Tak! Dla Rozwoju — a development-focused splinter built around infrastructure, investment and Paulina Matysiak\'s break with Razem.',
+      aliases: [
+        ['Tak! Dla Rozwoju', 'Tak! Dla Rozwoju'],
+        ['Tak Dla Rozwoju', 'Tak! Dla Rozwoju']
+      ]
+    },
+    {
+      id: 'akcja-socjalistyczna',
+      className: 'party-akcja-socjalistyczna',
+      explanation: 'Akcja Socjalistyczna — the original-left split that can emerge from the Razem-Matysiak conflict in the scenario.',
+      aliases: [['Akcja Socjalistyczna', 'Akcja Socjalistyczna']]
+    },
+    {
+      id: 'partia-zero',
+      className: 'party-p0',
+      explanation: 'Partia Zero — the political vehicle associated with Krzysztof Stanowski and the Kanał Zero media ecosystem.',
+      aliases: [
+        ['Partia Zero', 'Partia Zero'],
+        ['P0', 'P0']
+      ]
+    },
+    {
       id: 'german-minority',
       className: 'party-german-minority',
       explanation: 'German Minority — the electoral committee representing Poland’s German minority.',
@@ -640,6 +664,11 @@ window.disableGrayMode = function() {
   var partyAliases = {};
   var partyDefinitionsByClass = {};
   var partyAliasPattern = [];
+  var entityAliases = {};
+  var entityAliasPattern = [];
+  var personAliases = {};
+  var personDefinitionsById = {};
+  var personAliasPattern = [];
   var escapeRegExp = function(value) {
     return value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
   };
@@ -674,6 +703,591 @@ window.disableGrayMode = function() {
     'g'
   );
 
+  var entityDefinitions = [
+    {
+      id: 'kpo',
+      explanation: 'KPO is Poland\'s National Recovery Plan, the package tied to EU post-pandemic recovery funds and reform milestones.',
+      aliases: ['KPO', 'National Recovery Plan']
+    },
+    {
+      id: 'zelensky',
+      explanation: 'Volodymyr Zelensky is the president of Ukraine during Russia\'s full-scale invasion and a central wartime diplomatic figure.',
+      aliases: ['Zelensky', 'Zelenskyy', 'Volodymyr Zelensky', 'Volodymyr Zelenskyy']
+    },
+    {
+      id: 'putin',
+      explanation: 'Vladimir Putin is the president of Russia who ordered the 2022 full-scale invasion of Ukraine.',
+      aliases: ['Putin', 'Vladimir Putin']
+    },
+    {
+      id: 'european_commission',
+      explanation: 'The European Commission is the EU\'s executive institution that proposes legislation and oversees treaty and budget enforcement.',
+      aliases: [
+        'European Commission',
+        'European Comission',
+        'Commission'
+      ]
+    },
+    {
+      id: 'constitutional_tribunal',
+      explanation: 'The Constitutional Tribunal is Poland\'s court for constitutional review and a major flashpoint in rule-of-law disputes.',
+      aliases: ['Constitutional Tribunal', 'Tribunal']
+    },
+    {
+      id: 'nato',
+      explanation: 'NATO is the North Atlantic Treaty Organization, the military alliance that includes Poland under collective defense obligations.',
+      aliases: ['NATO', 'North Atlantic Treaty Organization']
+    },
+    {
+      id: 'eu',
+      explanation: 'The EU is the European Union, the political and economic bloc whose rules, funds, and institutions shape Polish policy choices.',
+      aliases: ['EU', 'European Union']
+    },
+    {
+      id: 'independence_day',
+      explanation: 'Independence Day marks Poland\'s restoration of statehood in 1918 and is observed annually on 11 November.',
+      aliases: ['Independence Day']
+    },
+    {
+      id: 'gutowski',
+      explanation: 'Marcin Gutowski is a Polish investigative journalist associated with major public-interest reporting projects.',
+      aliases: ['Marcin Gutowski', 'Gutowski']
+    }
+  ];
+
+  entityDefinitions.forEach(function(definition) {
+    definition.aliases.forEach(function(alias) {
+      entityAliases[alias] = definition;
+      entityAliasPattern.push(alias);
+    });
+  });
+  entityAliasPattern.sort(function(left, right) {
+    return right.length - left.length;
+  });
+  entityAliasPattern = new RegExp(
+    '(^|[^A-Za-zÀ-ž0-9_])(' +
+      entityAliasPattern.map(escapeRegExp).join('|') +
+    ')(?=$|[^A-Za-zÀ-ž0-9_])',
+    'g'
+  );
+
+  var personDefinitions = [
+    {
+      id: 'duda',
+      className: 'party-pis',
+      explanation: 'Andrzej Duda is the Polish president elected in 2015 and re-elected in 2020 with support from PiS.',
+      aliases: ['Andrzej Duda', 'Duda']
+    },
+    {
+      id: 'kaczynski',
+      className: 'party-pis',
+      explanation: 'Jarosław Kaczyński is the long-time leader and chief strategist of Law and Justice (PiS).',
+      aliases: [
+        'Jaroslaw Kaczynski',
+        'Jarosław Kaczyński',
+        'Kaczynski',
+        'Kaczyński'
+      ]
+    },
+    {
+      id: 'morawiecki',
+      className: 'party-pis',
+      explanation: 'Mateusz Morawiecki served as prime minister of Poland from 2017 to 2023 under PiS governments.',
+      aliases: ['Mateusz Morawiecki', 'Morawiecki']
+    },
+    {
+      id: 'pelczynska_nalecz',
+      className: 'party-p2050',
+      explanation: 'Katarzyna Pełczyńska-Nałęcz is a Poland 2050 leader associated with institutional reform and state-capacity policy.',
+      aliases: [
+        'Katarzyna Pelczynska-Nalecz',
+        'Katarzyna Pełczyńska-Nałęcz',
+        'Pelczynska-Nalecz',
+        'Pełczyńska-Nałęcz'
+      ]
+    },
+    {
+      id: 'hennig_kloska',
+      className: 'party-p2050',
+      explanation: 'Paulina Hennig-Kloska is a Poland 2050 politician associated with climate and public-administration policy.',
+      aliases: [
+        'Paulina Hennig-Kloska',
+        'Paulina Hennig-Kłoska',
+        'Hennig-Kloska',
+        'Hennig-Kłoska'
+      ]
+    },
+    {
+      id: 'zielinska',
+      className: 'party-ko',
+      explanation: 'Urszula Zielińska is a Polish Green politician associated with climate, municipal and equality-focused policy work.',
+      aliases: ['Urszula Zielinska', 'Urszula Zielińska', 'Zielinska', 'Zielińska']
+    },
+    {
+      id: 'blaszczak',
+      className: 'party-pis',
+      explanation: 'Mariusz Błaszczak is a senior PiS politician who served as defence minister and party organizer.',
+      aliases: ['Mariusz Blaszczak', 'Mariusz Błaszczak', 'Blaszczak', 'Błaszczak']
+    },
+    {
+      id: 'wawrzyk',
+      className: 'party-pis',
+      explanation: 'Piotr Wawrzyk is a PiS politician and former deputy foreign minister associated with administrative and consular policy controversies.',
+      aliases: ['Piotr Wawrzyk', 'Wawrzyk']
+    },
+    {
+      id: 'szydlo',
+      className: 'party-pis',
+      explanation: 'Beata Szydło was prime minister in 2015 to 2017 and remains a prominent welfare-conservative figure in PiS.',
+      aliases: ['Beata Szydlo', 'Beata Szydło', 'Szydlo', 'Szydło']
+    },
+    {
+      id: 'ziobro',
+      className: 'party-sovereign-poland',
+      explanation: 'Zbigniew Ziobro is a former justice minister and prosecutor general who led Solidarna Polska later renamed Suwerenna Polska.',
+      aliases: ['Zbigniew Ziobro', 'Ziobro']
+    },
+    {
+      id: 'warchol',
+      className: 'party-sovereign-poland',
+      explanation: 'Marcin Warchoł is a politician from the Solidarna Polska and Suwerenna Polska camp focused on justice policy.',
+      aliases: ['Marcin Warchol', 'Marcin Warchoł', 'Warchol', 'Warchoł']
+    },
+    {
+      id: 'jaki',
+      className: 'party-sovereign-poland',
+      explanation: 'Patryk Jaki is a Suwerenna Polska politician and MEP known for hard-line law-and-order messaging.',
+      aliases: ['Patryk Jaki', 'Jaki']
+    },
+    {
+      id: 'barski',
+      className: 'party-pis',
+      explanation: 'Dariusz Barski is a prosecutor associated with the contested National Prosecutor appointment in the PiS-era judiciary dispute.',
+      aliases: ['Dariusz Barski', 'Barski']
+    },
+    {
+      id: 'gowin',
+      className: 'party-pis',
+      explanation: 'Jarosław Gowin is the founder of Agreement (Porozumienie) and a former deputy prime minister in the United Right camp.',
+      aliases: ['Jaroslaw Gowin', 'Jarosław Gowin', 'Gowin']
+    },
+    {
+      id: 'tusk',
+      className: 'party-ko',
+      explanation: 'Donald Tusk is a former Polish prime minister and former European Council president who leads Civic Platform in KO.',
+      aliases: ['Donald Tusk', 'Tusk']
+    },
+    {
+      id: 'miller',
+      className: 'party-sld',
+      explanation: 'Leszek Miller is a former Polish prime minister and a defining figure of the post-communist SLD establishment.',
+      aliases: ['Leszek Miller', 'Miller']
+    },
+    {
+      id: 'trzaskowski',
+      className: 'party-ko',
+      explanation: 'Rafał Trzaskowski is the mayor of Warsaw and a leading KO figure who narrowly lost the 2020 presidential election.',
+      aliases: ['Rafal Trzaskowski', 'Rafał Trzaskowski', 'Trzaskowski']
+    },
+    {
+      id: 'sikorski',
+      className: 'party-ko',
+      explanation: 'Radosław Sikorski is a veteran Polish diplomat and KO politician known for foreign policy roles.',
+      aliases: ['Radoslaw Sikorski', 'Radosław Sikorski', 'Sikorski']
+    },
+    {
+      id: 'budka',
+      className: 'party-ko',
+      explanation: 'Borys Budka is a Civic Platform politician who led PO in 2020 to 2021 before Donald Tusk returned.',
+      aliases: ['Borys Budka', 'Budka']
+    },
+    {
+      id: 'schetyna',
+      className: 'party-ko',
+      explanation: 'Grzegorz Schetyna is a senior Civic Platform organizer and former PO leader in the late 2010s.',
+      aliases: ['Grzegorz Schetyna', 'Schetyna']
+    },
+    {
+      id: 'grodzki',
+      className: 'party-ko',
+      explanation: 'Tomasz Grodzki is a KO senator who served as Marshal of the Senate after the 2019 election.',
+      aliases: ['Tomasz Grodzki', 'Grodzki']
+    },
+    {
+      id: 'kidawa_blonska',
+      className: 'party-ko',
+      explanation: 'Małgorzata Kidawa-Błońska is a Civic Platform politician, former Sejm deputy marshal, and KO presidential nominee before withdrawal in 2020.',
+      aliases: [
+        'Małgorzata Kidawa-Błońska',
+        'Malgorzata Kidawa-Blonska',
+        'Kidawa-Błońska',
+        'Kidawa-Blonska',
+        'Kidawa'
+      ]
+    },
+    {
+      id: 'holownia',
+      className: 'party-p2050',
+      explanation: 'Szymon Hołownia is a former media presenter who founded Poland 2050 and became one of the main centrist opposition leaders.',
+      aliases: ['Szymon Holownia', 'Szymon Hołownia', 'Holownia', 'Hołownia']
+    },
+    {
+      id: 'kosiniak',
+      className: 'party-psl',
+      explanation: 'Władysław Kosiniak-Kamysz leads the agrarian-centrist PSL and is a key architect of its alliances with centrist partners.',
+      aliases: [
+        'Wladyslaw Kosiniak-Kamysz',
+        'Władysław Kosiniak-Kamysz',
+        'Kosiniak-Kamysz',
+        'Kosiniak',
+        'Kamysz'
+      ]
+    },
+    {
+      id: 'czarzasty',
+      className: 'party-lewica',
+      explanation: 'Włodzimierz Czarzasty is a co-leader of the New Left and one of the main parliamentary negotiators on the Polish left.',
+      aliases: ['Wlodzimierz Czarzasty', 'Włodzimierz Czarzasty', 'Czarzasty']
+    },
+    {
+      id: 'biedron',
+      className: 'party-lewica',
+      explanation: 'Robert Biedroń is the founder of Wiosna, former mayor of Słupsk, and a leading New Left politician at national and EU level.',
+      aliases: ['Robert Biedron', 'Robert Biedroń', 'Biedron', 'Biedroń']
+    },
+    {
+      id: 'smiszek',
+      className: 'party-lewica',
+      explanation: 'Krzysztof Śmiszek is a New Left politician known for legal rights advocacy and parliamentary work on justice issues.',
+      aliases: ['Krzysztof Smiszek', 'Krzysztof Śmiszek', 'Smiszek', 'Śmiszek']
+    },
+    {
+      id: 'scheuring_wielgus',
+      className: 'party-lewica',
+      explanation: 'Joanna Scheuring-Wielgus is a New Left politician known for secular and civil-rights advocacy.',
+      aliases: [
+        'Joanna Scheuring-Wielgus',
+        'Joanna Scheuring Wielgus',
+        'Scheuring-Wielgus',
+        'Scheuring Wielgus'
+      ]
+    },
+    {
+      id: 'zandberg',
+      className: 'party-razem',
+      explanation: 'Adrian Zandberg is a co-founder and principal ideological voice of Razem on labor, welfare, and public investment.',
+      aliases: ['Adrian Zandberg', 'Zandberg']
+    },
+    {
+      id: 'matysiak',
+      className: 'party-razem',
+      explanation: 'Paulina Matysiak is a left-wing MP identified with rail and infrastructure policy and later split currents in this scenario.',
+      aliases: [
+        'Paulina Matysiak',
+        'Pola Matysiak',
+        'Matysiak'
+      ]
+    },
+    {
+      id: 'biejat',
+      className: 'party-lewica',
+      explanation: 'Magdalena Biejat is a New Left politician known for social policy, tenant rights, and welfare-state advocacy.',
+      aliases: ['Magdalena Biejat', 'Biejat']
+    },
+    {
+      id: 'zukowska',
+      className: 'party-lewica',
+      explanation: 'Anna-Maria Żukowska is a New Left parliamentarian known for combative media performances and caucus messaging discipline.',
+      aliases: ['Anna-Maria Żukowska', 'Anna-Maria Zukowska', 'Żukowska', 'Zukowska']
+    },
+    {
+      id: 'kotula',
+      className: 'party-lewica',
+      explanation: 'Katarzyna Kotula is a New Left politician associated with feminist mobilisation and equality-policy campaigning.',
+      aliases: ['Katarzyna Kotula', 'Kotula']
+    },
+    {
+      id: 'wieczorek',
+      className: 'party-sld',
+      explanation: 'Dariusz Wieczorek is an SLD-rooted organiser focused on regional machinery and parliamentary management.',
+      aliases: ['Dariusz Wieczorek', 'Wieczorek']
+    },
+    {
+      id: 'gawkowski',
+      className: 'party-lewica',
+      explanation: 'Krzysztof Gawkowski is a New Left politician active in parliamentary coordination and digital-policy debates.',
+      aliases: ['Krzysztof Gawkowski', 'Gawkowski']
+    },
+    {
+      id: 'nowicka',
+      className: 'party-lewica',
+      explanation: 'Wanda Nowicka is a veteran feminist and parliamentary advocate for reproductive rights and secular civil law.',
+      aliases: ['Wanda Nowicka', 'Nowicka']
+    },
+    {
+      id: 'zawisza',
+      className: 'party-razem',
+      explanation: 'Marcelina Zawisza is a Razem MP focused on health care, social services, and care-economy policy.',
+      aliases: ['Marcelina Zawisza', 'Zawisza']
+    },
+    {
+      id: 'dziemianowicz',
+      className: 'party-lewica',
+      explanation: 'Agnieszka Dziemianowicz-Bąk is a New Left politician focused on labor rights, education, and social policy reform.',
+      aliases: [
+        'Agnieszka Dziemianowicz-Bak',
+        'Agnieszka Dziemianowicz-Bąk',
+        'Dziemianowicz-Bak',
+        'Dziemianowicz-Bąk',
+        'Dziemianowicz'
+      ]
+    },
+    {
+      id: 'mentzen',
+      className: 'party-konf',
+      explanation: 'Sławomir Mentzen is a libertarian-right leader of New Hope and one of the most prominent faces of Konfederacja.',
+      aliases: ['Slawomir Mentzen', 'Sławomir Mentzen', 'Mentzen']
+    },
+    {
+      id: 'korwin_mikke',
+      className: 'party-konf',
+      explanation: 'Janusz Korwin-Mikke is a veteran libertarian politician and founder of KORWiN whose rhetoric shaped the Polish far-right scene.',
+      aliases: [
+        'Janusz Korwin-Mikke',
+        'Janusz Korwin Mikke',
+        'Korwin-Mikke',
+        'Korwin Mikke',
+        'Korwin'
+      ]
+    },
+    {
+      id: 'witek',
+      className: 'party-pis',
+      explanation: 'Elżbieta Witek is a PiS politician and former Sejm Marshal who features in government-formation and constitutional-crisis branches.',
+      aliases: ['Elżbieta Witek', 'Elzbieta Witek', 'Witek']
+    },
+    {
+      id: 'bosak',
+      className: 'party-konf',
+      explanation: 'Krzysztof Bosak is a nationalist leader in Konfederacja and a former presidential candidate.',
+      aliases: ['Krzysztof Bosak', 'Bosak']
+    },
+    {
+      id: 'braun',
+      className: 'party-konf',
+      explanation: 'Grzegorz Braun is a monarchist-nationalist politician whose faction later forms the Korona track after the Konfederacja split.',
+      aliases: ['Grzegorz Braun', 'Braun']
+    },
+    {
+      id: 'dziambor',
+      className: 'party-konf',
+      explanation: 'Artur Dziambor is a libertarian politician who left KORWiN and helped build the Wolnościowcy breakaway.',
+      aliases: ['Artur Dziambor', 'Dziambor']
+    },
+    {
+      id: 'kulesza',
+      className: 'party-konf',
+      explanation: 'Jakub Kulesza is a libertarian right politician linked to KORWiN and later Wolnościowcy circles.',
+      aliases: ['Jakub Kulesza', 'Kulesza']
+    },
+    {
+      id: 'sosnierz',
+      className: 'party-konf',
+      explanation: 'Dobromir Sośnierz is a libertarian right politician associated with KORWiN and Wolnościowcy currents.',
+      aliases: ['Dobromir Sosnierz', 'Dobromir Sośnierz', 'Sosnierz', 'Sośnierz']
+    },
+    {
+      id: 'stanowski',
+      className: 'party-p0',
+      explanation: 'Krzysztof Stanowski is a sports journalist and media entrepreneur represented in this scenario as the Partia Zero figure.',
+      aliases: ['Krzysztof Stanowski', 'Stanowski']
+    },
+    {
+      id: 'szpilski',
+      className: 'party-nowa-solidarnosc',
+      explanation: 'Chrystian Szpilski is a founder character of the in-game Nowa Solidarność formation in the 2023 split event.',
+      aliases: ['Chrystian Szpilski', 'Szpilski']
+    },
+    {
+      id: 'spalinski',
+      className: 'party-nowa-solidarnosc',
+      explanation: 'Patryk Spaliński is a founder character of the in-game Nowa Solidarność formation in the 2023 split event.',
+      aliases: ['Patryk Spalinski', 'Patryk Spaliński', 'Spalinski', 'Spaliński']
+    },
+    {
+      id: 'kozlowski',
+      className: 'party-nowa-solidarnosc',
+      explanation: 'Maciej Kozłowski is a founder character of the in-game Nowa Solidarność formation in the 2023 split event.',
+      aliases: ['Maciej Kozlowski', 'Maciej Kozłowski', 'Kozlowski', 'Kozłowski']
+    },
+    {
+      id: 'rozenek',
+      className: 'party-pps',
+      explanation: 'Andrzej Rozenek is a left-wing parliamentarian tied in this scenario to the PPS parliamentary breakaway move.',
+      aliases: ['Andrzej Rozenek', 'Rozenek']
+    },
+    {
+      id: 'kwiatkowski',
+      className: 'party-pps',
+      explanation: 'Robert Kwiatkowski is a Polish political and media figure included here in the PPS breakaway parliamentary bloc.',
+      aliases: ['Robert Kwiatkowski', 'Kwiatkowski']
+    },
+    {
+      id: 'senyszyn',
+      className: 'party-pps',
+      explanation: 'Joanna Senyszyn is a veteran left politician and economist appearing here as part of the PPS breakaway grouping.',
+      aliases: ['Joanna Senyszyn', 'Senyszyn']
+    },
+    {
+      id: 'konieczny',
+      className: 'party-pps',
+      explanation: 'Wojciech Konieczny is a physician-politician and senator aligned with the PPS support line in this event chain.',
+      aliases: ['Wojciech Konieczny', 'Konieczny']
+    },
+    {
+      id: 'morawska_stanecka',
+      className: 'party-pps',
+      explanation: 'Gabriela Morawska-Stanecka is a senator and former deputy senate marshal appearing in the PPS support coalition context.',
+      aliases: [
+        'Gabriela Morawska-Stanecka',
+        'Gabriela Morawska Stanecka',
+        'Morawska-Stanecka',
+        'Morawska Stanecka'
+      ]
+    },
+    {
+      id: 'biden',
+      className: 'party-us-dem',
+      explanation: 'Joe Biden served as the 46th president of the United States and is identified with the Democratic Party.',
+      aliases: [
+        'Joe Biden',
+        'Joseph Biden',
+        'Joseph R. Biden',
+        'Joe R. Biden',
+        'Biden'
+      ]
+    },
+    {
+      id: 'trump',
+      className: 'party-us-gop',
+      explanation: 'Donald Trump served as the 45th president of the United States and is the dominant figure in recent Republican politics.',
+      aliases: ['Donald Trump', 'Trump']
+    },
+    {
+      id: 'harris',
+      className: 'party-us-dem',
+      explanation: 'Kamala Harris served as vice president of the United States and is a leading figure in the Democratic Party.',
+      aliases: ['Kamala Harris', 'Harris']
+    },
+    {
+      id: 'ramaswamy',
+      className: 'party-us-gop',
+      explanation: 'Vivek Ramaswamy is a Republican candidate-entrepreneur known for anti-establishment campaign messaging.',
+      aliases: ['Vivek Ramaswamy', 'Vivek', 'Ramaswamy']
+    },
+    {
+      id: 'desantis',
+      className: 'party-us-gop',
+      explanation: 'Ron DeSantis is the governor of Florida and a major conservative contender in Republican presidential politics.',
+      aliases: ['Ron DeSantis', 'Ronald DeSantis', 'DeSantis']
+    },
+    {
+      id: 'haley',
+      className: 'party-us-gop',
+      explanation: 'Nikki Haley is a former South Carolina governor and former US ambassador to the UN in Republican politics.',
+      aliases: ['Nikki Haley', 'Haley']
+    },
+    {
+      id: 'rubio',
+      className: 'party-us-gop',
+      explanation: 'Marco Rubio is a Republican senator from Florida known for foreign policy and national-security positioning.',
+      aliases: ['Marco Rubio', 'Rubio']
+    },
+    {
+      id: 'vance',
+      className: 'party-us-gop',
+      explanation: 'J. D. Vance is a Republican politician associated with populist-national conservative currents in US politics.',
+      aliases: ['J. D. Vance', 'JD Vance', 'J.D. Vance', 'Vance']
+    },
+    {
+      id: 'obama',
+      className: 'party-us-dem',
+      explanation: 'Barack Obama served as the 44th president of the United States and remains a defining Democratic figure.',
+      aliases: ['Barack Obama', 'Obama']
+    },
+    {
+      id: 'george_w_bush',
+      className: 'party-us-gop',
+      explanation: 'George W. Bush served as the 43rd president of the United States and led the GOP in the post-9/11 era.',
+      aliases: ['George W. Bush', 'George Bush', 'Bush']
+    },
+    {
+      id: 'bill_clinton',
+      className: 'party-us-dem',
+      explanation: 'Bill Clinton served as the 42nd president of the United States and shaped centrist Democratic politics in the 1990s.',
+      aliases: ['Bill Clinton', 'William Clinton', 'Clinton']
+    },
+    {
+      id: 'george_h_w_bush',
+      className: 'party-us-gop',
+      explanation: 'George H. W. Bush served as the 41st president of the United States after prior roles in diplomacy and intelligence.',
+      aliases: ['George H. W. Bush']
+    },
+    {
+      id: 'reagan',
+      className: 'party-us-gop',
+      explanation: 'Ronald Reagan served as the 40th president of the United States and became an icon of modern conservative politics.',
+      aliases: ['Ronald Reagan', 'Reagan']
+    },
+    {
+      id: 'carter',
+      className: 'party-us-dem',
+      explanation: 'Jimmy Carter served as the 39th president of the United States and later became globally known for humanitarian work.',
+      aliases: ['Jimmy Carter', 'James Carter', 'Carter']
+    },
+    {
+      id: 'ford',
+      className: 'party-us-gop',
+      explanation: 'Gerald Ford served as the 38th president of the United States after succeeding Richard Nixon.',
+      aliases: ['Gerald Ford', 'Ford']
+    },
+    {
+      id: 'nixon',
+      className: 'party-us-gop',
+      explanation: 'Richard Nixon served as the 37th president of the United States and resigned during the Watergate scandal.',
+      aliases: ['Richard Nixon', 'Nixon']
+    },
+    {
+      id: 'lbj',
+      className: 'party-us-dem',
+      explanation: 'Lyndon B. Johnson served as the 36th president of the United States and drove the Great Society reforms.',
+      aliases: ['Lyndon B. Johnson', 'Lyndon Johnson', 'Johnson']
+    },
+    {
+      id: 'jfk',
+      className: 'party-us-dem',
+      explanation: 'John F. Kennedy served as the 35th president of the United States and became a lasting symbol of Cold War era liberal leadership.',
+      aliases: ['John F. Kennedy', 'John Kennedy', 'Kennedy']
+    }
+  ];
+
+  personDefinitions.forEach(function(definition) {
+    personDefinitionsById[definition.id] = definition;
+    definition.aliases.forEach(function(alias) {
+      personAliases[alias] = definition;
+      personAliasPattern.push(alias);
+    });
+  });
+  personAliasPattern.sort(function(left, right) {
+    return right.length - left.length;
+  });
+  personAliasPattern = new RegExp(
+    '(^|[^A-Za-zÀ-ž0-9_])(' +
+      personAliasPattern.map(escapeRegExp).join('|') +
+    ')(?=$|[^A-Za-zÀ-ž0-9_])',
+    'g'
+  );
+
   var genericLeftAliases = {
     'The Left': true,
     'the Left': true,
@@ -696,15 +1310,62 @@ window.disableGrayMode = function() {
       : match.label;
   };
 
+  var partyLogoIdForAlias = function(match, alias) {
+    if (!match) {
+      return '';
+    }
+    if (match.definition.id === 'lewica' && alias === 'Lewica Razem') {
+      return 'razem';
+    }
+    return match.definition.id;
+  };
+
+  var partyLogoIds = {
+    'nowa-solidarnosc': true,
+    'lewica': true,
+    'sld': true,
+    'wiosna': true,
+    'razem': true,
+    'pps': true,
+    'left-labor': true,
+    'young-left': true,
+    'tak-dla-rozwoju': true,
+    'akcja-socjalistyczna': true,
+    'ko': true,
+    'po': true,
+    'nowoczesna': true,
+    'inicjatywa-polska': true,
+    'zieloni': true,
+    'pis': true,
+    'psl': true,
+    'p2050': true,
+    'third-way': true,
+    'konf': true,
+    'kkp': true,
+    'national-movement': true,
+    'agreement': true,
+    'sovereign-poland': true,
+    'solidary-poland': true,
+    'rozwoj-plus': true,
+    'partia-zero': true
+  };
+
   var partyMarkup = function(alias) {
     var match = partyAliases[alias];
     if (!match) {
       return alias;
     }
-    return '<span class="party ' + match.definition.className +
+    var logoId = partyLogoIdForAlias(match, alias);
+    var logoMarkup = partyLogoIds[logoId]
+      ? '<span class="party-name-logo" aria-hidden="true"></span>'
+      : '';
+    return '<span class="party party-name ' + match.definition.className +
       '" title="' + escapeAttribute(match.definition.explanation) +
-      '" data-party="' + match.definition.id + '">' +
-      partyLabel(alias) + '</span>';
+      '" data-party="' + match.definition.id +
+      '" data-party-logo="' + logoId + '">' +
+      logoMarkup +
+      '<span class="party-name-label">' + partyLabel(alias) + '</span>' +
+      '</span>';
   };
 
   var replacePartyAliases = function(text, addMarkup) {
@@ -723,6 +1384,216 @@ window.disableGrayMode = function() {
         return prefix + replacement;
       }
     );
+  };
+
+  var entityMarkup = function(alias) {
+    var definition = entityAliases[alias];
+    if (!definition) {
+      return alias;
+    }
+    return '<span class="entity-name" title="' +
+      escapeAttribute(definition.explanation) +
+      '" data-entity="' + definition.id + '">' +
+      alias + '</span>';
+  };
+
+  var replaceEntityAliases = function(text, addMarkup) {
+    return text.replace(
+      entityAliasPattern,
+      function(fullMatch, prefix, alias) {
+        var replacement = addMarkup ? entityMarkup(alias) : alias;
+        return prefix + replacement;
+      }
+    );
+  };
+
+  var personTooltip = function(definition) {
+    if (!definition || typeof definition.explanation !== 'string') {
+      return '';
+    }
+    return definition.explanation.trim();
+  };
+
+  var resolvePersonDefinition = function(definition) {
+    if (!definition) {
+      return definition;
+    }
+
+    var engine = window.dendryUI && window.dendryUI.dendryEngine;
+    var qualities = engine && engine.state && engine.state.qualities;
+
+    var isRazemLedMerger =
+      Number(qualities && qualities.nowa_lewica_merger_agreed) > 0 &&
+      (String(qualities && qualities.merger_leader || '') === 'Razem' ||
+      /\bLewica Razem\b/i.test(String(qualities && qualities.left_party_name || '')));
+    var mergedLeft =
+      Number(qualities && qualities.nowa_lewica_merger_agreed) > 0;
+    var youngLeftVisible =
+      Number(qualities && qualities.progressives_active) > 0 ||
+      Number(qualities && qualities.progressives_party_formed) > 0;
+
+    var thirdWayJoint =
+      Number(qualities && qualities.third_way_joint_list) > 0 ||
+      ((Number(qualities && qualities.third_way_active) > 0 ||
+      Number(qualities && qualities.third_way_2023_done) > 0) &&
+      Number(qualities && qualities.third_way_split) === 0);
+
+    var morawieckiSplit =
+      Number(qualities && qualities.pis_morawiecki_camp) > 0 ||
+      Number(qualities && qualities.rozwoj_club_formed) > 0 ||
+      Number(qualities && qualities.rozwoj_association_members) > 0;
+
+    if (definition.id === 'gowin') {
+      var porozumienieStatus = String(
+        qualities && qualities.porozumienie_status || ''
+      ).toLowerCase();
+      if (
+        porozumienieStatus.indexOf('outside') >= 0 ||
+        porozumienieStatus.indexOf('opposition') >= 0 ||
+        porozumienieStatus.indexOf('independent') >= 0
+      ) {
+        return {
+          id: definition.id,
+          className: 'party-agreement',
+          explanation: 'Jarosław Gowin now leads an independent Porozumienie current outside the PiS cabinet bloc.',
+          aliases: definition.aliases
+        };
+      }
+    }
+
+    if (definition.id === 'holownia') {
+      return {
+        id: definition.id,
+        className: thirdWayJoint ? 'party-third-way' : 'party-p2050',
+        explanation: thirdWayJoint
+          ? 'Szymon Hołownia appears as the Poland 2050 co-leader inside the Third Way alliance.'
+          : 'Szymon Hołownia appears as the standalone leader of Poland 2050 after the Third Way split.',
+        aliases: definition.aliases
+      };
+    }
+
+    if (definition.id === 'kosiniak') {
+      return {
+        id: definition.id,
+        className: thirdWayJoint ? 'party-third-way' : 'party-psl',
+        explanation: thirdWayJoint
+          ? 'Władysław Kosiniak-Kamysz appears as the PSL co-leader inside the Third Way alliance.'
+          : 'Władysław Kosiniak-Kamysz appears as the standalone PSL leader after the Third Way split.',
+        aliases: definition.aliases
+      };
+    }
+
+    if (definition.id === 'morawiecki' && morawieckiSplit) {
+      return {
+        id: definition.id,
+        className: 'party-rozwoj',
+        explanation: 'Mateusz Morawiecki now fronts the Rozwój+ developmental bloc after splitting from the unified PiS parliamentary camp.',
+        aliases: definition.aliases
+      };
+    }
+
+    if (definition.id === 'ziobro') {
+      return {
+        id: definition.id,
+        className: Number(qualities && qualities.suwerenna_renamed) > 0
+          ? 'party-sovereign-poland'
+          : 'party-solidary-poland',
+        explanation: 'Zbigniew Ziobro leads Solidarna Polska/Suwerenna Polska and is rendered with that distinct current rather than default PiS styling.',
+        aliases: definition.aliases
+      };
+    }
+
+    if (
+      mergedLeft &&
+      (
+        definition.id === 'miller' ||
+        definition.id === 'wieczorek' ||
+        definition.id === 'czarzasty' ||
+        definition.id === 'biedron' ||
+        definition.id === 'smiszek' ||
+        definition.id === 'scheuring_wielgus'
+      )
+    ) {
+      if (isRazemLedMerger) {
+        return {
+          id: definition.id,
+          className: 'party-razem',
+          explanation: 'After the Razem-led merger, this former SLD/Wiosna figure is rendered under the Razem-led unified party line.',
+          aliases: definition.aliases
+        };
+      }
+      return {
+        id: definition.id,
+        className: youngLeftVisible ? 'party-progressive' : 'party-nowa-lewica',
+        explanation: youngLeftVisible
+          ? 'After the merger, this former SLD/Wiosna figure is aligned with the progressive current branding.'
+          : 'After the merger, this former SLD/Wiosna figure is aligned with the establishment New Left branding.',
+        aliases: definition.aliases
+      };
+    }
+
+    if (definition.id !== 'braun') {
+      return definition;
+    }
+
+    var braunSplitActive =
+      Number(qualities && qualities.far_right_split) > 0 ||
+      Number(qualities && qualities.korona_seats) > 0 ||
+      Number(qualities && qualities.korona_poll) > 0 ||
+      Number(qualities && qualities.korona_vote_intent) > 0;
+    if (!braunSplitActive) {
+      return definition;
+    }
+    return {
+      id: definition.id,
+      className: 'party-kkp',
+      explanation: 'Grzegorz Braun leads the Korona current after splitting from Konfederacja and becomes a separate far-right pole.',
+      aliases: definition.aliases
+    };
+  };
+
+  var personMarkup = function(alias) {
+    var definition = resolvePersonDefinition(personAliases[alias]);
+    if (!definition) {
+      return alias;
+    }
+    return '<span class="party ' + definition.className +
+      ' person-name" title="' + escapeAttribute(personTooltip(definition)) +
+      '" data-party-person="' + definition.id + '">' +
+      alias + '</span>';
+  };
+
+  var replacePersonAliases = function(text, addMarkup) {
+    return text.replace(
+      personAliasPattern,
+      function(fullMatch, prefix, alias) {
+        var replacement = addMarkup ? personMarkup(alias) : alias;
+        return prefix + replacement;
+      }
+    );
+  };
+
+  var replaceOutsideTags = function(text, replacer) {
+    return text.split(/(<[^>]+>)/g).map(function(part) {
+      if (!part || part.charAt(0) === '<') {
+        return part;
+      }
+      return replacer(part);
+    }).join('');
+  };
+
+  var hasClassName = function(tag, className) {
+    var classMatch = tag.match(/\bclass=(["'])(.*?)\1/i);
+    if (!classMatch) {
+      return false;
+    }
+    var classes = classMatch[2].split(/\s+/);
+    for (var i = 0; i < classes.length; i++) {
+      if (classes[i] === className) {
+        return true;
+      }
+    }
+    return false;
   };
 
   var partyDefinitionFromTag = function(tag) {
@@ -771,7 +1642,28 @@ window.disableGrayMode = function() {
       if (token.charAt(0) !== '<') {
         var insideParty = elementStack.length &&
           elementStack[elementStack.length - 1].party;
-        return replacePartyAliases(token, !insideParty);
+        var insidePerson = elementStack.length &&
+          elementStack[elementStack.length - 1].person;
+        var insideEntity = elementStack.length &&
+          elementStack[elementStack.length - 1].entity;
+        var withEntityAliases = replaceOutsideTags(
+          token,
+          function(part) {
+            return replaceEntityAliases(part, !insideEntity);
+          }
+        );
+        var withPersonAliases = replaceOutsideTags(
+          withEntityAliases,
+          function(part) {
+            return replacePersonAliases(part, !insidePerson);
+          }
+        );
+        return replaceOutsideTags(
+          withPersonAliases,
+          function(part) {
+            return replacePartyAliases(part, !insideParty);
+          }
+        );
       }
 
       var closingTag = token.match(/^<\/\s*([A-Za-z][^\s>]*)/);
@@ -794,17 +1686,29 @@ window.disableGrayMode = function() {
         return token;
       }
       var ownParty = partyDefinitionFromTag(token);
+      var ownPerson = hasClassName(token, 'person-name');
+      var ownEntity = hasClassName(token, 'entity-name');
       var inheritedParty = elementStack.length
         ? elementStack[elementStack.length - 1].party
         : null;
+      var inheritedPerson = elementStack.length
+        ? elementStack[elementStack.length - 1].person
+        : null;
+      var inheritedEntity = elementStack.length
+        ? elementStack[elementStack.length - 1].entity
+        : null;
       var activeParty = ownParty || inheritedParty;
+      var activePerson = ownPerson || inheritedPerson;
+      var activeEntity = ownEntity || inheritedEntity;
       var voidElement = /\/\s*>$/.test(token) ||
         /^(area|base|br|col|embed|hr|img|input|link|meta|param|source|track|wbr)$/i
           .test(openingTag[1]);
       if (!voidElement) {
         elementStack.push({
           tag: openingTag[1],
-          party: activeParty
+          party: activeParty,
+          person: activePerson,
+          entity: activeEntity
         });
       }
       return addPartyExplanation(token, ownParty);
@@ -815,11 +1719,31 @@ window.disableGrayMode = function() {
     if (!root || !root.querySelectorAll) {
       return;
     }
-    var elements = root.querySelectorAll('.party');
+    var candidates = root.querySelectorAll('[class], .party');
+    var elements = Array.prototype.filter.call(candidates, function(element) {
+      if (element.classList.contains('party')) {
+        return true;
+      }
+      for (var i = 0; i < element.classList.length; i++) {
+        if (partyDefinitionsByClass[element.classList[i]]) {
+          return true;
+        }
+      }
+      return false;
+    });
     for (var i = 0; i < elements.length; i++) {
       var element = elements[i];
+      var personDefinition = null;
       var definition = null;
       var text = element.textContent.replace(/\s+/g, ' ').trim();
+      var personId = element.getAttribute('data-party-person');
+      if (personId && personDefinitionsById[personId]) {
+        personDefinition = resolvePersonDefinition(
+          personDefinitionsById[personId]
+        );
+      } else if (personAliases[text]) {
+        personDefinition = resolvePersonDefinition(personAliases[text]);
+      }
       var exactAlias = partyAliases[text];
       if (exactAlias) {
         definition = exactAlias.definition;
@@ -838,9 +1762,38 @@ window.disableGrayMode = function() {
           }
         }
       }
+      if (personDefinition) {
+        element.title = personTooltip(personDefinition);
+        element.setAttribute('data-party-person', personDefinition.id);
+        element.classList.add('person-name');
+      }
       if (definition) {
-        element.title = definition.explanation;
+        element.classList.add('party');
+        if (!personDefinition) {
+          element.title = definition.explanation;
+        }
         element.setAttribute('data-party', definition.id);
+        if (exactAlias) {
+          var logoOverride = partyLogoIdForAlias(exactAlias, text);
+          if (logoOverride) {
+            element.setAttribute('data-party-logo', logoOverride);
+          }
+        }
+        if (
+          partyLogoIds[
+            element.getAttribute('data-party-logo') || definition.id
+          ] &&
+          !element.classList.contains('party-name') &&
+          !element.querySelector('.party-name, .party-name-logo')
+        ) {
+          element.classList.add('has-party-logo');
+        }
+      }
+    }
+    for (var j = 0; j < elements.length; j++) {
+      var container = elements[j];
+      if (container.querySelector('.party')) {
+        container.classList.remove('has-party-logo');
       }
     }
   };

@@ -5320,109 +5320,269 @@ const seatQuality = function(id) {
     if (id == "pps") return "pps_party_seats";
     return id + "_seats";
 };
+const sejmListOutcome = String(Q.sejm_list_outcome || "left_5");
 const thirdWayJoint =
-    (Q.third_way_active || Q.third_way_2023_done) &&
-    !Q.third_way_split;
-const countIds = ids.filter(function(id) {
-    return id != "other" &&
-        (!thirdWayJoint || (id != "psl" && id != "p2050"));
-});
-if (thirdWayJoint) countIds.push("third_way");
+    Number(Q.third_way_joint_list) == 1 || (
+        (Q.third_way_active || Q.third_way_2023_done) &&
+        !Q.third_way_split &&
+        sejmListOutcome != "third_host_5"
+    );
 const liveVote = function(id) {
     if (id == "third_way") {
+        const poll = Number(Q.third_way_poll);
+        if (Number.isFinite(poll) && poll > 0) return poll;
+        const pslPoll = Math.max(0, Number(Q.psl_poll) || 0);
+        const p2050Poll = Math.max(0, Number(Q.p2050_poll) || 0);
+        if (pslPoll + p2050Poll > 0) return pslPoll + p2050Poll;
         return Math.max(
             0,
-            (Number(Q.psl_vote_intent) || 0) +
-                (Number(Q.p2050_vote_intent) || 0)
+            (Number(Q.psl_component_vote_intent) || 0) +
+                (Number(Q.p2050_component_vote_intent) || 0)
         );
+    }
+    const poll = Number(Q[id + "_poll"]);
+    if (Number.isFinite(poll) && poll > 0) return poll;
+    const componentIntent = Number(Q[id + "_component_vote_intent"]);
+    if (Number.isFinite(componentIntent) && componentIntent > 0) {
+        return componentIntent;
     }
     const intent = Number(Q[id + "_vote_intent"]);
     if (Number.isFinite(intent) && intent > 0) return intent;
     return Math.max(0, Number(Q[seatQuality(id)]) || 0) * 100 / 460;
 };
+const countIds = ids.filter(function(id) {
+    return id != "other" &&
+        (!thirdWayJoint || (id != "psl" && id != "p2050"));
+});
+if (thirdWayJoint) countIds.push("third_way");
 const activeCountIds = countIds.filter(function(id) {
     return liveVote(id) > 0.02;
 });
 if (!activeCountIds.length) {
     activeCountIds.push("pis", "ko", "left", "konf");
 }
-const countedVotes = {};
 const countShocks = {};
 const shockRange = Q.snap_election_cycle > 1 ? 4.4 : 3;
+const shockedVotes = {};
 for (const id of activeCountIds) {
     const shock =
         (this.random.uint32() / 4294967296 - 0.5) * shockRange;
     countShocks[id] = shock;
-    countedVotes[id] = Math.max(0.02, liveVote(id) + shock);
+    shockedVotes[id] = Math.max(0.02, liveVote(id) + shock);
 }
-if (Object.prototype.hasOwnProperty.call(countedVotes, "left")) {
-    countedVotes.left += Math.max(
+if (Object.prototype.hasOwnProperty.call(shockedVotes, "left")) {
+    shockedVotes.left += Math.max(
         0,
         Number(Q.snap_campaign_left_bonus) || 0
     );
 }
 const aggregateOther = Math.max(
     0,
-    Number(Q.other_vote_intent) || Number(Q.other_poll) || 0
+    Number(Q.other_poll) || Number(Q.other_vote_intent) || 0
 );
-const countedTotal = aggregateOther + activeCountIds.reduce(
+const shockedTotal = aggregateOther + activeCountIds.reduce(
     function(total, id) {
-        return total + countedVotes[id];
+        return total + shockedVotes[id];
     },
     0
 );
-for (const id of activeCountIds) {
-    countedVotes[id] = countedVotes[id] * 100 / Math.max(1, countedTotal);
-}
 const normalizedOther =
-    aggregateOther * 100 / Math.max(1, countedTotal);
+    aggregateOther * 100 / Math.max(1, shockedTotal);
+for (const id of activeCountIds) {
+    shockedVotes[id] = shockedVotes[id] * 100 / Math.max(1, shockedTotal);
+}
+
+const committeeFor = {};
+for (const id of ids.concat(["third_way"])) committeeFor[id] = id;
+if (thirdWayJoint) {
+    committeeFor.psl = "third_way";
+    committeeFor.p2050 = "third_way";
+}
+const breakawayCommitteeQualities = {
+    spring_breakaway: "spring_list_committee",
+    labor_left: "labor_list_committee",
+    young_left: "progressives_list_committee",
+    razem: "razem_list_committee",
+    social_patriot: "social_patriot_list_committee"
+};
+for (const id of Object.keys(breakawayCommitteeQualities)) {
+    const requestedCommittee = String(
+        Q[breakawayCommitteeQualities[id]] || id
+    );
+    if (
+        ["left", "razem", "left_coalition"].includes(requestedCommittee) ||
+        (id == "social_patriot" && requestedCommittee == "pis")
+    ) {
+        committeeFor[id] = requestedCommittee;
+    }
+}
+if (sejmListOutcome == "left_coalition_8") {
+    committeeFor.left = "left_coalition";
+} else if (sejmListOutcome == "razem_5" && Q.razem_party_formed) {
+    committeeFor.left = "razem";
+} else if (sejmListOutcome == "democratic_8") {
+    committeeFor.left = "democratic_list";
+    committeeFor.ko = "democratic_list";
+    committeeFor.psl = "democratic_list";
+    if (Q.p2050_emerged) committeeFor.p2050 = "democratic_list";
+} else if (sejmListOutcome == "ko_5") {
+    committeeFor.left = "ko";
+} else if (sejmListOutcome == "third_way_8") {
+    committeeFor.left = "third_way";
+    committeeFor.psl = "third_way";
+    if (Q.p2050_emerged) committeeFor.p2050 = "third_way";
+} else if (sejmListOutcome == "third_host_5") {
+    committeeFor.left = ["psl", "p2050"].includes(Q.sejm_list_host)
+        ? Q.sejm_list_host
+        : "psl";
+} else if (sejmListOutcome == "pis_5") {
+    committeeFor.left = "pis";
+}
+
+const componentBaseVotes = {};
+for (const id of ids) {
+    if (id == "other") continue;
+    componentBaseVotes[id] = Math.max(0, liveVote(id));
+}
+const committeeVotes = {};
+for (const id of activeCountIds) {
+    const committee = committeeFor[id] || id;
+    committeeVotes[committee] =
+        Math.max(0, committeeVotes[committee] || 0) + shockedVotes[id];
+}
+
 const thresholds = {
-    pis: 5, ko: Q.ko_consolidated ? 5 : 8, p2050: 5, psl: 5,
-    left: 5, konf: 5, sld_breakaway: 5, social_patriot: 5,
+    pis: 5,
+    ko: Q.ko_consolidated || sejmListOutcome == "ko_5" ? 5 : 8,
+    p2050: 5,
+    psl: 5,
+    left: 5,
+    konf: 5,
+    sld_breakaway: 5,
+    social_patriot: 5,
     spring_breakaway: 5,
-    labor_left: 5, young_left: 5, razem: 5, pps: 5,
-    tak_rozwoj: 5, centrum: 5, rozwoj: 5, korona: 5, ko_splinter: 5,
+    labor_left: 5,
+    young_left: 5,
+    razem: 5,
+    pps: 5,
+    tak_rozwoj: 5,
+    centrum: 5,
+    rozwoj: 5,
+    korona: 5,
+    ko_splinter: 5,
+    left_coalition: 8,
+    democratic_list: 8,
     third_way: 8
 };
-let qualified = activeCountIds.filter(function(id) {
-    return countedVotes[id] >= thresholds[id];
+
+let qualifiedCommittees = Object.keys(committeeVotes).filter(function(id) {
+    return committeeVotes[id] >= (thresholds[id] || 5);
 });
-if (!qualified.length) {
-    qualified = activeCountIds.slice().sort(function(a, b) {
-        return countedVotes[b] - countedVotes[a];
+if (!qualifiedCommittees.length) {
+    qualifiedCommittees = Object.keys(committeeVotes).sort(function(a, b) {
+        return committeeVotes[b] - committeeVotes[a];
     }).slice(0, 1);
 }
-const resultSeats = {};
-for (const id of ids.concat(["third_way"])) resultSeats[id] = 0;
+
+const committeeSeats = {};
+for (const committee of Object.keys(committeeVotes)) {
+    committeeSeats[committee] = 0;
+}
 for (let seat = 0; seat < 460; seat += 1) {
-    let winner = qualified[0];
+    let winner = qualifiedCommittees[0];
     let best = -1;
-    for (const id of qualified) {
-        const quotient = countedVotes[id] / (resultSeats[id] + 1);
+    for (const committee of qualifiedCommittees) {
+        const quotient = committeeVotes[committee] /
+            (committeeSeats[committee] + 1);
         if (quotient > best) {
             best = quotient;
-            winner = id;
+            winner = committee;
         }
     }
-    resultSeats[winner] += 1;
+    committeeSeats[winner] += 1;
 }
-if (thirdWayJoint) {
-    const pslWeight = Math.max(0.01, liveVote("psl"));
-    const p2050Weight = Math.max(0.01, liveVote("p2050"));
-    const pslExact = resultSeats.third_way * pslWeight /
-        (pslWeight + p2050Weight);
-    resultSeats.psl = Math.floor(pslExact);
-    resultSeats.p2050 = resultSeats.third_way - resultSeats.psl;
+
+const resultSeats = {};
+for (const id of ids.concat(["third_way"])) resultSeats[id] = 0;
+for (const committee of Object.keys(committeeVotes)) {
+    const totalSeats = committeeSeats[committee] || 0;
+    if (totalSeats <= 0) continue;
+    const members = ids.filter(function(id) {
+        if (id == "other") return false;
+        if (thirdWayJoint && committee == "third_way") {
+            return id == "psl" || id == "p2050";
+        }
+        return (committeeFor[id] || id) == committee &&
+            componentBaseVotes[id] > 0.001;
+    });
+    if (members.length == 1 && members[0] == committee) {
+        resultSeats[committee] = totalSeats;
+        continue;
+    }
+    if (!members.length) {
+        if (Object.prototype.hasOwnProperty.call(resultSeats, committee)) {
+            resultSeats[committee] = totalSeats;
+        }
+        continue;
+    }
+    const weightTotal = members.reduce(function(total, id) {
+        return total + componentBaseVotes[id];
+    }, 0);
+    const allocations = members.map(function(id) {
+        const exact = totalSeats * componentBaseVotes[id] /
+            Math.max(0.01, weightTotal);
+        return {
+            id: id,
+            seats: Math.floor(exact),
+            remainder: exact - Math.floor(exact)
+        };
+    });
+    let allocated = allocations.reduce(function(total, entry) {
+        return total + entry.seats;
+    }, 0);
+    allocations.sort(function(a, b) {
+        return b.remainder - a.remainder;
+    });
+    let remainderIndex = 0;
+    while (allocated < totalSeats) {
+        allocations[remainderIndex % allocations.length].seats += 1;
+        remainderIndex += 1;
+        allocated += 1;
+    }
+    for (const entry of allocations) {
+        resultSeats[entry.id] = entry.seats;
+    }
 }
+
 for (const id of ids) {
     Q[seatQuality(id)] = resultSeats[id] || 0;
     Q[id + "_projected_seats"] = Q[seatQuality(id)];
-    const resultVote = thirdWayJoint && (id == "psl" || id == "p2050")
-        ? countedVotes.third_way * liveVote(id) /
-            Math.max(0.01, liveVote("psl") + liveVote("p2050"))
-        : (id == "other" ? normalizedOther : countedVotes[id] || 0);
+    if (id == "other") {
+        Q["snap_election_" + id + "_vote"] =
+            Math.round(normalizedOther * 100) / 100;
+        continue;
+    }
+    const committee = committeeFor[id] || id;
+    const committeeVote = Math.max(0, committeeVotes[committee] || 0);
+    if (committeeVote <= 0) {
+        Q["snap_election_" + id + "_vote"] = 0;
+        continue;
+    }
+    const committeeMembers = ids.filter(function(member) {
+        if (member == "other") return false;
+        if (thirdWayJoint && committee == "third_way") {
+            return member == "psl" || member == "p2050";
+        }
+        return (committeeFor[member] || member) == committee &&
+            componentBaseVotes[member] > 0.001;
+    });
+    const committeeWeight = committeeMembers.reduce(function(total, member) {
+        return total + componentBaseVotes[member];
+    }, 0);
+    const memberVote = committeeVote * componentBaseVotes[id] /
+        Math.max(0.01, committeeWeight);
     Q["snap_election_" + id + "_vote"] =
-        Math.round(resultVote * 100) / 100;
+        Math.round(memberVote * 100) / 100;
 }
 
 // A new election replaces the old main-list caucus ledger. Reapportion only
@@ -5864,6 +6024,83 @@ Q.news_headline =
     Q.snap_election_cycle > 1
         ? "A fresh second campaign shifts the balance but again fragments the Sejm"
         : "The alternative election returns a fragmented Sejm";
+Q.snap_third_way_joint_list = thirdWayJoint ? 1 : 0;
+Q.snap_election_third_way_vote = Math.round(
+    (
+        (Number(Q.snap_election_psl_vote) || 0) +
+        (Number(Q.snap_election_p2050_vote) || 0)
+    ) * 100
+) / 100;
+!}
+on-display: {!
+const data = [];
+const certifiedParties = [
+    ["pis", "PiS", "PiS", Q.pis_seats],
+    ["konf", "Konf.", "Konfederacja", Q.konf_seats],
+    ["ko", "KO", "KO", Q.ko_seats],
+    ["left", "NL", Q.left_party_name || "Lewica", Q.left_seats],
+    ["sld_breakaway", "SLD", Q.barons_party_name, Q.sld_breakaway_seats],
+    ["social_patriot", "LP", Q.social_patriot_party_name, Q.social_patriot_seats],
+    ["spring_breakaway", "Spring", Q.spring_party_name, Q.spring_breakaway_seats],
+    ["labor_left", "Labour", Q.labor_party_name, Q.labor_left_seats],
+    ["young_left", "Young", Q.progressives_party_name, Q.young_left_seats],
+    ["razem", "Razem", Q.razem_party_name, Q.razem_party_seats],
+    ["pps", "PPS", Q.pps_party_name, Q.pps_party_seats],
+    ["centrum", "Centrum", "Unia Centrum", Q.centrum_seats],
+    ["rozwoj", "Rozwój+", "Rozwój Plus", Q.rozwoj_seats],
+    ["korona", "Korona", "Korona", Q.korona_seats],
+    ["ko_splinter", "KO-S", Q.ko_splinter_type || "KO splinter", Q.ko_splinter_seats],
+    ["other", "Inni", "Inni", Q.other_seats]
+];
+if (Q.snap_third_way_joint_list) {
+    certifiedParties.splice(
+        2,
+        0,
+        [
+            "third_way",
+            "Third Way",
+            "Trzecia Droga",
+            (Number(Q.psl_seats) || 0) + (Number(Q.p2050_seats) || 0)
+        ]
+    );
+} else {
+    certifiedParties.splice(
+        2,
+        0,
+        ["psl", "PSL", "PSL", Q.psl_seats],
+        ["p2050", "PL2050", "Polska 2050", Q.p2050_seats]
+    );
+}
+for (const party of certifiedParties) {
+    if (party[3] > 0) {
+        data.push({
+            id: party[0],
+            legend: party[1],
+            name: party[2],
+            seats: party[3]
+        });
+    }
+}
+if (
+    typeof window !== "undefined" &&
+    typeof d3 !== "undefined" &&
+    document.getElementById("poland-sejm-snap")
+) {
+    let width = 500;
+    let height = 500;
+    const content = document.getElementById("content");
+    if (content && content.offsetWidth < 450) {
+        width = Math.max(260, content.offsetWidth - 30);
+        height = width;
+        document.getElementById("poland-sejm-snap").style.height =
+            Math.round(width / 2) + "px";
+    }
+    const parliament = d3.parliament();
+    parliament.width(width).height(height).innerRadiusCoef(0.4);
+    parliament.enter.fromCenter(true).smallToBig(true);
+    parliament.exit.toCenter(false).bigToSmall(true);
+    d3.select("#poland-sejm-snap").datum(data).call(parliament);
+}
 !}
 
 [? if election_2027_terminal = 1: = 2027 Sejm and Senate result ?]
@@ -5873,33 +6110,35 @@ Q.news_headline =
 election in the constitutional sequence. Voters have moved again during the
 fresh campaign; the parties do not simply inherit the previous count.?]
 
-**[+ snap_election_day_summary +]**
+{!<svg id="poland-sejm-snap" class="poland-sejm-chart"></svg>!}
+
+<div class="election-table">
+<div class="election-table-head"><span>Committee</span><span>Vote</span><span>Seats</span><span>Status</span></div>
+<div class="election-table-row"><span class="party party-pis">PiS</span><span>[+ snap_election_pis_vote +]%</span><b>[+ pis_seats +]</b><span>certified</span></div>
+<div class="election-table-row"><span class="party party-ko">KO</span><span>[+ snap_election_ko_vote +]%</span><b>[+ ko_seats +]</b><span>[? if ko_consolidated: separate list · 5%?][? if not ko_consolidated: coalition form · 8%?]</span></div>
+[? if snap_third_way_joint_list = 1: <div class="election-table-row"><span class="party party-third-way">Trzecia Droga</span><span>[+ snap_election_third_way_vote +]%</span><b>[+ p2050_seats + psl_seats +]</b><span>joint list · 8% threshold</span></div>?]
+[? if snap_third_way_joint_list = 0: <div class="election-table-row"><span class="party party-p2050">Polska 2050</span><span>[+ snap_election_p2050_vote +]%</span><b>[+ p2050_seats +]</b><span>separate list · 5%</span></div><div class="election-table-row"><span class="party party-psl">PSL</span><span>[+ snap_election_psl_vote +]%</span><b>[+ psl_seats +]</b><span>separate list · 5%</span></div>?]
+<div class="election-table-row"><span class="party party-lewica">[+ left_party_name +]</span><span>[+ snap_election_left_vote +]%</span><b>[+ left_seats +]</b><span>main list</span></div>
+[? if sld_breakaway_seats > 0 or barons_party_formed = 1: <div class="election-table-row"><span class="party party-sld">[+ barons_party_name +]</span><span>[+ snap_election_sld_breakaway_vote +]%</span><b>[+ sld_breakaway_seats +]</b><span>breakaway</span></div>?]
+[? if social_patriot_seats > 0 or social_patriot_party_formed = 1: <div class="election-table-row"><span class="party party-social-patriot">[+ social_patriot_party_name +]</span><span>[+ snap_election_social_patriot_vote +]%</span><b>[+ social_patriot_seats +]</b><span>[? if social_patriot_list_committee = "pis": PiS host list?][? if social_patriot_list_committee != "pis": independent?]</span></div>?]
+[? if spring_breakaway_seats > 0 or spring_party_formed = 1: <div class="election-table-row"><span class="party party-wiosna">[+ spring_party_name +]</span><span>[+ snap_election_spring_breakaway_vote +]%</span><b>[+ spring_breakaway_seats +]</b><span>breakaway</span></div>?]
+[? if labor_left_seats > 0 or labor_party_formed = 1: <div class="election-table-row"><span class="party party-left-labor">[+ labor_party_name +]</span><span>[+ snap_election_labor_left_vote +]%</span><b>[+ labor_left_seats +]</b><span>breakaway</span></div>?]
+[? if young_left_seats > 0 or progressives_party_formed = 1: <div class="election-table-row"><span class="party party-progressive">[+ progressives_party_name +]</span><span>[+ snap_election_young_left_vote +]%</span><b>[+ young_left_seats +]</b><span>breakaway</span></div>?]
+[? if razem_party_seats > 0 or razem_party_formed = 1: <div class="election-table-row"><span class="party party-razem">Razem</span><span>[+ snap_election_razem_vote +]%</span><b>[+ razem_party_seats +]</b><span>independent list</span></div>?]
+[? if pps_party_seats > 0 or pps_party_formed = 1: <div class="election-table-row"><span class="party party-pps">PPS</span><span>[+ snap_election_pps_vote +]%</span><b>[+ pps_party_seats +]</b><span>independent list</span></div>?]
+[? if tak_rozwoj_seats > 0 or tak_dla_rozwoju_party_formed = 1: <div class="election-table-row"><span class="party party-razem">[+ tak_rozwoj_party_name +]</span><span>[+ snap_election_tak_rozwoj_vote +]%</span><b>[+ tak_rozwoj_seats +]</b><span>Matysiak splitter</span></div>?]
+[? if centrum_seats > 0 or unia_centrum_formed = 1: <div class="election-table-row"><span class="party party-centrum">Unia Centrum</span><span>[+ snap_election_centrum_vote +]%</span><b>[+ centrum_seats +]</b><span>PL2050 split</span></div>?]
+[? if ko_splinter_seats > 0 or ko_splinter_active = 1: <div class="election-table-row"><span class="party party-ko">[+ ko_splinter_type +] KO splinter</span><span>[+ snap_election_ko_splinter_vote +]%</span><b>[+ ko_splinter_seats +]</b><span>KO split</span></div>?]
+[? if rozwoj_seats > 0 or rozwoj_party_formed = 1: <div class="election-table-row"><span class="party party-rozwoj">Rozwój Plus</span><span>[+ snap_election_rozwoj_vote +]%</span><b>[+ rozwoj_seats +]</b><span>PiS split</span></div>?]
+[? if korona_seats > 0 or far_right_split > 0: <div class="election-table-row"><span class="party party-korona">Korona</span><span>[+ snap_election_korona_vote +]%</span><b>[+ korona_seats +]</b><span>Konf. split</span></div>?]
+<div class="election-table-row"><span class="party party-konf">Konfederacja</span><span>[+ snap_election_konf_vote +]%</span><b>[+ konf_seats +]</b><span>certified</span></div>
+</div>
+
+Election-day movement: **[+ snap_election_day_summary +]**.
 
 **Senate:** [+ senate_democratic_seats +] democratic · [+
 senate_right_seats +] right-aligned · [+ senate_independent_seats +]
 independent. **[+ senate_control +]** under 100 single-member district results.
-
-<div class="election-table">
-<div class="election-table-head"><span>Party</span><span></span><span>Seats</span><span></span></div>
-<div class="election-table-row"><span class="party party-pis">PiS / loyalist right</span><span></span><b>[+ pis_seats +]</b><span></span></div>
-<div class="election-table-row"><span class="party party-ko">KO</span><span></span><b>[+ ko_seats +]</b><span></span></div>
-[? if ko_splinter_seats > 0: <div class="election-table-row"><span class="party party-ko">[+ ko_splinter_type +] KO splinter</span><span></span><b>[+ ko_splinter_seats +]</b><span>KO split</span></div>?]
-<div class="election-table-row"><span class="party party-lewica">[+ left_party_name +]</span><span></span><b>[+ left_seats +]</b><span>main list</span></div>
-[? if sld_breakaway_seats > 0: <div class="election-table-row"><span class="party party-sld">[+ barons_party_name +]</span><span></span><b>[+ sld_breakaway_seats +]</b><span>breakaway</span></div>?]
-[? if social_patriot_seats > 0: <div class="election-table-row"><span class="party party-social-patriot">[+ social_patriot_party_name +]</span><span></span><b>[+ social_patriot_seats +]</b><span>[+ social_patriot_electoral_strategy +]</span></div>?]
-[? if spring_breakaway_seats > 0: <div class="election-table-row"><span class="party party-wiosna">[+ spring_party_name +]</span><span></span><b>[+ spring_breakaway_seats +]</b><span>breakaway</span></div>?]
-[? if labor_left_seats > 0: <div class="election-table-row"><span class="party party-left-labor">[+ labor_party_name +]</span><span></span><b>[+ labor_left_seats +]</b><span>breakaway</span></div>?]
-[? if young_left_seats > 0: <div class="election-table-row"><span class="party party-progressive">[+ progressives_party_name +]</span><span></span><b>[+ young_left_seats +]</b><span>breakaway</span></div>?]
-[? if razem_party_seats > 0: <div class="election-table-row"><span class="party party-razem">Razem</span><span></span><b>[+ razem_party_seats +]</b><span>independent</span></div>?]
-[? if pps_party_seats > 0: <div class="election-table-row"><span class="party party-pps">PPS</span><span></span><b>[+ pps_party_seats +]</b><span>independent</span></div>?]
-[? if tak_rozwoj_seats > 0: <div class="election-table-row"><span class="party party-razem">[+ tak_rozwoj_party_name +]</span><span></span><b>[+ tak_rozwoj_seats +]</b><span>Matysiak splitter</span></div>?]
-<div class="election-table-row"><span class="party party-psl">PSL</span><span></span><b>[+ psl_seats +]</b><span></span></div>
-<div class="election-table-row"><span class="party party-p2050">Poland 2050</span><span></span><b>[+ p2050_seats +]</b><span></span></div>
-[? if centrum_seats > 0: <div class="election-table-row"><span class="party party-centrum">Unia Centrum</span><span></span><b>[+ centrum_seats +]</b><span>PL2050 split</span></div>?]
-<div class="election-table-row"><span class="party party-konf">Konfederacja</span><span></span><b>[+ konf_seats +]</b><span></span></div>
-[? if korona_seats > 0: <div class="election-table-row"><span class="party party-korona">Korona</span><span></span><b>[+ korona_seats +]</b><span>Konf. split</span></div>?]
-[? if rozwoj_seats > 0: <div class="election-table-row"><span class="party party-rozwoj">Rozwój Plus</span><span></span><b>[+ rozwoj_seats +]</b><span>PiS split</span></div>?]
-</div>
 
 - @poland_election.sejm_threshold_defeat: Concede the election
 - @snap_resolve_senate_marshal

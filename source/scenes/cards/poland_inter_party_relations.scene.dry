@@ -18,11 +18,13 @@ about the coalition it may prefer later.
 - @third_way
 - @pis_solidarists
 - @konf
+- @breakaways
 - @stand_alone
 
 @ko
 title: Strengthen the working relationship with KO
 subtitle: Cost: 1 resource. KO relation +8; socialist dissent rises.
+view-if: ko_seats > 0 or ko_poll > 0
 choose-if: resources >= 1
 unavailable-subtitle: A permanent parliamentary liaison requires one resource.
 on-arrival: resources -= 1; poland_inter_party_focus = "KO"; ko_relation += 8; p2050_relation += 1; constitutional_restraint += 2; judicial_legitimacy += 2; razem_dissent += 4; labor_dissent += 2; party_unity -= 1; news_headline = "Lewica and KO strengthen their permanent parliamentary channel"
@@ -35,11 +37,53 @@ the largest liberal party easily becomes dependence.
 
 
 @third_way
-title: Build a rural and state-capacity channel with PSL and Polska 2050
-subtitle: Cost: 1 resource. PSL and Polska 2050 relations +7; rights-oriented caucuses object.
+title: Build a rural and state-capacity channel with active centrist partners
+subtitle: Cost: 1 resource. Strengthens relations with whichever of PSL, Poland 2050 and Centrum are active.
+view-if: psl_seats > 0 or psl_poll > 0 or p2050_seats > 0 or p2050_poll > 0 or p2050_emerged = 1 or unia_centrum_formed = 1 or centrum_seats > 0 or centrum_poll > 0
 choose-if: resources >= 1
 unavailable-subtitle: Rural, local-government and parliamentary liaison requires one resource.
-on-arrival: resources -= 1; poland_inter_party_focus = "PSL and Polska 2050"; psl_relation += 7; p2050_relation += 7; local_network += 2; public_trust += 1; progressives_dissent += 4; spring_dissent += 2; news_headline = "Lewica opens a permanent rural and state-capacity channel to PSL and Polska 2050"
+on-arrival: {!
+Q.resources -= 1;
+const partners = [];
+if ((Number(Q.psl_seats) || 0) > 0 || (Number(Q.psl_poll) || 0) > 0) {
+    Q.psl_relation += 7;
+    partners.push("PSL");
+}
+if (
+    !Q.p2050_joined_left &&
+    (
+        (Number(Q.p2050_seats) || 0) > 0 ||
+        (Number(Q.p2050_poll) || 0) > 0 ||
+        Q.p2050_emerged
+    )
+) {
+    Q.p2050_relation += 7;
+    partners.push("Polska 2050");
+}
+if (
+    Q.unia_centrum_formed ||
+    (Number(Q.centrum_seats) || 0) > 0 ||
+    (Number(Q.centrum_poll) || 0) > 0
+) {
+    if (Number.isFinite(Number(Q.centrum_relation))) {
+        Q.centrum_relation += 6;
+    } else {
+        Q.centrum_parent_relation =
+            (Number(Q.centrum_parent_relation) || 34) + 6;
+    }
+    partners.push("Unia Centrum");
+}
+Q.poland_inter_party_focus = partners.length
+    ? partners.join(" and ")
+    : "centrist and rural channel";
+Q.local_network += 2;
+Q.public_trust += 1;
+Q.progressives_dissent += 4;
+Q.spring_dissent += 2;
+Q.news_headline = partners.length
+    ? "Lewica opens a permanent channel to " + partners.join(" and ")
+    : "Lewica opens a centrist and rural liaison channel";
+!}
 
 The talks begin with clinics, transport, local finance and administrative
 capacity. Rights policy is not abandoned; it is also not permitted to lead the
@@ -51,6 +95,7 @@ meeting.
 @pis_solidarists
 title: Open a working channel to PiS's social-solidarist current
 subtitle: Cost: 1 resource. Bargaining capital +6, PiS relation +8 and hostility −10; the liberal opposition and PiS right object.
+view-if: pis_seats > 0 or pis_poll > 0
 choose-if: resources >= 1
 unavailable-subtitle: A serious social-policy channel requires one resource.
 on-arrival: {!
@@ -101,14 +146,103 @@ an outside partner and record their dissent.
 
 
 @konf
-title: Open a narrow anti-privatisation channel to Konfederacja deputies
-subtitle: Cost: 1 resource. Konfederacja relation +6; democratic and progressive relationships suffer.
+title: Open a narrow anti-privatisation channel to the active radical-right family
+subtitle: Cost: 1 resource. Improves relations with active Konf-family parties; democratic and progressive relationships suffer.
+view-if: konf_seats > 0 or konf_poll > 0 or p0_formed = 1 or p0_seats > 0 or p0_poll > 0 or far_right_split = 1 or korona_seats > 0 or korona_poll > 0
 choose-if: resources >= 1
 unavailable-subtitle: Vetting a narrow parliamentary channel requires one resource.
-on-arrival: resources -= 1; poland_inter_party_focus = "a narrow Konfederacja channel"; konf_relation += 6; ko_relation -= 3; p2050_relation -= 2; pis_relation -= 1; progressive_credibility -= 3; progressives_dissent += 7; razem_dissent += 4; far_right_agenda += 2; news_headline = "A narrow anti-privatisation vote opens an argument across Lewica"
+on-arrival: {!
+Q.resources -= 1;
+const channels = [];
+if ((Number(Q.konf_seats) || 0) > 0 || (Number(Q.konf_poll) || 0) > 0) {
+    Q.konf_relation += 6;
+    channels.push("Konfederacja");
+}
+if (Q.p0_formed || (Number(Q.p0_seats) || 0) > 0 || (Number(Q.p0_poll) || 0) > 0) {
+    Q.p0_parent_relation = (Number(Q.p0_parent_relation) || 24) + 8;
+    channels.push(Q.p0_name || "Partia Zero");
+}
+if (Q.far_right_split || (Number(Q.korona_seats) || 0) > 0 || (Number(Q.korona_poll) || 0) > 0) {
+    Q.korona_parent_relation = (Number(Q.korona_parent_relation) || 20) + 6;
+    channels.push("Korona");
+}
+Q.poland_inter_party_focus = channels.length
+    ? "a narrow channel to " + channels.join(" and ")
+    : "a narrow Konfederacja channel";
+Q.ko_relation -= 3;
+Q.p2050_relation -= 2;
+Q.pis_relation -= 1;
+Q.progressive_credibility -= 3;
+Q.progressives_dissent += 7;
+Q.razem_dissent += 4;
+Q.far_right_agenda += 2;
+Q.news_headline = channels.length
+    ? "A narrow anti-privatisation vote opens channels to " + channels.join(" and ")
+    : "A narrow anti-privatisation vote opens an argument across Lewica";
+!}
 
 One vote on public ownership does not erase the radical right's programme.
 Many inside Lewica regard even a bounded channel as normalisation.
+
+- #poland_card_finish
+
+
+@breakaways
+title: Rebuild channels with active Left breakaway parties
+subtitle: Cost: 1 resource. Improve relations with all active Left breakaways and reduce fragmentation pressure.
+view-if: barons_party_formed = 1 or social_patriot_party_formed = 1 or spring_party_formed = 1 or labor_party_formed = 1 or progressives_party_formed = 1 or razem_party_formed = 1 or pps_party_formed = 1 or tak_dla_rozwoju_party_formed = 1
+choose-if: resources >= 1
+unavailable-subtitle: Reconciliation talks require one resource.
+on-arrival: {!
+Q.resources -= 1;
+const rebuilt = [];
+if (Q.barons_party_formed) {
+    Q.barons_party_relation += 8;
+    rebuilt.push(Q.barons_party_name || "SLD breakaway");
+}
+if (Q.social_patriot_party_formed) {
+    Q.social_patriot_party_relation += 8;
+    rebuilt.push(Q.social_patriot_party_name || "Lewica Patriotyczna");
+}
+if (Q.spring_party_formed) {
+    Q.spring_party_relation += 8;
+    rebuilt.push(Q.spring_party_name || "Spring breakaway");
+}
+if (Q.labor_party_formed) {
+    Q.labor_party_relation += 8;
+    rebuilt.push(Q.labor_party_name || "Labour Left");
+}
+if (Q.progressives_party_formed) {
+    Q.progressives_party_relation += 8;
+    rebuilt.push(Q.progressives_party_name || "Young Left");
+}
+if (Q.razem_party_formed) {
+    Q.razem_party_relation += 8;
+    rebuilt.push(Q.razem_party_name || "Razem");
+}
+if (Q.pps_party_formed) {
+    Q.pps_party_relation += 8;
+    rebuilt.push(Q.pps_party_name || "PPS");
+}
+if (Q.tak_dla_rozwoju_party_formed) {
+    Q.tak_rozwoj_parent_relation =
+        (Number(Q.tak_rozwoj_parent_relation) || 30) + 8;
+    rebuilt.push(Q.tak_rozwoj_party_name || "Tak! Dla Rozwoju");
+}
+Q.poland_inter_party_focus = rebuilt.length
+    ? "Left-breakaway reconciliation"
+    : "party autonomy";
+Q.party_unity += 3;
+Q.left_right_score -= 1;
+Q.progressives_dissent -= 2;
+Q.barons_dissent -= 2;
+Q.news_headline = rebuilt.length
+    ? "Lewica rebuilds channels with breakaway parties: " + rebuilt.join(", ")
+    : "Lewica attempts breakaway reconciliation";
+!}
+
+Bridging channels with breakaways rarely produces instant reunification, but it
+can stop avoidable seat leakage and reopen list talks before the campaign hardens.
 
 - #poland_card_finish
 

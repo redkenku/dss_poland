@@ -378,6 +378,8 @@ const partnerScore = requiredPartnerScores.length
     : 100;
 const accepted = outcome == "left_5" ||
     (partnerScore >= 50 && internalScore >= 45);
+const pisFriendlyFollowup =
+    outcome == "pis_5" && !accepted && relation("pis_relation", 8) >= 45;
 
 Q.spring_joined_razem = 0;
 Q.labor_joined_razem = 0;
@@ -395,6 +397,7 @@ Q.social_patriot_electoral_strategy = socialPatriotNeedsHost
     : "Independent party list above 5%";
 Q.razem_list_committee = "razem";
 Q.pps_list_committee = "pps";
+Q.sejm_list_followup_pending = 0;
 Q.sejm_list_partner_score = partnerScore;
 Q.sejm_list_internal_score = internalScore;
 Q.sejm_list_acceptances = partnerNames.map(function(name, index) {
@@ -459,6 +462,20 @@ if (accepted) {
     Q.party_unity += coalitionForm ? 2 : (host == "left" ? 1 : -2);
     Q.turnout_readiness += 3;
     Q.news_headline = Q.sejm_list_result;
+} else if (pisFriendlyFollowup) {
+    Q.sejm_list_followup_pending = 1;
+    Q.sejm_list_outcome = "left_5";
+    Q.sejm_list_structure = "Host-party list";
+    Q.sejm_list_host = "left";
+    Q.sejm_list_threshold = 5;
+    Q.sejm_list_members = "Lewica pending revised terms with PiS";
+    Q.sejm_list_control = "Pending revised terms after PiS objections";
+    Q.sejm_list_result =
+        Q.sejm_list_target +
+        " enters a final objection round instead of outright rejection";
+    Q.sejm_list_has_partners = 0;
+    Q.news_headline =
+        "PiS asks Lewica to revise host-list terms before filing";
 } else {
     Q.sejm_list_outcome = "left_5";
     Q.sejm_list_structure = "Host-party list";
@@ -480,6 +497,8 @@ Q.sejm_list_negotiation_done = 1;
 
 **[+ sejm_list_result +].**
 
+[? if sejm_list_followup_pending: The target committee is not filed yet. PiS keeps the channel open, but demands a final response to objections on control, message discipline and candidate guarantees before registration.?]
+
 Legal form: **[+ sejm_list_structure +] · [+ sejm_list_threshold +]%**<br>
 Control: **[+ sejm_list_control +]**
 
@@ -491,6 +510,44 @@ SLD and PPS breakaways remain on their own legal committees. They are never
 silently folded into Razem by this bargain.
 [? if social_patriot_party_formed: **Lewica Patriotyczna:** [+
 social_patriot_electoral_strategy +].?]
+
+go-to: list_pis_objections if sejm_list_followup_pending = 1; poland_event_queue if sejm_list_followup_pending = 0
+
+@list_pis_objections
+title: PiS states objections and offers one final bargain
+new-page: true
+
+= A final host-list negotiation
+
+PiS does not close the door outright. Its committee delivers one page of
+objections: host-list discipline must be explicit, candidate places must be
+ratified by the host, and campaign lines cannot contradict the bloc's core
+message in key districts.
+
+The objections are not new. They are the points we have so far refused to
+fulfil. We can concede and secure entry, or refuse and file independently.
+
+- @list_pis_objections_concede
+- @list_pis_objections_refuse
+
+@list_pis_objections_concede
+title: Concede the objections and enter the PiS host list
+subtitle: Progressive factions treat this as a strategic surrender.
+on-arrival: sejm_list_outcome = "pis_5"; sejm_list_structure = "Host-party list"; sejm_list_host = "pis"; sejm_list_threshold = 5; sejm_list_members = "PiS with Lewica candidates"; sejm_list_control = "PiS controls nominations and subsidy"; sejm_list_result = "PiS host list accepted after objections"; sejm_list_has_partners = 1; party_unity -= 3; progressives_dissent += 8; spring_dissent += 6; razem_dissent += 8; coalition_blur += 4; pis_relation += 2; ko_relation -= 3; news_headline = "Lewica concedes PiS objections and files on the host list"
+
+PiS signs after we concede its objections. The list path is now real and legal,
+but the internal bill arrives immediately: progressive factions call the move a
+capitulation and begin preparing to contest the campaign line from inside.
+
+- @poland_event_queue: File the lists
+
+@list_pis_objections_refuse
+title: Reject the objections and file an independent list
+subtitle: Keep autonomy, lose the PiS host-list channel.
+on-arrival: sejm_list_outcome = "left_5"; sejm_list_structure = "Host-party list"; sejm_list_host = "left"; sejm_list_threshold = 5; sejm_list_members = "Lewica alone after failed talks"; sejm_list_control = "Lewica controls nominations and subsidy"; sejm_list_result = "PiS objections rejected; Lewica files its own party list"; sejm_list_has_partners = 0; party_unity += 1; progressives_dissent -= 2; pis_relation -= 4; left_poll_momentum -= 0.1; news_headline = "Lewica leaves the PiS channel and files independently"
+
+We leave the table and keep full control of the slate. PiS uses the breakdown
+to question our reliability, but the campaign remains ours to write.
 
 - @poland_event_queue: File the lists
 
@@ -1507,7 +1564,19 @@ const advisorRoster = [
     ["gawkowski", "Krzysztof Gawkowski"],
     ["nowicka", "Wanda Nowicka"],
     ["zawisza", "Marcelina Zawisza"],
-    ["matysiak", "Paulina Matysiak"]
+    ["matysiak", "Paulina Matysiak"],
+    ["konieczny", "Wojciech Konieczny"],
+    ["morawska_stanecka", "Gabriela Morawska-Stanecka"],
+    ["kwiatkowski", "Robert Kwiatkowski"],
+    ["pelczynska_nalecz", "Katarzyna Pełczyńska-Nałęcz"],
+    ["hennig_kloska", "Paulina Hennig-Kloska"],
+    ["zielinska", "Urszula Zielińska"],
+    ["morawiecki", "Mateusz Morawiecki"],
+    ["holownia", "Szymon Hołownia"],
+    ["tracz", "Małgorzata Tracz"],
+    ["spurek", "Sylwia Spurek"],
+    ["semieniuk", "Olga Semeniuk-Patkowska"],
+    ["cieszynski", "Janusz Cieszyński"]
 ];
 const activeAdvisorNames = advisorRoster
     .filter(function(advisor) {
