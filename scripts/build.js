@@ -48,7 +48,112 @@ if (fs.existsSync(browserCss)) {
   const css = fs.readFileSync(browserCss, 'utf8')
     .replace(/\n\.(?:b|save_button|delete_button|hand|pinned-cards|deck) \{\}\n/g, '\n')
     .replace(/(float:\s*(?:left|right);\n)\s*display:\s*inline-block;\n/g, '$1')
-    .replace(/\bmarginRight\s*:/g, 'margin-right:');
+    .replace(/\bmarginRight\s*:/g, 'margin-right:')
+    .replace(
+      /\.candidate-copy small,\n\.candidate-minor small \{/,
+      '.candidate-copy small {'
+    )
+    .replace(
+      /\.candidate-minor-grid \{[\s\S]*?\n\}\n\n@media \(max-width: 520px\) \{\n  \.candidate-minor-grid \{[\s\S]*?\n  \}\n\n  \.candidate-minor:nth-child\(odd\) \{\n    border-right: none;\n  \}\n/,
+      `.candidate-minor-list {
+  display: grid;
+  grid-template-columns: 1fr;
+}
+
+.candidate-minor {
+  display: grid;
+  grid-template-columns: minmax(10.5em, 42%) minmax(0, 1fr);
+  gap: 0.55em;
+  align-items: baseline;
+  min-width: 0;
+  padding: 0.3em 0.75em;
+  border-bottom: 1px solid var(--ledger-rule-color);
+  font-size: 0.82em;
+  line-height: 1.15;
+}
+
+.candidate-minor:last-child {
+  border-bottom: none;
+}
+
+.candidate-minor b {
+  min-width: 0;
+  font-size: 1em;
+  font-weight: bold;
+}
+
+.candidate-minor small {
+  display: block;
+  min-width: 0;
+  margin: 0;
+  color: var(--ledger-muted-color);
+  font-size: 0.85em;
+  line-height: 1.15;
+}
+
+@media (max-width: 430px) {
+  .candidate-minor {
+    grid-template-columns: 1fr;
+    gap: 0.05em;
+    padding-top: 0.38em;
+    padding-bottom: 0.38em;
+  }
+}
+`
+    )
+    .replace(
+      /\.candidate-field \{[\s\S]*?\n\}/,
+      `.candidate-field {
+  margin: 0.75em 0;
+  border: 1px solid var(--ledger-rule-color);
+  border-radius: 4px;
+  overflow: hidden;
+  background: var(--signal-surface);
+  line-height: 1.2;
+}`
+    )
+    .replace(/\.candidate-field-heading \{[\s\S]*?\n\}/, `.candidate-field-heading {
+  padding: 0.4em 0.65em;
+  border-bottom: 3px double var(--ledger-rule-color);
+  font-size: 0.78em;
+  font-weight: bold;
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+}`)
+    .replace(/\.candidate-field-group \{[\s\S]*?\n\}/, `.candidate-field-group {
+  padding: 0.24em 0.65em;
+  border-bottom: 1px solid var(--ledger-rule-color);
+  color: var(--ledger-muted-color);
+  font-size: 0.68em;
+  font-weight: bold;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}`)
+    .replace(/\.candidate-entry \{[\s\S]*?\n\}/, `.candidate-entry {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 0.45em;
+  align-items: center;
+  padding: 0.38em 0.65em;
+  border-bottom: 1px solid var(--ledger-rule-color);
+}`)
+    .replace(/\.candidate-copy small \{[\s\S]*?\n\}/, `.candidate-copy small {
+  display: block;
+  margin-top: 0.02em;
+  color: var(--ledger-muted-color);
+  font-size: 0.72em;
+  line-height: 1.08;
+}`)
+    .replace(/\.candidate-badge \{[\s\S]*?\n\}/, `.candidate-badge {
+  padding: 0.1em 0.35em;
+  border: 1px solid var(--ledger-rule-color);
+  border-radius: 999px;
+  white-space: nowrap;
+  font-size: 0.58em;
+  font-weight: bold;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}`);
   fs.writeFileSync(browserCss, css);
 }
 

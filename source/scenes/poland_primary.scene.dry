@@ -3,13 +3,21 @@ title: The open presidential primary
 @franchise
 title: Who is the Left?
 new-page: true
+on-arrival: {!
+Q.primary_biedron_eligible = 0;
+Q.primary_zandberg_eligible = 0;
+Q.primary_adb_eligible = 0;
+Q.primary_zukowska_eligible = 0;
+Q.primary_kotula_eligible = 0;
+Q.primary_biejat_eligible = 0;
+Q.primary_field_size = 0;
+!}
 
 = The primary franchise
 
 An open contest resolves nothing until the alliance defines its electorate.
-Every boundary advantages a different kind of organisation: paid-up party
-members, movement activists, municipal networks or a public audience attracted
-by one candidate.
+Every boundary creates a different Left: party delegates, organised members or
+a public assembled by the candidates themselves.
 
 - @delegates
 - @members
@@ -17,13 +25,13 @@ by one candidate.
 
 @delegates
 title: Limit the vote to founding-party delegates
-subtitle: Cheap control. SLD and Wiosna machinery dominate a narrow electorate.
+subtitle: Cheap and controlled. The founders choose the field as well as the winner.
 on-arrival: primary_electorate = "Founding-party delegates"; primary_franchise_code = 1; primary_turnout = 1400; barons_dissent -= 3; spring_dissent -= 2; public_trust -= 2; news_headline = "Delegates receive the presidential ballots"
 go-to: access
 
 @members
 title: Let members and affiliated movements vote
-subtitle: A negotiated electorate; Razem must still trust the common process.
+subtitle: Organised currents gain weight; no candidate can rely on television alone.
 choose-if: razem_cooperation >= 40
 unavailable-subtitle: Razem and movement organisers do not trust the common register.
 on-arrival: primary_electorate = "Members and affiliated movements"; primary_franchise_code = 2; primary_turnout = 52000; organiser_energy += 2; movement_autonomy += 2; barons_dissent += 2; public_trust += 1; news_headline = "The alliance opens one verified membership register"
@@ -31,11 +39,12 @@ go-to: access
 
 @supporters
 title: Register sympathisers for a public primary
-subtitle: Broadest mandate and greatest capture risk.
+subtitle: The broadest mandate, the widest field and the greatest capture risk.
 choose-if: primary_signature_network or local_network >= 45 or turnout_readiness >= 61
 unavailable-subtitle: No signature network or local register can verify a public electorate.
 on-arrival: primary_electorate = "Registered sympathisers"; primary_franchise_code = 3; primary_turnout = 180000; public_trust += 3; turnout_readiness += 4; media_capacity += 2; barons_dissent += 5; movement_autonomy += 3; news_headline = "Registered sympathisers turn the nomination into a public contest"
 go-to: access
+
 
 @access
 title: Who may stand?
@@ -43,9 +52,9 @@ new-page: true
 
 = Ballot access
 
-The electorate is **[+ primary_electorate +]**. Now each organisation asks
-whether it owns a guaranteed nomination, must find allies across currents, or
-can enter through supporter signatures.
+The electorate is **[+ primary_electorate +]**. The next rule decides whether
+the ballot belongs to the founding organisations, rewards candidates who can
+bridge currents, or can be opened by a supporter campaign.
 
 - @founders
 - @cross_current
@@ -53,25 +62,151 @@ can enter through supporter signatures.
 
 @founders
 title: Guarantee one place to each founding organisation
-subtitle: A controlled core ballot that rewards recognised leaders.
-on-arrival: primary_rules = "Founding-organisation nominations"; primary_access_code = 1; party_unity += 2; barons_dissent -= 2; progressives_dissent += 2; labor_dissent += 1; news_headline = "The founders protect their places on the ballot"
-go-to: campaign
+subtitle: Biedroń, Zandberg and one SLD nominee form a controlled three-person field.
+on-arrival: primary_rules = "Founding-organisation nominations"; primary_access_code = 1; party_unity += 2; barons_dissent -= 2; progressives_dissent += 2; labor_dissent += 1; news_headline = "The founders protect three places on the ballot"
+go-to: ballot
 
 @cross_current
 title: Require endorsements from two political currents
-subtitle: Crossover figures enter only if earlier cooperation made sponsorship credible.
+subtitle: Bridge candidates can qualify without owning a founding organisation.
 choose-if: primary_cross_faction_pact or primary_rules_written or primary_franchise_code >= 2
 unavailable-subtitle: The currents never agreed how to recognise one another's endorsements.
 on-arrival: primary_rules = "Two-current endorsement"; primary_access_code = 2; party_unity += 1; progressives_dissent -= 2; labor_dissent -= 2; barons_dissent += 2; news_headline = "Cross-current endorsements widen the primary"
-go-to: campaign
+go-to: ballot
 
 @petitions
 title: Use a low supporter-petition threshold
-subtitle: Widest field. Prepared organisers gain more than headquarters.
+subtitle: All six campaigns may qualify; prepared movements gain more than headquarters.
 choose-if: primary_franchise_code = 3 and (primary_signature_network or local_network >= 45)
 unavailable-subtitle: Only a verified public electorate with a signature network can sustain petitions.
-on-arrival: primary_rules = "Supporter-petition access"; primary_access_code = 3; party_unity -= 1; organiser_energy += 3; movement_autonomy += 4; barons_dissent += 5; news_headline = "Supporter petitions place outsiders on the ballot"
-go-to: campaign
+on-arrival: primary_rules = "Supporter-petition access"; primary_access_code = 3; party_unity -= 1; organiser_energy += 3; movement_autonomy += 4; barons_dissent += 5; news_headline = "Supporter petitions place six campaigns on the ballot"
+go-to: ballot
+
+
+@ballot
+title: The qualified field
+new-page: true
+on-arrival: {!
+const primaryBallotNumber = function(value, fallback) {
+    return Number.isFinite(Number(value)) ? Number(value) : fallback;
+};
+
+const ballotLabor = primaryBallotNumber(Q.labor_strength, 0);
+const ballotProgressives = primaryBallotNumber(Q.progressives_strength, 0);
+const ballotBarons = primaryBallotNumber(Q.barons_strength, 0);
+const ballotSpring = primaryBallotNumber(Q.spring_strength, 0);
+const ballotRazem = primaryBallotNumber(Q.razem_strength, 0);
+const ballotMedia = primaryBallotNumber(Q.media_capacity, 0);
+const ballotPublicSector = primaryBallotNumber(Q.public_sector_support, 0);
+const ballotLaborDissent = primaryBallotNumber(Q.labor_dissent, 0);
+const ballotProgressiveDissent =
+    primaryBallotNumber(Q.progressives_dissent, 0);
+
+Q.primary_biedron_eligible = 1;
+Q.primary_zandberg_eligible = 1;
+Q.primary_adb_eligible = 0;
+Q.primary_zukowska_eligible = 0;
+Q.primary_kotula_eligible = 0;
+Q.primary_biejat_eligible = 0;
+Q.primary_sld_nominee = "None";
+
+if (Q.primary_access_code == 1) {
+    let adbNomination =
+        ballotLabor * 0.8 + ballotProgressives * 0.35 +
+        ballotPublicSector * 0.15 - ballotLaborDissent * 0.15;
+    let zukowskaNomination =
+        ballotBarons * 0.75 + ballotProgressives * 0.35 +
+        ballotMedia * 0.12 - ballotProgressiveDissent * 0.12;
+
+    if (
+        Q.dziemianowicz_bak_advisor ||
+        Q.primary_new_generation ||
+        Q.primary_social_slate ||
+        Q.primary_union_slate
+    ) {
+        adbNomination += 8;
+    }
+    if (
+        Q.zukowska_advisor ||
+        Q.primary_machine_slate ||
+        Q.primary_spokesperson_slate
+    ) {
+        zukowskaNomination += 8;
+    }
+
+    if (adbNomination >= zukowskaNomination) {
+        Q.primary_adb_eligible = 1;
+        Q.primary_sld_nominee = "Agnieszka Dziemianowicz-Bąk";
+    } else {
+        Q.primary_zukowska_eligible = 1;
+        Q.primary_sld_nominee = "Anna-Maria Żukowska";
+    }
+}
+
+if (Q.primary_access_code == 2) {
+    Q.primary_adb_eligible = 1;
+    Q.primary_biejat_eligible = 1;
+
+    Q.primary_zukowska_eligible =
+        Q.zukowska_advisor ||
+        Q.primary_machine_slate ||
+        Q.primary_spokesperson_slate ||
+        ballotBarons + ballotProgressives >= 30 ? 1 : 0;
+
+    Q.primary_kotula_eligible =
+        Q.kotula_advisor ||
+        Q.primary_equality_slate ||
+        Q.primary_movement_slate ||
+        ballotSpring + ballotProgressives >= 30 ? 1 : 0;
+}
+
+if (Q.primary_access_code == 3) {
+    Q.primary_adb_eligible = 1;
+    Q.primary_zukowska_eligible = 1;
+    Q.primary_kotula_eligible = 1;
+    Q.primary_biejat_eligible = 1;
+}
+
+Q.primary_field_size =
+    Q.primary_biedron_eligible +
+    Q.primary_zandberg_eligible +
+    Q.primary_adb_eligible +
+    Q.primary_zukowska_eligible +
+    Q.primary_kotula_eligible +
+    Q.primary_biejat_eligible;
+!}
+
+= The ballot takes shape
+
+Rules: **[+ primary_rules +]**  
+Electorate: **[+ primary_electorate +]**
+
+[? if primary_access_code = 1:
+The founders reserve one place each. Wiosna nominates **Robert Biedroń**,
+Razem nominates **Adrian Zandberg**, and the SLD contest produces
+**[+ primary_sld_nominee +]**. ?]
+
+[? if primary_access_code = 2:
+Biedroń and Zandberg qualify through their organisations. Dziemianowicz-Bąk
+and Biejat assemble endorsements across labour, progressive and municipal
+currents; Żukowska and Kotula qualify only where their supporting structures
+are strong enough. ?]
+
+[? if primary_access_code = 3:
+The petition threshold admits all six campaigns. Headquarters can no longer
+prevent an organised candidate from reaching the voters. ?]
+
+**Qualified candidates:**
+
+[? if primary_biedron_eligible: - **Robert Biedroń** — Wiosna, media reach and a public-facing campaign. ?]
+[? if primary_zandberg_eligible: - **Adrian Zandberg** — Razem, programme and organised economic-left support. ?]
+[? if primary_adb_eligible: - **Agnieszka Dziemianowicz-Bąk** — labour-progressive crossover and public services. ?]
+[? if primary_zukowska_eligible: - **Anna-Maria Żukowska** — SLD organisation, spokespeople and party delegates. ?]
+[? if primary_kotula_eligible: - **Katarzyna Kotula** — equality movements, Wiosna activists and public mobilisation. ?]
+[? if primary_biejat_eligible: - **Magdalena Biejat** — Razem, labour, tenants and municipal organising. ?]
+
+- @campaign: Choose the campaign arena
+
 
 @campaign
 title: How will the primary be fought?
@@ -80,10 +215,11 @@ new-page: true
 = The primary campaign
 
 Ballot: **[+ primary_rules +]**  
-Electorate: **[+ primary_electorate +]**
+Electorate: **[+ primary_electorate +]**  
+Candidates: **[+ primary_field_size +]**
 
-The arena determines what kind of candidate looks presidential. No later stage
-costs resources; once opened, the alliance must finish the contest.
+The arena cannot create a constituency that does not exist, but it decides
+which constituency becomes visible on polling day.
 
 - @television
 - @counties
@@ -91,7 +227,7 @@ costs resources; once opened, the alliance must finish the contest.
 
 @television
 title: Hold three televised debates
-subtitle: Rewards media-ready candidates and a prepared rapid-response operation.
+subtitle: Best for Biedroń and Żukowska; Kotula can break through with movement energy.
 choose-if: media_capacity >= 20 or primary_tv_ready
 unavailable-subtitle: The alliance lacks the production and briefing capacity for national debates.
 on-arrival: primary_campaign = "Televised debates"; primary_campaign_code = 1; media_capacity += 2; public_trust += 1; news_headline = "Three debates turn the primary into national programming"
@@ -99,7 +235,7 @@ go-to: tally
 
 @counties
 title: Send the field through county hustings
-subtitle: Rewards regional networks, organisers and crossover candidates.
+subtitle: Best for Dziemianowicz-Bąk and Biejat; rewards regional crossover work.
 choose-if: local_network >= 45 or primary_signature_network
 unavailable-subtitle: Too few county organisations can host and verify the ballot.
 on-arrival: primary_campaign = "County hustings"; primary_campaign_code = 2; local_network += 2; turnout_readiness += 2; news_headline = "County hustings test who can organise beyond Warsaw"
@@ -107,94 +243,146 @@ go-to: tally
 
 @issues
 title: Use workplace, tenant and equality forums
-subtitle: Free fallback. Rewards candidates with programme and movement sponsorship.
+subtitle: Best for programme candidates; Zandberg, Biejat, Kotula and Dziemianowicz-Bąk all have a route.
 on-arrival: primary_campaign = "Workplace, tenant and equality forums"; primary_campaign_code = 3; labor_credibility += 1; feminist_trust += 1; organiser_energy += 1; news_headline = "Issue forums make the primary argue about power"
 go-to: tally
+
 
 @tally
 title: Count the primary
 new-page: true
 on-arrival: {!
-Q.primary_biedron_eligible = 1;
-Q.primary_zandberg_eligible = 1;
-Q.primary_adb_eligible =
-    Q.dziemianowicz_bak_advisor ||
-    Q.primary_new_generation ||
-    Q.primary_social_slate ||
-    Q.primary_union_slate ||
-    (
-        Q.primary_access_code >= 2 &&
-        Q.labor_strength + Q.progressives_strength >= 35
-    ) ? 1 : 0;
-Q.primary_zukowska_eligible =
-    Q.zukowska_advisor ||
-    Q.primary_machine_slate ||
-    Q.primary_spokesperson_slate ? 1 : 0;
-Q.primary_kotula_eligible =
-    (
-        Q.kotula_advisor ||
-        Q.primary_equality_slate ||
-        Q.primary_movement_slate
-    ) &&
-    Q.primary_access_code >= 2 ? 1 : 0;
-Q.primary_biejat_eligible =
-    (
-        Q.biejat_advisor ||
-        Q.primary_tenant_slate ||
-        Q.primary_union_slate ||
-        Q.primary_movement_slate
-    ) &&
-    Q.primary_access_code >= 2 ? 1 : 0;
+const primaryNumber = function(value, fallback) {
+    return Number.isFinite(Number(value)) ? Number(value) : fallback;
+};
+
+const springStrength = primaryNumber(Q.spring_strength, 0);
+const razemStrength = primaryNumber(Q.razem_strength, 0);
+const laborStrength = primaryNumber(Q.labor_strength, 0);
+const progressiveStrength = primaryNumber(Q.progressives_strength, 0);
+const baronsStrength = primaryNumber(Q.barons_strength, 0);
+
+const springDissent = primaryNumber(Q.spring_dissent, 0);
+const razemDissent = primaryNumber(Q.razem_dissent, 0);
+const laborDissent = primaryNumber(Q.labor_dissent, 0);
+const progressiveDissent = primaryNumber(Q.progressives_dissent, 0);
+
+const mediaCapacity = primaryNumber(Q.media_capacity, 0);
+const womenSupport = primaryNumber(Q.women_support, 0);
+const workersSupport = primaryNumber(Q.workers_support, 0);
+const laborCredibility = primaryNumber(Q.labor_credibility, 0);
+const publicSectorSupport = primaryNumber(Q.public_sector_support, 0);
+const youngSupport = primaryNumber(Q.young_support, 0);
+const feministTrust = primaryNumber(Q.feminist_trust, 0);
+const householdSecurity = primaryNumber(Q.household_security, 0);
+const organiserEnergy = primaryNumber(Q.organiser_energy, 0);
 
 let biedron =
-    34 + Q.spring_strength * 0.4 - Q.spring_dissent * 0.15 +
-    Q.media_capacity * 0.08 + Q.women_support * 0.05;
-let zandberg =
-    27 + Q.razem_strength * 0.45 - Q.razem_dissent * 0.15 +
-    Q.labor_credibility * 0.08 + Q.workers_support * 0.06;
-let adb =
-    18 + Q.labor_strength * 0.35 + Q.progressives_strength * 0.3 -
-    (Q.labor_dissent + Q.progressives_dissent) * 0.08 +
-    Q.public_sector_support * 0.08;
-let zukowska =
-    14 + Q.progressives_strength * 0.35 + Q.barons_strength * 0.15 -
-    Q.progressives_dissent * 0.12 + Q.media_capacity * 0.08;
-let kotula =
-    11 + Q.progressives_strength * 0.35 + Q.spring_strength * 0.25 -
-    (Q.progressives_dissent + Q.spring_dissent) * 0.07 +
-    Q.feminist_trust * 0.08;
-let biejat =
-    11 + Q.razem_strength * 0.35 + Q.labor_strength * 0.3 -
-    (Q.razem_dissent + Q.labor_dissent) * 0.07 +
-    Q.household_security * 0.05;
+    18 + springStrength * 0.40 - springDissent * 0.14 +
+    mediaCapacity * 0.08 + womenSupport * 0.03;
 
+let zandberg =
+    17 + razemStrength * 0.42 - razemDissent * 0.14 +
+    laborCredibility * 0.09 + workersSupport * 0.04;
+
+let adb =
+    15 + laborStrength * 0.27 + progressiveStrength * 0.25 -
+    (laborDissent + progressiveDissent) * 0.075 +
+    publicSectorSupport * 0.07 + womenSupport * 0.02;
+
+let zukowska =
+    14 + progressiveStrength * 0.25 + baronsStrength * 0.21 -
+    progressiveDissent * 0.10 + mediaCapacity * 0.07 +
+    youngSupport * 0.02;
+
+let kotula =
+    13 + progressiveStrength * 0.22 + springStrength * 0.22 -
+    (progressiveDissent + springDissent) * 0.065 +
+    feministTrust * 0.09 + youngSupport * 0.03;
+
+let biejat =
+    14 + razemStrength * 0.25 + laborStrength * 0.25 -
+    (razemDissent + laborDissent) * 0.065 +
+    householdSecurity * 0.05 + organiserEnergy * 0.06;
+
+// The franchise decides which organisations can mobilise voters.
 if (Q.primary_franchise_code == 1) {
-    biedron += 14; zandberg += 12; adb += 3;
-    zukowska += 10; kotula += 4; biejat += 5;
+    biedron += 5; zandberg += 3; adb += 4;
+    zukowska += 9; kotula -= 3; biejat -= 2;
 }
 if (Q.primary_franchise_code == 2) {
-    biedron += 9; zandberg += 12; adb += 9;
-    zukowska += 7; kotula += 8; biejat += 10;
+    biedron += 3; zandberg += 7; adb += 7;
+    zukowska += 4; kotula += 5; biejat += 7;
 }
 if (Q.primary_franchise_code == 3) {
-    biedron += 14; zandberg += 7; adb += 11;
-    zukowska += 6; kotula += 11; biejat += 8;
-}
-if (Q.primary_campaign_code == 1) {
-    biedron += 12; zandberg += 10; adb += 5;
-    zukowska += 11; kotula += 5; biejat += 3;
-}
-if (Q.primary_campaign_code == 2) {
-    biedron += 7; zandberg += 6; adb += 10;
-    zukowska += 9; kotula += 7; biejat += 9;
-}
-if (Q.primary_campaign_code == 3) {
-    biedron += 5; zandberg += 12; adb += 13;
-    zukowska += 4; kotula += 13; biejat += 13;
+    biedron += 8; zandberg += 2; adb += 5;
+    zukowska += 4; kotula += 8; biejat += 6;
 }
 
-Q.primary_biedron_weight = Math.max(1, Math.round(biedron));
-Q.primary_zandberg_weight = Math.max(1, Math.round(zandberg));
+// Ballot access rewards the candidates who fit the qualifying rule.
+if (Q.primary_access_code == 1) {
+    biedron += 7; zandberg += 7; adb += 5;
+    zukowska += 7; kotula -= 8; biejat -= 8;
+}
+if (Q.primary_access_code == 2) {
+    biedron += 1; zandberg += 1; adb += 8;
+    zukowska += 4; kotula += 7; biejat += 8;
+}
+if (Q.primary_access_code == 3) {
+    biedron += 4; zandberg += 2; adb += 5;
+    zukowska += 3; kotula += 10; biejat += 8;
+}
+
+// Campaign format converts different kinds of support into turnout.
+if (Q.primary_campaign_code == 1) {
+    biedron += 10; zandberg += 4; adb += 5;
+    zukowska += 9; kotula += 7; biejat += 3;
+}
+if (Q.primary_campaign_code == 2) {
+    biedron += 3; zandberg += 4; adb += 9;
+    zukowska += 6; kotula += 6; biejat += 9;
+}
+if (Q.primary_campaign_code == 3) {
+    biedron += 2; zandberg += 8; adb += 9;
+    zukowska += 2; kotula += 10; biejat += 10;
+}
+
+// Earlier slates and advisers matter without being required for basic access.
+if (Q.dziemianowicz_bak_advisor) adb += 3;
+if (Q.primary_new_generation) adb += 4;
+if (Q.primary_social_slate) adb += 4;
+if (Q.primary_union_slate) {
+    adb += 3;
+    biejat += 3;
+}
+
+if (Q.zukowska_advisor) zukowska += 3;
+if (Q.primary_machine_slate) zukowska += 5;
+if (Q.primary_spokesperson_slate) zukowska += 4;
+
+if (Q.kotula_advisor) kotula += 3;
+if (Q.primary_equality_slate) kotula += 5;
+if (Q.primary_movement_slate) {
+    kotula += 4;
+    biejat += 3;
+}
+
+if (Q.biejat_advisor) biejat += 3;
+if (Q.primary_tenant_slate) biejat += 5;
+
+// Similar candidates divide an organisational reservoir instead of creating
+// additional voters from nowhere.
+if (Q.primary_kotula_eligible) biedron -= 3;
+if (Q.primary_biejat_eligible) zandberg -= 3;
+if (Q.primary_adb_eligible && Q.primary_zukowska_eligible) {
+    adb -= 1.5;
+    zukowska -= 1.5;
+}
+
+Q.primary_biedron_weight = Q.primary_biedron_eligible
+    ? Math.max(1, Math.round(biedron)) : 0;
+Q.primary_zandberg_weight = Q.primary_zandberg_eligible
+    ? Math.max(1, Math.round(zandberg)) : 0;
 Q.primary_adb_weight = Q.primary_adb_eligible
     ? Math.max(1, Math.round(adb)) : 0;
 Q.primary_zukowska_weight = Q.primary_zukowska_eligible
@@ -214,24 +402,34 @@ const candidates = [
 ].filter(function(candidate) {
     return candidate[2] > 0;
 });
+
 Q.primary_total_weight = candidates.reduce(function(total, candidate) {
     return total + candidate[2];
 }, 0);
-Q.primary_random_roll =
-    this.random.uint32() / 4294967296 * Q.primary_total_weight;
 
-// This is a tally, not a weighted lottery. Organisation and campaign choices
-// establish each candidate's base; bounded candidate-level turnout variance
-// then produces votes for every eligible name. The highest tally wins and the
-// displayed shares are calculated from those same counted votes.
+// Delegates are predictable; a public primary permits a little more turnout
+// variation. The rules remain much more important than the random factor.
+const primaryVariance =
+    Q.primary_franchise_code == 3
+        ? 0.08
+        : (Q.primary_franchise_code == 2 ? 0.06 : 0.04);
+
 const adjusted = candidates.map(function(candidate) {
     const turnoutFactor =
-        0.82 + this.random.uint32() / 4294967296 * 0.36;
-    return [candidate[0], candidate[1], candidate[2], candidate[2] * turnoutFactor];
+        1 - primaryVariance +
+        this.random.uint32() / 4294967296 * primaryVariance * 2;
+    return [
+        candidate[0],
+        candidate[1],
+        candidate[2],
+        candidate[2] * turnoutFactor
+    ];
 }.bind(this));
+
 const adjustedTotal = adjusted.reduce(function(total, candidate) {
     return total + candidate[3];
 }, 0);
+
 let allocatedVotes = 0;
 const tallied = adjusted.map(function(candidate, index) {
     const votes = index == adjusted.length - 1
@@ -244,37 +442,57 @@ const tallied = adjusted.map(function(candidate, index) {
                 Math.max(1, adjustedTotal)
             )
         );
+
     allocatedVotes += votes;
     Q["primary_" + candidate[1] + "_tally"] = votes;
     return [candidate[0], candidate[1], candidate[2], votes];
 });
+
+Q.primary_total_votes = tallied.reduce(function(total, candidate) {
+    return total + candidate[3];
+}, 0);
+
+tallied.forEach(function(candidate) {
+    Q["primary_" + candidate[1] + "_share"] =
+        Math.round(
+            candidate[3] * 1000 /
+            Math.max(1, Q.primary_total_votes)
+        ) / 10;
+});
+
 const ordered = tallied.slice().sort(function(left, right) {
     if (right[3] != left[3]) return right[3] - left[3];
     if (right[2] != left[2]) return right[2] - left[2];
     return left[0] < right[0] ? -1 : 1;
 });
-Q.primary_winner = ordered[0][0];
-const runner = ordered[1];
-Q.primary_runner_up = runner ? runner[0] : "None";
+
 const winner = ordered[0];
-Q.primary_total_votes = tallied.reduce(function(total, candidate) {
-    return total + candidate[3];
-}, 0);
-Q.primary_winner_share = Math.round(
-    winner[3] * 1000 / Math.max(1, Q.primary_total_votes)
-) / 10;
+const runner = ordered[1];
+
+Q.primary_winner = winner[0];
+Q.primary_runner_up = runner ? runner[0] : "None";
+Q.primary_winner_share =
+    Q["primary_" + winner[1] + "_share"];
 Q.primary_runner_share = runner
-    ? Math.round(runner[3] * 1000 / Math.max(1, Q.primary_total_votes)) / 10
+    ? Q["primary_" + runner[1] + "_share"]
     : 0;
+Q.primary_margin =
+    Math.round(
+        (Q.primary_winner_share - Q.primary_runner_share) * 10
+    ) / 10;
 Q.primary_mandate = Math.round(Q.primary_winner_share);
 
-if (Q.primary_mandate >= 45) {
+if (Q.primary_winner_share >= 40 || Q.primary_margin >= 10) {
     Q.party_unity += 2;
-} else if (Q.primary_mandate < 25) {
-    Q.party_unity -= 3;
+} else if (
+    Q.primary_winner_share < 25 ||
+    Q.primary_margin < 2
+) {
+    Q.party_unity -= 2;
 }
 !}
 go-to: result_biedron if primary_winner = "Robert Biedroń"; result_zandberg if primary_winner = "Adrian Zandberg"; result_adb if primary_winner = "Agnieszka Dziemianowicz-Bąk"; result_zukowska if primary_winner = "Anna-Maria Żukowska"; result_kotula if primary_winner = "Katarzyna Kotula"; result_biejat if primary_winner = "Magdalena Biejat"
+
 
 @result_biedron
 on-arrival: presidential_candidate = "Robert Biedroń"; presidential_candidate_base = 2.2; primary_active = 0; spring_dissent -= 9; spring_strength += 3; media_capacity += 3; razem_dissent += 4; barons_dissent += 2; news_headline = "Biedroń wins the open Left primary"
@@ -300,23 +518,36 @@ go-to: result
 on-arrival: presidential_candidate = "Magdalena Biejat"; presidential_candidate_base = 2.7; primary_active = 0; razem_dissent -= 8; labor_dissent -= 4; organiser_energy += 3; labor_credibility += 3; household_policy_pressure += 2; barons_dissent += 6; spring_dissent += 3; party_unity -= 1; last_policy_stage = "Primary programme"; last_policy_authority = "Lewica party electorate"; last_policy_implementation = "Not enacted"; news_headline = "Biejat wins the open Left primary"
 go-to: result
 
+
 @result
 title: A candidate with a constituency
 new-page: true
 
 = [+ presidential_candidate +] wins
 
-**[+ presidential_candidate +]** wins a weighted **[+ primary_winner_share +]%**
-mandate. **[+ primary_runner_up +]** is the strongest runner-up at
-**[+ primary_runner_share +]%**.
+**[+ presidential_candidate +]** wins **[+ primary_winner_share +]%** of the
+counted primary vote. **[+ primary_runner_up +]** finishes second on
+**[+ primary_runner_share +]%**, a margin of **[+ primary_margin +]** points.
 
 Electorate: **[+ primary_electorate +]**  
 Ballot access: **[+ primary_rules +]**  
 Campaign: **[+ primary_campaign +]**
 
-The result is neither a neutral opinion poll nor a leadership appointment. The
-rules chosen by the alliance created the electorate that has now created its
-candidate. Losing organisations retain their structures, their dissent and a
-record of precisely which rule defeated them.
+[? if primary_winner_share >= 40:
+The winner has both a constituency and a broad primary mandate. Losing
+organisations can dispute the programme, but not the result. ?]
+
+[? if primary_winner_share < 40 and primary_margin >= 5:
+The winner has a clear plurality rather than ownership of the whole alliance.
+The nomination is settled; the coalition around it still has to be built. ?]
+
+[? if primary_margin < 5:
+The ballot settles the nomination by a narrow margin. The losing campaigns
+retain enough organisation to demand programme, staff and campaign concessions.
+?]
+
+The rules chosen by the alliance created the electorate that has now created
+its candidate. Every losing organisation retains a record of precisely which
+boundary, access rule and campaign arena defeated it.
 
 - @poland_events_2021_2023.independence_2019: Begin the presidential campaign

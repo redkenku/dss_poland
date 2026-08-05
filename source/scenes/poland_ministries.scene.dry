@@ -2,222 +2,21 @@ title: Cabinet portfolios
 new-page: true
 face-image: img/poland/cards/negotiate-government.webp
 on-arrival: {!
+const finiteMinistry = function(value, fallback) {
+    return Number.isFinite(Number(value)) ? Number(value) : fallback;
+};
+const clampMinistry = function(value, low, high) {
+    return Math.max(low, Math.min(high, finiteMinistry(value, low)));
+};
 const model = String(Q.left_cabinet_model || "");
+const recordedModelCode = String(Q.left_cabinet_model_code || "");
 const mode = String(Q.ministry_allocation_mode || "formation");
-const preserveExisting =
-    mode == "reshuffle" || mode == "event_reshuffle";
-const maximalMandate =
-    model == "Programme-bound Left cabinet entry" ||
-    model == "Programme-bound cooperating Left entry";
-const wholeLeftMandate =
-    model == "Whole Left coalition delegation" ||
-    model == "Whole cooperating Left coalition delegation";
+const preserveExisting = mode == "reshuffle" || mode == "event_reshuffle";
 const portfolioKeys = [
     "labor", "equality", "housing", "health", "digital", "science",
     "interior", "finance", "economy", "justice", "foreign",
     "agriculture", "defence"
 ];
-const rosterHas = function(party) {
-    return portfolioKeys.some(function(portfolio) {
-        return Q[portfolio + "_minister_party"] == party;
-    });
-};
-const razemAlreadyExcluded = model.includes("Razem external");
-const externalRazemSeats =
-    Q.razem_in_government || razemAlreadyExcluded ||
-    wholeLeftMandate || maximalMandate
-    ? 0
-    : Math.max(0, Number(Q.razem_seats) || 0);
-const leftCabinetSeats = Math.max(
-    0,
-    Number(
-        wholeLeftMandate || maximalMandate
-            ? Q.left_committed_seats
-            : (
-                model.includes("Razem external")
-                    ? Q.nowa_lewica_seats
-                    : Q.left_seats
-            )
-    ) - externalRazemSeats || 0
-);
-const statutoryMajority = Math.max(
-    1,
-    Number(Q.sejm_statutory_majority) || 231
-);
-const leftHasMajority = leftCabinetSeats >= statutoryMajority;
-const formationVotesRecorded =
-    Math.max(0, Number(Q.candidate_ko_votes) || 0) +
-    Math.max(0, Number(Q.candidate_p2050_votes) || 0) +
-    Math.max(0, Number(Q.candidate_psl_votes) || 0) +
-    Math.max(0, Number(Q.candidate_left_votes) || 0) > 0;
-const snapCommitmentsRecorded = Boolean(Q.snap_cabinet_commitments_recorded);
-const democraticFormation =
-    String(Q.ministry_return_mode || "") == "cabinet_program";
-const currentRosterRecorded = preserveExisting || (!democraticFormation &&
-    Boolean(Q.government_has_confidence) &&
-    !Boolean(Q.caretaker_government) &&
-    String(Q.cabinet_roster_government_party || "") ==
-        String(Q.government_party || "")
-);
-const formationPslDecision = Number(Q.formation_psl_cabinet_committed);
-const pisInCabinet =
-    !democraticFormation &&
-    Q.government_party == "pis" &&
-    !Q.caretaker_government &&
-    Math.max(0, Number(Q.pis_seats) || 0) > 0;
-const koInCabinet = !pisInCabinet && !leftHasMajority && Math.max(
-    0,
-    Number(Q.ko_seats) || 0
-) > 0 && (
-    preserveExisting
-        ? Boolean(Q.ministry_ko_in_cabinet) || rosterHas("KO")
-        : (
-            snapCommitmentsRecorded
-                ? Q.government_party != "pis"
-                : (
-                    currentRosterRecorded
-                        ? Boolean(Q.ministry_ko_in_cabinet) || rosterHas("KO")
-                        : (
-                            formationVotesRecorded
-                                ? Number(Q.candidate_ko_votes) > 0
-                                : true
-                        )
-                )
-        )
-);
-const p2050InCabinet = !pisInCabinet && !leftHasMajority && Math.max(
-    0,
-    Number(Q.p2050_seats) || 0
-) > 0 && (
-    preserveExisting
-        ? Boolean(Q.ministry_p2050_in_cabinet) || rosterHas("Poland 2050")
-        : (
-            snapCommitmentsRecorded
-                ? Boolean(Q.snap_p2050_cabinet_committed)
-                : (
-                    currentRosterRecorded
-                        ? Boolean(Q.ministry_p2050_in_cabinet) ||
-                            rosterHas("Poland 2050")
-                        : (
-                            formationVotesRecorded
-                                ? Number(Q.candidate_p2050_votes) > 0
-                                : true
-                        )
-                )
-        )
-);
-const pslInCabinet = !pisInCabinet && !leftHasMajority &&
-!Q.coalition_broken && Math.max(
-    0,
-    Number(Q.psl_seats) || 0
-) > 0 && (
-    preserveExisting
-        ? Boolean(Q.ministry_psl_in_cabinet) || rosterHas("PSL")
-        : (
-            snapCommitmentsRecorded
-                ? Boolean(Q.snap_psl_cabinet_committed)
-                : (
-                    currentRosterRecorded
-                        ? Boolean(Q.ministry_psl_in_cabinet) || rosterHas("PSL")
-                        : (
-                            formationVotesRecorded
-                                ? (
-                                    formationPslDecision >= 0
-                                        ? Boolean(formationPslDecision)
-                                        : Number(Q.candidate_psl_votes) > 0
-                                )
-                                : true
-                        )
-                )
-        )
-);
-const pisCabinetMinisters = {
-    labor: "Marlena Maląg",
-    equality: "Anna Schmidt",
-    housing: "Piotr Uściński",
-    health: "Adam Niedzielski",
-    digital: "Janusz Cieszyński",
-    science: "Przemysław Czarnek",
-    interior: "Mariusz Kamiński",
-    finance: "Tadeusz Kościński",
-    economy: "Piotr Nowak",
-    justice: "Zbigniew Ziobro",
-    foreign: "Zbigniew Rau",
-    agriculture: "Grzegorz Puda",
-    defence: "Mariusz Błaszczak"
-};
-const independentCabinetMinisters = {
-    labor: "Gertruda Uścińska",
-    equality: "Zuzanna Rudzińska-Bluszcz",
-    housing: "Joanna Erbel",
-    health: "Maria Libura",
-    digital: "Alek Tarkowski",
-    science: "Michał Kleiber",
-    interior: "Marek Biernacki",
-    finance: "Paweł Wojciechowski",
-    economy: "Jerzy Hausner",
-    justice: "Ewa Łętowska",
-    foreign: "Jacek Czaputowicz",
-    agriculture: "Monika Stanny",
-    defence: "Stanisław Koziej"
-};
-const coalitionDefault = function(portfolio, namedMinister) {
-    if (pisInCabinet) {
-        return ["PiS", pisCabinetMinisters[portfolio]];
-    }
-    return koInCabinet
-        ? ["KO", namedMinister]
-        : ["Cabinet", independentCabinetMinisters[portfolio]];
-};
-const defaults = {
-    labor: coalitionDefault(
-        "labor", "Marzena Okła-Drewnowicz"
-    ),
-    equality: coalitionDefault(
-        "equality", "Monika Rosa"
-    ),
-    housing: coalitionDefault(
-        "housing", "Krystyna Sibińska"
-    ),
-    health: coalitionDefault("health", "Izabela Leszczyna"),
-    digital: pisInCabinet
-        ? ["PiS", pisCabinetMinisters.digital]
-        : p2050InCabinet
-        ? ["Poland 2050", "Michał Gramatyka"]
-        : coalitionDefault(
-            "digital", "Jan Grabiec"
-        ),
-    science: coalitionDefault(
-        "science", "Barbara Nowacka"
-    ),
-    interior: coalitionDefault(
-        "interior", "Marcin Kierwiński"
-    ),
-    finance: coalitionDefault("finance", "Andrzej Domański"),
-    economy: pisInCabinet
-        ? ["PiS", pisCabinetMinisters.economy]
-        : pslInCabinet
-        ? ["PSL", "Krzysztof Hetman"]
-        : coalitionDefault(
-            "economy", "Borys Budka"
-        ),
-    justice: coalitionDefault("justice", "Adam Bodnar"),
-    foreign: coalitionDefault(
-        "foreign", "Radosław Sikorski"
-    ),
-    agriculture: pisInCabinet
-        ? ["PiS", pisCabinetMinisters.agriculture]
-        : pslInCabinet
-        ? ["PSL", "Czesław Siekierski"]
-        : coalitionDefault(
-            "agriculture", "Dorota Niedziela"
-        ),
-    defence: pisInCabinet
-        ? ["PiS", pisCabinetMinisters.defence]
-        : pslInCabinet
-        ? ["PSL", "Władysław Kosiniak-Kamysz"]
-        : coalitionDefault("defence", "Tomasz Siemoniak")
-};
 const costs = {
     labor: 5,
     equality: 3,
@@ -233,128 +32,429 @@ const costs = {
     agriculture: 10,
     defence: 15
 };
-const portfolios = portfolioKeys;
-const totalPortfolioLeverage = portfolios.reduce(function(total, portfolio) {
-    return total + costs[portfolio];
+const totalPortfolioLeverage = portfolioKeys.reduce(function(total, key) {
+    return total + costs[key];
 }, 0);
+const normalizePartyCode = function(value) {
+    const text = String(value || "").trim().toLowerCase();
+    if (text == "pis") return "pis";
+    if (text == "ko" || text.includes("obywatelsk")) return "ko";
+    if (text == "psl") return "psl";
+    if (text == "p2050" || text.includes("2050")) return "p2050";
+    if (text == "lewica" || text == "left" || text.includes("lewica")) {
+        return "lewica";
+    }
+    if (text == "cabinet" || text == "independent") return "cabinet";
+    return "";
+};
+const partyDisplay = function(code) {
+    if (code == "pis") return "PiS";
+    if (code == "ko") return "KO";
+    if (code == "psl") return "PSL";
+    if (code == "p2050") return "Polska 2050";
+    if (code == "lewica") return "Lewica";
+    return "Cabinet";
+};
+const rosterHasCode = function(code) {
+    return portfolioKeys.some(function(portfolio) {
+        return normalizePartyCode(Q[portfolio + "_minister_party"]) == code;
+    });
+};
+const flagRecorded = function(key) {
+    return Number.isFinite(Number(Q[key])) && Number(Q[key]) >= 0;
+};
+const flagValue = function(key) {
+    return flagRecorded(key) ? Number(Q[key]) > 0 : false;
+};
+
+let modelCode = recordedModelCode;
+if (
+    model == "Programme-bound Left cabinet entry" ||
+    model == "Programme-bound cooperating Left entry"
+) {
+    modelCode = "programme_bound";
+} else if (
+    model == "Whole Left coalition delegation" ||
+    model == "Whole cooperating Left coalition delegation"
+) {
+    modelCode = "whole_left";
+} else if (model.includes("Razem external")) {
+    modelCode = "razem_external";
+} else if (!modelCode || !preserveExisting) {
+    modelCode = "ordinary_left_delegation";
+}
+Q.left_cabinet_model_code = modelCode;
+const maximalMandate = modelCode == "programme_bound";
+const wholeLeftMandate = modelCode == "whole_left";
+const razemExternal = modelCode == "razem_external";
+
+const currentGovernmentCode = normalizePartyCode(Q.government_party);
+const rosterGovernmentCode = normalizePartyCode(
+    Q.cabinet_roster_government_party
+);
+const sameGovernmentRoster =
+    Boolean(Q.cabinet_roster_finalized) &&
+    rosterGovernmentCode != "" &&
+    rosterGovernmentCode == currentGovernmentCode;
+
+const formationCommitmentsActive =
+    Boolean(Q.formation_in_progress) ||
+    ["cabinet_program", "governing_agreement", "pis_coalition"].includes(
+        String(Q.ministry_return_mode || "")
+    ) || Boolean(Q.formation_cabinet_commitments_recorded);
+const resolveCommitment = function(code) {
+    if (preserveExisting) {
+        if (flagRecorded("ministry_" + code + "_in_cabinet")) {
+            return flagValue("ministry_" + code + "_in_cabinet");
+        }
+        return rosterHasCode(code);
+    }
+    const formationKey = "formation_" + code + "_cabinet_committed";
+    const snapKey = "snap_" + code + "_cabinet_committed";
+    if (formationCommitmentsActive && flagRecorded(formationKey)) {
+        return flagValue(formationKey);
+    }
+    if (Boolean(Q.snap_cabinet_commitments_recorded) && flagRecorded(snapKey)) {
+        return flagValue(snapKey);
+    }
+    if (sameGovernmentRoster) {
+        if (flagRecorded("ministry_" + code + "_in_cabinet")) {
+            return flagValue("ministry_" + code + "_in_cabinet");
+        }
+        return rosterHasCode(code);
+    }
+    return currentGovernmentCode == code;
+};
+
+const leftCommitted =
+    Boolean(Q.left_cabinet_committed) &&
+    !Boolean(Q.caretaker_government);
+let leftCabinetSeats = preserveExisting || sameGovernmentRoster
+    ? finiteMinistry(Q.left_cabinet_delegation_seats, -1)
+    : -1;
+if (leftCabinetSeats < 0) {
+    if (wholeLeftMandate || maximalMandate || Boolean(Q.razem_in_government)) {
+        leftCabinetSeats = finiteMinistry(
+            Q.left_committed_seats,
+            finiteMinistry(Q.left_seats, 0)
+        );
+    } else if (razemExternal) {
+        leftCabinetSeats = finiteMinistry(
+            Q.nowa_lewica_seats,
+            Math.max(
+                0,
+                finiteMinistry(Q.left_seats, 0) -
+                    finiteMinistry(Q.razem_seats, 0)
+            )
+        );
+    } else if (
+        Number.isFinite(Number(Q.nowa_lewica_seats)) &&
+        finiteMinistry(Q.nowa_lewica_seats, 0) > 0 &&
+        !Boolean(Q.razem_in_government)
+    ) {
+        leftCabinetSeats = finiteMinistry(Q.nowa_lewica_seats, 0);
+    } else {
+        leftCabinetSeats = Math.max(
+            0,
+            finiteMinistry(Q.left_seats, 0) -
+                (!Boolean(Q.razem_in_government)
+                    ? finiteMinistry(Q.razem_seats, 0)
+                    : 0)
+        );
+    }
+}
+leftCabinetSeats = leftCommitted ? Math.max(0, Math.round(leftCabinetSeats)) : 0;
+Q.left_cabinet_delegation_seats = leftCabinetSeats;
+
+const statutoryMajority = Math.max(
+    1,
+    Math.round(finiteMinistry(Q.sejm_statutory_majority, 231))
+);
+const leftHasMajority = leftCabinetSeats >= statutoryMajority;
+const pisInCabinet =
+    !Boolean(Q.caretaker_government) &&
+    currentGovernmentCode == "pis" &&
+    finiteMinistry(Q.pis_seats, 0) > 0;
+const koInCabinet =
+    !pisInCabinet && !leftHasMajority &&
+    finiteMinistry(Q.ko_seats, 0) > 0 && resolveCommitment("ko");
+const p2050InCabinet =
+    !pisInCabinet && !leftHasMajority &&
+    finiteMinistry(Q.p2050_seats, 0) > 0 && resolveCommitment("p2050");
+const pslInCabinet =
+    !pisInCabinet && !leftHasMajority && !Boolean(Q.coalition_broken) &&
+    finiteMinistry(Q.psl_seats, 0) > 0 && resolveCommitment("psl");
+
+let cabinetLeaderCode = normalizePartyCode(Q.prime_minister_party);
+if (!cabinetLeaderCode) {
+    cabinetLeaderCode = normalizePartyCode(Q.democratic_candidate_party);
+}
+if (!cabinetLeaderCode) cabinetLeaderCode = currentGovernmentCode;
+if (leftHasMajority) cabinetLeaderCode = "lewica";
+const committedCodes = [];
+if (pisInCabinet) committedCodes.push("pis");
+if (koInCabinet) committedCodes.push("ko");
+if (p2050InCabinet) committedCodes.push("p2050");
+if (pslInCabinet) committedCodes.push("psl");
+if (leftCommitted) committedCodes.push("lewica");
+if (!committedCodes.includes(cabinetLeaderCode)) {
+    cabinetLeaderCode = committedCodes[0] || "cabinet";
+}
+const partyIsCommitted = function(code) {
+    return code == "cabinet" || committedCodes.includes(code);
+};
+
+const ministerRosters = {
+    pis: {
+        labor: "Marlena Maląg",
+        equality: "Anna Schmidt",
+        housing: "Piotr Uściński",
+        health: "Adam Niedzielski",
+        digital: "Janusz Cieszyński",
+        science: "Przemysław Czarnek",
+        interior: "Mariusz Kamiński",
+        finance: "Tadeusz Kościński",
+        economy: "Piotr Nowak",
+        justice: "Zbigniew Ziobro",
+        foreign: "Zbigniew Rau",
+        agriculture: "Grzegorz Puda",
+        defence: "Mariusz Błaszczak"
+    },
+    ko: {
+        labor: "Marzena Okła-Drewnowicz",
+        equality: "Monika Rosa",
+        housing: "Krystyna Sibińska",
+        health: "Izabela Leszczyna",
+        digital: "Jan Grabiec",
+        science: "Barbara Nowacka",
+        interior: "Marcin Kierwiński",
+        finance: "Andrzej Domański",
+        economy: "Borys Budka",
+        justice: "Adam Bodnar",
+        foreign: "Radosław Sikorski",
+        agriculture: "Dorota Niedziela",
+        defence: "Tomasz Siemoniak"
+    },
+    p2050: {
+        labor: "Agnieszka Buczyńska",
+        equality: "Aleksandra Leo",
+        housing: "Michał Kobosko",
+        health: "Żaneta Cwalina-Śliwowska",
+        digital: "Michał Gramatyka",
+        science: "Joanna Mucha",
+        interior: "Mirosław Suchoń",
+        finance: "Ryszard Petru",
+        economy: "Katarzyna Pełczyńska-Nałęcz",
+        justice: "Paweł Śliz",
+        foreign: "Paweł Zalewski",
+        agriculture: "Norbert Pietrykowski",
+        defence: "Maciej Żywno"
+    },
+    psl: {
+        labor: "Urszula Pasławska",
+        equality: "Agnieszka Kłopotek",
+        housing: "Krzysztof Paszyk",
+        health: "Marek Sawicki",
+        digital: "Stefan Krajewski",
+        science: "Dariusz Klimczak",
+        interior: "Piotr Zgorzelski",
+        finance: "Janusz Piechociński",
+        economy: "Krzysztof Hetman",
+        justice: "Jacek Tomczak",
+        foreign: "Władysław Teofil Bartoszewski",
+        agriculture: "Czesław Siekierski",
+        defence: "Władysław Kosiniak-Kamysz"
+    },
+    cabinet: {
+        labor: "Gertruda Uścińska",
+        equality: "Zuzanna Rudzińska-Bluszcz",
+        housing: "Joanna Erbel",
+        health: "Maria Libura",
+        digital: "Alek Tarkowski",
+        science: "Michał Kleiber",
+        interior: "Marek Biernacki",
+        finance: "Paweł Wojciechowski",
+        economy: "Jerzy Hausner",
+        justice: "Ewa Łętowska",
+        foreign: "Jacek Czaputowicz",
+        agriculture: "Monika Stanny",
+        defence: "Stanisław Koziej"
+    }
+};
+const ministerFor = function(code, portfolio) {
+    const roster = ministerRosters[code] || ministerRosters.cabinet;
+    return roster[portfolio] || ministerRosters.cabinet[portfolio];
+};
+const ownerForPortfolio = function(portfolio) {
+    if (pisInCabinet) return "pis";
+    if (portfolio == "agriculture" && pslInCabinet) return "psl";
+    if (portfolio == "defence" && pslInCabinet) return "psl";
+    if (portfolio == "economy" && pslInCabinet) return "psl";
+    if (portfolio == "digital" && p2050InCabinet) return "p2050";
+    if (
+        ["interior", "finance", "justice", "foreign"].includes(portfolio) &&
+        koInCabinet
+    ) {
+        return "ko";
+    }
+    if (cabinetLeaderCode != "lewica" && partyIsCommitted(cabinetLeaderCode)) {
+        return cabinetLeaderCode;
+    }
+    if (koInCabinet) return "ko";
+    if (p2050InCabinet) return "p2050";
+    if (pslInCabinet) return "psl";
+    return "cabinet";
+};
+
 const cabinetSeats = Math.max(
     1,
     leftCabinetSeats +
-    (pisInCabinet ? Math.max(0, Number(Q.pis_seats) || 0) : 0) +
-    (koInCabinet ? Math.max(0, Number(Q.ko_seats) || 0) : 0) +
-    (p2050InCabinet ? Math.max(0, Number(Q.p2050_seats) || 0) : 0) +
-    (pslInCabinet ? Math.max(0, Number(Q.psl_seats) || 0) : 0)
+        (pisInCabinet ? Math.max(0, finiteMinistry(Q.pis_seats, 0)) : 0) +
+        (koInCabinet ? Math.max(0, finiteMinistry(Q.ko_seats, 0)) : 0) +
+        (p2050InCabinet ? Math.max(0, finiteMinistry(Q.p2050_seats, 0)) : 0) +
+        (pslInCabinet ? Math.max(0, finiteMinistry(Q.psl_seats, 0)) : 0)
 );
 const negotiationBonus = maximalMandate ? 8 : wholeLeftMandate ? 6 : 3;
 const leftLedCabinet =
-    Q.government_party == "lewica" ||
-    Q.democratic_candidate == "Agnieszka Dziemianowicz-Bąk" ||
+    cabinetLeaderCode == "lewica" ||
+    currentGovernmentCode == "lewica" ||
+    normalizePartyCode(Q.prime_minister_party) == "lewica" ||
+    normalizePartyCode(Q.democratic_candidate_party) == "lewica" ||
     Boolean(Q.snap_dem_candidate_left);
 const leadershipBonus = leftLedCabinet ? 5 : 0;
-const baseLeverage = Q.left_cabinet_committed
-    ? Math.min(
-        totalPortfolioLeverage,
-        Math.round(
-            totalPortfolioLeverage * leftCabinetSeats / cabinetSeats
-        ) + negotiationBonus + leadershipBonus
-    )
+let baseLeverage = leftCommitted
+    ? Math.round(totalPortfolioLeverage * leftCabinetSeats / cabinetSeats) +
+        negotiationBonus + leadershipBonus
     : 0;
-const eligibleNominee = function(primary, fallback) {
-    return primary == Q.president_name ? fallback : primary;
+if (leftCommitted && leftCabinetSeats > 0) baseLeverage = Math.max(3, baseLeverage);
+if (leftHasMajority) baseLeverage = totalPortfolioLeverage;
+baseLeverage = Math.min(totalPortfolioLeverage, Math.max(0, baseLeverage));
+
+const factionStrength = function(id) {
+    return Math.max(0, finiteMinistry(Q[id + "_strength"], 0));
 };
-const leftPartyIsRazem = String(Q.left_party_name || "").includes("Razem");
-const dominantLeftCaucus = leftPartyIsRazem
-    ? "razem"
-    : (
-        Q.razem_active && Q.razem_in_left &&
-        (Number(Q.razem_strength) || 0) >= Math.max(
-            Number(Q.barons_strength) || 0,
-            Number(Q.spring_strength) || 0,
-            Number(Q.labor_strength) || 0,
-            Number(Q.progressives_strength) || 0,
-            Number(Q.social_patriot_strength) || 0
-        )
-            ? "razem"
-            : "default"
-    );
-const ministryNomineeDefaults = dominantLeftCaucus == "razem"
-    ? {
-        labor: "Agnieszka Dziemianowicz-Bąk",
-        equality: "Katarzyna Kotula",
-        housing: "Magdalena Biejat",
-        health: "Marcelina Zawisza",
-        digital: "Krzysztof Gawkowski",
-        science: "Maciej Gdula",
-        interior: "Wiesław Szczepański",
-        finance: "Dariusz Standerski",
-        economy: "Paulina Matysiak",
-        justice: "Katarzyna Ueberhan",
-        foreign: "Andrzej Szejna",
-        agriculture: "Wiesław Buż",
-        defence: "Marcin Kulasek"
+const factionActive = function(id) {
+    if (id == "barons") return !Boolean(Q.barons_party_formed);
+    if (id == "spring") return !Boolean(Q.spring_party_formed);
+    if (id == "labor") return !Boolean(Q.labor_party_formed);
+    if (id == "progressives") return !Boolean(Q.progressives_party_formed);
+    if (id == "social_patriot") return !Boolean(Q.social_patriot_party_formed);
+    if (id == "pps") return !Boolean(Q.pps_party_formed);
+    if (id == "razem") {
+        return !Boolean(Q.razem_party_formed) &&
+            (
+                Boolean(Q.razem_in_left) ||
+                Boolean(Q.razem_in_left_club) ||
+                Boolean(Q.razem_in_government) ||
+                String(Q.left_party_name || "").includes("Razem")
+            );
     }
-    : {
-        labor: "Agnieszka Dziemianowicz-Bąk",
-        equality: "Katarzyna Kotula",
-        housing: "Magdalena Biejat",
-        health: "Marcelina Zawisza",
-        digital: "Krzysztof Gawkowski",
-        science: "Dariusz Wieczorek",
-        interior: "Wiesław Szczepański",
-        finance: "Dariusz Standerski",
-        economy: "Paulina Matysiak",
-        justice: "Krzysztof Śmiszek",
-        foreign: "Andrzej Szejna",
-        agriculture: "Wiesław Buż",
-        defence: "Marcin Kulasek"
-    };
-Q.ministry_labor_nominee = eligibleNominee(
-    ministryNomineeDefaults.labor, "Katarzyna Ueberhan"
-);
-Q.ministry_equality_nominee = eligibleNominee(
-    ministryNomineeDefaults.equality, "Anita Kucharska-Dziedzic"
-);
-Q.ministry_housing_nominee = eligibleNominee(
-    pisInCabinet && !Q.razem_in_government
-        ? "Joanna Scheuring-Wielgus" : ministryNomineeDefaults.housing,
-    "Joanna Scheuring-Wielgus"
-);
-Q.ministry_health_nominee = eligibleNominee(
-    pisInCabinet && !Q.razem_in_government
-        ? "Marek Rutka" : ministryNomineeDefaults.health,
-    "Marek Rutka"
-);
-Q.ministry_digital_nominee = eligibleNominee(
-    ministryNomineeDefaults.digital, "Dariusz Standerski"
-);
-Q.ministry_science_nominee = eligibleNominee(
-    ministryNomineeDefaults.science, "Maciej Gdula"
-);
-Q.ministry_interior_nominee = eligibleNominee(
-    ministryNomineeDefaults.interior, "Tomasz Szymański"
-);
-Q.ministry_finance_nominee = eligibleNominee(
-    ministryNomineeDefaults.finance, "Wojciech Konieczny"
-);
-Q.ministry_economy_nominee = eligibleNominee(
-    ministryNomineeDefaults.economy, "Agnieszka Dziemianowicz-Bąk"
-);
-Q.ministry_justice_nominee = eligibleNominee(
-    ministryNomineeDefaults.justice, "Katarzyna Ueberhan"
-);
-Q.ministry_foreign_nominee = eligibleNominee(
-    ministryNomineeDefaults.foreign, "Marek Balt"
-);
-Q.ministry_agriculture_nominee = eligibleNominee(
-    ministryNomineeDefaults.agriculture, "Zdzisław Wolski"
-);
-Q.ministry_defence_nominee = eligibleNominee(
-    ministryNomineeDefaults.defence, "Andrzej Szejna"
-);
+    return true;
+};
+const factionIds = [
+    "barons", "spring", "labor", "progressives",
+    "razem", "social_patriot", "pps"
+];
+let dominantLeftCaucus = "barons";
+let dominantStrength = -1;
+for (const id of factionIds) {
+    const strength = factionActive(id) ? factionStrength(id) : -1;
+    if (strength > dominantStrength) {
+        dominantLeftCaucus = id;
+        dominantStrength = strength;
+    }
+}
+
+const nomineePools = {
+    labor: ["Agnieszka Dziemianowicz-Bąk", "Tomasz Trela", "Katarzyna Ueberhan"],
+    equality: ["Katarzyna Kotula", "Anita Kucharska-Dziedzic", "Krzysztof Śmiszek"],
+    housing: ["Magdalena Biejat", "Joanna Scheuring-Wielgus", "Tomasz Trela"],
+    health: ["Marcelina Zawisza", "Marek Rutka", "Wojciech Konieczny"],
+    digital: ["Krzysztof Gawkowski", "Dariusz Standerski", "Łukasz Litewka"],
+    science: ["Dariusz Wieczorek", "Maciej Gdula", "Łukasz Litewka"],
+    interior: ["Wiesław Szczepański", "Tomasz Szymański", "Tomasz Trela"],
+    finance: ["Dariusz Standerski", "Wojciech Konieczny", "Tomasz Trela"],
+    economy: ["Paulina Matysiak", "Tomasz Trela", "Dariusz Wieczorek"],
+    justice: ["Krzysztof Śmiszek", "Katarzyna Ueberhan", "Anita Kucharska-Dziedzic"],
+    foreign: ["Andrzej Szejna", "Marek Balt", "Krzysztof Śmiszek"],
+    agriculture: ["Wiesław Buż", "Zdzisław Wolski", "Wojciech Konieczny"],
+    defence: ["Marcin Kulasek", "Andrzej Szejna", "Tomasz Trela"]
+};
+const factionPreferences = {
+    barons: {
+        labor: "Tomasz Trela", science: "Dariusz Wieczorek",
+        interior: "Wiesław Szczepański", finance: "Dariusz Standerski",
+        economy: "Dariusz Wieczorek"
+    },
+    spring: {
+        equality: "Krzysztof Śmiszek", housing: "Joanna Scheuring-Wielgus",
+        digital: "Krzysztof Gawkowski", justice: "Krzysztof Śmiszek"
+    },
+    labor: {
+        labor: "Agnieszka Dziemianowicz-Bąk", health: "Wojciech Konieczny",
+        finance: "Wojciech Konieczny", economy: "Agnieszka Dziemianowicz-Bąk",
+        agriculture: "Wojciech Konieczny"
+    },
+    progressives: {
+        labor: "Agnieszka Dziemianowicz-Bąk", equality: "Katarzyna Kotula",
+        digital: "Łukasz Litewka", science: "Łukasz Litewka",
+        justice: "Katarzyna Ueberhan"
+    },
+    razem: {
+        housing: "Magdalena Biejat", health: "Marcelina Zawisza",
+        science: "Maciej Gdula", economy: "Paulina Matysiak",
+        justice: "Katarzyna Ueberhan"
+    },
+    social_patriot: {
+        interior: "Tomasz Trela", foreign: "Andrzej Szejna",
+        agriculture: "Zdzisław Wolski", defence: "Marcin Kulasek"
+    },
+    pps: {
+        labor: "Tomasz Trela", health: "Wojciech Konieczny",
+        finance: "Wojciech Konieczny", agriculture: "Wojciech Konieczny"
+    }
+};
+const reservedNominees = new Set();
+for (const name of [
+    Q.president_name,
+    Q.prime_minister,
+    leftLedCabinet ? Q.democratic_candidate : ""
+]) {
+    if (String(name || "").trim()) reservedNominees.add(String(name));
+}
+if (preserveExisting) {
+    for (const portfolio of portfolioKeys) {
+        const existing = String(Q[portfolio + "_minister"] || "").trim();
+        if (existing) reservedNominees.add(existing);
+    }
+}
+const usedNominees = new Set(reservedNominees);
+const chooseNominee = function(portfolio) {
+    const preference =
+        (factionPreferences[dominantLeftCaucus] || {})[portfolio];
+    const candidates = [];
+    if (preference) candidates.push(preference);
+    for (const candidate of nomineePools[portfolio]) {
+        if (!candidates.includes(candidate)) candidates.push(candidate);
+    }
+    candidates.push("Lewica cabinet delegate — " + portfolio);
+    for (const candidate of candidates) {
+        if (!usedNominees.has(candidate)) {
+            usedNominees.add(candidate);
+            return candidate;
+        }
+    }
+    return "Lewica cabinet delegate — " + portfolio;
+};
+for (const portfolio of portfolioKeys) {
+    Q["ministry_" + portfolio + "_nominee"] = chooseNominee(portfolio);
+}
 
 Q.ministries_finalized = 0;
 Q.ministry_maximal_mandate = maximalMandate ? 1 : 0;
 Q.ministry_whole_left_mandate = wholeLeftMandate ? 1 : 0;
+Q.ministry_left_led_cabinet = leftLedCabinet ? 1 : 0;
+Q.ministry_dominant_left_caucus = dominantLeftCaucus;
 Q.ministry_base_leverage = baseLeverage;
 Q.ministry_left_cabinet_seats = leftCabinetSeats;
 Q.ministry_coalition_seats = cabinetSeats;
@@ -362,50 +462,84 @@ Q.ministry_pis_in_cabinet = pisInCabinet ? 1 : 0;
 Q.ministry_ko_in_cabinet = koInCabinet ? 1 : 0;
 Q.ministry_p2050_in_cabinet = p2050InCabinet ? 1 : 0;
 Q.ministry_psl_in_cabinet = pslInCabinet ? 1 : 0;
+Q.ministry_cabinet_leader_code = cabinetLeaderCode;
 Q.ministry_reshuffle_changes = 0;
-Q.ministry_coalition_partners = [
-    pisInCabinet ? "PiS" : "",
-    koInCabinet ? "KO" : "",
-    p2050InCabinet ? "Polska 2050" : "",
-    pslInCabinet ? "PSL" : "",
-    Q.left_cabinet_committed ? "Lewica" : ""
-].filter(Boolean).join(" · ");
+Q.ministry_coalition_partners = committedCodes
+    .map(partyDisplay)
+    .join(" · ");
 
-for (const portfolio of portfolios) {
+for (const portfolio of portfolioKeys) {
     const partyKey = portfolio + "_minister_party";
     const ministerKey = portfolio + "_minister";
-    const missing =
-        typeof Q[partyKey] != "string" ||
-        !Q[partyKey].length ||
-        Q[partyKey] == "Unassigned" ||
-        typeof Q[ministerKey] != "string" ||
-        !Q[ministerKey].length ||
-        /nominee|unassigned|development ministry/i.test(Q[ministerKey]);
-    if (!preserveExisting || missing) {
-        Q[partyKey] = defaults[portfolio][0];
-        Q[ministerKey] = defaults[portfolio][1];
+    const currentCode = normalizePartyCode(Q[partyKey]);
+    const authoredDefaultOwner = ownerForPortfolio(portfolio);
+    const storedSource = normalizePartyCode(
+        Q["ministry_" + portfolio + "_source_party_code"]
+    );
+    let baselineOwner = authoredDefaultOwner;
+    if (preserveExisting && currentCode == "lewica" && partyIsCommitted(storedSource)) {
+        baselineOwner = storedSource;
+    } else if (preserveExisting && currentCode && currentCode != "lewica") {
+        baselineOwner = partyIsCommitted(currentCode) ? currentCode : authoredDefaultOwner;
     }
-    Q["ministry_" + portfolio + "_default_party"] =
-        defaults[portfolio][0];
+    let baselineMinister = ministerFor(baselineOwner, portfolio);
+    if (preserveExisting && currentCode == baselineOwner) {
+        const existingMinister = String(Q[ministerKey] || "").trim();
+        if (existingMinister) baselineMinister = existingMinister;
+    }
+    const missing =
+        !currentCode ||
+        typeof Q[ministerKey] != "string" ||
+        !String(Q[ministerKey]).trim() ||
+        /nominee|unassigned|development ministry/i.test(String(Q[ministerKey]));
+    if (!preserveExisting || missing) {
+        Q[partyKey] = partyDisplay(authoredDefaultOwner);
+        Q[ministerKey] = ministerFor(authoredDefaultOwner, portfolio);
+    }
+    const finalCurrentCode = normalizePartyCode(Q[partyKey]);
+    Q["ministry_" + portfolio + "_baseline_owner_code"] = baselineOwner;
+    Q["ministry_" + portfolio + "_baseline_party"] = partyDisplay(baselineOwner);
+    Q["ministry_" + portfolio + "_baseline_minister"] = baselineMinister;
+    Q["ministry_" + portfolio + "_default_party"] = partyDisplay(authoredDefaultOwner);
     Q["ministry_" + portfolio + "_default_minister"] =
-        defaults[portfolio][1];
+        ministerFor(authoredDefaultOwner, portfolio);
+    Q["ministry_" + portfolio + "_current_owner_code"] =
+        finalCurrentCode || authoredDefaultOwner;
+    if (finalCurrentCode != "lewica") {
+        Q["ministry_" + portfolio + "_source_party_code"] =
+            finalCurrentCode || authoredDefaultOwner;
+    } else if (!storedSource) {
+        Q["ministry_" + portfolio + "_source_party_code"] = baselineOwner;
+    }
+    if (!preserveExisting) {
+        Q["ministry_" + portfolio + "_penalty_active"] = 0;
+        Q["ministry_" + portfolio + "_penalty_relation"] = 0;
+        Q["ministry_" + portfolio + "_penalty_partner_dissent"] = 0;
+        Q["ministry_" + portfolio + "_penalty_general_dissent"] = 0;
+        Q["ministry_" + portfolio + "_taken_from_code"] = "";
+    }
 }
 Q.family_minister_party = Q.labor_minister_party;
 Q.family_minister = Q.labor_minister;
 
-Q.ministry_count = portfolios.reduce(function(total, portfolio) {
+Q.ministry_count = portfolioKeys.reduce(function(total, portfolio) {
     return total +
-        (Q[portfolio + "_minister_party"] == "Lewica" ? 1 : 0);
+        (normalizePartyCode(Q[portfolio + "_minister_party"]) == "lewica" ? 1 : 0);
 }, 0);
-const investedLeverage = portfolios.reduce(function(total, portfolio) {
+const investedLeverage = portfolioKeys.reduce(function(total, portfolio) {
     return total +
-        (Q[portfolio + "_minister_party"] == "Lewica"
+        (normalizePartyCode(Q[portfolio + "_minister_party"]) == "lewica"
             ? costs[portfolio]
             : 0);
 }, 0);
-Q.ministry_leverage = preserveExisting
-    ? Math.max(0, baseLeverage - investedLeverage)
-    : baseLeverage;
+const leverageBalance = baseLeverage - investedLeverage;
+Q.ministry_leverage = Math.max(0, leverageBalance);
+Q.ministry_leverage_debt = Math.max(0, -leverageBalance);
+Q.ministry_invested_leverage = investedLeverage;
+Q.ministry_minimum_expected_value = Math.max(
+    3,
+    Math.round(baseLeverage * 0.35)
+);
 if (preserveExisting) {
     Q.ministry_reshuffle_previous_count = Q.ministry_count;
 }
@@ -418,28 +552,36 @@ new-page: true
 
 = The cabinet table
 
-Lewica has **[+ ministry_leverage +] leverage**. Every portfolio below has its
-own Government Affairs card when Lewica controls it. Untaken offices remain
-with the named coalition partner.
+Lewica has **[+ ministry_leverage +] free leverage** and **[+
+ministry_leverage_debt +] leverage debt**. Every portfolio below has its own
+Government Affairs card when Lewica controls it. Untaken offices remain with
+the named coalition partner.
 
-That entitlement comes from **[+ ministry_left_cabinet_seats +] Lewica
-cabinet seats out of [+ ministry_coalition_seats +] seats held by parties
-sharing cabinet responsibility**, plus the negotiated programme and any
-Lewica premiership.
+The entitlement comes from **[+ ministry_left_cabinet_seats +] Lewica cabinet
+seats out of [+ ministry_coalition_seats +] seats held by parties sharing
+cabinet responsibility**, plus the negotiated programme and any Lewica-led
+premiership. The strongest active Left caucus is **[+
+ministry_dominant_left_caucus +]**; its preferred names lead the nominee list,
+but no person may simultaneously serve as President, Prime Minister or two
+different ministers.
 
+[? if ministry_leverage_debt > 0: **The delegation now holds more cabinet
+value than its current entitlement.** At least [+ ministry_leverage_debt +]
+leverage must be recovered by returning offices before this reshuffle can be
+finalised.?]
 [? if ministry_allocation_mode = "reshuffle" or ministry_allocation_mode =
 "event_reshuffle": This is a live reshuffle. Existing Lewica offices remain in
-place; return one to recover its leverage, then bargain for another.?]
+place, but a reduced entitlement creates real leverage debt rather than free
+overrepresentation.?]
 
-[? if ministry_pis_in_cabinet = 1: Kaczyński will bargain over social policy,
-public services, digital administration, science and the development office.
-Interior, Finance, Justice, Foreign Affairs, Agriculture and Defence remain
-PiS red lines in this coalition.?]
-[? if ministry_pis_in_cabinet = 0: This table belongs to **[+
+[? if ministry_pis_in_cabinet = 1: PiS will bargain over social policy, public
+services, digital administration, science and development. Interior, Finance,
+Justice, Foreign Affairs, Agriculture and Defence remain PiS red lines in this
+accession agreement.?]
+[? if ministry_pis_in_cabinet = 0: Cabinet commitments are explicit: **[+
 ministry_coalition_partners +]**. KO treats Finance and Foreign Affairs as
-senior claims. PSL treats Agriculture as a hard coalition red line when it
-joins the cabinet, while Defence is available only in an exceptionally strong
-negotiation.?]
+senior claims. PSL treats Agriculture and Defence as senior claims, but those
+claims can be negotiated rather than hidden behind an unreachable flag.?]
 
 <div class="ministry-grid">
 <div><span>Labour & Social Policy</span><b>[+ labor_minister_party +] · [+ labor_minister +]</b></div>
@@ -457,18 +599,74 @@ negotiation.?]
 <div><span>National Defence</span><b>[+ defence_minister_party +] · [+ defence_minister +]</b></div>
 </div>
 
+- @negotiate_psl_agriculture_release
 - #poland_ministry_take
 - #poland_ministry_drop
 - @finalize
+
+@negotiate_psl_agriculture_release
+title: Negotiate PSL's Agriculture claim
+subtitle: 3 leverage · converts a hard claim into a ministry available for a later ten-leverage demand
+view-if: ministry_psl_in_cabinet = 1 and psl_agriculture_released != 1 and agriculture_minister_party != "Lewica"
+choose-if: ministry_leverage_debt = 0 and ministry_leverage >= 3 and psl_relation >= 40
+unavailable-subtitle: Requires three free leverage, no leverage debt and a workable PSL relationship.
+on-arrival: {!
+const finiteMinistry = function(value, fallback) {
+    return Number.isFinite(Number(value)) ? Number(value) : fallback;
+};
+Q.ministry_leverage = finiteMinistry(Q.ministry_leverage, 0) - 3;
+Q.psl_agriculture_released = 1;
+Q.psl_relation = finiteMinistry(Q.psl_relation, 0) + 2;
+Q.psl_coalition_dissent = Math.max(
+    0,
+    finiteMinistry(Q.psl_coalition_dissent, 0) - 1
+);
+Q.news_headline =
+    "PSL accepts compensation for releasing its Agriculture claim";
+!}
+go-to: menu
 
 @take_labor
 title: Take Labour & Social Policy
 subtitle: 5 leverage · [+ ministry_labor_nominee +]
 tags: poland_ministry_take
 view-if: labor_minister_party != "Lewica"
-choose-if: ministry_leverage >= 5
-unavailable-subtitle: Requires five leverage.
-on-arrival: ministry_leverage -= 5; ministry_count += 1; ministry_reshuffle_changes += 1; labor_minister_party = "Lewica"; labor_minister = ministry_labor_nominee; family_minister_party = "Lewica"; family_minister = ministry_labor_nominee
+choose-if: ministry_leverage_debt = 0 and ministry_leverage >= 5
+unavailable-subtitle: Requires 5 free leverage and no leverage debt.
+on-arrival: {!
+const finiteMinistry = function(value, fallback) {
+    return Number.isFinite(Number(value)) ? Number(value) : fallback;
+};
+const owner = String(
+    Q.ministry_labor_current_owner_code ||
+    Q.ministry_labor_baseline_owner_code || "cabinet"
+);
+Q.ministry_labor_taken_from_code = owner;
+Q.ministry_labor_penalty_active = 0;
+Q.ministry_labor_penalty_relation = 0;
+Q.ministry_labor_penalty_partner_dissent = 0;
+Q.ministry_labor_penalty_general_dissent = 0;
+if (["pis", "ko", "psl", "p2050"].includes(owner)) {
+    Q[owner + "_relation"] = finiteMinistry(Q[owner + "_relation"], 0) - 1;
+    Q[owner + "_coalition_dissent"] =
+        finiteMinistry(Q[owner + "_coalition_dissent"], 0) + 1;
+    Q.government_coalition_dissent =
+        finiteMinistry(Q.government_coalition_dissent, 0) + 0;
+    Q.ministry_labor_penalty_active = 1;
+    Q.ministry_labor_penalty_relation = 1;
+    Q.ministry_labor_penalty_partner_dissent = 1;
+    Q.ministry_labor_penalty_general_dissent = 0;
+}
+Q.ministry_leverage -= 5;
+Q.ministry_count += 1;
+Q.ministry_reshuffle_changes += 1;
+Q.labor_minister_party = "Lewica";
+Q.labor_minister = Q.ministry_labor_nominee;
+Q.ministry_labor_current_owner_code = "lewica";
+Q.ministry_labor_source_party_code = owner;
+Q.family_minister_party = "Lewica";
+Q.family_minister = Q.ministry_labor_nominee;
+!}
 go-to: menu
 
 @take_equality
@@ -476,9 +674,40 @@ title: Take Equality
 subtitle: 3 leverage · [+ ministry_equality_nominee +]
 tags: poland_ministry_take
 view-if: equality_minister_party != "Lewica"
-choose-if: ministry_leverage >= 3
-unavailable-subtitle: Requires three leverage.
-on-arrival: ministry_leverage -= 3; ministry_count += 1; ministry_reshuffle_changes += 1; equality_minister_party = "Lewica"; equality_minister = ministry_equality_nominee
+choose-if: ministry_leverage_debt = 0 and ministry_leverage >= 3
+unavailable-subtitle: Requires 3 free leverage and no leverage debt.
+on-arrival: {!
+const finiteMinistry = function(value, fallback) {
+    return Number.isFinite(Number(value)) ? Number(value) : fallback;
+};
+const owner = String(
+    Q.ministry_equality_current_owner_code ||
+    Q.ministry_equality_baseline_owner_code || "cabinet"
+);
+Q.ministry_equality_taken_from_code = owner;
+Q.ministry_equality_penalty_active = 0;
+Q.ministry_equality_penalty_relation = 0;
+Q.ministry_equality_penalty_partner_dissent = 0;
+Q.ministry_equality_penalty_general_dissent = 0;
+if (["pis", "ko", "psl", "p2050"].includes(owner)) {
+    Q[owner + "_relation"] = finiteMinistry(Q[owner + "_relation"], 0) - 1;
+    Q[owner + "_coalition_dissent"] =
+        finiteMinistry(Q[owner + "_coalition_dissent"], 0) + 1;
+    Q.government_coalition_dissent =
+        finiteMinistry(Q.government_coalition_dissent, 0) + 0;
+    Q.ministry_equality_penalty_active = 1;
+    Q.ministry_equality_penalty_relation = 1;
+    Q.ministry_equality_penalty_partner_dissent = 1;
+    Q.ministry_equality_penalty_general_dissent = 0;
+}
+Q.ministry_leverage -= 3;
+Q.ministry_count += 1;
+Q.ministry_reshuffle_changes += 1;
+Q.equality_minister_party = "Lewica";
+Q.equality_minister = Q.ministry_equality_nominee;
+Q.ministry_equality_current_owner_code = "lewica";
+Q.ministry_equality_source_party_code = owner;
+!}
 go-to: menu
 
 @take_housing
@@ -486,9 +715,40 @@ title: Take Housing
 subtitle: 6 leverage · [+ ministry_housing_nominee +]
 tags: poland_ministry_take
 view-if: housing_minister_party != "Lewica"
-choose-if: ministry_leverage >= 6
-unavailable-subtitle: Requires six leverage.
-on-arrival: ministry_leverage -= 6; ministry_count += 1; ministry_reshuffle_changes += 1; housing_minister_party = "Lewica"; housing_minister = ministry_housing_nominee
+choose-if: ministry_leverage_debt = 0 and ministry_leverage >= 6
+unavailable-subtitle: Requires 6 free leverage and no leverage debt.
+on-arrival: {!
+const finiteMinistry = function(value, fallback) {
+    return Number.isFinite(Number(value)) ? Number(value) : fallback;
+};
+const owner = String(
+    Q.ministry_housing_current_owner_code ||
+    Q.ministry_housing_baseline_owner_code || "cabinet"
+);
+Q.ministry_housing_taken_from_code = owner;
+Q.ministry_housing_penalty_active = 0;
+Q.ministry_housing_penalty_relation = 0;
+Q.ministry_housing_penalty_partner_dissent = 0;
+Q.ministry_housing_penalty_general_dissent = 0;
+if (["pis", "ko", "psl", "p2050"].includes(owner)) {
+    Q[owner + "_relation"] = finiteMinistry(Q[owner + "_relation"], 0) - 1;
+    Q[owner + "_coalition_dissent"] =
+        finiteMinistry(Q[owner + "_coalition_dissent"], 0) + 1;
+    Q.government_coalition_dissent =
+        finiteMinistry(Q.government_coalition_dissent, 0) + 0;
+    Q.ministry_housing_penalty_active = 1;
+    Q.ministry_housing_penalty_relation = 1;
+    Q.ministry_housing_penalty_partner_dissent = 1;
+    Q.ministry_housing_penalty_general_dissent = 0;
+}
+Q.ministry_leverage -= 6;
+Q.ministry_count += 1;
+Q.ministry_reshuffle_changes += 1;
+Q.housing_minister_party = "Lewica";
+Q.housing_minister = Q.ministry_housing_nominee;
+Q.ministry_housing_current_owner_code = "lewica";
+Q.ministry_housing_source_party_code = owner;
+!}
 go-to: menu
 
 @take_health
@@ -496,9 +756,40 @@ title: Take Health
 subtitle: 7 leverage · [+ ministry_health_nominee +]
 tags: poland_ministry_take
 view-if: health_minister_party != "Lewica"
-choose-if: ministry_leverage >= 7 and ((razem_in_left_club = 1 and razem_split = 0) or ministry_pis_in_cabinet = 1)
-unavailable-subtitle: Requires seven leverage. Outside the PiS accession route, Health also requires Razem's participation in the Left delegation.
-on-arrival: ministry_leverage -= 7; ministry_count += 1; ministry_reshuffle_changes += 1; health_minister_party = "Lewica"; health_minister = ministry_health_nominee
+choose-if: ministry_leverage_debt = 0 and ministry_leverage >= 7
+unavailable-subtitle: Requires seven free leverage and no leverage debt.
+on-arrival: {!
+const finiteMinistry = function(value, fallback) {
+    return Number.isFinite(Number(value)) ? Number(value) : fallback;
+};
+const owner = String(
+    Q.ministry_health_current_owner_code ||
+    Q.ministry_health_baseline_owner_code || "cabinet"
+);
+Q.ministry_health_taken_from_code = owner;
+Q.ministry_health_penalty_active = 0;
+Q.ministry_health_penalty_relation = 0;
+Q.ministry_health_penalty_partner_dissent = 0;
+Q.ministry_health_penalty_general_dissent = 0;
+if (["pis", "ko", "psl", "p2050"].includes(owner)) {
+    Q[owner + "_relation"] = finiteMinistry(Q[owner + "_relation"], 0) - 1;
+    Q[owner + "_coalition_dissent"] =
+        finiteMinistry(Q[owner + "_coalition_dissent"], 0) + 1;
+    Q.government_coalition_dissent =
+        finiteMinistry(Q.government_coalition_dissent, 0) + 0;
+    Q.ministry_health_penalty_active = 1;
+    Q.ministry_health_penalty_relation = 1;
+    Q.ministry_health_penalty_partner_dissent = 1;
+    Q.ministry_health_penalty_general_dissent = 0;
+}
+Q.ministry_leverage -= 7;
+Q.ministry_count += 1;
+Q.ministry_reshuffle_changes += 1;
+Q.health_minister_party = "Lewica";
+Q.health_minister = Q.ministry_health_nominee;
+Q.ministry_health_current_owner_code = "lewica";
+Q.ministry_health_source_party_code = owner;
+!}
 go-to: menu
 
 @take_digital
@@ -506,9 +797,40 @@ title: Take Digital Affairs
 subtitle: 4 leverage · [+ ministry_digital_nominee +]
 tags: poland_ministry_take
 view-if: digital_minister_party != "Lewica"
-choose-if: ministry_leverage >= 4
-unavailable-subtitle: Requires four leverage.
-on-arrival: ministry_leverage -= 4; ministry_count += 1; ministry_reshuffle_changes += 1; digital_minister_party = "Lewica"; digital_minister = ministry_digital_nominee
+choose-if: ministry_leverage_debt = 0 and ministry_leverage >= 4
+unavailable-subtitle: Requires 4 free leverage and no leverage debt.
+on-arrival: {!
+const finiteMinistry = function(value, fallback) {
+    return Number.isFinite(Number(value)) ? Number(value) : fallback;
+};
+const owner = String(
+    Q.ministry_digital_current_owner_code ||
+    Q.ministry_digital_baseline_owner_code || "cabinet"
+);
+Q.ministry_digital_taken_from_code = owner;
+Q.ministry_digital_penalty_active = 0;
+Q.ministry_digital_penalty_relation = 0;
+Q.ministry_digital_penalty_partner_dissent = 0;
+Q.ministry_digital_penalty_general_dissent = 0;
+if (["pis", "ko", "psl", "p2050"].includes(owner)) {
+    Q[owner + "_relation"] = finiteMinistry(Q[owner + "_relation"], 0) - 1;
+    Q[owner + "_coalition_dissent"] =
+        finiteMinistry(Q[owner + "_coalition_dissent"], 0) + 1;
+    Q.government_coalition_dissent =
+        finiteMinistry(Q.government_coalition_dissent, 0) + 0;
+    Q.ministry_digital_penalty_active = 1;
+    Q.ministry_digital_penalty_relation = 1;
+    Q.ministry_digital_penalty_partner_dissent = 1;
+    Q.ministry_digital_penalty_general_dissent = 0;
+}
+Q.ministry_leverage -= 4;
+Q.ministry_count += 1;
+Q.ministry_reshuffle_changes += 1;
+Q.digital_minister_party = "Lewica";
+Q.digital_minister = Q.ministry_digital_nominee;
+Q.ministry_digital_current_owner_code = "lewica";
+Q.ministry_digital_source_party_code = owner;
+!}
 go-to: menu
 
 @take_science
@@ -516,107 +838,541 @@ title: Take Science
 subtitle: 4 leverage · [+ ministry_science_nominee +]
 tags: poland_ministry_take
 view-if: science_minister_party != "Lewica"
-choose-if: ministry_leverage >= 4
-unavailable-subtitle: Requires four leverage.
-on-arrival: ministry_leverage -= 4; ministry_count += 1; ministry_reshuffle_changes += 1; science_minister_party = "Lewica"; science_minister = ministry_science_nominee
+choose-if: ministry_leverage_debt = 0 and ministry_leverage >= 4
+unavailable-subtitle: Requires 4 free leverage and no leverage debt.
+on-arrival: {!
+const finiteMinistry = function(value, fallback) {
+    return Number.isFinite(Number(value)) ? Number(value) : fallback;
+};
+const owner = String(
+    Q.ministry_science_current_owner_code ||
+    Q.ministry_science_baseline_owner_code || "cabinet"
+);
+Q.ministry_science_taken_from_code = owner;
+Q.ministry_science_penalty_active = 0;
+Q.ministry_science_penalty_relation = 0;
+Q.ministry_science_penalty_partner_dissent = 0;
+Q.ministry_science_penalty_general_dissent = 0;
+if (["pis", "ko", "psl", "p2050"].includes(owner)) {
+    Q[owner + "_relation"] = finiteMinistry(Q[owner + "_relation"], 0) - 1;
+    Q[owner + "_coalition_dissent"] =
+        finiteMinistry(Q[owner + "_coalition_dissent"], 0) + 1;
+    Q.government_coalition_dissent =
+        finiteMinistry(Q.government_coalition_dissent, 0) + 0;
+    Q.ministry_science_penalty_active = 1;
+    Q.ministry_science_penalty_relation = 1;
+    Q.ministry_science_penalty_partner_dissent = 1;
+    Q.ministry_science_penalty_general_dissent = 0;
+}
+Q.ministry_leverage -= 4;
+Q.ministry_count += 1;
+Q.ministry_reshuffle_changes += 1;
+Q.science_minister_party = "Lewica";
+Q.science_minister = Q.ministry_science_nominee;
+Q.ministry_science_current_owner_code = "lewica";
+Q.ministry_science_source_party_code = owner;
+!}
 go-to: menu
 
 @take_interior
 title: Take Interior & Administration
-subtitle: 5 leverage · [+ ministry_interior_nominee +] · senior-partner dissent
+subtitle: 5 leverage · [+ ministry_interior_nominee +] · senior-partner claim
 tags: poland_ministry_take
 view-if: interior_minister_party != "Lewica"
-choose-if: ministry_leverage >= 5 and ministry_pis_in_cabinet = 0
-unavailable-subtitle: Requires five leverage. [? if ministry_pis_in_cabinet = 1: PiS will not release Interior in the 2021 accession agreement.?][? if ministry_pis_in_cabinet = 0: [+ ministry_interior_default_party +] currently holds Interior.?]
-on-arrival: ministry_leverage -= 5; ministry_count += 1; ministry_reshuffle_changes += 1; interior_minister_party = "Lewica"; interior_minister = ministry_interior_nominee; ko_relation -= 3 if ministry_ko_in_cabinet = 1; ko_coalition_dissent += 5 if ministry_ko_in_cabinet = 1; government_coalition_dissent += 2 if ministry_ko_in_cabinet = 1
+choose-if: ministry_leverage_debt = 0 and ministry_leverage >= 5 and ministry_pis_in_cabinet = 0
+unavailable-subtitle: Requires five free leverage. PiS will not release Interior in its accession agreement.
+on-arrival: {!
+const finiteMinistry = function(value, fallback) {
+    return Number.isFinite(Number(value)) ? Number(value) : fallback;
+};
+const owner = String(
+    Q.ministry_interior_current_owner_code ||
+    Q.ministry_interior_baseline_owner_code || "cabinet"
+);
+Q.ministry_interior_taken_from_code = owner;
+Q.ministry_interior_penalty_active = 0;
+Q.ministry_interior_penalty_relation = 0;
+Q.ministry_interior_penalty_partner_dissent = 0;
+Q.ministry_interior_penalty_general_dissent = 0;
+if (["pis", "ko", "psl", "p2050"].includes(owner)) {
+    Q[owner + "_relation"] = finiteMinistry(Q[owner + "_relation"], 0) - 3;
+    Q[owner + "_coalition_dissent"] =
+        finiteMinistry(Q[owner + "_coalition_dissent"], 0) + 5;
+    Q.government_coalition_dissent =
+        finiteMinistry(Q.government_coalition_dissent, 0) + 2;
+    Q.ministry_interior_penalty_active = 1;
+    Q.ministry_interior_penalty_relation = 3;
+    Q.ministry_interior_penalty_partner_dissent = 5;
+    Q.ministry_interior_penalty_general_dissent = 2;
+}
+Q.ministry_leverage -= 5;
+Q.ministry_count += 1;
+Q.ministry_reshuffle_changes += 1;
+Q.interior_minister_party = "Lewica";
+Q.interior_minister = Q.ministry_interior_nominee;
+Q.ministry_interior_current_owner_code = "lewica";
+Q.ministry_interior_source_party_code = owner;
+!}
 go-to: menu
 
 @take_finance
-title: Demand the Finance Ministry
-subtitle: 10 leverage · [+ ministry_finance_nominee +] · senior-partner veto
+title: Demand Finance
+subtitle: 10 leverage · [+ ministry_finance_nominee +] · senior-partner claim
 tags: poland_ministry_take
 view-if: finance_minister_party != "Lewica"
-choose-if: ministry_leverage >= 10 and ministry_pis_in_cabinet = 0 and (ministry_ko_in_cabinet = 0 or ministry_maximal_mandate = 1)
-unavailable-subtitle: Requires ten leverage. [? if ministry_pis_in_cabinet = 1: PiS reserves Finance in this accession agreement.?][? if ministry_pis_in_cabinet = 0: [+ ministry_finance_default_party +] currently holds Finance; KO releases it only to the strongest programme-bound Left delegation.?]
-on-arrival: ministry_leverage -= 10; ministry_count += 1; ministry_reshuffle_changes += 1; finance_minister_party = "Lewica"; finance_minister = ministry_finance_nominee; ko_relation -= 10 if ministry_ko_in_cabinet = 1; ko_coalition_dissent += 14 if ministry_ko_in_cabinet = 1; government_coalition_dissent += 6 if ministry_ko_in_cabinet = 1
+choose-if: ministry_leverage_debt = 0 and ministry_leverage >= 10 and ministry_pis_in_cabinet = 0 and (ministry_ko_in_cabinet = 0 or ministry_maximal_mandate = 1 or ministry_left_led_cabinet = 1 or (ministry_whole_left_mandate = 1 and ko_relation >= 55))
+unavailable-subtitle: Requires ten free leverage. PiS reserves Finance; KO releases it only to a programme-bound, whole-delegation or Left-led cabinet.
+on-arrival: {!
+const finiteMinistry = function(value, fallback) {
+    return Number.isFinite(Number(value)) ? Number(value) : fallback;
+};
+const owner = String(
+    Q.ministry_finance_current_owner_code ||
+    Q.ministry_finance_baseline_owner_code || "cabinet"
+);
+Q.ministry_finance_taken_from_code = owner;
+Q.ministry_finance_penalty_active = 0;
+Q.ministry_finance_penalty_relation = 0;
+Q.ministry_finance_penalty_partner_dissent = 0;
+Q.ministry_finance_penalty_general_dissent = 0;
+if (["pis", "ko", "psl", "p2050"].includes(owner)) {
+    Q[owner + "_relation"] = finiteMinistry(Q[owner + "_relation"], 0) - 10;
+    Q[owner + "_coalition_dissent"] =
+        finiteMinistry(Q[owner + "_coalition_dissent"], 0) + 14;
+    Q.government_coalition_dissent =
+        finiteMinistry(Q.government_coalition_dissent, 0) + 6;
+    Q.ministry_finance_penalty_active = 1;
+    Q.ministry_finance_penalty_relation = 10;
+    Q.ministry_finance_penalty_partner_dissent = 14;
+    Q.ministry_finance_penalty_general_dissent = 6;
+}
+Q.ministry_leverage -= 10;
+Q.ministry_count += 1;
+Q.ministry_reshuffle_changes += 1;
+Q.finance_minister_party = "Lewica";
+Q.finance_minister = Q.ministry_finance_nominee;
+Q.ministry_finance_current_owner_code = "lewica";
+Q.ministry_finance_source_party_code = owner;
+!}
 go-to: menu
 
 @take_economy
 title: Take Development & Technology
-subtitle: 10 leverage · [+ ministry_economy_nominee +] · senior-partner dissent
+subtitle: 10 leverage · [+ ministry_economy_nominee +] · senior-partner claim
 tags: poland_ministry_take
 view-if: economy_minister_party != "Lewica"
-choose-if: ministry_leverage >= 10
-unavailable-subtitle: Requires ten leverage.
-on-arrival: ministry_leverage -= 10; ministry_count += 1; ministry_reshuffle_changes += 1; economy_minister_party = "Lewica"; economy_minister = ministry_economy_nominee; psl_relation -= 4 if ministry_psl_in_cabinet = 1; psl_coalition_dissent += 8 if ministry_psl_in_cabinet = 1; government_coalition_dissent += 3 if ministry_psl_in_cabinet = 1; pis_relation -= 4 if ministry_pis_in_cabinet = 1; government_coalition_dissent += 5 if ministry_pis_in_cabinet = 1
+choose-if: ministry_leverage_debt = 0 and ministry_leverage >= 10
+unavailable-subtitle: Requires 10 free leverage and no leverage debt.
+on-arrival: {!
+const finiteMinistry = function(value, fallback) {
+    return Number.isFinite(Number(value)) ? Number(value) : fallback;
+};
+const owner = String(
+    Q.ministry_economy_current_owner_code ||
+    Q.ministry_economy_baseline_owner_code || "cabinet"
+);
+Q.ministry_economy_taken_from_code = owner;
+Q.ministry_economy_penalty_active = 0;
+Q.ministry_economy_penalty_relation = 0;
+Q.ministry_economy_penalty_partner_dissent = 0;
+Q.ministry_economy_penalty_general_dissent = 0;
+if (["pis", "ko", "psl", "p2050"].includes(owner)) {
+    Q[owner + "_relation"] = finiteMinistry(Q[owner + "_relation"], 0) - 4;
+    Q[owner + "_coalition_dissent"] =
+        finiteMinistry(Q[owner + "_coalition_dissent"], 0) + 8;
+    Q.government_coalition_dissent =
+        finiteMinistry(Q.government_coalition_dissent, 0) + 3;
+    Q.ministry_economy_penalty_active = 1;
+    Q.ministry_economy_penalty_relation = 4;
+    Q.ministry_economy_penalty_partner_dissent = 8;
+    Q.ministry_economy_penalty_general_dissent = 3;
+}
+Q.ministry_leverage -= 10;
+Q.ministry_count += 1;
+Q.ministry_reshuffle_changes += 1;
+Q.economy_minister_party = "Lewica";
+Q.economy_minister = Q.ministry_economy_nominee;
+Q.ministry_economy_current_owner_code = "lewica";
+Q.ministry_economy_source_party_code = owner;
+!}
 go-to: menu
 
 @take_justice
 title: Take Justice
-subtitle: 10 leverage · [+ ministry_justice_nominee +] · senior-partner veto
+subtitle: 10 leverage · [+ ministry_justice_nominee +] · senior-partner claim
 tags: poland_ministry_take
 view-if: justice_minister_party != "Lewica"
-choose-if: ministry_leverage >= 10 and ministry_pis_in_cabinet = 0
-unavailable-subtitle: Requires ten leverage. [? if ministry_pis_in_cabinet = 1: PiS and Solidarna Polska will not release Justice in this accession agreement.?][? if ministry_pis_in_cabinet = 0: [+ ministry_justice_default_party +] currently holds Justice.?]
-on-arrival: ministry_leverage -= 10; ministry_count += 1; ministry_reshuffle_changes += 1; justice_minister_party = "Lewica"; justice_minister = ministry_justice_nominee; ko_relation -= 5 if ministry_ko_in_cabinet = 1; ko_coalition_dissent += 8 if ministry_ko_in_cabinet = 1; government_coalition_dissent += 4 if ministry_ko_in_cabinet = 1
+choose-if: ministry_leverage_debt = 0 and ministry_leverage >= 10 and ministry_pis_in_cabinet = 0
+unavailable-subtitle: Requires ten free leverage. PiS and its justice wing will not release Justice.
+on-arrival: {!
+const finiteMinistry = function(value, fallback) {
+    return Number.isFinite(Number(value)) ? Number(value) : fallback;
+};
+const owner = String(
+    Q.ministry_justice_current_owner_code ||
+    Q.ministry_justice_baseline_owner_code || "cabinet"
+);
+Q.ministry_justice_taken_from_code = owner;
+Q.ministry_justice_penalty_active = 0;
+Q.ministry_justice_penalty_relation = 0;
+Q.ministry_justice_penalty_partner_dissent = 0;
+Q.ministry_justice_penalty_general_dissent = 0;
+if (["pis", "ko", "psl", "p2050"].includes(owner)) {
+    Q[owner + "_relation"] = finiteMinistry(Q[owner + "_relation"], 0) - 5;
+    Q[owner + "_coalition_dissent"] =
+        finiteMinistry(Q[owner + "_coalition_dissent"], 0) + 8;
+    Q.government_coalition_dissent =
+        finiteMinistry(Q.government_coalition_dissent, 0) + 4;
+    Q.ministry_justice_penalty_active = 1;
+    Q.ministry_justice_penalty_relation = 5;
+    Q.ministry_justice_penalty_partner_dissent = 8;
+    Q.ministry_justice_penalty_general_dissent = 4;
+}
+Q.ministry_leverage -= 10;
+Q.ministry_count += 1;
+Q.ministry_reshuffle_changes += 1;
+Q.justice_minister_party = "Lewica";
+Q.justice_minister = Q.ministry_justice_nominee;
+Q.ministry_justice_current_owner_code = "lewica";
+Q.ministry_justice_source_party_code = owner;
+!}
 go-to: menu
 
 @take_foreign
 title: Demand Foreign Affairs
-subtitle: 10 leverage · [+ ministry_foreign_nominee +] · senior-partner veto
+subtitle: 10 leverage · [+ ministry_foreign_nominee +] · senior-partner claim
 tags: poland_ministry_take
 view-if: foreign_minister_party != "Lewica"
-choose-if: ministry_leverage >= 10 and ministry_pis_in_cabinet = 0 and (ministry_ko_in_cabinet = 0 or ministry_maximal_mandate = 1 or (ministry_whole_left_mandate = 1 and ko_relation >= 50))
-unavailable-subtitle: Requires ten leverage. [? if ministry_pis_in_cabinet = 1: PiS reserves Foreign Affairs in this accession agreement.?][? if ministry_pis_in_cabinet = 0: [+ ministry_foreign_default_party +] currently holds Foreign Affairs; KO releases it only to an exceptionally strong Left delegation.?]
-on-arrival: ministry_leverage -= 10; ministry_count += 1; ministry_reshuffle_changes += 1; foreign_minister_party = "Lewica"; foreign_minister = ministry_foreign_nominee; ko_relation -= 8 if ministry_ko_in_cabinet = 1; ko_coalition_dissent += 12 if ministry_ko_in_cabinet = 1; government_coalition_dissent += 5 if ministry_ko_in_cabinet = 1
+choose-if: ministry_leverage_debt = 0 and ministry_leverage >= 10 and ministry_pis_in_cabinet = 0 and (ministry_ko_in_cabinet = 0 or ministry_maximal_mandate = 1 or ministry_left_led_cabinet = 1 or (ministry_whole_left_mandate = 1 and ko_relation >= 50))
+unavailable-subtitle: Requires ten free leverage. PiS reserves Foreign Affairs; KO requires an exceptionally strong Left claim.
+on-arrival: {!
+const finiteMinistry = function(value, fallback) {
+    return Number.isFinite(Number(value)) ? Number(value) : fallback;
+};
+const owner = String(
+    Q.ministry_foreign_current_owner_code ||
+    Q.ministry_foreign_baseline_owner_code || "cabinet"
+);
+Q.ministry_foreign_taken_from_code = owner;
+Q.ministry_foreign_penalty_active = 0;
+Q.ministry_foreign_penalty_relation = 0;
+Q.ministry_foreign_penalty_partner_dissent = 0;
+Q.ministry_foreign_penalty_general_dissent = 0;
+if (["pis", "ko", "psl", "p2050"].includes(owner)) {
+    Q[owner + "_relation"] = finiteMinistry(Q[owner + "_relation"], 0) - 8;
+    Q[owner + "_coalition_dissent"] =
+        finiteMinistry(Q[owner + "_coalition_dissent"], 0) + 12;
+    Q.government_coalition_dissent =
+        finiteMinistry(Q.government_coalition_dissent, 0) + 5;
+    Q.ministry_foreign_penalty_active = 1;
+    Q.ministry_foreign_penalty_relation = 8;
+    Q.ministry_foreign_penalty_partner_dissent = 12;
+    Q.ministry_foreign_penalty_general_dissent = 5;
+}
+Q.ministry_leverage -= 10;
+Q.ministry_count += 1;
+Q.ministry_reshuffle_changes += 1;
+Q.foreign_minister_party = "Lewica";
+Q.foreign_minister = Q.ministry_foreign_nominee;
+Q.ministry_foreign_current_owner_code = "lewica";
+Q.ministry_foreign_source_party_code = owner;
+!}
 go-to: menu
 
 @take_agriculture
 title: Demand Agriculture & Rural Development
-subtitle: 10 leverage · [+ ministry_agriculture_nominee +] · senior-partner veto
+subtitle: 10 leverage · [+ ministry_agriculture_nominee +] · senior-partner claim
 tags: poland_ministry_take
 view-if: agriculture_minister_party != "Lewica"
-choose-if: ministry_leverage >= 10 and ministry_pis_in_cabinet = 0 and (ministry_psl_in_cabinet = 0 or psl_agriculture_released = 1)
-unavailable-subtitle: Requires ten leverage. [? if ministry_pis_in_cabinet = 1: PiS reserves Agriculture in this accession agreement.?][? if ministry_pis_in_cabinet = 0: [+ ministry_agriculture_default_party +] currently holds Agriculture; PSL must explicitly release its claim.?]
-on-arrival: ministry_leverage -= 10; ministry_count += 1; ministry_reshuffle_changes += 1; agriculture_minister_party = "Lewica"; agriculture_minister = ministry_agriculture_nominee; psl_relation -= 10 if ministry_psl_in_cabinet = 1; psl_coalition_dissent += 16 if ministry_psl_in_cabinet = 1; government_coalition_dissent += 7 if ministry_psl_in_cabinet = 1
+choose-if: ministry_leverage_debt = 0 and ministry_leverage >= 10 and ministry_pis_in_cabinet = 0 and (ministry_psl_in_cabinet = 0 or psl_agriculture_released = 1 or ((ministry_maximal_mandate = 1 or ministry_left_led_cabinet = 1) and psl_relation >= 60))
+unavailable-subtitle: Requires ten free leverage. With PSL in cabinet, negotiate or overpower its Agriculture claim first.
+on-arrival: {!
+const finiteMinistry = function(value, fallback) {
+    return Number.isFinite(Number(value)) ? Number(value) : fallback;
+};
+const owner = String(
+    Q.ministry_agriculture_current_owner_code ||
+    Q.ministry_agriculture_baseline_owner_code || "cabinet"
+);
+Q.ministry_agriculture_taken_from_code = owner;
+Q.ministry_agriculture_penalty_active = 0;
+Q.ministry_agriculture_penalty_relation = 0;
+Q.ministry_agriculture_penalty_partner_dissent = 0;
+Q.ministry_agriculture_penalty_general_dissent = 0;
+if (["pis", "ko", "psl", "p2050"].includes(owner)) {
+    Q[owner + "_relation"] = finiteMinistry(Q[owner + "_relation"], 0) - 10;
+    Q[owner + "_coalition_dissent"] =
+        finiteMinistry(Q[owner + "_coalition_dissent"], 0) + 16;
+    Q.government_coalition_dissent =
+        finiteMinistry(Q.government_coalition_dissent, 0) + 7;
+    Q.ministry_agriculture_penalty_active = 1;
+    Q.ministry_agriculture_penalty_relation = 10;
+    Q.ministry_agriculture_penalty_partner_dissent = 16;
+    Q.ministry_agriculture_penalty_general_dissent = 7;
+}
+Q.ministry_leverage -= 10;
+Q.ministry_count += 1;
+Q.ministry_reshuffle_changes += 1;
+Q.agriculture_minister_party = "Lewica";
+Q.agriculture_minister = Q.ministry_agriculture_nominee;
+Q.ministry_agriculture_current_owner_code = "lewica";
+Q.ministry_agriculture_source_party_code = owner;
+!}
 go-to: menu
 
 @take_defence
 title: Demand National Defence
-subtitle: 15 leverage · [+ ministry_defence_nominee +] · senior-partner veto
+subtitle: 15 leverage · [+ ministry_defence_nominee +] · senior-partner claim
 tags: poland_ministry_take
 view-if: defence_minister_party != "Lewica"
-choose-if: ministry_leverage >= 15 and ministry_pis_in_cabinet = 0 and (ministry_psl_in_cabinet = 0 or (ministry_maximal_mandate = 1 and psl_relation >= 40))
-unavailable-subtitle: Requires fifteen leverage. [? if ministry_pis_in_cabinet = 1: PiS reserves Defence in this accession agreement.?][? if ministry_pis_in_cabinet = 0: [+ ministry_defence_default_party +] currently holds Defence; with PSL in cabinet, only a maximal Left mandate can dislodge its claim.?]
-on-arrival: ministry_leverage -= 15; ministry_count += 1; ministry_reshuffle_changes += 1; defence_minister_party = "Lewica"; defence_minister = ministry_defence_nominee; psl_relation -= 10 if ministry_psl_in_cabinet = 1; psl_coalition_dissent += 14 if ministry_psl_in_cabinet = 1; government_coalition_dissent += 6 if ministry_psl_in_cabinet = 1
+choose-if: ministry_leverage_debt = 0 and ministry_leverage >= 15 and ministry_pis_in_cabinet = 0 and (ministry_psl_in_cabinet = 0 or ((ministry_maximal_mandate = 1 or ministry_left_led_cabinet = 1) and psl_relation >= 45))
+unavailable-subtitle: Requires fifteen free leverage. With PSL in cabinet, only a strong Left-led negotiation can dislodge Defence.
+on-arrival: {!
+const finiteMinistry = function(value, fallback) {
+    return Number.isFinite(Number(value)) ? Number(value) : fallback;
+};
+const owner = String(
+    Q.ministry_defence_current_owner_code ||
+    Q.ministry_defence_baseline_owner_code || "cabinet"
+);
+Q.ministry_defence_taken_from_code = owner;
+Q.ministry_defence_penalty_active = 0;
+Q.ministry_defence_penalty_relation = 0;
+Q.ministry_defence_penalty_partner_dissent = 0;
+Q.ministry_defence_penalty_general_dissent = 0;
+if (["pis", "ko", "psl", "p2050"].includes(owner)) {
+    Q[owner + "_relation"] = finiteMinistry(Q[owner + "_relation"], 0) - 10;
+    Q[owner + "_coalition_dissent"] =
+        finiteMinistry(Q[owner + "_coalition_dissent"], 0) + 14;
+    Q.government_coalition_dissent =
+        finiteMinistry(Q.government_coalition_dissent, 0) + 6;
+    Q.ministry_defence_penalty_active = 1;
+    Q.ministry_defence_penalty_relation = 10;
+    Q.ministry_defence_penalty_partner_dissent = 14;
+    Q.ministry_defence_penalty_general_dissent = 6;
+}
+Q.ministry_leverage -= 15;
+Q.ministry_count += 1;
+Q.ministry_reshuffle_changes += 1;
+Q.defence_minister_party = "Lewica";
+Q.defence_minister = Q.ministry_defence_nominee;
+Q.ministry_defence_current_owner_code = "lewica";
+Q.ministry_defence_source_party_code = owner;
+!}
 go-to: menu
 
 @drop_labor
 title: Return Labour & Social Policy
 tags: poland_ministry_drop
 view-if: labor_minister_party = "Lewica"
-on-arrival: ministry_leverage += 5; ministry_count -= 1; ministry_reshuffle_changes += 1; labor_minister_party = ministry_labor_default_party; labor_minister = ministry_labor_default_minister; family_minister_party = ministry_labor_default_party; family_minister = ministry_labor_default_minister
+on-arrival: {!
+const finiteMinistry = function(value, fallback) {
+    return Number.isFinite(Number(value)) ? Number(value) : fallback;
+};
+const debtBefore = Math.max(0, finiteMinistry(Q.ministry_leverage_debt, 0));
+const debtPaid = Math.min(debtBefore, 5);
+Q.ministry_leverage_debt = debtBefore - debtPaid;
+Q.ministry_leverage = finiteMinistry(Q.ministry_leverage, 0) +
+    (5 - debtPaid);
+const owner = String(
+    Q.ministry_labor_taken_from_code ||
+    Q.ministry_labor_source_party_code ||
+    Q.ministry_labor_baseline_owner_code || "cabinet"
+);
+const ownerStillPartner =
+    (owner == "pis" && Q.ministry_pis_in_cabinet) ||
+    (owner == "ko" && Q.ministry_ko_in_cabinet) ||
+    (owner == "psl" && Q.ministry_psl_in_cabinet) ||
+    (owner == "p2050" && Q.ministry_p2050_in_cabinet);
+if (Q.ministry_labor_penalty_active && ownerStillPartner) {
+    Q[owner + "_relation"] = finiteMinistry(Q[owner + "_relation"], 0) +
+        finiteMinistry(Q.ministry_labor_penalty_relation, 0);
+    Q[owner + "_coalition_dissent"] = Math.max(
+        0,
+        finiteMinistry(Q[owner + "_coalition_dissent"], 0) -
+            finiteMinistry(Q.ministry_labor_penalty_partner_dissent, 0)
+    );
+    Q.government_coalition_dissent = Math.max(
+        0,
+        finiteMinistry(Q.government_coalition_dissent, 0) -
+            finiteMinistry(Q.ministry_labor_penalty_general_dissent, 0)
+    );
+}
+Q.labor_minister_party = Q.ministry_labor_baseline_party;
+Q.labor_minister = Q.ministry_labor_baseline_minister;
+Q.ministry_labor_current_owner_code =
+    Q.ministry_labor_baseline_owner_code;
+Q.ministry_labor_source_party_code =
+    Q.ministry_labor_baseline_owner_code;
+Q.ministry_labor_taken_from_code = "";
+Q.ministry_labor_penalty_active = 0;
+Q.ministry_labor_penalty_relation = 0;
+Q.ministry_labor_penalty_partner_dissent = 0;
+Q.ministry_labor_penalty_general_dissent = 0;
+Q.ministry_count = Math.max(0, finiteMinistry(Q.ministry_count, 0) - 1);
+Q.ministry_reshuffle_changes += 1;
+Q.family_minister_party = Q.labor_minister_party;
+Q.family_minister = Q.labor_minister;
+!}
 go-to: menu
 
 @drop_equality
 title: Return Equality
 tags: poland_ministry_drop
 view-if: equality_minister_party = "Lewica"
-on-arrival: ministry_leverage += 3; ministry_count -= 1; ministry_reshuffle_changes += 1; equality_minister_party = ministry_equality_default_party; equality_minister = ministry_equality_default_minister
+on-arrival: {!
+const finiteMinistry = function(value, fallback) {
+    return Number.isFinite(Number(value)) ? Number(value) : fallback;
+};
+const debtBefore = Math.max(0, finiteMinistry(Q.ministry_leverage_debt, 0));
+const debtPaid = Math.min(debtBefore, 3);
+Q.ministry_leverage_debt = debtBefore - debtPaid;
+Q.ministry_leverage = finiteMinistry(Q.ministry_leverage, 0) +
+    (3 - debtPaid);
+const owner = String(
+    Q.ministry_equality_taken_from_code ||
+    Q.ministry_equality_source_party_code ||
+    Q.ministry_equality_baseline_owner_code || "cabinet"
+);
+const ownerStillPartner =
+    (owner == "pis" && Q.ministry_pis_in_cabinet) ||
+    (owner == "ko" && Q.ministry_ko_in_cabinet) ||
+    (owner == "psl" && Q.ministry_psl_in_cabinet) ||
+    (owner == "p2050" && Q.ministry_p2050_in_cabinet);
+if (Q.ministry_equality_penalty_active && ownerStillPartner) {
+    Q[owner + "_relation"] = finiteMinistry(Q[owner + "_relation"], 0) +
+        finiteMinistry(Q.ministry_equality_penalty_relation, 0);
+    Q[owner + "_coalition_dissent"] = Math.max(
+        0,
+        finiteMinistry(Q[owner + "_coalition_dissent"], 0) -
+            finiteMinistry(Q.ministry_equality_penalty_partner_dissent, 0)
+    );
+    Q.government_coalition_dissent = Math.max(
+        0,
+        finiteMinistry(Q.government_coalition_dissent, 0) -
+            finiteMinistry(Q.ministry_equality_penalty_general_dissent, 0)
+    );
+}
+Q.equality_minister_party = Q.ministry_equality_baseline_party;
+Q.equality_minister = Q.ministry_equality_baseline_minister;
+Q.ministry_equality_current_owner_code =
+    Q.ministry_equality_baseline_owner_code;
+Q.ministry_equality_source_party_code =
+    Q.ministry_equality_baseline_owner_code;
+Q.ministry_equality_taken_from_code = "";
+Q.ministry_equality_penalty_active = 0;
+Q.ministry_equality_penalty_relation = 0;
+Q.ministry_equality_penalty_partner_dissent = 0;
+Q.ministry_equality_penalty_general_dissent = 0;
+Q.ministry_count = Math.max(0, finiteMinistry(Q.ministry_count, 0) - 1);
+Q.ministry_reshuffle_changes += 1;
+!}
 go-to: menu
 
 @drop_housing
 title: Return Housing
 tags: poland_ministry_drop
 view-if: housing_minister_party = "Lewica"
-on-arrival: ministry_leverage += 6; ministry_count -= 1; ministry_reshuffle_changes += 1; housing_minister_party = ministry_housing_default_party; housing_minister = ministry_housing_default_minister
+on-arrival: {!
+const finiteMinistry = function(value, fallback) {
+    return Number.isFinite(Number(value)) ? Number(value) : fallback;
+};
+const debtBefore = Math.max(0, finiteMinistry(Q.ministry_leverage_debt, 0));
+const debtPaid = Math.min(debtBefore, 6);
+Q.ministry_leverage_debt = debtBefore - debtPaid;
+Q.ministry_leverage = finiteMinistry(Q.ministry_leverage, 0) +
+    (6 - debtPaid);
+const owner = String(
+    Q.ministry_housing_taken_from_code ||
+    Q.ministry_housing_source_party_code ||
+    Q.ministry_housing_baseline_owner_code || "cabinet"
+);
+const ownerStillPartner =
+    (owner == "pis" && Q.ministry_pis_in_cabinet) ||
+    (owner == "ko" && Q.ministry_ko_in_cabinet) ||
+    (owner == "psl" && Q.ministry_psl_in_cabinet) ||
+    (owner == "p2050" && Q.ministry_p2050_in_cabinet);
+if (Q.ministry_housing_penalty_active && ownerStillPartner) {
+    Q[owner + "_relation"] = finiteMinistry(Q[owner + "_relation"], 0) +
+        finiteMinistry(Q.ministry_housing_penalty_relation, 0);
+    Q[owner + "_coalition_dissent"] = Math.max(
+        0,
+        finiteMinistry(Q[owner + "_coalition_dissent"], 0) -
+            finiteMinistry(Q.ministry_housing_penalty_partner_dissent, 0)
+    );
+    Q.government_coalition_dissent = Math.max(
+        0,
+        finiteMinistry(Q.government_coalition_dissent, 0) -
+            finiteMinistry(Q.ministry_housing_penalty_general_dissent, 0)
+    );
+}
+Q.housing_minister_party = Q.ministry_housing_baseline_party;
+Q.housing_minister = Q.ministry_housing_baseline_minister;
+Q.ministry_housing_current_owner_code =
+    Q.ministry_housing_baseline_owner_code;
+Q.ministry_housing_source_party_code =
+    Q.ministry_housing_baseline_owner_code;
+Q.ministry_housing_taken_from_code = "";
+Q.ministry_housing_penalty_active = 0;
+Q.ministry_housing_penalty_relation = 0;
+Q.ministry_housing_penalty_partner_dissent = 0;
+Q.ministry_housing_penalty_general_dissent = 0;
+Q.ministry_count = Math.max(0, finiteMinistry(Q.ministry_count, 0) - 1);
+Q.ministry_reshuffle_changes += 1;
+!}
 go-to: menu
 
 @drop_health
 title: Return Health
 tags: poland_ministry_drop
 view-if: health_minister_party = "Lewica"
-on-arrival: ministry_leverage += 7; ministry_count -= 1; ministry_reshuffle_changes += 1; health_minister_party = ministry_health_default_party; health_minister = ministry_health_default_minister
+on-arrival: {!
+const finiteMinistry = function(value, fallback) {
+    return Number.isFinite(Number(value)) ? Number(value) : fallback;
+};
+const debtBefore = Math.max(0, finiteMinistry(Q.ministry_leverage_debt, 0));
+const debtPaid = Math.min(debtBefore, 7);
+Q.ministry_leverage_debt = debtBefore - debtPaid;
+Q.ministry_leverage = finiteMinistry(Q.ministry_leverage, 0) +
+    (7 - debtPaid);
+const owner = String(
+    Q.ministry_health_taken_from_code ||
+    Q.ministry_health_source_party_code ||
+    Q.ministry_health_baseline_owner_code || "cabinet"
+);
+const ownerStillPartner =
+    (owner == "pis" && Q.ministry_pis_in_cabinet) ||
+    (owner == "ko" && Q.ministry_ko_in_cabinet) ||
+    (owner == "psl" && Q.ministry_psl_in_cabinet) ||
+    (owner == "p2050" && Q.ministry_p2050_in_cabinet);
+if (Q.ministry_health_penalty_active && ownerStillPartner) {
+    Q[owner + "_relation"] = finiteMinistry(Q[owner + "_relation"], 0) +
+        finiteMinistry(Q.ministry_health_penalty_relation, 0);
+    Q[owner + "_coalition_dissent"] = Math.max(
+        0,
+        finiteMinistry(Q[owner + "_coalition_dissent"], 0) -
+            finiteMinistry(Q.ministry_health_penalty_partner_dissent, 0)
+    );
+    Q.government_coalition_dissent = Math.max(
+        0,
+        finiteMinistry(Q.government_coalition_dissent, 0) -
+            finiteMinistry(Q.ministry_health_penalty_general_dissent, 0)
+    );
+}
+Q.health_minister_party = Q.ministry_health_baseline_party;
+Q.health_minister = Q.ministry_health_baseline_minister;
+Q.ministry_health_current_owner_code =
+    Q.ministry_health_baseline_owner_code;
+Q.ministry_health_source_party_code =
+    Q.ministry_health_baseline_owner_code;
+Q.ministry_health_taken_from_code = "";
+Q.ministry_health_penalty_active = 0;
+Q.ministry_health_penalty_relation = 0;
+Q.ministry_health_penalty_partner_dissent = 0;
+Q.ministry_health_penalty_general_dissent = 0;
+Q.ministry_count = Math.max(0, finiteMinistry(Q.ministry_count, 0) - 1);
+Q.ministry_reshuffle_changes += 1;
+!}
 go-to: menu
 
 @drop_digital
@@ -624,11 +1380,51 @@ title: Return Digital Affairs
 tags: poland_ministry_drop
 view-if: digital_minister_party = "Lewica"
 on-arrival: {!
-Q.ministry_leverage += 4;
-Q.ministry_count -= 1;
+const finiteMinistry = function(value, fallback) {
+    return Number.isFinite(Number(value)) ? Number(value) : fallback;
+};
+const debtBefore = Math.max(0, finiteMinistry(Q.ministry_leverage_debt, 0));
+const debtPaid = Math.min(debtBefore, 4);
+Q.ministry_leverage_debt = debtBefore - debtPaid;
+Q.ministry_leverage = finiteMinistry(Q.ministry_leverage, 0) +
+    (4 - debtPaid);
+const owner = String(
+    Q.ministry_digital_taken_from_code ||
+    Q.ministry_digital_source_party_code ||
+    Q.ministry_digital_baseline_owner_code || "cabinet"
+);
+const ownerStillPartner =
+    (owner == "pis" && Q.ministry_pis_in_cabinet) ||
+    (owner == "ko" && Q.ministry_ko_in_cabinet) ||
+    (owner == "psl" && Q.ministry_psl_in_cabinet) ||
+    (owner == "p2050" && Q.ministry_p2050_in_cabinet);
+if (Q.ministry_digital_penalty_active && ownerStillPartner) {
+    Q[owner + "_relation"] = finiteMinistry(Q[owner + "_relation"], 0) +
+        finiteMinistry(Q.ministry_digital_penalty_relation, 0);
+    Q[owner + "_coalition_dissent"] = Math.max(
+        0,
+        finiteMinistry(Q[owner + "_coalition_dissent"], 0) -
+            finiteMinistry(Q.ministry_digital_penalty_partner_dissent, 0)
+    );
+    Q.government_coalition_dissent = Math.max(
+        0,
+        finiteMinistry(Q.government_coalition_dissent, 0) -
+            finiteMinistry(Q.ministry_digital_penalty_general_dissent, 0)
+    );
+}
+Q.digital_minister_party = Q.ministry_digital_baseline_party;
+Q.digital_minister = Q.ministry_digital_baseline_minister;
+Q.ministry_digital_current_owner_code =
+    Q.ministry_digital_baseline_owner_code;
+Q.ministry_digital_source_party_code =
+    Q.ministry_digital_baseline_owner_code;
+Q.ministry_digital_taken_from_code = "";
+Q.ministry_digital_penalty_active = 0;
+Q.ministry_digital_penalty_relation = 0;
+Q.ministry_digital_penalty_partner_dissent = 0;
+Q.ministry_digital_penalty_general_dissent = 0;
+Q.ministry_count = Math.max(0, finiteMinistry(Q.ministry_count, 0) - 1);
 Q.ministry_reshuffle_changes += 1;
-Q.digital_minister_party = Q.ministry_digital_default_party;
-Q.digital_minister = Q.ministry_digital_default_minister;
 !}
 go-to: menu
 
@@ -636,21 +1432,159 @@ go-to: menu
 title: Return Science
 tags: poland_ministry_drop
 view-if: science_minister_party = "Lewica"
-on-arrival: ministry_leverage += 4; ministry_count -= 1; ministry_reshuffle_changes += 1; science_minister_party = ministry_science_default_party; science_minister = ministry_science_default_minister
+on-arrival: {!
+const finiteMinistry = function(value, fallback) {
+    return Number.isFinite(Number(value)) ? Number(value) : fallback;
+};
+const debtBefore = Math.max(0, finiteMinistry(Q.ministry_leverage_debt, 0));
+const debtPaid = Math.min(debtBefore, 4);
+Q.ministry_leverage_debt = debtBefore - debtPaid;
+Q.ministry_leverage = finiteMinistry(Q.ministry_leverage, 0) +
+    (4 - debtPaid);
+const owner = String(
+    Q.ministry_science_taken_from_code ||
+    Q.ministry_science_source_party_code ||
+    Q.ministry_science_baseline_owner_code || "cabinet"
+);
+const ownerStillPartner =
+    (owner == "pis" && Q.ministry_pis_in_cabinet) ||
+    (owner == "ko" && Q.ministry_ko_in_cabinet) ||
+    (owner == "psl" && Q.ministry_psl_in_cabinet) ||
+    (owner == "p2050" && Q.ministry_p2050_in_cabinet);
+if (Q.ministry_science_penalty_active && ownerStillPartner) {
+    Q[owner + "_relation"] = finiteMinistry(Q[owner + "_relation"], 0) +
+        finiteMinistry(Q.ministry_science_penalty_relation, 0);
+    Q[owner + "_coalition_dissent"] = Math.max(
+        0,
+        finiteMinistry(Q[owner + "_coalition_dissent"], 0) -
+            finiteMinistry(Q.ministry_science_penalty_partner_dissent, 0)
+    );
+    Q.government_coalition_dissent = Math.max(
+        0,
+        finiteMinistry(Q.government_coalition_dissent, 0) -
+            finiteMinistry(Q.ministry_science_penalty_general_dissent, 0)
+    );
+}
+Q.science_minister_party = Q.ministry_science_baseline_party;
+Q.science_minister = Q.ministry_science_baseline_minister;
+Q.ministry_science_current_owner_code =
+    Q.ministry_science_baseline_owner_code;
+Q.ministry_science_source_party_code =
+    Q.ministry_science_baseline_owner_code;
+Q.ministry_science_taken_from_code = "";
+Q.ministry_science_penalty_active = 0;
+Q.ministry_science_penalty_relation = 0;
+Q.ministry_science_penalty_partner_dissent = 0;
+Q.ministry_science_penalty_general_dissent = 0;
+Q.ministry_count = Math.max(0, finiteMinistry(Q.ministry_count, 0) - 1);
+Q.ministry_reshuffle_changes += 1;
+!}
 go-to: menu
 
 @drop_interior
 title: Return Interior & Administration
 tags: poland_ministry_drop
 view-if: interior_minister_party = "Lewica"
-on-arrival: interior_minister_party = ministry_interior_default_party; interior_minister = ministry_interior_default_minister; ministry_leverage += 5; ministry_count -= 1; ministry_reshuffle_changes += 1; ko_relation += 3 if ministry_ko_in_cabinet = 1; ko_coalition_dissent -= 5 if ministry_ko_in_cabinet = 1; government_coalition_dissent -= 2 if ministry_ko_in_cabinet = 1
+on-arrival: {!
+const finiteMinistry = function(value, fallback) {
+    return Number.isFinite(Number(value)) ? Number(value) : fallback;
+};
+const debtBefore = Math.max(0, finiteMinistry(Q.ministry_leverage_debt, 0));
+const debtPaid = Math.min(debtBefore, 5);
+Q.ministry_leverage_debt = debtBefore - debtPaid;
+Q.ministry_leverage = finiteMinistry(Q.ministry_leverage, 0) +
+    (5 - debtPaid);
+const owner = String(
+    Q.ministry_interior_taken_from_code ||
+    Q.ministry_interior_source_party_code ||
+    Q.ministry_interior_baseline_owner_code || "cabinet"
+);
+const ownerStillPartner =
+    (owner == "pis" && Q.ministry_pis_in_cabinet) ||
+    (owner == "ko" && Q.ministry_ko_in_cabinet) ||
+    (owner == "psl" && Q.ministry_psl_in_cabinet) ||
+    (owner == "p2050" && Q.ministry_p2050_in_cabinet);
+if (Q.ministry_interior_penalty_active && ownerStillPartner) {
+    Q[owner + "_relation"] = finiteMinistry(Q[owner + "_relation"], 0) +
+        finiteMinistry(Q.ministry_interior_penalty_relation, 0);
+    Q[owner + "_coalition_dissent"] = Math.max(
+        0,
+        finiteMinistry(Q[owner + "_coalition_dissent"], 0) -
+            finiteMinistry(Q.ministry_interior_penalty_partner_dissent, 0)
+    );
+    Q.government_coalition_dissent = Math.max(
+        0,
+        finiteMinistry(Q.government_coalition_dissent, 0) -
+            finiteMinistry(Q.ministry_interior_penalty_general_dissent, 0)
+    );
+}
+Q.interior_minister_party = Q.ministry_interior_baseline_party;
+Q.interior_minister = Q.ministry_interior_baseline_minister;
+Q.ministry_interior_current_owner_code =
+    Q.ministry_interior_baseline_owner_code;
+Q.ministry_interior_source_party_code =
+    Q.ministry_interior_baseline_owner_code;
+Q.ministry_interior_taken_from_code = "";
+Q.ministry_interior_penalty_active = 0;
+Q.ministry_interior_penalty_relation = 0;
+Q.ministry_interior_penalty_partner_dissent = 0;
+Q.ministry_interior_penalty_general_dissent = 0;
+Q.ministry_count = Math.max(0, finiteMinistry(Q.ministry_count, 0) - 1);
+Q.ministry_reshuffle_changes += 1;
+!}
 go-to: menu
 
 @drop_finance
 title: Return Finance
 tags: poland_ministry_drop
 view-if: finance_minister_party = "Lewica"
-on-arrival: finance_minister_party = ministry_finance_default_party; finance_minister = ministry_finance_default_minister; ministry_leverage += 10; ministry_count -= 1; ministry_reshuffle_changes += 1; ko_relation += 10 if ministry_ko_in_cabinet = 1; ko_coalition_dissent -= 14 if ministry_ko_in_cabinet = 1; government_coalition_dissent -= 6 if ministry_ko_in_cabinet = 1
+on-arrival: {!
+const finiteMinistry = function(value, fallback) {
+    return Number.isFinite(Number(value)) ? Number(value) : fallback;
+};
+const debtBefore = Math.max(0, finiteMinistry(Q.ministry_leverage_debt, 0));
+const debtPaid = Math.min(debtBefore, 10);
+Q.ministry_leverage_debt = debtBefore - debtPaid;
+Q.ministry_leverage = finiteMinistry(Q.ministry_leverage, 0) +
+    (10 - debtPaid);
+const owner = String(
+    Q.ministry_finance_taken_from_code ||
+    Q.ministry_finance_source_party_code ||
+    Q.ministry_finance_baseline_owner_code || "cabinet"
+);
+const ownerStillPartner =
+    (owner == "pis" && Q.ministry_pis_in_cabinet) ||
+    (owner == "ko" && Q.ministry_ko_in_cabinet) ||
+    (owner == "psl" && Q.ministry_psl_in_cabinet) ||
+    (owner == "p2050" && Q.ministry_p2050_in_cabinet);
+if (Q.ministry_finance_penalty_active && ownerStillPartner) {
+    Q[owner + "_relation"] = finiteMinistry(Q[owner + "_relation"], 0) +
+        finiteMinistry(Q.ministry_finance_penalty_relation, 0);
+    Q[owner + "_coalition_dissent"] = Math.max(
+        0,
+        finiteMinistry(Q[owner + "_coalition_dissent"], 0) -
+            finiteMinistry(Q.ministry_finance_penalty_partner_dissent, 0)
+    );
+    Q.government_coalition_dissent = Math.max(
+        0,
+        finiteMinistry(Q.government_coalition_dissent, 0) -
+            finiteMinistry(Q.ministry_finance_penalty_general_dissent, 0)
+    );
+}
+Q.finance_minister_party = Q.ministry_finance_baseline_party;
+Q.finance_minister = Q.ministry_finance_baseline_minister;
+Q.ministry_finance_current_owner_code =
+    Q.ministry_finance_baseline_owner_code;
+Q.ministry_finance_source_party_code =
+    Q.ministry_finance_baseline_owner_code;
+Q.ministry_finance_taken_from_code = "";
+Q.ministry_finance_penalty_active = 0;
+Q.ministry_finance_penalty_relation = 0;
+Q.ministry_finance_penalty_partner_dissent = 0;
+Q.ministry_finance_penalty_general_dissent = 0;
+Q.ministry_count = Math.max(0, finiteMinistry(Q.ministry_count, 0) - 1);
+Q.ministry_reshuffle_changes += 1;
+!}
 go-to: menu
 
 @drop_economy
@@ -658,20 +1592,51 @@ title: Return Development & Technology
 tags: poland_ministry_drop
 view-if: economy_minister_party = "Lewica"
 on-arrival: {!
-Q.economy_minister_party = Q.ministry_economy_default_party;
-Q.economy_minister = Q.ministry_economy_default_minister;
-Q.ministry_leverage += 10;
-Q.ministry_count -= 1;
+const finiteMinistry = function(value, fallback) {
+    return Number.isFinite(Number(value)) ? Number(value) : fallback;
+};
+const debtBefore = Math.max(0, finiteMinistry(Q.ministry_leverage_debt, 0));
+const debtPaid = Math.min(debtBefore, 10);
+Q.ministry_leverage_debt = debtBefore - debtPaid;
+Q.ministry_leverage = finiteMinistry(Q.ministry_leverage, 0) +
+    (10 - debtPaid);
+const owner = String(
+    Q.ministry_economy_taken_from_code ||
+    Q.ministry_economy_source_party_code ||
+    Q.ministry_economy_baseline_owner_code || "cabinet"
+);
+const ownerStillPartner =
+    (owner == "pis" && Q.ministry_pis_in_cabinet) ||
+    (owner == "ko" && Q.ministry_ko_in_cabinet) ||
+    (owner == "psl" && Q.ministry_psl_in_cabinet) ||
+    (owner == "p2050" && Q.ministry_p2050_in_cabinet);
+if (Q.ministry_economy_penalty_active && ownerStillPartner) {
+    Q[owner + "_relation"] = finiteMinistry(Q[owner + "_relation"], 0) +
+        finiteMinistry(Q.ministry_economy_penalty_relation, 0);
+    Q[owner + "_coalition_dissent"] = Math.max(
+        0,
+        finiteMinistry(Q[owner + "_coalition_dissent"], 0) -
+            finiteMinistry(Q.ministry_economy_penalty_partner_dissent, 0)
+    );
+    Q.government_coalition_dissent = Math.max(
+        0,
+        finiteMinistry(Q.government_coalition_dissent, 0) -
+            finiteMinistry(Q.ministry_economy_penalty_general_dissent, 0)
+    );
+}
+Q.economy_minister_party = Q.ministry_economy_baseline_party;
+Q.economy_minister = Q.ministry_economy_baseline_minister;
+Q.ministry_economy_current_owner_code =
+    Q.ministry_economy_baseline_owner_code;
+Q.ministry_economy_source_party_code =
+    Q.ministry_economy_baseline_owner_code;
+Q.ministry_economy_taken_from_code = "";
+Q.ministry_economy_penalty_active = 0;
+Q.ministry_economy_penalty_relation = 0;
+Q.ministry_economy_penalty_partner_dissent = 0;
+Q.ministry_economy_penalty_general_dissent = 0;
+Q.ministry_count = Math.max(0, finiteMinistry(Q.ministry_count, 0) - 1);
 Q.ministry_reshuffle_changes += 1;
-if (Q.ministry_psl_in_cabinet) {
-    Q.psl_relation += 4;
-    Q.psl_coalition_dissent -= 8;
-    Q.government_coalition_dissent -= 3;
-}
-if (Q.ministry_pis_in_cabinet) {
-    Q.pis_relation += 4;
-    Q.government_coalition_dissent -= 5;
-}
 !}
 go-to: menu
 
@@ -679,14 +1644,106 @@ go-to: menu
 title: Return Justice
 tags: poland_ministry_drop
 view-if: justice_minister_party = "Lewica"
-on-arrival: justice_minister_party = ministry_justice_default_party; justice_minister = ministry_justice_default_minister; ministry_leverage += 10; ministry_count -= 1; ministry_reshuffle_changes += 1; ko_relation += 5 if ministry_ko_in_cabinet = 1; ko_coalition_dissent -= 8 if ministry_ko_in_cabinet = 1; government_coalition_dissent -= 4 if ministry_ko_in_cabinet = 1
+on-arrival: {!
+const finiteMinistry = function(value, fallback) {
+    return Number.isFinite(Number(value)) ? Number(value) : fallback;
+};
+const debtBefore = Math.max(0, finiteMinistry(Q.ministry_leverage_debt, 0));
+const debtPaid = Math.min(debtBefore, 10);
+Q.ministry_leverage_debt = debtBefore - debtPaid;
+Q.ministry_leverage = finiteMinistry(Q.ministry_leverage, 0) +
+    (10 - debtPaid);
+const owner = String(
+    Q.ministry_justice_taken_from_code ||
+    Q.ministry_justice_source_party_code ||
+    Q.ministry_justice_baseline_owner_code || "cabinet"
+);
+const ownerStillPartner =
+    (owner == "pis" && Q.ministry_pis_in_cabinet) ||
+    (owner == "ko" && Q.ministry_ko_in_cabinet) ||
+    (owner == "psl" && Q.ministry_psl_in_cabinet) ||
+    (owner == "p2050" && Q.ministry_p2050_in_cabinet);
+if (Q.ministry_justice_penalty_active && ownerStillPartner) {
+    Q[owner + "_relation"] = finiteMinistry(Q[owner + "_relation"], 0) +
+        finiteMinistry(Q.ministry_justice_penalty_relation, 0);
+    Q[owner + "_coalition_dissent"] = Math.max(
+        0,
+        finiteMinistry(Q[owner + "_coalition_dissent"], 0) -
+            finiteMinistry(Q.ministry_justice_penalty_partner_dissent, 0)
+    );
+    Q.government_coalition_dissent = Math.max(
+        0,
+        finiteMinistry(Q.government_coalition_dissent, 0) -
+            finiteMinistry(Q.ministry_justice_penalty_general_dissent, 0)
+    );
+}
+Q.justice_minister_party = Q.ministry_justice_baseline_party;
+Q.justice_minister = Q.ministry_justice_baseline_minister;
+Q.ministry_justice_current_owner_code =
+    Q.ministry_justice_baseline_owner_code;
+Q.ministry_justice_source_party_code =
+    Q.ministry_justice_baseline_owner_code;
+Q.ministry_justice_taken_from_code = "";
+Q.ministry_justice_penalty_active = 0;
+Q.ministry_justice_penalty_relation = 0;
+Q.ministry_justice_penalty_partner_dissent = 0;
+Q.ministry_justice_penalty_general_dissent = 0;
+Q.ministry_count = Math.max(0, finiteMinistry(Q.ministry_count, 0) - 1);
+Q.ministry_reshuffle_changes += 1;
+!}
 go-to: menu
 
 @drop_foreign
 title: Return Foreign Affairs
 tags: poland_ministry_drop
 view-if: foreign_minister_party = "Lewica"
-on-arrival: foreign_minister_party = ministry_foreign_default_party; foreign_minister = ministry_foreign_default_minister; ministry_leverage += 10; ministry_count -= 1; ministry_reshuffle_changes += 1; ko_relation += 8 if ministry_ko_in_cabinet = 1; ko_coalition_dissent -= 12 if ministry_ko_in_cabinet = 1; government_coalition_dissent -= 5 if ministry_ko_in_cabinet = 1
+on-arrival: {!
+const finiteMinistry = function(value, fallback) {
+    return Number.isFinite(Number(value)) ? Number(value) : fallback;
+};
+const debtBefore = Math.max(0, finiteMinistry(Q.ministry_leverage_debt, 0));
+const debtPaid = Math.min(debtBefore, 10);
+Q.ministry_leverage_debt = debtBefore - debtPaid;
+Q.ministry_leverage = finiteMinistry(Q.ministry_leverage, 0) +
+    (10 - debtPaid);
+const owner = String(
+    Q.ministry_foreign_taken_from_code ||
+    Q.ministry_foreign_source_party_code ||
+    Q.ministry_foreign_baseline_owner_code || "cabinet"
+);
+const ownerStillPartner =
+    (owner == "pis" && Q.ministry_pis_in_cabinet) ||
+    (owner == "ko" && Q.ministry_ko_in_cabinet) ||
+    (owner == "psl" && Q.ministry_psl_in_cabinet) ||
+    (owner == "p2050" && Q.ministry_p2050_in_cabinet);
+if (Q.ministry_foreign_penalty_active && ownerStillPartner) {
+    Q[owner + "_relation"] = finiteMinistry(Q[owner + "_relation"], 0) +
+        finiteMinistry(Q.ministry_foreign_penalty_relation, 0);
+    Q[owner + "_coalition_dissent"] = Math.max(
+        0,
+        finiteMinistry(Q[owner + "_coalition_dissent"], 0) -
+            finiteMinistry(Q.ministry_foreign_penalty_partner_dissent, 0)
+    );
+    Q.government_coalition_dissent = Math.max(
+        0,
+        finiteMinistry(Q.government_coalition_dissent, 0) -
+            finiteMinistry(Q.ministry_foreign_penalty_general_dissent, 0)
+    );
+}
+Q.foreign_minister_party = Q.ministry_foreign_baseline_party;
+Q.foreign_minister = Q.ministry_foreign_baseline_minister;
+Q.ministry_foreign_current_owner_code =
+    Q.ministry_foreign_baseline_owner_code;
+Q.ministry_foreign_source_party_code =
+    Q.ministry_foreign_baseline_owner_code;
+Q.ministry_foreign_taken_from_code = "";
+Q.ministry_foreign_penalty_active = 0;
+Q.ministry_foreign_penalty_relation = 0;
+Q.ministry_foreign_penalty_partner_dissent = 0;
+Q.ministry_foreign_penalty_general_dissent = 0;
+Q.ministry_count = Math.max(0, finiteMinistry(Q.ministry_count, 0) - 1);
+Q.ministry_reshuffle_changes += 1;
+!}
 go-to: menu
 
 @drop_agriculture
@@ -694,16 +1751,51 @@ title: Return Agriculture & Rural Development
 tags: poland_ministry_drop
 view-if: agriculture_minister_party = "Lewica"
 on-arrival: {!
-Q.agriculture_minister_party = Q.ministry_agriculture_default_party;
-Q.agriculture_minister = Q.ministry_agriculture_default_minister;
-Q.ministry_leverage += 10;
-Q.ministry_count -= 1;
-Q.ministry_reshuffle_changes += 1;
-if (Q.ministry_psl_in_cabinet) {
-    Q.psl_relation += 10;
-    Q.psl_coalition_dissent -= 16;
-    Q.government_coalition_dissent -= 7;
+const finiteMinistry = function(value, fallback) {
+    return Number.isFinite(Number(value)) ? Number(value) : fallback;
+};
+const debtBefore = Math.max(0, finiteMinistry(Q.ministry_leverage_debt, 0));
+const debtPaid = Math.min(debtBefore, 10);
+Q.ministry_leverage_debt = debtBefore - debtPaid;
+Q.ministry_leverage = finiteMinistry(Q.ministry_leverage, 0) +
+    (10 - debtPaid);
+const owner = String(
+    Q.ministry_agriculture_taken_from_code ||
+    Q.ministry_agriculture_source_party_code ||
+    Q.ministry_agriculture_baseline_owner_code || "cabinet"
+);
+const ownerStillPartner =
+    (owner == "pis" && Q.ministry_pis_in_cabinet) ||
+    (owner == "ko" && Q.ministry_ko_in_cabinet) ||
+    (owner == "psl" && Q.ministry_psl_in_cabinet) ||
+    (owner == "p2050" && Q.ministry_p2050_in_cabinet);
+if (Q.ministry_agriculture_penalty_active && ownerStillPartner) {
+    Q[owner + "_relation"] = finiteMinistry(Q[owner + "_relation"], 0) +
+        finiteMinistry(Q.ministry_agriculture_penalty_relation, 0);
+    Q[owner + "_coalition_dissent"] = Math.max(
+        0,
+        finiteMinistry(Q[owner + "_coalition_dissent"], 0) -
+            finiteMinistry(Q.ministry_agriculture_penalty_partner_dissent, 0)
+    );
+    Q.government_coalition_dissent = Math.max(
+        0,
+        finiteMinistry(Q.government_coalition_dissent, 0) -
+            finiteMinistry(Q.ministry_agriculture_penalty_general_dissent, 0)
+    );
 }
+Q.agriculture_minister_party = Q.ministry_agriculture_baseline_party;
+Q.agriculture_minister = Q.ministry_agriculture_baseline_minister;
+Q.ministry_agriculture_current_owner_code =
+    Q.ministry_agriculture_baseline_owner_code;
+Q.ministry_agriculture_source_party_code =
+    Q.ministry_agriculture_baseline_owner_code;
+Q.ministry_agriculture_taken_from_code = "";
+Q.ministry_agriculture_penalty_active = 0;
+Q.ministry_agriculture_penalty_relation = 0;
+Q.ministry_agriculture_penalty_partner_dissent = 0;
+Q.ministry_agriculture_penalty_general_dissent = 0;
+Q.ministry_count = Math.max(0, finiteMinistry(Q.ministry_count, 0) - 1);
+Q.ministry_reshuffle_changes += 1;
 !}
 go-to: menu
 
@@ -712,39 +1804,195 @@ title: Return National Defence
 tags: poland_ministry_drop
 view-if: defence_minister_party = "Lewica"
 on-arrival: {!
-Q.defence_minister_party = Q.ministry_defence_default_party;
-Q.defence_minister = Q.ministry_defence_default_minister;
-Q.ministry_leverage += 15;
-Q.ministry_count -= 1;
-Q.ministry_reshuffle_changes += 1;
-if (Q.ministry_psl_in_cabinet) {
-    Q.psl_relation += 10;
-    Q.psl_coalition_dissent -= 14;
-    Q.government_coalition_dissent -= 6;
+const finiteMinistry = function(value, fallback) {
+    return Number.isFinite(Number(value)) ? Number(value) : fallback;
+};
+const debtBefore = Math.max(0, finiteMinistry(Q.ministry_leverage_debt, 0));
+const debtPaid = Math.min(debtBefore, 15);
+Q.ministry_leverage_debt = debtBefore - debtPaid;
+Q.ministry_leverage = finiteMinistry(Q.ministry_leverage, 0) +
+    (15 - debtPaid);
+const owner = String(
+    Q.ministry_defence_taken_from_code ||
+    Q.ministry_defence_source_party_code ||
+    Q.ministry_defence_baseline_owner_code || "cabinet"
+);
+const ownerStillPartner =
+    (owner == "pis" && Q.ministry_pis_in_cabinet) ||
+    (owner == "ko" && Q.ministry_ko_in_cabinet) ||
+    (owner == "psl" && Q.ministry_psl_in_cabinet) ||
+    (owner == "p2050" && Q.ministry_p2050_in_cabinet);
+if (Q.ministry_defence_penalty_active && ownerStillPartner) {
+    Q[owner + "_relation"] = finiteMinistry(Q[owner + "_relation"], 0) +
+        finiteMinistry(Q.ministry_defence_penalty_relation, 0);
+    Q[owner + "_coalition_dissent"] = Math.max(
+        0,
+        finiteMinistry(Q[owner + "_coalition_dissent"], 0) -
+            finiteMinistry(Q.ministry_defence_penalty_partner_dissent, 0)
+    );
+    Q.government_coalition_dissent = Math.max(
+        0,
+        finiteMinistry(Q.government_coalition_dissent, 0) -
+            finiteMinistry(Q.ministry_defence_penalty_general_dissent, 0)
+    );
 }
+Q.defence_minister_party = Q.ministry_defence_baseline_party;
+Q.defence_minister = Q.ministry_defence_baseline_minister;
+Q.ministry_defence_current_owner_code =
+    Q.ministry_defence_baseline_owner_code;
+Q.ministry_defence_source_party_code =
+    Q.ministry_defence_baseline_owner_code;
+Q.ministry_defence_taken_from_code = "";
+Q.ministry_defence_penalty_active = 0;
+Q.ministry_defence_penalty_relation = 0;
+Q.ministry_defence_penalty_partner_dissent = 0;
+Q.ministry_defence_penalty_general_dissent = 0;
+Q.ministry_count = Math.max(0, finiteMinistry(Q.ministry_count, 0) - 1);
+Q.ministry_reshuffle_changes += 1;
 !}
 go-to: menu
 
 @finalize
 title: Finalise the cabinet allocation
-subtitle: Unspent leverage becomes coalition goodwill.
-choose-if: ministry_count >= 1
-unavailable-subtitle: A governing Lewica delegation must take at least one portfolio.
+subtitle: Unspent leverage buys goodwill from actual cabinet partners; taking only a token office can anger the Left.
+choose-if: ministry_count >= 1 and ministry_leverage_debt = 0
+unavailable-subtitle: A governing Lewica delegation must take at least one portfolio and clear all leverage debt.
 on-arrival: {!
-const portfolioNames = [
+const finiteMinistry = function(value, fallback) {
+    return Number.isFinite(Number(value)) ? Number(value) : fallback;
+};
+const normalizePartyCode = function(value) {
+    const text = String(value || "").trim().toLowerCase();
+    if (text == "pis") return "pis";
+    if (text == "ko" || text.includes("obywatelsk")) return "ko";
+    if (text == "psl") return "psl";
+    if (text == "p2050" || text.includes("2050")) return "p2050";
+    if (text == "lewica" || text == "left" || text.includes("lewica")) return "lewica";
+    if (text == "cabinet" || text == "independent") return "cabinet";
+    return "";
+};
+const finalPortfolioKeys = [
     "labor", "equality", "housing", "health", "digital", "science",
     "interior", "finance", "economy", "justice", "foreign",
     "agriculture", "defence"
 ];
-Q.ministry_count = portfolioNames.reduce(function(total, portfolio) {
-    return total +
-        (Q[portfolio + "_minister_party"] == "Lewica" ? 1 : 0);
+const finalCosts = {
+    labor: 5, equality: 3, housing: 6, health: 7, digital: 4,
+    science: 4, interior: 5, finance: 10, economy: 10,
+    justice: 10, foreign: 10, agriculture: 10, defence: 15
+};
+const isLeftOffice = function(portfolio) {
+    return normalizePartyCode(Q[portfolio + "_minister_party"]) == "lewica";
+};
+Q.ministry_count = finalPortfolioKeys.reduce(function(total, portfolio) {
+    return total + (isLeftOffice(portfolio) ? 1 : 0);
 }, 0);
+Q.ministry_invested_leverage = finalPortfolioKeys.reduce(
+    function(total, portfolio) {
+        return total + (isLeftOffice(portfolio) ? finalCosts[portfolio] : 0);
+    },
+    0
+);
+const unspent = Math.max(0, finiteMinistry(Q.ministry_leverage, 0));
+const expectedValue = Math.max(
+    3,
+    finiteMinistry(Q.ministry_minimum_expected_value, 3)
+);
+const socialCore = ["labor", "housing", "health"].filter(isLeftOffice).length;
+const rightsCore = ["equality", "justice"].filter(isLeftOffice).length;
+const economicCore = ["finance", "economy"].filter(isLeftOffice).length;
+Q.ministry_underclaim_penalty = 0;
+if (finiteMinistry(Q.ministry_base_leverage, 0) >= 15 && socialCore == 0) {
+    if (!Q.labor_party_formed) Q.labor_dissent = finiteMinistry(Q.labor_dissent, 0) + 4;
+    if (!Q.razem_party_formed) Q.razem_dissent = finiteMinistry(Q.razem_dissent, 0) + 3;
+    if (!Q.pps_party_formed) Q.pps_dissent = finiteMinistry(Q.pps_dissent, 0) + 3;
+    Q.party_unity = finiteMinistry(Q.party_unity, 50) - 2;
+    Q.ministry_underclaim_penalty += 2;
+}
+if (finiteMinistry(Q.ministry_base_leverage, 0) >= 12 && rightsCore == 0) {
+    if (!Q.progressives_party_formed) Q.progressives_dissent = finiteMinistry(Q.progressives_dissent, 0) + 3;
+    if (!Q.spring_party_formed) Q.spring_dissent = finiteMinistry(Q.spring_dissent, 0) + 2;
+    Q.ministry_underclaim_penalty += 1;
+}
+if (
+    Q.ministry_invested_leverage < expectedValue ||
+    (Q.ministry_count == 1 && finiteMinistry(Q.ministry_base_leverage, 0) >= 18)
+) {
+    const tokenPenalty = Math.min(
+        4,
+        Math.max(1, Math.floor(unspent / 7))
+    );
+    Q.party_unity = finiteMinistry(Q.party_unity, 50) - tokenPenalty;
+    Q.barons_dissent = finiteMinistry(Q.barons_dissent, 0) + Math.min(3, tokenPenalty);
+    Q.ministry_underclaim_penalty += tokenPenalty;
+}
+if (socialCore >= 2) {
+    Q.labor_dissent = Math.max(0, finiteMinistry(Q.labor_dissent, 0) - 2);
+    Q.razem_dissent = Math.max(0, finiteMinistry(Q.razem_dissent, 0) - 1);
+}
+if (rightsCore >= 1) {
+    Q.progressives_dissent = Math.max(
+        0,
+        finiteMinistry(Q.progressives_dissent, 0) - 1
+    );
+    Q.spring_dissent = Math.max(0, finiteMinistry(Q.spring_dissent, 0) - 1);
+}
+if (economicCore >= 1) {
+    Q.barons_dissent = Math.max(0, finiteMinistry(Q.barons_dissent, 0) - 1);
+}
+
+const partnerCodes = [];
+if (Q.ministry_pis_in_cabinet) partnerCodes.push("pis");
+if (Q.ministry_ko_in_cabinet) partnerCodes.push("ko");
+if (Q.ministry_p2050_in_cabinet) partnerCodes.push("p2050");
+if (Q.ministry_psl_in_cabinet) partnerCodes.push("psl");
+const goodwillPool = Math.floor(unspent / 3);
+const goodwillEach = partnerCodes.length
+    ? Math.floor(goodwillPool / partnerCodes.length)
+    : 0;
+for (const code of partnerCodes) {
+    if (goodwillEach > 0) {
+        Q[code + "_relation"] = finiteMinistry(Q[code + "_relation"], 0) +
+            goodwillEach;
+        Q[code + "_coalition_dissent"] = Math.max(
+            0,
+            finiteMinistry(Q[code + "_coalition_dissent"], 0) -
+                Math.max(1, Math.floor(goodwillEach / 2))
+        );
+    }
+}
+Q.government_coalition_dissent = Math.max(
+    0,
+    finiteMinistry(Q.government_coalition_dissent, 0) -
+        Math.floor(goodwillPool / 2)
+);
+
+for (const portfolio of finalPortfolioKeys) {
+    const currentCode = normalizePartyCode(Q[portfolio + "_minister_party"]);
+    if (currentCode == "lewica") {
+        Q["ministry_" + portfolio + "_source_party_code"] = String(
+            Q["ministry_" + portfolio + "_taken_from_code"] ||
+            Q["ministry_" + portfolio + "_source_party_code"] ||
+            Q["ministry_" + portfolio + "_baseline_owner_code"] ||
+            "cabinet"
+        );
+    } else {
+        Q["ministry_" + portfolio + "_source_party_code"] =
+            currentCode || "cabinet";
+    }
+}
+Q.family_minister_party = Q.labor_minister_party;
+Q.family_minister = Q.labor_minister;
 Q.ministries_finalized = 1;
+Q.cabinet_roster_finalized = 1;
+Q.cabinet_roster_government_party =
+    normalizePartyCode(Q.government_party) || Q.ministry_cabinet_leader_code;
+Q.cabinet_roster_prime_minister = String(Q.prime_minister || "");
+Q.cabinet_roster_date = String(Q.date_label || "");
+Q.cabinet_roster_left_portfolios = Q.ministry_count;
+Q.cabinet_commitments_recorded = 1;
+
 if (Q.ministry_return_mode == "pis_coalition") {
-    Q.pis_relation += Math.floor(Q.ministry_leverage / 2);
-    Q.government_coalition_dissent -=
-        Math.floor(Q.ministry_leverage / 3);
     Q.news_headline =
         "The PiS agreement gives Lewica " +
         Q.ministry_count + " cabinet portfolios";
@@ -752,17 +2000,16 @@ if (Q.ministry_return_mode == "pis_coalition") {
     Q.ministry_return_mode == "card_finish" ||
     Q.ministry_return_mode == "event_queue"
 ) {
-    Q.government_coalition_dissent -=
-        Math.floor(Q.ministry_leverage / 3);
     Q.news_headline =
         "The reshuffle leaves Lewica with " +
         Q.ministry_count + " cabinet portfolios";
 } else {
-    Q.ko_coalition_dissent -= Math.floor(Q.ministry_leverage / 2);
     Q.news_headline =
-        "Lewica takes " + Q.ministry_count + " cabinet portfolios";
+        "Lewica takes " + Q.ministry_count +
+        " cabinet portfolios from an explicit coalition settlement";
 }
 Q.ministry_leverage = 0;
+Q.ministry_leverage_debt = 0;
 Q.ministry_allocation_mode = "settled";
 !}
 go-to: poland_events_2021_2023.aug21_cabinet_result if ministry_return_mode = "pis_coalition"; poland_card_finish if ministry_return_mode = "card_finish"; poland_event_queue if ministry_return_mode = "event_queue"; poland_government_formation.governing_agreement if ministry_return_mode = "governing_agreement"; poland_government_formation.cabinet_program if ministry_return_mode != "pis_coalition" and ministry_return_mode != "card_finish" and ministry_return_mode != "event_queue" and ministry_return_mode != "governing_agreement"
@@ -770,12 +2017,37 @@ go-to: poland_events_2021_2023.aug21_cabinet_result if ministry_return_mode = "p
 @opposition_allocation
 title: Confidence without ministries
 new-page: true
-on-arrival: ministries_finalized = 1; ministry_count = 0; ministry_leverage = 0; ministry_allocation_mode = "settled"
+on-arrival: {!
+const normalizePartyCode = function(value) {
+    const text = String(value || "").trim().toLowerCase();
+    if (text == "pis") return "pis";
+    if (text == "ko" || text.includes("obywatelsk")) return "ko";
+    if (text == "psl") return "psl";
+    if (text == "p2050" || text.includes("2050")) return "p2050";
+    if (text == "lewica" || text == "left" || text.includes("lewica")) return "lewica";
+    return "";
+};
+Q.ministries_finalized = 1;
+Q.ministry_count = 0;
+Q.ministry_leverage = 0;
+Q.ministry_leverage_debt = 0;
+Q.ministry_allocation_mode = "settled";
+Q.cabinet_roster_finalized = 1;
+Q.cabinet_roster_government_party =
+    normalizePartyCode(Q.government_party) || Q.ministry_cabinet_leader_code;
+Q.cabinet_roster_prime_minister = String(Q.prime_minister || "");
+Q.cabinet_roster_date = String(Q.date_label || "");
+Q.cabinet_roster_left_portfolios = 0;
+!}
 
 = No ministries
 
-Lewica promised confidence and supply, not cabinet service. The coalition
-allocates every portfolio without it: KO keeps the senior state and diplomatic
-offices, Poland 2050 its institutional claims, and PSL Agriculture and Defence.
+Lewica promised confidence and supply, not cabinet service. The parties that
+explicitly accepted cabinet responsibility allocate the portfolios recorded
+above; a confidence vote alone does not make every supporting party a ministerial
+partner.
 
-- @poland_government_formation.cabinet_program: Continue to the exposé
+- @opposition_allocation_continue: Continue
+
+@opposition_allocation_continue
+go-to: poland_events_2021_2023.aug21_cabinet_result if ministry_return_mode = "pis_coalition"; poland_card_finish if ministry_return_mode = "card_finish"; poland_event_queue if ministry_return_mode = "event_queue"; poland_government_formation.governing_agreement if ministry_return_mode = "governing_agreement"; poland_government_formation.cabinet_program if ministry_return_mode != "pis_coalition" and ministry_return_mode != "card_finish" and ministry_return_mode != "event_queue" and ministry_return_mode != "governing_agreement"
