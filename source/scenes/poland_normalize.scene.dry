@@ -343,6 +343,21 @@ if (Q.started) {
         ko_merger_federalism: 34,
         ko_merger_dissent: 28,
         ko_merger_recruitment: 0,
+        ko_cohesion: 62,
+        ko_collapse_shock: 0,
+        ko_collapse_pressure: 0,
+        ko_collapsed: 0,
+        ko_collapse_time: -1,
+        ko_collapse_settlement_time: -1,
+        ko_collapse_defectors: 0,
+        ko_collapse_government_shock: 0,
+        ko_convention_done: 0,
+        ko_convention_failed: 0,
+        ko_leader_changed: 0,
+        ko_break_size: 0,
+        ko_splinter_settled: 0,
+        ko_splinter_pact: 0,
+        ko_splinter_relation: 30,
         ko_splinter_active: 0,
         ko_individual_defectors: 0,
         ko_splinter_poll: 0,
@@ -414,6 +429,27 @@ if (Q.started) {
     }
     if (typeof Q.ko_splinter_type != "string") {
         Q.ko_splinter_type = "None";
+    }
+    if (typeof Q.ko_consolidation_stance != "string") {
+        Q.ko_consolidation_stance = "No public stance";
+    }
+    if (typeof Q.ko_collapse_cause != "string") {
+        Q.ko_collapse_cause = "none";
+    }
+    if (typeof Q.ko_collapse_stance != "string") {
+        Q.ko_collapse_stance = "Undecided";
+    }
+    if (typeof Q.ko_collapse_result != "string") {
+        Q.ko_collapse_result = "KO has not split";
+    }
+    if (typeof Q.ko_break_wing != "string") {
+        Q.ko_break_wing = "None";
+    }
+    if (typeof Q.ko_break_leader != "string") {
+        Q.ko_break_leader = "None";
+    }
+    if (typeof Q.ko_splinter_outcome != "string") {
+        Q.ko_splinter_outcome = "No settlement yet";
     }
     if (typeof Q.rozwoj_named_loyalties != "string") {
         Q.rozwoj_named_loyalties = "No declarations yet";
@@ -699,6 +735,36 @@ if (Q.started) {
         koSplinterRecord.name = Q.ko_splinter_type + " KO splinter";
         koSplinterRecord.legal_status = "independent organisation";
     }
+
+    // KO's structural health is one derived number rather than four hidden
+    // convention meters. Every term is a failure the player can already see:
+    // what the coalition has cost KO, where its polling is, a succession
+    // nobody could force, a lost presidency, and discrete shocks recorded by
+    // KO's own events (ko_collapse_shock, which decays monthly in advance).
+    Q.ko_cohesion = clamp(Math.round(Number(Q.ko_cohesion) || 62), 0, 100);
+    const koCollapsePressure =
+        Math.max(0, Number(Q.ko_collapse_shock) || 0) +
+        Math.max(0, (Number(Q.ko_coalition_dissent) || 0) - 18) * 0.9 +
+        Math.max(0, 24 - (Number(Q.ko_poll) || 24)) * 2.4 +
+        Math.max(0, 60 - Q.ko_cohesion) * 0.5 +
+        (Q.ko_leader == "Donald Tusk" && Number(Q.year) >= 2026 ? 8 : 0) +
+        (Q.pres_2025_winner_key == "right" ? 6 : 0) +
+        (Q.caretaker_government ? 8 : 0) +
+        (Q.snap_election_requested ? 6 : 0) -
+        (Q.ko_consolidated ? 16 : 0) -
+        (Q.government_party == "ko" && Q.government_has_confidence ? 8 : 0);
+    Q.ko_collapse_pressure = Q.ko_collapsed
+        ? 0
+        : clamp(Math.round(koCollapsePressure), 0, 100);
+    Q.ko_condition_label = Q.ko_collapsed
+        ? "split into rival organisations"
+        : Q.ko_collapse_pressure >= 68
+            ? "at breaking point"
+            : Q.ko_collapse_pressure >= 48
+                ? "openly quarrelling"
+                : Q.ko_collapse_pressure >= 28
+                    ? "strained but holding"
+                    : "in working order";
     if (Q.greens_joined_left) {
         const greensRecord = rivalGroup("greens");
         if (greensRecord) {
@@ -1230,6 +1296,73 @@ if (Q.started) {
             Q.left_party_name = "Zjednoczona Lewica";
         }
     }
+    // Wiosna ascendancy path. Wiosna can own the common project from three
+    // starting positions: the protected dual chairs, a Wiosna-led successor,
+    // or an unmerged Wiosna that is simply the strongest current left in the
+    // room. Only availability and the labels are derived here; the dated
+    // events own stage, route and consequences.
+    const springStrength = Number(Q.spring_strength) || 0;
+    const springStrongestCurrent =
+        Q.spring_active && Q.spring_in_left &&
+        activeLeftCaucuses.every(function(caucus) {
+            return caucus == "spring" ||
+                springStrength >= (Number(Q[caucus + "_strength"]) || 0);
+        });
+    Q.spring_path_mode = Q.spring_party_formed
+        ? "none"
+        : (String(Q.left_dominant_current || "") == "spring"
+            ? "sole"
+            : (!Q.spring_merged && springStrongestCurrent
+                ? "independent"
+                : (String(Q.left_constitution || "") == "dual_chairs" &&
+                        Q.spring_merged
+                    ? "dual"
+                    : "none")));
+    Q.spring_path_available =
+        Q.spring_path_mode != "none" && !Q.spring_path_declined ? 1 : 0;
+    Q.spring_path_stage = clamp(
+        Math.round(Number(Q.spring_path_stage) || 0),
+        0,
+        3
+    );
+    if (
+        ["social_liberal", "market_liberal"].indexOf(
+            String(Q.spring_path_route)
+        ) < 0
+    ) {
+        Q.spring_path_route = "none";
+    }
+    Q.spring_liberal_bridge = clamp(
+        Number(Q.spring_liberal_bridge) || 0,
+        0,
+        100
+    );
+    Q.spring_path_doctrine_label =
+        Q.spring_path_route == "market_liberal"
+            ? "Fiscally conservative, socially liberal"
+            : (Q.spring_path_route == "social_liberal"
+                ? "Equality-first social liberalism"
+                : "Doctrine unsettled");
+    if (Q.spring_path_stage >= 2) {
+        Q.spring_path_label =
+            "Wiosna ascendant · " + Q.spring_path_doctrine_label;
+    } else if (Q.spring_path_available) {
+        Q.spring_path_label = "Wiosna can claim the project";
+    } else if (Q.spring_path_declined) {
+        Q.spring_path_label = "Wiosna's claim was refused";
+    } else {
+        Q.spring_path_label = "No Wiosna project";
+    }
+    // A completed doctrine convention renames the party it produced.
+    if (
+        Q.spring_path_stage >= 3 &&
+        typeof Q.spring_path_party_name == "string" &&
+        Q.spring_path_party_name.trim().length &&
+        !Q.left_realign_formed
+    ) {
+        Q.left_party_name = Q.spring_path_party_name;
+    }
+
     const autonomousPartners = [];
     if (
         Q.razem_active &&
@@ -3373,6 +3506,8 @@ if (Q.started) {
         Math.max(0, Q.poland_party_clubs_timer || 0);
     Q.poland_party_discipline_timer =
         Math.max(0, Q.poland_party_discipline_timer || 0);
+    Q.poland_wiosna_project_timer =
+        Math.max(0, Q.poland_wiosna_project_timer || 0);
     if (typeof Q.poland_enemy_focus != "string") {
         Q.poland_enemy_focus = "No fixed enemy";
     }
@@ -3776,6 +3911,215 @@ if (Q.started) {
         clamp(Q.p2050_coalition_dissent, 0, 100);
     Q.left_coalition_dissent =
         clamp(Q.left_coalition_dissent, 0, 100);
+
+    // Unanswered policy pressure.
+    //
+    // Party and opposition work can put a demand on the national agenda; only
+    // the competent ledger can answer it. What is left over is what voters are
+    // actually angry about, and it is the input to both the pressure events and
+    // the radicalisation of the party system. Every domain therefore pairs the
+    // demand with the ledger that answers it.
+    const pressureDomains = [
+        {
+            id: "health",
+            label: "hospitals, staff and waiting lists",
+            pressure: "health_policy_pressure",
+            answer: "health_capacity",
+            floor: 45,
+            weight: 1.00,
+            portfolio: "health_minister_party"
+        },
+        {
+            id: "household",
+            label: "rents, bills and household security",
+            pressure: "household_policy_pressure",
+            answer: "household_security",
+            floor: 42,
+            weight: 1.10,
+            portfolio: "housing_minister_party"
+        },
+        {
+            id: "climate",
+            label: "energy transition and climate capacity",
+            pressure: "climate_policy_pressure",
+            answer: "climate_state_capacity",
+            floor: 30,
+            weight: 0.70,
+            portfolio: "economy_minister_party"
+        },
+        {
+            id: "admin",
+            label: "state administration and delivery capacity",
+            pressure: "administrative_reform_pressure",
+            answer: "administrative_capacity",
+            floor: 30,
+            weight: 0.75,
+            portfolio: "digital_minister_party"
+        },
+        {
+            id: "kpo",
+            label: "recovery-fund money and its conditions",
+            pressure: "kpo_scrutiny",
+            answer: "kpo_public_credit",
+            floor: 20,
+            weight: 0.85,
+            portfolio: "finance_minister_party"
+        },
+        {
+            id: "justice",
+            label: "prosecution, courts and accountability",
+            pressure: "prosecution_oversight_capacity",
+            answer: "judicial_legitimacy",
+            floor: 40,
+            weight: 0.80,
+            portfolio: "justice_minister_party"
+        }
+    ];
+    let grievanceTotal = 0;
+    let grievanceWeight = 0;
+    let topPressureDomain = null;
+    for (const domain of pressureDomains) {
+        const raised = clamp(finitePolitical(Q[domain.pressure], 0), 0, 100);
+        const answered = Math.max(
+            0,
+            finitePolitical(Q[domain.answer], 0) - domain.floor
+        ) * 0.55;
+        const unmet = clamp(raised - answered, 0, 60);
+        Q[domain.id + "_pressure_unmet"] = Math.round(unmet * 10) / 10;
+        grievanceTotal += unmet * domain.weight;
+        grievanceWeight += domain.weight;
+        if (!topPressureDomain || unmet > topPressureDomain.unmet) {
+            topPressureDomain = {
+                id: domain.id,
+                label: domain.label,
+                portfolio: domain.portfolio,
+                unmet: unmet
+            };
+        }
+    }
+    Q.social_grievance = Math.round(
+        clamp(
+            grievanceTotal / Math.max(1, grievanceWeight) * 2.1,
+            0,
+            100
+        )
+    );
+    const leftExecutive =
+        Q.left_in_government &&
+        Q.government_has_confidence &&
+        !Q.caretaker_government;
+    if (topPressureDomain && topPressureDomain.unmet >= 6) {
+        Q.pressure_top_domain = topPressureDomain.id;
+        Q.pressure_top_label = topPressureDomain.label;
+        Q.pressure_top_value = Math.round(topPressureDomain.unmet * 10) / 10;
+        Q.pressure_owner =
+            leftExecutive &&
+            String(Q[topPressureDomain.portfolio] || "") == "Lewica"
+                ? "Lewica ministry"
+                : (leftExecutive
+                    ? "the coalition"
+                    : String(Q.government_name || "the cabinet"));
+    } else {
+        Q.pressure_top_domain = "none";
+        Q.pressure_top_label = "No unanswered demand";
+        Q.pressure_top_value = 0;
+        Q.pressure_owner = "none";
+    }
+
+    // Radicalisation is anger with nowhere institutional to go. Economic pain
+    // and unanswered demands push it up; trust, delivery and household
+    // security pull it back, so a competent government can always work its way
+    // out of the spiral it inherited.
+    const grievancePush = Q.social_grievance * 0.42;
+    const economicPush = clamp(economicCrisis, 0, 60) * 0.55;
+    const antiSystemPush =
+        Math.max(
+            0,
+            finitePolitical(Q.far_right_street_capacity, 38) - 38
+        ) * 0.20 +
+        finitePolitical(Q.covid_anti_system_pressure, 0) * 0.10 +
+        Math.max(0, finitePolitical(Q.far_right_agenda, 30) - 40) * 0.16;
+    const institutionalDamping =
+        Math.max(0, finitePolitical(Q.institutional_trust, 44) - 44) * 0.30 +
+        Math.max(0, finitePolitical(Q.public_trust, 43) - 43) * 0.22 +
+        Math.max(0, finitePolitical(Q.household_security, 45) - 45) * 0.18 +
+        (leftExecutive
+            ? Math.max(
+                0,
+                finitePolitical(Q.government_delivery, 30) - 30
+            ) * 0.14
+            : 0);
+    Q.radicalisation_index = Math.round(
+        clamp(
+            grievancePush + economicPush + antiSystemPush -
+                institutionalDamping,
+            0,
+            100
+        )
+    );
+
+    // Junior-partner authority.
+    //
+    // A Lewica ministry inside somebody else's cabinet can be overruled, and
+    // the risk is a political fact rather than a mood: coalition strain, a cold
+    // senior relationship and an absent operating agreement all make an
+    // objection more likely, while a written dispute protocol and a delivering
+    // government make it rarer. Ministry cards roll against this number.
+    const leftIsJunior =
+        leftExecutive && String(Q.government_party || "") != "lewica";
+    Q.left_is_junior_partner = leftIsJunior ? 1 : 0;
+    const seniorPartnerNames = {
+        pis: "PiS",
+        ko: "KO",
+        psl: "PSL",
+        p2050: "Poland 2050",
+        lewica: "Lewica"
+    };
+    Q.coalition_senior_partner =
+        seniorPartnerNames[String(Q.government_party || "")] ||
+        "the senior coalition partner";
+    const seniorRelation =
+        Q.government_party == "pis"
+            ? finitePolitical(Q.pis_relation, 8)
+            : (Q.government_party == "ko"
+                ? finitePolitical(Q.ko_relation, 44)
+                : (Q.government_party == "psl"
+                    ? finitePolitical(Q.psl_relation, 24)
+                    : (Q.government_party == "p2050"
+                        ? finitePolitical(Q.p2050_relation, 20)
+                        : 50)));
+    Q.coalition_objection_risk = Math.round(
+        clamp(
+            (leftIsJunior ? 26 : 0) +
+                Math.max(
+                    0,
+                    finitePolitical(Q.government_coalition_dissent, 0) - 8
+                ) * 0.9 +
+                Math.max(0, 50 - seniorRelation) * 0.45 +
+                Math.max(
+                    0,
+                    finitePolitical(Q.psl_coalition_dissent, 0) - 12
+                ) * 0.25 -
+                Math.max(
+                    0,
+                    finitePolitical(Q.government_delivery, 30) - 40
+                ) * 0.30 -
+                // Everything written down at formation is worth something
+                // here, which is the only reason to have written it down.
+                (Q.coalition_dispute_protocol ? 12 : 0) -
+                (Q.annual_rural_guarantee ? 6 : 0) -
+                (
+                    String(Q.coalition_budget_bargain || "").length > 0 &&
+                    Q.coalition_budget_bargain != "None"
+                        ? 5
+                        : 0
+                ),
+            0,
+            78
+        )
+    );
+    // The values clause PSL bought at formation is a real veto, not a memory.
+    Q.coalition_values_veto = Q.coalition_conscience_clause ? 1 : 0;
 }
     Q.third_way_display_name = !Q.p2050_emerged
         ? "PSL"

@@ -14,16 +14,64 @@ arrive asking why productivity has never made their members less insecure.
 The ministry can turn the argument into investment, a wage compact or a
 smaller administrative victory.
 
+[? if left_is_junior_partner = 1: **[+ coalition_senior_partner +] holds the
+premiership**, and every conditionality clause passes through its Chancellery.
+Objection risk on a contested measure: **[+ coalition_objection_risk +]%**.?]
+
 - @public_investment
 - @wage_compact
 - @procurement
 
 @public_investment
 title: Launch a public investment and industrial programme
-subtitle: Cost: 2 budget capacity. Growth comes with institutions and conditions.
+subtitle: Cost: 2 budget capacity. Growth comes with institutions and conditions — and the conditions are what get contested.
 choose-if: budget >= 2
 unavailable-subtitle: The investment programme requires two budget points.
-on-arrival: budget -= 2; economic_growth += 0.8; unemployment -= 0.4; workers_support += 5; government_delivery += 5; fiscal_stress += 2; ko_coalition_dissent += 4 if government_party != "pis"; government_coalition_dissent += 5 if government_party = "pis"; pis_relation -= 3 if government_party = "pis"; news_headline = "The Economy Ministry launches a public investment programme with labour conditions"
+on-arrival: {!
+Q.budget -= 2;
+const objectionRoll = this.random.uint32() / 4294967296;
+const objected =
+    Q.left_is_junior_partner &&
+    objectionRoll * 100 < Number(Q.coalition_objection_risk) * 1.05;
+Q.last_card_objection = objected ? 1 : 0;
+Q.last_card_objector = Q.coalition_senior_partner;
+if (objected) {
+    // The money survives. Public ownership and the collective agreements
+    // attached to it do not.
+    Q.economic_growth += 0.4;
+    Q.unemployment -= 0.2;
+    Q.government_delivery += 2;
+    Q.fiscal_stress += 2;
+    Q.labor_credibility -= 2;
+    Q.labor_dissent += 4;
+    Q.left_coalition_dissent += 6;
+    Q.coalition_blur += 3;
+    Q.ministry_overruled_count += 1;
+    Q.ministry_overruled_last = "Industrial programme labour conditions";
+    Q.news_headline =
+        Q.coalition_senior_partner +
+        " strips the labour conditions out of the investment programme";
+} else {
+    Q.economic_growth += 0.8;
+    Q.unemployment -= 0.4;
+    Q.workers_support += 5;
+    Q.industrial_logistics_left_affinity += 3;
+    Q.labor_credibility += 3;
+    Q.government_delivery += 5;
+    Q.administrative_capacity += 1;
+    Q.climate_state_capacity += 2;
+    Q.climate_policy_pressure = Math.max(0, Q.climate_policy_pressure - 6);
+    Q.fiscal_stress += 2;
+    if (Q.government_party == "pis") {
+        Q.government_coalition_dissent += 5;
+        Q.pis_relation -= 3;
+    } else {
+        Q.ko_coalition_dissent += 4;
+    }
+    Q.news_headline =
+        "The Economy Ministry launches a public investment programme with labour conditions";
+}
+!}
 
 Rail, energy and regional production receive patient public finance tied to
 collective agreements and domestic capacity. [? if government_party != "pis":
@@ -31,6 +79,11 @@ KO supports the projects and objects to the part that makes ownership matter.?]
 [? if government_party = "pis": PiS supports the domestic production and
 objects when trade unions, rather than party-linked boards, receive power over
 the conditions.?]
+
+[? if last_card_objection = 1: The programme is announced on schedule with the
+conditionality annex removed. What is financed is the same rail and the same
+grid; what is not financed is any reason for the workforce building them to
+believe this cabinet is different.?]
 
 - #poland_card_finish
 
@@ -51,11 +104,15 @@ investment, but workers can describe what changed.
 
 @procurement
 title: Rewrite procurement around jobs and delivery
-subtitle: No resource or budget cost. Use the authority already inside the ministry.
-on-arrival: government_delivery += 2; economic_growth += 0.2; public_trust += 2; labor_credibility += 1; progressives_dissent += 1; news_headline = "Public procurement receives enforceable labour and delivery standards"
+subtitle: Free fallback. Real authority, small reach, and a slower state while contractors relearn the rules.
+on-arrival: government_delivery += 2; economic_growth += 0.2; public_trust += 2; labor_credibility += 1; progressives_dissent += 1; administrative_reform_pressure += 3; ko_coalition_dissent += 2 if government_party != "pis"; last_card_objection = 0; news_headline = "Public procurement receives enforceable labour and delivery standards"
 
 The ministry changes scoring rules, publication duties and contract
 monitoring. It cannot substitute for an investment budget, but it stops the
 state buying low wages and late delivery as though they were bargains.
+
+For two quarters it also stops the state buying much of anything quickly.
+Contracting authorities re-tender, the offices absorb the new documentation,
+and every delayed project is credited to the ministry that changed the rules.
 
 - #poland_card_finish

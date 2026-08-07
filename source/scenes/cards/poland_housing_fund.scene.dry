@@ -13,39 +13,177 @@ The ministry has land, a draft and a coalition ceiling. [? if
 government_party = "pis": PiS wants the cranes in its advertisements and private developers in
 the financing. Our draft gives municipalities the land and the homes.?]
 
+[? if left_is_junior_partner = 1: **[+ coalition_senior_partner +] holds the
+premiership**, and the development industry has its own channel into it.
+Objection risk on a contested measure: **[+ coalition_objection_risk +]%**.?]
+
 - @programme
+- @rent_regulation
 - @pilot
 - @guarantee
 
 @programme
 title: Launch the public housing programme
-subtitle: Cost: 3 budget capacity.
+subtitle: Cost: 3 budget capacity. Municipal construction at scale — the measure the coalition is most likely to cut.
 choose-if: budget >= 3 and housing_minister_party = "Lewica"
 unavailable-subtitle: Requires the Housing Ministry and three budget points.
-on-arrival: budget -= 3; household_security += 8; government_delivery += 7; labor_credibility += 3; ko_coalition_dissent += 6 if government_party != "pis"; government_coalition_dissent += 6 if government_party = "pis"; pis_relation -= 3 if government_party = "pis"; government_goal_housing = 1; news_headline = "The cabinet launches a public housing programme"
+on-arrival: {!
+Q.budget -= 3;
+const objectionRoll = this.random.uint32() / 4294967296;
+const objected =
+    Q.left_is_junior_partner &&
+    objectionRoll * 100 < Number(Q.coalition_objection_risk) * 1.1;
+Q.last_card_objection = objected ? 1 : 0;
+Q.last_card_objector = Q.coalition_senior_partner;
+if (objected) {
+    Q.household_security += 3;
+    Q.government_delivery += 2;
+    Q.left_coalition_dissent += 7;
+    Q.coalition_blur += 3;
+    Q.government_coalition_dissent += 4;
+    Q.household_policy_pressure += 4;
+    Q.progressives_dissent += 3;
+    Q.ministry_overruled_count += 1;
+    Q.ministry_overruled_last = "Public housing programme";
+    Q.government_goal_housing = 1;
+    Q.news_headline =
+        Q.coalition_senior_partner +
+        " turns the public housing programme into a developer subsidy";
+} else {
+    Q.household_security += 8;
+    Q.government_delivery += 7;
+    Q.labor_credibility += 3;
+    Q.young_support += 3;
+    Q.urban_progressive_support += 2;
+    Q.anti_establishment_youth_left_affinity += 3;
+    Q.metropolitan_liberals_left_affinity += 2;
+    Q.household_policy_pressure =
+        Math.max(0, Q.household_policy_pressure - 12);
+    Q.government_goal_housing = 2;
+    if (Q.government_party == "pis") {
+        Q.government_coalition_dissent += 6;
+        Q.pis_relation -= 3;
+    } else {
+        Q.ko_coalition_dissent += 6;
+    }
+    Q.news_headline = "The cabinet launches a public housing programme";
+}
+!}
 
 **Result:** [+ news_headline +].
+
+[? if last_card_objection = 1: The programme survives in name. The financing
+instrument is rewritten so that municipalities co-finance private developments
+instead of building, the land bank becomes "available for competitive
+disposal", and the completion target moves beyond the parliamentary term.?][? if
+last_card_objection = 0: Municipal land, public financing and public ownership at
+the end of it. The first tranche is small enough to be honest about and large
+enough to be visible in four cities.?]
+
+[? if last_card_objection = 1: Somebody in the Chancellery briefed the
+development industry before they briefed us.?]
+
+- #poland_card_finish
+
+
+@rent_regulation
+title: Regulate indexation and licence the rental market
+subtitle: Cost: 1 budget capacity. Cheap, immediate and aimed at the landlord vote nobody else will touch.
+choose-if: budget >= 1 and housing_minister_party = "Lewica"
+unavailable-subtitle: Requires the Housing Ministry and one budget point.
+on-arrival: {!
+Q.budget -= 1;
+const objectionRoll = this.random.uint32() / 4294967296;
+const objected =
+    Q.left_is_junior_partner &&
+    objectionRoll * 100 < Number(Q.coalition_objection_risk) * 0.95;
+Q.last_card_objection = objected ? 1 : 0;
+Q.last_card_objector = Q.coalition_senior_partner;
+if (objected) {
+    Q.household_security += 1;
+    Q.left_coalition_dissent += 5;
+    Q.coalition_blur += 2;
+    Q.household_policy_pressure += 3;
+    Q.ministry_overruled_count += 1;
+    Q.ministry_overruled_last = "Rental indexation cap";
+    Q.government_goal_housing = Math.max(
+        1,
+        Number(Q.government_goal_housing) || 0
+    );
+    Q.news_headline =
+        Q.coalition_senior_partner +
+        " blocks the indexation cap as an interference with contracts";
+} else {
+    Q.household_security += 5;
+    Q.young_support += 4;
+    Q.urban_progressive_support += 3;
+    Q.anti_establishment_youth_left_affinity += 4;
+    Q.metropolitan_liberals_left_affinity += 3;
+    Q.government_delivery += 3;
+    Q.razem_cooperation += 3;
+    Q.household_policy_pressure =
+        Math.max(0, Q.household_policy_pressure - 9);
+    Q.ko_poll_momentum -= 0.2;
+    Q.economic_issue_salience += 2;
+    Q.government_goal_housing = Math.max(
+        1,
+        Number(Q.government_goal_housing) || 0
+    );
+    if (Q.government_party == "pis") {
+        Q.government_coalition_dissent += 3;
+    } else {
+        Q.ko_coalition_dissent += 5;
+        Q.p2050_coalition_dissent += 3;
+    }
+    Q.news_headline =
+        "Rent indexation is capped and the rental market gets a public register";
+}
+!}
+
+**Result:** [+ news_headline +].
+
+[? if last_card_objection = 0: Indexation is tied to wage growth, deposits are
+held in escrow, and every tenancy enters a register that makes the market
+visible for the first time. It costs almost nothing and reaches every renter in
+the country this quarter rather than in four years.?][? if last_card_objection =
+1: The cap is withdrawn before first reading with an argument about the sanctity
+of contracts, offered by people whose own tenancy agreements are not indexed to
+anything.?]
+
+[? if last_card_objection = 0: The people it costs are organised, articulate and
+mostly vote for our coalition partners.?]
 
 - #poland_card_finish
 
 
 @pilot
 title: Fund a municipal pilot
-subtitle: Cost: 1 budget capacity.
+subtitle: Cost: 1 budget capacity. Small, safe and hard for anyone to object to.
 choose-if: budget >= 1
 unavailable-subtitle: Requires one budget point.
-on-arrival: budget -= 1; household_security += 4; local_network += 2; government_delivery += 3; government_goal_housing = 1; news_headline = "Municipal housing pilots begin"
+on-arrival: budget -= 1; household_security += 4; local_network += 2; government_delivery += 3; household_policy_pressure -= 4; government_goal_housing = 1; last_card_objection = 0; news_headline = "Municipal housing pilots begin"
 
 **Result:** [+ news_headline +].
+
+Two hundred units in four municipalities, delivered by councils that already
+have the land. Nobody in the coalition will die on this hill, which is both its
+strength and its ceiling.
 
 - #poland_card_finish
 
 
 @guarantee
 title: Negotiate tenant guarantees first
-subtitle: No spending; slower delivery.
-on-arrival: household_security += 2; public_trust += 1; government_delivery += 1; government_goal_housing = 1; news_headline = "Tenant guarantees precede the housing fund"
+subtitle: No spending. A statutory floor now; the homes stay unbuilt and the demand keeps growing.
+on-arrival: household_security += 2; public_trust += 1; government_delivery += 1; household_policy_pressure += 3; progressives_dissent += 2; razem_dissent += 3; government_goal_housing = 1; last_card_objection = 0; news_headline = "Tenant guarantees precede the housing fund"
 
 **Result:** [+ news_headline +].
+
+Eviction protection and notice periods are written into statute without a zloty
+of new spending, which is a real gain for anyone facing a landlord this winter.
+
+It is also the fourth consecutive year in which the ministry has produced a
+guarantee instead of a building. The waiting lists lengthen against a promise
+that is now legally enforceable and physically empty.
 
 - #poland_card_finish

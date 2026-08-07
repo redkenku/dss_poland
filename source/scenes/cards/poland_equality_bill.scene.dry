@@ -13,6 +13,12 @@ The dispute is over scope and timing. [? if government_party = "pis": PiS
 accepted an Equality Ministry as a cheap office. It did not expect the minister
 to put an equality bill on the cabinet agenda.?]
 
+[? if coalition_values_veto = 1: **The conscience clause signed at formation is
+on the table before the bill is.** PSL's negotiators regard values legislation
+as exempt from coalition discipline, and they have it in writing.?]
+[? if left_is_junior_partner = 1: Objection risk on a contested measure under
+**[+ coalition_senior_partner +]**: **[+ coalition_objection_risk +]%**.?]
+
 - @full
 - @employment
 - @consult
@@ -63,12 +69,37 @@ Q.public_opinion_last_issue = "LGBT equality";
 Q.public_opinion_last_reception = Q.card_public_response;
 Q.public_opinion_last_delta = net;
 Q.public_opinion_last_action = "Full equality bill";
-Q.government_goal_equality = 1;
-Q.news_headline = net >= 1
-    ? "The full equality bill reaches cabinet with public momentum"
-    : (net <= -1
-        ? "The equality bill reaches cabinet under a culture-war barrage"
-        : "The full equality bill reaches cabinet");
+// The conscience clause PSL bought at formation is exactly the instrument for
+// this bill, and it does not need coalition strain to be used.
+const objectionRoll = this.random.uint32() / 4294967296;
+const objectionChance = Number(Q.coalition_objection_risk) *
+    (Q.coalition_values_veto ? 1.4 : 1.0) +
+    (Q.coalition_values_veto ? 20 : 0);
+const objected = Q.left_is_junior_partner && objectionRoll * 100 < objectionChance;
+Q.last_card_objection = objected ? 1 : 0;
+Q.last_card_objector = Q.coalition_values_veto
+    ? "PSL's conscience clause"
+    : Q.coalition_senior_partner;
+if (objected) {
+    Q.minority_safety -= 2;
+    Q.progressives_dissent += 5;
+    Q.feminist_trust -= 2;
+    Q.left_coalition_dissent += 7;
+    Q.coalition_blur += 3;
+    Q.government_delivery -= 2;
+    Q.ministry_overruled_count += 1;
+    Q.ministry_overruled_last = "Full equality bill";
+    Q.government_goal_equality = 1;
+    Q.news_headline =
+        "The equality bill is pulled from the cabinet agenda before the vote";
+} else {
+    Q.government_goal_equality = 2;
+    Q.news_headline = net >= 1
+        ? "The full equality bill reaches cabinet with public momentum"
+        : (net <= -1
+            ? "The equality bill reaches cabinet under a culture-war barrage"
+            : "The full equality bill reaches cabinet");
+}
 !}
 
 [? if card_public_response = "breakthrough": Cabinet expected a defensive
@@ -89,6 +120,12 @@ Coalition dissent rises faster than expected. ?]
 [? if card_public_response = "reversal": A hostile, intensely polarised
 climate makes the cabinet initiative an immediate electoral liability.
 Withdrawal would cost the movement too. ?]
+
+[? if last_card_objection = 1: Then the bill is removed from the agenda by
+**[+ last_card_objector +]** before a minister has to vote on it. There is no
+defeat to appeal and no vote to publish: the item simply is not there when the
+papers are circulated. The movement that spent a year preparing for this
+cabinet meeting is told the timing was wrong. ?]
 
 - #poland_card_finish
 
@@ -136,6 +173,7 @@ Q.public_opinion_last_issue = "LGBT employment protections";
 Q.public_opinion_last_reception = Q.card_public_response;
 Q.public_opinion_last_delta = net;
 Q.public_opinion_last_action = "Narrow equality package";
+Q.last_card_objection = 0;
 Q.government_goal_equality = 1;
 Q.news_headline = net >= 1
     ? "Employment protections find a working majority"
@@ -195,6 +233,7 @@ Q.public_opinion_last_issue = "LGBT equality";
 Q.public_opinion_last_reception = Q.card_public_response;
 Q.public_opinion_last_delta = delayScore;
 Q.public_opinion_last_action = "Equality-bill consultation";
+Q.last_card_objection = 0;
 Q.news_headline = delayScore >= 1
     ? "Consultation lowers the temperature around equality"
     : (delayScore <= -1

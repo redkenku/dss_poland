@@ -14,20 +14,135 @@ caseloads designed for a different decade. No single ministry owns the whole
 failure, which means the cabinet can either coordinate it or continue passing
 the file around.
 
+[? if left_is_junior_partner = 1: **[+ coalition_senior_partner +] holds the
+premiership** and the Finance Ministry reads every indexation clause twice.
+Objection risk on a contested measure: **[+ coalition_objection_risk +]%**.?]
+
 - @social_floor
+- @working_poor
 - @protect_services
 - @target_exposure
 
 @social_floor
 title: Establish a cabinet-wide social floor
-subtitle: Cost: 2 budget capacity. Index support and make access portable.
+subtitle: Cost: 2 budget capacity. Index support and make access portable — the clause Finance most wants deleted.
 choose-if: budget >= 2
 unavailable-subtitle: Indexation and a common access floor require two budget points.
-on-arrival: budget -= 2; household_security += 6; workers_support += 4; pensioner_support += 3; health_capacity += 2; government_delivery += 4; fiscal_stress += 3; ko_coalition_dissent += 4; government_goal_welfare = 1; news_headline = "The cabinet adopts an indexed social floor across benefits and services"
+on-arrival: {!
+Q.budget -= 2;
+const objectionRoll = this.random.uint32() / 4294967296;
+const objected =
+    Q.left_is_junior_partner &&
+    objectionRoll * 100 < Number(Q.coalition_objection_risk) * 1.05;
+Q.last_card_objection = objected ? 1 : 0;
+Q.last_card_objector = Q.coalition_senior_partner;
+if (objected) {
+    Q.household_security += 2;
+    Q.government_delivery += 1;
+    Q.pensioner_support += 1;
+    Q.left_coalition_dissent += 6;
+    Q.coalition_blur += 3;
+    Q.household_policy_pressure += 4;
+    Q.government_coalition_dissent += 3;
+    Q.ministry_overruled_count += 1;
+    Q.ministry_overruled_last = "Indexed social floor";
+    Q.government_goal_welfare = 1;
+    Q.news_headline =
+        Q.coalition_senior_partner +
+        " strikes automatic indexation out of the social floor";
+} else {
+    Q.household_security += 6;
+    Q.workers_support += 4;
+    Q.pensioner_support += 3;
+    Q.health_capacity += 2;
+    Q.government_delivery += 4;
+    Q.fiscal_stress += 3;
+    Q.ko_coalition_dissent += 4;
+    Q.household_policy_pressure =
+        Math.max(0, Q.household_policy_pressure - 10);
+    Q.government_goal_welfare = 2;
+    Q.news_headline =
+        "The cabinet adopts an indexed social floor across benefits and services";
+}
+!}
 
 Thresholds update automatically and people no longer lose support merely by
 crossing an administrative boundary. The reform is expensive precisely
 because years of frozen values made deterioration look free.
+
+[? if last_card_objection = 1: What reaches the cabinet minutes is a one-off
+adjustment and a commitment to review indexation in the next medium-term
+framework. Every threshold will therefore be worth less again next year, on
+schedule.?]
+
+- #poland_card_finish
+
+
+@working_poor
+title: Extend the child and care benefits to the working poor
+subtitle: Cost: 1 budget capacity. Take the material claim PiS built its majority on and complete it.
+choose-if: budget >= 1
+unavailable-subtitle: Extending eligibility requires one budget point.
+on-arrival: {!
+Q.budget -= 1;
+const objectionRoll = this.random.uint32() / 4294967296;
+const objected =
+    Q.left_is_junior_partner &&
+    objectionRoll * 100 < Number(Q.coalition_objection_risk) * 0.9;
+Q.last_card_objection = objected ? 1 : 0;
+Q.last_card_objector = Q.coalition_senior_partner;
+Q.government_goal_welfare = Math.max(
+    1,
+    Number(Q.government_goal_welfare) || 0
+);
+if (objected) {
+    Q.household_security += 1;
+    Q.left_coalition_dissent += 5;
+    Q.coalition_blur += 2;
+    Q.household_policy_pressure += 3;
+    Q.ministry_overruled_count += 1;
+    Q.ministry_overruled_last = "Working-poor benefit extension";
+    Q.news_headline =
+        Q.coalition_senior_partner +
+        " defers the benefit extension to the next budget";
+} else {
+    Q.household_security += 5;
+    Q.workers_support += 4;
+    Q.women_support += 3;
+    Q.provincial_welfare_left_affinity += 4;
+    Q.industrial_logistics_left_affinity += 3;
+    Q.older_welfare_households_left_affinity += 2;
+    Q.government_delivery += 3;
+    Q.fiscal_stress += 1;
+    Q.pis_poll_momentum -= 0.3;
+    Q.konf_poll_momentum -= 0.1;
+    Q.social_spending_salience += 3;
+    Q.household_policy_pressure =
+        Math.max(0, Q.household_policy_pressure - 8);
+    if (Q.government_party == "pis") {
+        Q.government_coalition_dissent += 3;
+        Q.pis_relation -= 4;
+    } else {
+        Q.ko_coalition_dissent += 3;
+    }
+    Q.news_headline =
+        "Child and care benefits reach the working households they excluded";
+}
+!}
+
+**Result:** [+ news_headline +].
+
+[? if last_card_objection = 0: The gap PiS never closed was never about
+generosity: it was the households just above a threshold, in work, paying full
+market prices for care and receiving nothing. They are the exact households that
+voted for the 500+ programme and then discovered it was not for them.?][? if
+last_card_objection = 1: The extension is deferred to the next budget with warm
+words about the direction of travel. The households above the threshold read the
+direction of travel on their next invoice.?]
+
+[? if last_card_objection = 0: Completing somebody else's flagship is a strange
+way to win an argument, and it is the version of that argument they cannot
+answer.?]
 
 - #poland_card_finish
 
@@ -48,8 +163,8 @@ and rural partners can point to offices that remain open.
 
 @target_exposure
 title: Retarget the existing envelope at the most exposed households
-subtitle: No resource or budget cost. A limited review prevents the sharpest losses.
-on-arrival: household_security += 2; pensioner_support += 2; public_trust += 1; government_delivery += 1; progressive_credibility -= 1; progressives_dissent += 2; government_goal_welfare = 1; news_headline = "The welfare review redirects existing support toward the most exposed households"
+subtitle: Free fallback. Triage inside a fixed envelope: somebody who was receiving support stops.
+on-arrival: household_security += 2; pensioner_support += 2; public_trust += 1; government_delivery += 1; progressive_credibility -= 1; progressives_dissent += 3; household_policy_pressure += 3; workers_support -= 1; labor_dissent += 2; government_goal_welfare = 1; last_card_objection = 0; news_headline = "The welfare review redirects existing support toward the most exposed households"
 
 Officials adjust thresholds and case priorities without enlarging the
 envelope. The worst cliffs soften. The system remains too small, and nobody in

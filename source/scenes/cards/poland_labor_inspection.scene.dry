@@ -15,37 +15,168 @@ enter favoured employers' books.?]
 [? if government_party != "pis": The coalition agrees on enforcement and
 disputes the money.?]
 
+[? if left_is_junior_partner = 1: **[+ coalition_senior_partner +] holds the
+premiership.** The ministry is ours; the decision to let it act is not entirely
+ours. Objection risk on a contested measure: **[+ coalition_objection_risk
++]%**.?]
+
 - @fund
+- @platform_work
 - @target
 - @memo
 
 @fund
 title: Fund inspectors and regional offices
-subtitle: Cost: 2 budget capacity.
+subtitle: Cost: 2 budget capacity. The full staffing programme, and the one the coalition may refuse.
 choose-if: budget >= 2 and labor_minister_party = "Lewica"
 unavailable-subtitle: Requires the Labour Ministry and two budget points.
-on-arrival: budget -= 2; labor_credibility += 7; workers_support += 5; government_delivery += 5; ko_coalition_dissent += 3 if government_party != "pis"; government_coalition_dissent += 3 if government_party = "pis"; pis_relation -= 2 if government_party = "pis"; government_goal_labor = 1; news_headline = "Labour inspection receives staff and enforcement power"
+on-arrival: {!
+Q.budget -= 2;
+const objectionRoll = this.random.uint32() / 4294967296;
+const objected =
+    Q.left_is_junior_partner &&
+    objectionRoll * 100 < Number(Q.coalition_objection_risk) * 1.05;
+Q.last_card_objection = objected ? 1 : 0;
+Q.last_card_objector = Q.coalition_senior_partner;
+if (objected) {
+    // Overruled: the posts are cut back to a pilot and the political cost
+    // stays with us, because the announcement was ours.
+    Q.labor_credibility += 2;
+    Q.workers_support += 1;
+    Q.government_delivery += 1;
+    Q.labor_dissent += 4;
+    Q.left_coalition_dissent += 6;
+    Q.coalition_blur += 3;
+    Q.government_coalition_dissent += 4;
+    Q.ministry_overruled_count += 1;
+    Q.ministry_overruled_last = "Labour inspection staffing";
+    Q.government_goal_labor = 1;
+    Q.news_headline =
+        Q.coalition_senior_partner +
+        " cuts the labour inspection programme back to a pilot";
+} else {
+    Q.labor_credibility += 7;
+    Q.workers_support += 5;
+    Q.government_delivery += 5;
+    Q.administrative_capacity += 2;
+    Q.government_goal_labor = 2;
+    if (Q.government_party == "pis") {
+        Q.government_coalition_dissent += 3;
+        Q.pis_relation -= 2;
+    } else {
+        Q.ko_coalition_dissent += 4;
+    }
+    Q.news_headline =
+        "Labour inspection receives staff, regional offices and enforcement power";
+}
+!}
 
 **Result:** [+ news_headline +].
+
+[? if last_card_objection = 1: The letter arrives from the Chancellery before
+the press conference does. The posts are approved at a quarter of the number,
+the regional offices become "a pilot in two voivodeships", and the objection is
+recorded as a budgetary reservation rather than a political one.?][? if
+last_card_objection = 0: The inspectorate gets the posts, the regional offices
+and the mandate to use them, which is the difference between a right and a right
+somebody enforces.?]
+
+[? if last_card_objection = 1: We keep the ministry and the announcement. The
+union federations, who read the staffing annex, keep the receipt.?]
+
+- #poland_card_finish
+
+
+@platform_work
+title: Open the platform and outsourcing files
+subtitle: Cost: 1 budget capacity. Reclassify the couriers, drivers and warehouse subcontractors PiS calls entrepreneurs.
+choose-if: budget >= 1 and labor_minister_party = "Lewica"
+unavailable-subtitle: Requires the Labour Ministry and one budget point.
+on-arrival: {!
+Q.budget -= 1;
+const objectionRoll = this.random.uint32() / 4294967296;
+const objected =
+    Q.left_is_junior_partner &&
+    objectionRoll * 100 < Number(Q.coalition_objection_risk) * 0.85;
+Q.last_card_objection = objected ? 1 : 0;
+Q.last_card_objector = Q.coalition_senior_partner;
+Q.government_goal_labor = Math.max(1, Number(Q.government_goal_labor) || 0);
+if (objected) {
+    Q.labor_credibility += 2;
+    Q.young_support += 1;
+    Q.left_coalition_dissent += 5;
+    Q.coalition_blur += 2;
+    Q.ministry_overruled_count += 1;
+    Q.ministry_overruled_last = "Platform work reclassification";
+    Q.news_headline =
+        Q.coalition_senior_partner +
+        " sends the platform-work reclassification back for consultation";
+} else {
+    Q.labor_credibility += 5;
+    Q.workers_support += 4;
+    Q.young_support += 4;
+    Q.anti_establishment_youth_left_affinity += 4;
+    Q.industrial_logistics_left_affinity += 3;
+    Q.government_delivery += 3;
+    Q.konf_poll_momentum -= 0.2;
+    Q.economic_issue_salience += 2;
+    if (Q.government_party == "pis") {
+        Q.pis_relation -= 3;
+        Q.government_coalition_dissent += 4;
+    } else {
+        Q.ko_coalition_dissent += 3;
+    }
+    Q.news_headline =
+        "Couriers, drivers and warehouse subcontractors are reclassified as employees";
+}
+!}
+
+**Result:** [+ news_headline +].
+
+[? if last_card_objection = 0: The regulation covers the people the labour code
+was written to exclude: the courier on a service contract, the driver renting
+his own van from the firm that dispatches him, the warehouse crew hired through
+three intermediaries. Every one of them is now inside the inspectorate's
+jurisdiction.?][? if last_card_objection = 1: The reclassification goes to
+consultation, where the employers' organisations have three months to explain why
+courier work is a lifestyle. Nothing is withdrawn and nothing takes effect.?]
+
+[? if last_card_objection = 0: Konfederacja has spent four years telling exactly
+these workers that the state is their only enemy. The argument gets harder when
+the state has just given them notice periods.?]
 
 - #poland_card_finish
 
 
 @target
 title: Target wage theft with the existing staff
-subtitle: No budget cost; narrower effect.
-on-arrival: labor_credibility += 3; workers_support += 2; government_delivery += 2; government_goal_labor = 1; news_headline = "Inspectors concentrate on wage theft"
+subtitle: No budget cost. A narrower campaign the coalition cannot refuse.
+on-arrival: labor_credibility += 3; workers_support += 2; government_delivery += 2; industrial_logistics_left_affinity += 1; government_goal_labor = 1; last_card_objection = 0; news_headline = "Inspectors concentrate on wage theft"
 
 **Result:** [+ news_headline +].
+
+The existing inspectors are pointed at unpaid overtime and withheld wages,
+which is the offence workers actually report. It requires no new posts and
+therefore no coalition permission.
+
+It also reaches only the employers already on a list. The subcontracting chains
+that generate most of the complaints stay outside the inspectorate's reach.
 
 - #poland_card_finish
 
 
 @memo
-title: Publish the enforcement gap
-subtitle: Preserve capacity and shift responsibility to the coalition.
-on-arrival: public_trust += 1; ko_coalition_dissent += 2 if government_party != "pis"; government_coalition_dissent += 2 if government_party = "pis"; labor_dissent += 2; news_headline = "The ministry publishes the cost of inaction"
+title: Publish the enforcement gap instead of closing it
+subtitle: Free. Honest, useful, and read by the unions as a ministry explaining why it will not act.
+on-arrival: public_trust += 1; media_capacity += 1; ko_coalition_dissent += 2 if government_party != "pis"; government_coalition_dissent += 2 if government_party = "pis"; labor_dissent += 5; labor_credibility -= 2; workers_support -= 1; government_delivery -= 1; last_card_objection = 0; news_headline = "The ministry publishes the cost of inaction"
 
 **Result:** [+ news_headline +].
+
+The document is accurate: this many inspectors, this many workplaces, this many
+years to reach each one. It shifts the responsibility to whoever refused the
+posts.
+
+The federations point out that the minister who published it is ours, and that
+a ministry describing its own paralysis is still a paralysed ministry.
 
 - #poland_card_finish

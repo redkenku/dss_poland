@@ -709,6 +709,23 @@ function validateCorrectnessInvariants() {
   const discard = read('source/scenes/poland_discard_card.scene.dry');
   assert.strictEqual((discard.match(/Q\.month_actions \+= 1;/g) || []).length, 3);
 
+  // A blank line inside a [? ... ?] conditional makes the compiler abandon the
+  // whole file, and every scene in it silently disappears from the game. The
+  // failure surfaces far away, as unresolved go-to targets in other files, so
+  // catch it at the source instead.
+  for (const file of files) {
+    const source = read(path.relative(projectRoot, file));
+    for (const match of source.matchAll(/\[\?[\s\S]*?\?\]/g)) {
+      assert(
+        !match[0].includes('\n\n'),
+        path.relative(projectRoot, file) + ':' +
+          (source.slice(0, match.index).split('\n').length) +
+          ' has a blank line inside a [? ... ?] conditional; split it into ' +
+          'one conditional per paragraph'
+      );
+    }
+  }
+
   for (const section of sections) {
     if (/^view-if:\s*left_in_government\s*=\s*0/m.test(section.source)) {
       assert(

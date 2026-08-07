@@ -13,6 +13,10 @@ Police commanders want continuity, civil-rights groups want files opened and
 the coalition wants every security dispute kept out of the evening news. The
 Interior Ministry can make democratic control more than a slogan.
 
+[? if left_is_junior_partner = 1: **[+ coalition_senior_partner +] holds the
+premiership**, and the police unions have a shorter route to it than we do.
+Objection risk on a contested measure: **[+ coalition_objection_risk +]%**.?]
+
 - @democratic_vetting
 - @protect_targets
 - @threat_assessment
@@ -22,7 +26,37 @@ title: Fund vetting, training and civilian oversight
 subtitle: Cost: 1 budget capacity. Reform the institution rather than its press office.
 choose-if: budget >= 1
 unavailable-subtitle: Regional training and independent oversight require one budget point.
-on-arrival: budget -= 1; police_trust += 6; constitutional_restraint += 4; public_trust += 3; government_procedural_restraint += 2; government_coalition_dissent += 3; news_headline = "The Interior Ministry places police reform under civilian oversight"
+on-arrival: {!
+Q.budget -= 1;
+const objectionRoll = this.random.uint32() / 4294967296;
+const objected =
+    Q.left_is_junior_partner &&
+    objectionRoll * 100 < Number(Q.coalition_objection_risk);
+Q.last_card_objection = objected ? 1 : 0;
+Q.last_card_objector = Q.coalition_senior_partner;
+if (objected) {
+    Q.police_trust += 1;
+    Q.constitutional_restraint += 1;
+    Q.left_coalition_dissent += 5;
+    Q.coalition_blur += 2;
+    Q.progressives_dissent += 3;
+    Q.ministry_overruled_count += 1;
+    Q.ministry_overruled_last = "Civilian police oversight";
+    Q.news_headline =
+        Q.coalition_senior_partner +
+        " reduces civilian police oversight to an internal review board";
+} else {
+    Q.police_trust += 6;
+    Q.constitutional_restraint += 4;
+    Q.public_trust += 3;
+    Q.government_procedural_restraint += 2;
+    Q.institutional_trust += 3;
+    Q.administrative_capacity += 1;
+    Q.government_coalition_dissent += 3;
+    Q.news_headline =
+        "The Interior Ministry places police reform under civilian oversight";
+}
+!}
 
 Promotions, complaints and crowd-control doctrine receive published standards.
 Commanders call it mistrust. The ministry replies that accountable authority
@@ -45,8 +79,8 @@ right a ready-made story about political policing.
 
 @threat_assessment
 title: Publish a rights-tested national threat assessment
-subtitle: No resource or budget cost. Make the ministry defend its priorities in public.
-on-arrival: border_security_confidence += 2; constitutional_restraint += 2; government_procedural_restraint += 2; public_trust += 1; news_headline = "The Interior Ministry publishes the evidence behind its security priorities"
+subtitle: Free fallback. The ministry defends its priorities in public and hands its critics the same document.
+on-arrival: border_security_confidence += 2; constitutional_restraint += 2; government_procedural_restraint += 2; public_trust += 1; media_capacity += 1; far_right_agenda += 2; national_security_salience += 3; police_trust -= 1; last_card_objection = 0; news_headline = "The Interior Ministry publishes the evidence behind its security priorities"
 
 The document distinguishes crime, extremism and migration instead of folding
 them into one permanent emergency. It spends no new money, but makes the next

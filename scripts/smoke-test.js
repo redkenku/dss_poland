@@ -1029,13 +1029,13 @@ const expectedEvents = [
   'poland_presidential_election.setup',
   'poland_presidential_election.runoff_setup',
   'poland_leadership_events.p2050_foundation_2020',
-  'poland_events.merger',
+  'poland_merger_events.merger',
   'poland_events.abortion',
   'poland_events.strike',
   'poland_events.budget_2020',
   'poland_events.vaccine',
   'poland_monthly_briefing',
-  'poland_events.rename',
+  'poland_merger_events.rename',
   'poland_monthly_briefing',
   'poland_events.recovery_fund',
   'poland_events.opposition_reset',
@@ -1903,6 +1903,136 @@ function runSmoke(game) {
     );
   }
 
+  function testPressureAndRadicalisation() {
+    // Unanswered policy pressure must do three things: decay, drive the
+    // radicalisation transfer, and open a pressure event that a real answer
+    // then closes. Anything less and the opposition ledgers are decoration.
+    startStandard('pressure-ledger');
+    const qualities = engine.state.qualities;
+    qualities.year = 2024;
+    qualities.month = 7;
+    qualities.health_policy_pressure = 40;
+    qualities.household_policy_pressure = 30;
+    engine.goToScene('poland_advance');
+    qualities.year = 2024;
+    qualities.month = 7;
+    engine.goToScene('poland_normalize');
+    assert(
+      qualities.health_pressure_unmet >= 20,
+      'Unanswered health demand did not reach the grievance ledger'
+    );
+    assert(
+      qualities.social_grievance > 0 && qualities.radicalisation_index > 0,
+      'Unanswered demand did not raise grievance and radicalisation'
+    );
+    assert.strictEqual(
+      qualities.pressure_top_domain,
+      'health',
+      'The loudest unanswered demand was not selected for an event'
+    );
+
+    // Delivering the answer must pull the same numbers back down.
+    const radicalPeak = qualities.radicalisation_index;
+    qualities.health_capacity = 85;
+    qualities.household_security = 80;
+    qualities.public_trust = 65;
+    qualities.institutional_trust = 65;
+    engine.goToScene('poland_normalize');
+    assert(
+      qualities.radicalisation_index < radicalPeak,
+      'Delivery and trust did not reduce radicalisation'
+    );
+
+    // Monthly decay is real, so nothing ratchets for ever.
+    qualities.health_capacity = 48;
+    qualities.household_security = 45;
+    const beforeDecay = qualities.health_policy_pressure;
+    engine.goToScene('poland_advance');
+    assert(
+      qualities.health_policy_pressure < beforeDecay,
+      'Policy pressure did not decay across a month'
+    );
+
+    // Campaign posture does not ratchet either: the excess above the party's
+    // unassisted baseline erodes, while a ledger already below it is left for
+    // play to repair rather than being pushed further down.
+    qualities.public_trust = 90;
+    qualities.media_capacity = 90;
+    qualities.local_network = 90;
+    qualities.progressives_strength = 0;
+    qualities.progressive_credibility = 30;
+    engine.goToScene('poland_advance');
+    assert(
+      qualities.public_trust < 90 &&
+        qualities.media_capacity < 90 &&
+        qualities.local_network < 90,
+      'High campaign posture did not decay across a month'
+    );
+    assert(
+      qualities.progressive_credibility >= 30,
+      'Posture decay pushed a below-baseline ledger further down'
+    );
+
+    // The event fires, and funding the settlement closes the demand.
+    startStandard('pressure-event');
+    const q2 = engine.state.qualities;
+    q2.year = 2024;
+    q2.month = 7;
+    q2.health_policy_pressure = 45;
+    q2.left_in_government = 1;
+    q2.government_has_confidence = 1;
+    q2.caretaker_government = 0;
+    q2.government_party = 'ko';
+    q2.ministries_finalized = 1;
+    q2.ministry_count = 2;
+    q2.health_minister_party = 'Lewica';
+    q2.budget = 6;
+    engine.goToScene('poland_advance');
+    q2.year = 2024;
+    q2.month = 7;
+    engine.goToScene('poland_normalize');
+    const pending = (engine._compileChoices(
+      game.scenes['poland_event_queue.all_events']
+    ) || []).map(function(choice) {
+      return choice.id;
+    });
+    assert(
+      pending.includes('poland_pressure_events.health_strike'),
+      'Unanswered health demand did not open the strike event'
+    );
+    engine.goToScene('poland_pressure_events.health_strike');
+    const pressureBefore = q2.health_policy_pressure;
+    choose('poland_pressure_events.health_settlement');
+    assert(
+      q2.health_policy_pressure <= pressureBefore - 20,
+      'A funded settlement did not answer the health demand'
+    );
+    assert.strictEqual(
+      q2.government_goal_health,
+      2,
+      'A funded settlement did not record full delivery credit'
+    );
+
+    // Junior-partner authority: a written dispute protocol lowers the risk of
+    // being overruled, which is what makes the formation bargain worth buying.
+    q2.government_coalition_dissent = 30;
+    q2.ko_relation = 25;
+    q2.coalition_dispute_protocol = 0;
+    engine.goToScene('poland_normalize');
+    assert.strictEqual(
+      q2.left_is_junior_partner,
+      1,
+      'A Lewica ministry under a KO premiership is not marked junior'
+    );
+    const riskWithout = q2.coalition_objection_risk;
+    q2.coalition_dispute_protocol = 1;
+    engine.goToScene('poland_normalize');
+    assert(
+      q2.coalition_objection_risk < riskWithout,
+      'The written dispute protocol did not reduce the objection risk'
+    );
+  }
+
   function testGovernmentBurden() {
     startStandard('government-burden-entry');
     let qualities = engine.state.qualities;
@@ -1958,9 +2088,10 @@ function runSmoke(game) {
 
     engine.goToScene('poland_health_compact');
     choose('poland_health_compact.capacity');
-    assert.strictEqual(
-      qualities.government_goal_health,
-      1,
+    // Goal credit is tiered: a funded programme records 2, a cheaper or
+    // overruled version records 1. Either satisfies the burden goal.
+    assert(
+      qualities.government_goal_health >= 1,
       'Public-health delivery did not advance government burden'
     );
     engine.goToScene('poland_housing_fund');
@@ -2475,13 +2606,15 @@ function runSmoke(game) {
         gain: 1,
       },
       {
-        scene: 'poland_events.merger',
-        choice: 'poland_events.merger_assets',
+        scene: 'poland_merger_events.merger',
+        choice: 'poland_merger_events.merger_assets',
         gain: 2,
       },
       {
-        scene: 'poland_events.rename',
-        choice: 'poland_events.rename_drive',
+        // @rename is a dispatcher: it routes to rename_party, rename_federation
+        // or rename_separate. Only the common-party branch offers rename_drive.
+        scene: 'poland_merger_events.rename_party',
+        choice: 'poland_merger_events.rename_drive',
         gain: 1,
       },
     ];
@@ -2527,8 +2660,13 @@ function runSmoke(game) {
     assert.strictEqual(qualities.presidential_candidate, 'Undecided');
 
     choose('poland_primary.cross_current');
-    assert.strictEqual(engine.state.sceneId, 'poland_primary.campaign');
+    assert.strictEqual(engine.state.sceneId, 'poland_primary.ballot');
     assert.strictEqual(qualities.primary_access_code, 2);
+    assert.strictEqual(qualities.presidential_candidate, 'Undecided');
+
+    // @ballot presents the qualified field before the campaign arena is chosen.
+    choose('poland_primary.campaign');
+    assert.strictEqual(engine.state.sceneId, 'poland_primary.campaign');
     assert.strictEqual(qualities.presidential_candidate, 'Undecided');
 
     choose('poland_primary.issues');
@@ -4221,6 +4359,7 @@ function runSmoke(game) {
 
     choose(settings.frame);
     assert.strictEqual(qualities.pres_debate_stops_remaining, 2);
+    choose('poland_presidential_election.debate_rights_health');
     assert.strictEqual(
       engine.state.sceneId,
       'poland_presidential_election.debate_rights_health'
@@ -4228,6 +4367,7 @@ function runSmoke(game) {
 
     choose(settings.rights);
     assert.strictEqual(qualities.pres_debate_stops_remaining, 1);
+    choose('poland_presidential_election.debate_economy_close');
     assert.strictEqual(
       engine.state.sceneId,
       'poland_presidential_election.debate_economy_close'
@@ -4235,6 +4375,7 @@ function runSmoke(game) {
 
     choose(settings.close);
     assert.strictEqual(qualities.pres_debate_stops_remaining, 0);
+    choose('poland_presidential_election.debate_verdict');
     assert.strictEqual(
       engine.state.sceneId,
       'poland_presidential_election.debate_verdict'
@@ -4351,8 +4492,10 @@ function runSmoke(game) {
     assert.strictEqual(qualities.pres_first_actions_remaining, 2);
     choose('poland_presidential_election.campaign_work');
     assert.strictEqual(qualities.pres_first_actions_remaining, 1);
+    choose('poland_presidential_election.campaign_next');
     choose('poland_presidential_election.campaign_constitution');
     assert.strictEqual(qualities.pres_first_actions_remaining, 0);
+    choose('poland_presidential_election.campaign_done');
     assert.strictEqual(engine.state.sceneId, 'poland_presidential_election.debate');
     assert.strictEqual(
       [
@@ -4391,10 +4534,13 @@ function runSmoke(game) {
     assert.strictEqual(qualities.pres_support_actions_remaining, 2);
     choose('poland_presidential_election.endorsement_choice');
     choose('poland_presidential_election.endorse_free');
+    choose('poland_presidential_election.support_market');
     choose('poland_presidential_election.support_turnout');
     assert.strictEqual(qualities.pres_support_actions_remaining, 1);
+    choose('poland_presidential_election.support_next');
     choose('poland_presidential_election.support_release');
     assert.strictEqual(qualities.pres_support_actions_remaining, 0);
+    choose('poland_presidential_election.support_done');
     assert.strictEqual(
       engine.state.sceneId,
       'poland_presidential_election.runoff_poll'
@@ -4414,6 +4560,7 @@ function runSmoke(game) {
       );
     }
     choose('poland_presidential_election.final_push_safe');
+    choose('poland_presidential_election.runoff_count');
     assertRunoffAccounting(qualities);
     assert.deepStrictEqual(
       currentChoices().map(function(choice) {
@@ -4489,7 +4636,9 @@ function runSmoke(game) {
       choose('poland_presidential_election.joint_social');
       choose('poland_presidential_election.campaign_menu');
       choose('poland_presidential_election.campaign_digital');
+      choose('poland_presidential_election.campaign_next');
       choose('poland_presidential_election.campaign_work');
+      choose('poland_presidential_election.campaign_done');
       playPresidentialDebate();
       choose('poland_presidential_election.first_count');
       assertFirstRoundAccounting(qualities);
@@ -4507,11 +4656,15 @@ function runSmoke(game) {
       checkNumbers();
       choose('poland_presidential_election.left_runoff_frame');
       choose('poland_presidential_election.left_frame_social');
+      choose('poland_presidential_election.support_market');
       choose('poland_presidential_election.support_ko');
       assert.strictEqual(qualities.pres_support_actions_remaining, 1);
+      choose('poland_presidential_election.support_next');
       choose('poland_presidential_election.support_holownia');
       assert.strictEqual(qualities.pres_support_actions_remaining, 0);
+      choose('poland_presidential_election.support_done');
       choose('poland_presidential_election.final_push_gamble');
+      choose('poland_presidential_election.runoff_count');
       assertRunoffAccounting(qualities);
       assert.strictEqual(
         qualities.pres_runoff_winner_key,
@@ -7300,8 +7453,8 @@ function runSmoke(game) {
         );
       }
       break;
-    case 'poland_events.merger':
-      choose('poland_events.merger_dual');
+    case 'poland_merger_events.merger':
+      choose('poland_merger_events.merger_dual');
       returnToHub();
       break;
     case 'poland_trzaskowski.tribunal_showdown':
@@ -7392,11 +7545,11 @@ function runSmoke(game) {
       ]);
       assert.strictEqual(engine.state.sceneId, 'poland_hub');
       break;
-    case 'poland_events.rename':
+    case 'poland_merger_events.rename':
       chooseFirstAvailable([
-        'poland_events.rename_members',
-        'poland_events.rename_dual',
-        'poland_events.rename_machine',
+        'poland_merger_events.rename_members',
+        'poland_merger_events.rename_dual',
+        'poland_merger_events.rename_machine',
       ]);
       returnToHub();
       break;
@@ -7433,23 +7586,23 @@ function runSmoke(game) {
       ]);
       returnToHub();
       break;
-    case 'poland_events.left_revolt':
-    case 'poland_events.left_revolt_live':
+    case 'poland_merger_events.left_revolt':
+    case 'poland_merger_events.left_revolt_live':
       chooseFirstAvailable([
-        'poland_events.revolt_mediate',
-        'poland_events.revolt_ballot',
-        'poland_events.revolt_suspend',
+        'poland_merger_events.revolt_mediate',
+        'poland_merger_events.revolt_ballot',
+        'poland_merger_events.revolt_suspend',
       ]);
       returnToHub();
       break;
     case 'poland_leadership_events.tusk_return_2021':
       choose('poland_leadership_events.tusk_social_terms');
-      assert.strictEqual(engine.state.sceneId, 'poland_events.left_revolt_live');
+      assert.strictEqual(engine.state.sceneId, 'poland_merger_events.left_revolt_live');
       assert.strictEqual(engine.state.qualities.ko_leader, 'Donald Tusk');
       chooseFirstAvailable([
-        'poland_events.revolt_mediate',
-        'poland_events.revolt_ballot',
-        'poland_events.revolt_suspend',
+        'poland_merger_events.revolt_mediate',
+        'poland_merger_events.revolt_ballot',
+        'poland_merger_events.revolt_suspend',
       ]);
       returnToHub();
       break;
@@ -8020,9 +8173,9 @@ function runSmoke(game) {
   function testRazemLedMerger() {
     startStandard('razem-merger-blocked');
     let qualities = engine.state.qualities;
-    engine.goToScene('poland_events.merger');
+    engine.goToScene('poland_merger_events.merger');
     let mergerChoice = currentChoices().find(function(choice) {
-      return choice.id === 'poland_events.merger_all';
+      return choice.id === 'poland_merger_events.merger_all';
     });
     assert(mergerChoice, 'The all-wing merger option is missing');
     assert.strictEqual(
@@ -8040,12 +8193,12 @@ function runSmoke(game) {
     qualities.progressives_strength = 18;
     qualities.pps_strength = 2;
     const unityBefore = qualities.party_unity;
-    engine.goToScene('poland_events.merger');
+    engine.goToScene('poland_merger_events.merger');
     mergerChoice = currentChoices().find(function(choice) {
-      return choice.id === 'poland_events.merger_all';
+      return choice.id === 'poland_merger_events.merger_all';
     });
     assert(mergerChoice && mergerChoice.canChoose);
-    choose('poland_events.merger_all');
+    choose('poland_merger_events.merger_all');
     assert.strictEqual(qualities.razem_merged, 1);
     assert.strictEqual(qualities.left_project, 'Unified Razem-led Nowa Lewica');
     assert.strictEqual(qualities.party_unity, unityBefore + 10);
@@ -8104,7 +8257,7 @@ function runSmoke(game) {
     let qualities = engine.state.qualities;
     qualities.merger_event_done = 1;
     qualities.nowa_lewica_merger_agreed = 0;
-    engine.goToScene('poland_events.left_revolt');
+    engine.goToScene('poland_merger_events.left_revolt');
     assert.strictEqual(engine.state.sceneId, 'poland_hub');
     assert.strictEqual(qualities.left_revolt_event_done, 1);
     assert.strictEqual(qualities.merger_resolution, 'No merger, no revolt');
@@ -8113,18 +8266,18 @@ function runSmoke(game) {
     qualities = engine.state.qualities;
     qualities.nowa_lewica_merger_agreed = 1;
     qualities.merger_leader = 'Włodzimierz Czarzasty';
-    engine.goToScene('poland_events.left_revolt');
+    engine.goToScene('poland_merger_events.left_revolt');
     assert.strictEqual(qualities.merger_revolt_leader, 'Włodzimierz Czarzasty');
     assert(currentChoices().some(function(choice) {
-      return choice.id === 'poland_events.revolt_suspend';
+      return choice.id === 'poland_merger_events.revolt_suspend';
     }));
     assert(currentChoices().some(function(choice) {
-      return choice.id === 'poland_events.revolt_restore_miller';
+      return choice.id === 'poland_merger_events.revolt_restore_miller';
     }));
     assert(!currentChoices().some(function(choice) {
-      return choice.id === 'poland_events.revolt_razem_enforce';
+      return choice.id === 'poland_merger_events.revolt_razem_enforce';
     }));
-    choose('poland_events.revolt_restore_miller');
+    choose('poland_merger_events.revolt_restore_miller');
     assert.strictEqual(qualities.miller_restoration_done, 1);
     assert.strictEqual(qualities.miller_advisor, 1);
     assert.strictEqual(qualities.advisor_slot_1_locked, 1);
@@ -8136,7 +8289,7 @@ function runSmoke(game) {
     qualities.nowa_lewica_merger_agreed = 1;
     qualities.merger_leader = 'Dual chairs';
     qualities.czarzasty_advisor = 0;
-    engine.goToScene('poland_events.left_revolt');
+    engine.goToScene('poland_merger_events.left_revolt');
     assert.strictEqual(qualities.merger_revolt_leader, 'Dual chairs');
 
     startStandard('merger-revolt-razem');
@@ -8144,15 +8297,15 @@ function runSmoke(game) {
     qualities.nowa_lewica_merger_agreed = 1;
     qualities.razem_merged = 1;
     qualities.merger_leader = 'Razem';
-    engine.goToScene('poland_events.left_revolt');
+    engine.goToScene('poland_merger_events.left_revolt');
     assert.strictEqual(qualities.merger_revolt_leader, 'Razem');
     assert(!currentChoices().some(function(choice) {
-      return choice.id === 'poland_events.revolt_suspend';
+      return choice.id === 'poland_merger_events.revolt_suspend';
     }));
     assert(currentChoices().some(function(choice) {
-      return choice.id === 'poland_events.revolt_razem_enforce';
+      return choice.id === 'poland_merger_events.revolt_razem_enforce';
     }));
-    choose('poland_events.revolt_razem_pact');
+    choose('poland_merger_events.revolt_razem_pact');
     assert.strictEqual(qualities.merger_resolution, 'Razem-led current pact');
   }
 
@@ -12659,25 +12812,44 @@ function runSmoke(game) {
 
     startStandard('leadership-ko-consolidation');
     engine.goToScene('poland_events_2025.ko_consolidation_2025');
+    engine.state.qualities.ko_leader = 'Donald Tusk';
     assert.strictEqual(currentChoices().length, 3);
-    choose('poland_events_2025.ko_leadership_plural');
-    assert.strictEqual(engine.state.sceneId, 'poland_events_2025.ko_merger_programme');
-    assert.strictEqual(engine.state.qualities.ko_merger_stage, 2);
-    choose('poland_events_2025.ko_programme_balance');
-    assert.strictEqual(engine.state.qualities.ko_merger_stage, 3);
-    choose('poland_events_2025.ko_local_guarantees');
-    assert.strictEqual(engine.state.qualities.ko_merger_stage, 4);
-    choose('poland_events_2025.ko_assets_audit');
-    assert.strictEqual(engine.state.qualities.ko_merger_stage, 5);
-    choose('poland_events_2025.ko_dissolution_respect');
-    assert.strictEqual(engine.state.qualities.ko_merger_stage, 6);
-    choose('poland_events_2025.ko_dissenters_protection');
+    engine.state.qualities.ko_cohesion = 70;
+    engine.state.qualities.ko_poll = 26;
+    choose('poland_events_2025.ko_consolidation_back');
+    choose('poland_events_2025.ko_consolidation_result');
+    assert.strictEqual(
+      engine.state.sceneId,
+      'poland_events_2025.ko_consolidation_result'
+    );
     checkNumbers();
     qualities = engine.state.qualities;
-    assert.strictEqual(qualities.ko_merger_stage, 7);
+    assert.strictEqual(qualities.ko_merger_result, 'One registered KO party');
     assert.strictEqual(qualities.ko_consolidated, 1);
     assert.strictEqual(qualities.ko_leader, 'Donald Tusk');
+    assert.strictEqual(qualities.ko_leader_changed, 0);
     assert(qualities.ko_consolidation_outgoing_leaders.includes('Nowacka'));
+
+    // A convention held by a party nobody is happy with replaces its leader
+    // instead of confirming him.
+    startStandard('leadership-ko-succession');
+    engine.goToScene('poland_events_2025.ko_consolidation_2025');
+    engine.state.qualities.ko_leader = 'Donald Tusk';
+    qualities = engine.state.qualities;
+    qualities.ko_cohesion = 42;
+    qualities.ko_poll = 18;
+    qualities.ko_social_liberal_share = 30;
+    qualities.ko_classical_liberal_share = 70;
+    choose('poland_events_2025.ko_consolidation_abstain');
+    choose('poland_events_2025.ko_consolidation_result');
+    assert.strictEqual(
+      qualities.ko_merger_result,
+      'Convention adjourned without a decision'
+    );
+    assert.strictEqual(qualities.ko_convention_failed, 1);
+    assert.strictEqual(qualities.ko_leader_changed, 1);
+    assert.notStrictEqual(qualities.ko_leader, 'Donald Tusk');
+    assert(qualities.ko_collapse_shock >= 22);
 
     qualities = openLeadershipScene(
       'leadership-holownia-departs',
@@ -12871,12 +13043,11 @@ function runSmoke(game) {
     startStandard('phase7-ko-historical');
     qualities = engine.state.qualities;
     engine.goToScene('poland_events_2025.ko_consolidation_2025');
-    choose('poland_events_2025.ko_leadership_plural');
-    choose('poland_events_2025.ko_programme_balance');
-    choose('poland_events_2025.ko_local_guarantees');
-    choose('poland_events_2025.ko_assets_audit');
-    choose('poland_events_2025.ko_dissolution_respect');
-    choose('poland_events_2025.ko_dissenters_protection');
+    engine.state.qualities.ko_leader = 'Donald Tusk';
+    qualities.ko_cohesion = 75;
+    qualities.ko_poll = 26;
+    choose('poland_events_2025.ko_consolidation_abstain');
+    choose('poland_events_2025.ko_consolidation_result');
     assert.strictEqual(qualities.ko_consolidated, 1);
     assert.strictEqual(group(qualities, 'ko_party').active, 1);
     ['nowoczesna', 'ipl'].forEach(function(componentId) {
@@ -12892,14 +13063,19 @@ function runSmoke(game) {
       'allied separate party'
     );
 
+    // KO's collapse is one shared scene reachable whenever the pressure
+    // meter trips, not a convention-only outcome.
     startStandard('phase7-ko-splinter');
     qualities = engine.state.qualities;
     const koBeforeSplinter = qualities.ko_seats;
-    qualities.ko_merger_dissent = 80;
-    qualities.ko_merger_recruitment = 18;
     qualities.ko_social_liberal_share = 70;
     qualities.ko_classical_liberal_share = 30;
-    engine.goToScene('poland_events_2025.ko_merger_result_2025');
+    qualities.ko_collapse_pressure = 80;
+    engine.goToScene('poland_ko_collapse.ko_collapse');
+    assert.strictEqual(qualities.ko_break_wing, 'Classical-liberal');
+    assert(qualities.ko_break_size > 0);
+    choose('poland_ko_collapse.ko_collapse_finish');
+    assert.strictEqual(qualities.ko_collapsed, 1);
     assert.strictEqual(qualities.ko_splinter_active, 1);
     assert(qualities.ko_splinter_seats > 0);
     assert.strictEqual(
@@ -12907,21 +13083,35 @@ function runSmoke(game) {
       koBeforeSplinter
     );
     assert.strictEqual(group(qualities, 'ko_splinter').active, 1);
+    assert.strictEqual(qualities.ko_collapse_pressure, 0);
 
-    startStandard('phase7-ko-escalated-path');
+    // The departing progressives can be sheltered on the Left list, and the
+    // settlement that follows moves those mandates once and only once.
+    startStandard('phase7-ko-collapse-settlement');
     qualities = engine.state.qualities;
-    qualities.ko_coalition_dissent = 20;
-    engine.goToScene('poland_events_2025.ko_consolidation_2025');
-    choose('poland_events_2025.ko_leadership_recruit');
-    choose('poland_events_2025.ko_programme_attack');
-    choose('poland_events_2025.ko_local_attack');
-    choose('poland_events_2025.ko_assets_attack');
-    choose('poland_events_2025.ko_dissolution_recruit');
-    choose('poland_events_2025.ko_dissenters_attack');
+    const leftBeforeShelter = qualities.left_seats;
+    qualities.ko_social_liberal_share = 30;
+    qualities.ko_classical_liberal_share = 70;
+    qualities.ko_collapse_pressure = 80;
+    engine.goToScene('poland_ko_collapse.ko_collapse');
+    assert.strictEqual(qualities.ko_break_wing, 'Progressive');
+    choose('poland_ko_collapse.ko_collapse_shelter');
+    assert(qualities.ko_collapse_defectors > 0);
     assert.strictEqual(
-      qualities.ko_splinter_active,
-      1,
-      'Sustained KO dissent and an escalated convention still could not split KO'
+      qualities.left_seats,
+      leftBeforeShelter + qualities.ko_collapse_defectors
+    );
+    const shelteredSplinterSeats = qualities.ko_splinter_seats;
+    const leftBeforeSettlement = qualities.left_seats;
+    qualities.left_poll = 14;
+    engine.goToScene('poland_ko_collapse.ko_splinter_settlement');
+    choose('poland_ko_collapse.ko_splinter_list');
+    assert.strictEqual(qualities.ko_splinter_settled, 1);
+    assert.strictEqual(qualities.ko_splinter_active, 0);
+    assert.strictEqual(qualities.ko_splinter_seats, 0);
+    assert.strictEqual(
+      qualities.left_seats,
+      leftBeforeSettlement + shelteredSplinterSeats
     );
 
     startStandard('phase7-ko-individuals');
@@ -12930,11 +13120,11 @@ function runSmoke(game) {
     const leftBeforeIndividuals = qualities.left_seats;
     const progressivesBeforeIndividuals =
       qualities.left_progressives_seats;
-    qualities.ko_merger_integration = 20;
-    qualities.ko_merger_federalism = 20;
-    qualities.ko_merger_dissent = 30;
-    qualities.ko_merger_recruitment = 12;
-    engine.goToScene('poland_events_2025.ko_merger_result_2025');
+    engine.goToScene('poland_events_2025.ko_consolidation_2025');
+    engine.state.qualities.ko_leader = 'Donald Tusk';
+    qualities.ko_cohesion = 50;
+    choose('poland_events_2025.ko_consolidation_open_door');
+    choose('poland_events_2025.ko_consolidation_result');
     assert(qualities.ko_individual_defectors > 0);
     assert.strictEqual(
       qualities.ko_seats,
@@ -15402,6 +15592,18 @@ function runSmoke(game) {
       testDynamicLeftIdentity();
       return {
         ending: 'Dynamic Left identity fixtures passed',
+        score: 0,
+        unity: engine.state.qualities.party_unity,
+        polling: engine.state.qualities.left_poll,
+        budget2019: 0,
+        budget2020: 0,
+        cardsPlayed: 0,
+      };
+    }
+    if (process.env.DSS_PRESSURE_SMOKE === '1') {
+      testPressureAndRadicalisation();
+      return {
+        ending: 'Pressure and radicalisation fixtures passed',
         score: 0,
         unity: engine.state.qualities.party_unity,
         polling: engine.state.qualities.left_poll,

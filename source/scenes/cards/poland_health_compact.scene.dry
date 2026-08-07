@@ -14,7 +14,12 @@ government_party = "pis": Morawiecki wants the queues shortened before PiS
 loses credit for appointing a Lewica minister. The ministry wants staff before
 it accepts responsibility for the promise.?]
 
+[? if left_is_junior_partner = 1: **[+ coalition_senior_partner +] holds the
+premiership**, and the health budget line with it. Objection risk on a
+contested measure: **[+ coalition_objection_risk +]%**.?]
+
 - @capacity
+- @dental_paediatric
 - @clinics
 - @audit
 
@@ -65,12 +70,36 @@ Q.public_opinion_last_issue =
 Q.public_opinion_last_reception = Q.card_public_response;
 Q.public_opinion_last_delta = net;
 Q.public_opinion_last_action = "Health compact: staff and capacity";
-Q.government_goal_health = 1;
-Q.news_headline = net >= 1
-    ? "The health compact turns public demand into staff and beds"
-    : (net <= -1
-        ? "Health spending is lost in a renewed trust fight"
-        : "The health compact finances staff and beds");
+const objectionRoll = this.random.uint32() / 4294967296;
+const objected =
+    Q.left_is_junior_partner &&
+    objectionRoll * 100 < Number(Q.coalition_objection_risk);
+Q.last_card_objection = objected ? 1 : 0;
+Q.last_card_objector = Q.coalition_senior_partner;
+if (objected) {
+    // The Chancellery keeps the announcement and halves the establishment plan.
+    Q.health_capacity = Math.round(Q.health_capacity - 3);
+    Q.government_delivery -= 2;
+    Q.public_sector_support -= 1;
+    Q.left_coalition_dissent += 6;
+    Q.coalition_blur += 3;
+    Q.government_coalition_dissent += 4;
+    Q.health_policy_pressure += 3;
+    Q.ministry_overruled_count += 1;
+    Q.ministry_overruled_last = "Hospital staffing plan";
+    Q.government_goal_health = 1;
+    Q.news_headline =
+        Q.coalition_senior_partner +
+        " halves the hospital staffing plan before it reaches the wards";
+} else {
+    Q.government_goal_health = 2;
+    Q.health_policy_pressure = Math.max(0, Q.health_policy_pressure - 10);
+    Q.news_headline = net >= 1
+        ? "The health compact turns public demand into staff and beds"
+        : (net <= -1
+            ? "Health spending is lost in a renewed trust fight"
+            : "The health compact finances staff and beds");
+}
 !}
 
 [? if card_public_response = "breakthrough": Hospitals are a high-salience
@@ -89,6 +118,77 @@ shrink. ?]
 spending is read as another failed system defending itself. The ministry must
 deliver before the polls recover. ?]
 
+[? if last_card_objection = 1: The establishment plan comes back from the
+Chancellery with the second and third year deleted and a note about the
+medium-term financial framework. The wards that were promised staff read the
+same press release we did.?]
+
+- #poland_card_finish
+
+@dental_paediatric
+title: Put dentistry and children's care back inside the public network
+subtitle: Cost: 2 budget capacity. The service PiS promised and never built, delivered where its voters live.
+choose-if: budget >= 2 and health_minister_party = "Lewica"
+unavailable-subtitle: Requires the Health Ministry and two budget points.
+on-arrival: {!
+Q.budget -= 2;
+const objectionRoll = this.random.uint32() / 4294967296;
+const objected =
+    Q.left_is_junior_partner &&
+    objectionRoll * 100 < Number(Q.coalition_objection_risk) * 0.9;
+Q.last_card_objection = objected ? 1 : 0;
+Q.last_card_objector = Q.coalition_senior_partner;
+if (objected) {
+    Q.health_capacity += 2;
+    Q.government_delivery += 1;
+    Q.left_coalition_dissent += 5;
+    Q.coalition_blur += 2;
+    Q.ministry_overruled_count += 1;
+    Q.ministry_overruled_last = "Public dentistry and paediatric care";
+    Q.government_goal_health = 1;
+    Q.news_headline =
+        Q.coalition_senior_partner +
+        " reduces the public dentistry programme to a school pilot";
+} else {
+    Q.health_capacity += 5;
+    Q.household_security += 3;
+    Q.government_delivery += 4;
+    Q.pensioner_support += 3;
+    Q.women_support += 3;
+    Q.provincial_welfare_left_affinity += 4;
+    Q.older_welfare_households_left_affinity += 4;
+    Q.rural_localists_left_affinity += 2;
+    Q.pis_poll_momentum -= 0.25;
+    Q.konf_poll_momentum -= 0.1;
+    Q.social_spending_salience += 3;
+    Q.government_goal_health = 2;
+    Q.health_policy_pressure = Math.max(0, Q.health_policy_pressure - 8);
+    if (Q.government_party == "pis") {
+        Q.government_coalition_dissent += 4;
+        Q.pis_relation -= 3;
+    } else {
+        Q.ko_coalition_dissent += 3;
+        Q.psl_coalition_dissent -= 2;
+    }
+    Q.news_headline =
+        "Public dentistry and children's care return to the small-town network";
+}
+!}
+
+**Result:** [+ news_headline +].
+
+[? if last_card_objection = 0: Dentistry is the service Polish households pay
+for privately or go without, and children's specialists are the appointment that
+does not exist within a hundred kilometres of most of the country. Both go back
+into the public network with contracts attached, in the counties where PiS wins
+by explaining that nobody in Warsaw builds anything for them.?][? if
+last_card_objection = 1: What survives is a school screening pilot in four
+voivodeships and a commitment to evaluate it. The dentists' chairs remain
+private, and so does the bill.?]
+
+[? if last_card_objection = 0: The programme's political value is that it is
+impossible to describe as metropolitan. It is a dentist, in a town, paid for by
+the state.?]
 
 - #poland_card_finish
 
@@ -106,9 +206,16 @@ on-arrival: budget -= 1; health_capacity += 4; rural_support += 3; psl_coalition
 
 @audit
 title: Audit waiting lists and procurement
-subtitle: Free; useful; not treatment.
-on-arrival: health_capacity += 1; public_trust += 2; government_delivery += 1; news_headline = "The ministry publishes the waiting-list audit"
+subtitle: Free fallback. Useful, publishable, and not treatment; the queue is now documented in our name.
+on-arrival: health_capacity += 1; public_trust += 2; government_delivery += 1; media_capacity += 1; health_policy_pressure += 3; labor_dissent += 2; public_sector_support -= 1; last_card_objection = 0; news_headline = "The ministry publishes the waiting-list audit"
 
 **Result:** [+ news_headline +].
+
+The audit is real work and costs nothing: median waits by procedure, by
+voivodeship, with the procurement failures named.
+
+It also puts our signature on a number nobody has funded. The next time the
+queue is quoted in the Sejm, it will be quoted from our document, and the
+demand it documents goes up rather than down.
 
 - #poland_card_finish

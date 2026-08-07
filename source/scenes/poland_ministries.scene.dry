@@ -111,8 +111,18 @@ const resolveCommitment = function(code) {
     }
     const formationKey = "formation_" + code + "_cabinet_committed";
     const snapKey = "snap_" + code + "_cabinet_committed";
-    if (formationCommitmentsActive && flagRecorded(formationKey)) {
-        return flagValue(formationKey);
+    if (formationCommitmentsActive) {
+        if (flagRecorded(formationKey)) {
+            return flagValue(formationKey);
+        }
+        // Only PSL records an explicit formation flag. For the others, the
+        // coalition contract that was just signed is the answer; falling
+        // through to currentGovernmentCode would ask who leads the outgoing
+        // caretaker cabinet, which is never the incoming coalition.
+        const pledged = finiteMinistry(Q["candidate_" + code + "_votes"], -1);
+        if (pledged >= 0) {
+            return pledged > 0;
+        }
     }
     if (Boolean(Q.snap_cabinet_commitments_recorded) && flagRecorded(snapKey)) {
         return flagValue(snapKey);
@@ -126,9 +136,14 @@ const resolveCommitment = function(code) {
     return currentGovernmentCode == code;
 };
 
+// A cabinet being formed is always allocated while the outgoing one is still
+// caretaker, so the caretaker guard only applies to allocation outside a
+// formation round. Without this the whole formation route hands the delegation
+// zero leverage and no portfolio can be claimed.
 const leftCommitted =
     Boolean(Q.left_cabinet_committed) &&
-    !Boolean(Q.caretaker_government);
+    (!Boolean(Q.caretaker_government) ||
+        Q.ministry_allocation_mode == "formation");
 let leftCabinetSeats = preserveExisting || sameGovernmentRoster
     ? finiteMinistry(Q.left_cabinet_delegation_seats, -1)
     : -1;

@@ -158,6 +158,28 @@ if (culturalRightPressure + marketRightPressure >= 4) {
     Q.party_unity -= 1;
 }
 
+// An adopted Wiosna doctrine keeps working between events. The social-liberal
+// route accumulates ownership of the rights and secular arguments; the New
+// Palikot route keeps drifting right and pays for it on the labour flank
+// through the market pressure already computed above.
+if (Q.spring_path_stage >= 2 && Q.spring_path_route == "social_liberal") {
+    Q.lgbt_equality_left_ownership += 0.5;
+    Q.abortion_rights_left_ownership += 0.4;
+    Q.secular_state_left_ownership += 0.3;
+    Q.spring_liberal_bridge += 0.5;
+} else if (
+    Q.spring_path_stage >= 2 &&
+    Q.spring_path_route == "market_liberal"
+) {
+    if (Number(Q.left_economic_position) < 72) {
+        Q.left_economic_position += 0.5;
+    }
+    Q.market_liberal_support += 0.6;
+    Q.liberal_professionals_left_affinity += 0.15;
+    Q.spring_liberal_bridge += 0.8;
+    Q.konf_poll_momentum -= 0.03;
+}
+
 // Disunity is operational damage, not a game-over trigger. It erodes the
 // common campaign while leaving the player in charge of the coordinating
 // centre or whatever rump survives.
@@ -231,6 +253,7 @@ const monthlyTimers = [
     "poland_coalition_affairs_timer",
     "poland_party_clubs_timer",
     "poland_party_discipline_timer",
+    "poland_wiosna_project_timer",
     "poland_social_welfare_review_timer",
     "poland_fundraising_timer",
     "poland_campaigning_timer",
@@ -246,7 +269,14 @@ const monthlyTimers = [
     "poland_white_house_pressure_timer",
     "poland_european_right_timer",
     "emergency_fundraising_timer",
-    "constructive_vonc_cooldown"
+    "constructive_vonc_cooldown",
+    "pressure_event_cooldown",
+    "health_pressure_event_timer",
+    "household_pressure_event_timer",
+    "kpo_pressure_event_timer",
+    "admin_pressure_event_timer",
+    "climate_pressure_event_timer",
+    "justice_pressure_event_timer"
 ];
 for (const timer of monthlyTimers) {
     if (Q[timer] !== undefined) {
@@ -360,6 +390,9 @@ if (
 
 Q.time += 1;
 Q.month += 1;
+// Discrete KO failures fade if nothing repeats them; sustained ones stack
+// faster than this decay and eventually trip poland_ko_collapse.
+Q.ko_collapse_shock = Math.max(0, (Number(Q.ko_collapse_shock) || 0) - 2);
 const collectPartyIncome = function(periodLabel) {
     const subsidySeats = Number.isFinite(Number(Q.left_seats))
         ? Math.max(0, Math.round(Number(Q.left_seats)))
@@ -840,6 +873,32 @@ if (Q.progressives_strength >= 23 && Q.progressives_dissent < 50) {
 if (Q.razem_strength >= 23 && Q.razem_dissent < 50) {
     Q.labor_credibility += 0.2;
     Q.razem_cooperation += 0.2;
+}
+
+// Campaign posture is built capital, not a permanent trophy. Trust, credibility
+// and organisation all need feeding: without it a month of attrition pulls the
+// excess above the party's unassisted baseline back down. Only the excess
+// decays, so a weak ledger still has to be repaired by play rather than by
+// waiting. The faction-support gains above are applied first, so a well-run
+// current holds a stable plateau instead of sliding.
+const postureBaselines = {
+    public_trust: 43,
+    labor_credibility: 46,
+    progressive_credibility: 50,
+    feminist_trust: 44,
+    media_capacity: 16,
+    local_network: 42
+};
+const postureDecayRate = 0.05;
+for (const postureKey of Object.keys(postureBaselines)) {
+    const postureValue = Number(Q[postureKey]);
+    if (!Number.isFinite(postureValue)) continue;
+    const postureFloor = postureBaselines[postureKey];
+    if (postureValue <= postureFloor) continue;
+    Q[postureKey] = Math.round(
+        (postureValue -
+            (postureValue - postureFloor) * postureDecayRate) * 100
+    ) / 100;
 }
 
 if (Q.ko_relation < 35 || Q.psl_relation < 20) {
@@ -1959,6 +2018,67 @@ for (const trajectory of [
     "migration_disinformation"
 ]) {
     Q[trajectory] = clampPublic(Q[trajectory]);
+}
+
+// Unanswered demands cool slowly, and faster when the competent ledger has
+// actually improved. Nothing ratchets for ever: every pressure decays, is
+// capped, and loses most of its weight once the matching ledger is delivering.
+// The unmet figures are republished here as well as in poland_normalize. The
+// engine runs a scene's own on-arrival before its `call`, so the event desk
+// compiles its pressure events from whatever the last completed month left
+// behind; recomputing them at the month boundary keeps that gate honest.
+const pressureLedgers = [
+    ["health_policy_pressure", "health_capacity", 45, "health"],
+    ["household_policy_pressure", "household_security", 42, "household"],
+    ["climate_policy_pressure", "climate_state_capacity", 30, "climate"],
+    ["administrative_reform_pressure", "administrative_capacity", 30, "admin"],
+    ["kpo_scrutiny", "kpo_public_credit", 20, "kpo"],
+    ["prosecution_oversight_capacity", "judicial_legitimacy", 40, "justice"]
+];
+let pressureRelief = 0;
+let topPressureId = "none";
+let topPressureValue = 0;
+for (const ledger of pressureLedgers) {
+    const raised = Math.max(0, Number(Q[ledger[0]]) || 0);
+    const delivered = Math.max(0, (Number(Q[ledger[1]]) || 0) - ledger[2]);
+    const cooled = raised <= 0
+        ? 0
+        : Math.max(
+            0,
+            Math.min(60, raised * 0.94 - delivered * 0.05 - 0.2)
+        );
+    pressureRelief += raised - cooled;
+    Q[ledger[0]] = Math.round(cooled * 10) / 10;
+    const unmet = Math.round(
+        Math.max(0, Math.min(60, cooled - delivered * 0.55)) * 10
+    ) / 10;
+    Q[ledger[3] + "_pressure_unmet"] = unmet;
+    if (unmet > topPressureValue) {
+        topPressureValue = unmet;
+        topPressureId = ledger[3];
+    }
+}
+Q.pressure_relief_last = Math.round(pressureRelief * 10) / 10;
+// Only the loudest unanswered demand becomes an event. Six simultaneous
+// crises would be a queue, not a month.
+Q.pressure_top_domain = topPressureValue >= 6 ? topPressureId : "none";
+Q.pressure_top_value = topPressureValue;
+
+// A demand nobody answers is worth something to whoever raised it and costs
+// whoever owns the office. In government it arrives as coalition strain
+// instead, because the Left is then part of the answer that did not come.
+const monthlyGrievance = Math.max(0, Number(Q.social_grievance) || 0);
+if (monthlyGrievance >= 30) {
+    if (Q.left_in_government) {
+        Q.government_coalition_dissent += 0.6;
+        Q.progressives_dissent += 0.4;
+        Q.labor_dissent += 0.4;
+        Q.government_delivery -= 0.2;
+    } else {
+        Q.issue_ownership += 0.4;
+        Q.government_delivery -= 0.3;
+        Q.public_trust -= 0.15;
+    }
 }
 
 if (Q.year == 2020 && Q.month >= 1) {
