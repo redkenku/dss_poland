@@ -4899,6 +4899,19 @@ function runSmoke(game) {
       konf_braunist_share: 18,
       kanal_zero_capacity: 12,
     });
+    // With two Left candidacies the roster must carry the extra ballot row.
+    engine.goToScene('poland_events_2025.presidential_field_2025');
+    const splitRoster = contentText(engine.state.currentContent);
+    assert(
+      splitRoster.includes('Adrian Zandberg'),
+      'A separate Razem candidacy was missing from the printed ballot'
+    );
+    assert(
+      splitRoster.includes('thirteen candidates') ||
+        splitRoster.includes('Thirteen candidates'),
+      'The split-Left ballot was still described as a twelve-name field'
+    );
+
     engine.goToScene(
       'poland_events_2025.presidential_first_round_2025'
     );
@@ -4966,9 +4979,23 @@ function runSmoke(game) {
     engine.goToScene('poland_events_2025.left_presidential_split');
     choose('poland_events_2025.left_campaign_shared');
     choose('poland_events_2025.presidential_field_2025');
-    choose('poland_events_2025.pres25_meet_leaders');
-    choose('poland_events_2025.pres25_meet_right');
-    choose('poland_events_2025.pres25_meet_outsiders');
+    const rosterText = contentText(engine.state.currentContent);
+    assert(
+      rosterText.includes('candidate-field'),
+      'The 2025 roster did not render the styled candidate field'
+    );
+    assert(
+      rosterText.includes('Joanna Senyszyn') &&
+        rosterText.includes('Marek Woch'),
+      'The 2025 roster dropped the smaller committees'
+    );
+    choose('poland_events_2025.pres25_meet_candidates');
+    choose('poland_events_2025.pres25_meet_trzaskowski');
+    choose('poland_events_2025.pres25_meet_nawrocki');
+    choose('poland_events_2025.pres25_meet_mentzen');
+    choose('poland_events_2025.pres25_meet_braun');
+    choose('poland_events_2025.pres25_meet_holownia');
+    choose('poland_events_2025.pres25_meet_stanowski');
     choose('poland_events_2025.pres25_meet_minor');
     choose('poland_events_2025.pres25_meet_left');
     choose('poland_events_2025.pres25_opening_poll');
@@ -4976,16 +5003,21 @@ function runSmoke(game) {
     assert.strictEqual(qualities.pres_2025_poll_razem, 0);
     choose('poland_events_2025.pres25_campaign_menu');
     choose('poland_events_2025.pres25_campaign_work');
+    choose('poland_events_2025.pres25_campaign_next');
     choose('poland_events_2025.pres25_campaign_constitution');
     assert.strictEqual(qualities.pres_2025_campaign_actions_remaining, 0);
+    choose('poland_events_2025.pres25_campaign_done');
 
     qualities.year = 2025;
     qualities.month = 4;
     engine.goToScene('poland_events_2025.presidential_debate_2025');
     choose('poland_events_2025.pres25_debate_security');
     choose('poland_events_2025.pres25_security_signature');
+    choose('poland_events_2025.pres25_debate_economy');
     choose('poland_events_2025.pres25_economy_signature');
+    choose('poland_events_2025.pres25_debate_rights');
     choose('poland_events_2025.pres25_rights_signature');
+    choose('poland_events_2025.pres25_debate_questions');
     const questionChoices = currentChoices().map(function(choice) {
       return choice.id;
     });
@@ -4993,7 +5025,9 @@ function runSmoke(game) {
       'poland_events_2025.pres25_question_zandberg'
     ));
     choose('poland_events_2025.pres25_question_mentzen');
+    choose('poland_events_2025.pres25_debate_close');
     choose('poland_events_2025.pres25_close_signature');
+    choose('poland_events_2025.pres25_debate_verdict');
     choose('poland_events_2025.pres25_tracking_poll');
     const pollTotal = [
       'ko', 'right', 'left', 'razem', 'mentzen',
@@ -5003,6 +5037,70 @@ function runSmoke(game) {
     }, 0);
     assert(Math.abs(pollTotal - 100) < 0.01);
     assert.strictEqual(qualities.pres_2025_poll_razem, 0);
+    assert.notStrictEqual(qualities.pres_2025_debate_outcome, undefined);
+    assert.notStrictEqual(qualities.pres_2025_debate_upset, 'None');
+
+    // The first round opens a two-stage inter-round bargain: a published line,
+    // then a two-move market over the electorates nobody now represents.
+    qualities.month = 5;
+    engine.goToScene('poland_events_2025.presidential_first_round_2025');
+    assert.strictEqual(qualities.pres_2025_round_one_done, 1);
+    // The first-round table owns its own Status column.
+    [
+      'ko', 'right', 'left', 'razem', 'mentzen',
+      'braun', 'holownia', 'stanowski'
+    ].forEach(function(key) {
+      assert(
+        ['elected', 'runoff', 'eliminated', 'no candidate'].includes(
+          qualities['pres_2025_status_' + key]
+        ),
+        key + ' had no first-round status when the result table was printed'
+      );
+    });
+    if (!qualities.pres_2025_first_round_winner) {
+      choose('poland_events_2025.runoff_broker');
+      assert.strictEqual(qualities.pres_2025_support_actions_remaining, 2);
+      const brokerChoices = currentChoices().map(function(choice) {
+        return choice.id;
+      });
+      assert(brokerChoices.length > 0, 'The runoff broker offered no line');
+      choose(brokerChoices[0]);
+      choose('poland_events_2025.pres25_support_market');
+      choose('poland_events_2025.pres25_support_turnout');
+      assert.strictEqual(qualities.pres_2025_support_actions_remaining, 1);
+      assert(qualities.pres_2025_runoff_target_bonus > 0);
+      choose('poland_events_2025.pres25_support_next');
+      choose('poland_events_2025.pres25_support_release');
+      assert.strictEqual(qualities.pres_2025_support_actions_remaining, 0);
+      choose('poland_events_2025.pres25_support_done');
+
+      qualities.month = 6;
+      engine.goToScene('poland_events_2025.pres25_runoff_campaign');
+      assert.strictEqual(qualities.pres_2025_runoff_done, 0);
+      assert.strictEqual(
+        Math.round(
+          (qualities.pres_2025_runoff_poll_a +
+            qualities.pres_2025_runoff_poll_b) * 10
+        ) / 10,
+        100,
+        'The inter-round tracking poll did not sum to 100'
+      );
+      choose('poland_events_2025.pres25_push_ground');
+      assert.strictEqual(qualities.pres_2025_runoff_final_push, 'Ground operation');
+      choose('poland_events_2025.presidential_runoff_2025');
+      assert.strictEqual(qualities.pres_2025_runoff_done, 1);
+      assert.strictEqual(
+        qualities.pres_2025_runoff_votes_a + qualities.pres_2025_runoff_votes_b,
+        qualities.pres_2025_runoff_valid_votes
+      );
+      assert(
+        Math.abs(
+          qualities.pres_2025_runoff_a_share +
+            qualities.pres_2025_runoff_b_share - 100
+        ) < 0.02
+      );
+      assert(String(qualities.pres_2025_winner).length > 0);
+    }
   }
 
   function testPresidentialDebateMinigame() {
@@ -5332,6 +5430,10 @@ function runSmoke(game) {
 
     setCampaignDate(qualities, 2020, 9, 'September');
     qualities.merger_event_done = 1;
+    // September 2020 opens the legacy desk when two or more files are still
+    // pending; this test exercises the repeat-election route on its own.
+    qualities.animals_2020_done = 1;
+    qualities.emilewicz_left_porozumienie = 1;
     engine.goToScene('poland_polling');
     checkNumbers();
     assert.strictEqual(
@@ -12604,47 +12706,36 @@ function runSmoke(game) {
 
   function continueDatedEventAfterword(expectedSceneId) {
     const qualities = engine.state.qualities;
-    if (engine.state.sceneId !== 'poland_event_queue.afterword') {
-      const retainedResultScene = engine.state.sceneId;
-      assert(
-        currentChoices().some(function(choice) {
-          return choice.id === 'poland_event_queue' && choice.canChoose;
-        }),
-        'A dated result has neither a retained exit nor a queue afterword: ' +
-          retainedResultScene
-      );
-      choose('poland_event_queue');
-    }
-    assert.strictEqual(
-      engine.state.sceneId,
-      'poland_event_queue.afterword',
-      'A dated decision did not retain its result beat'
-    );
-    assert.strictEqual(qualities.poland_event_return_beat, 1);
     assert(
       typeof qualities.news_headline === 'string' &&
         qualities.news_headline.length > 0,
       'The dated-event queue has no consequence headline'
     );
-    try {
-      choose(
-        qualities.poland_event_queue_count > 0
-          ? 'poland_event_queue.afterword_desk'
-          : 'poland_event_queue.afterword_complete'
+    if (engine.state.sceneId !== expectedSceneId) {
+      const retainedResultScene = engine.state.sceneId;
+      assert(
+        currentChoices().some(function(choice) {
+          return choice.id === 'poland_event_queue' && choice.canChoose;
+        }),
+        'A dated result has no retained exit back to the queue: ' +
+          retainedResultScene
       );
-    } catch (error) {
-      error.message += ' ' + JSON.stringify({
-        date: qualities.date_label,
-        count: qualities.poland_event_queue_count,
-        headline: qualities.news_headline,
-        expectedSceneId: expectedSceneId,
-      });
-      throw error;
+      try {
+        choose('poland_event_queue');
+      } catch (error) {
+        error.message += ' ' + JSON.stringify({
+          date: qualities.date_label,
+          count: qualities.poland_event_queue_count,
+          headline: qualities.news_headline,
+          expectedSceneId: expectedSceneId,
+        });
+        throw error;
+      }
     }
     assert.strictEqual(
       engine.state.sceneId,
       expectedSceneId,
-      'The result beat did not open the expected next screen'
+      'The dated result did not open the expected next screen'
     );
   }
 

@@ -45,7 +45,7 @@ if (result.status !== 0) {
 // diagnostics-clean without modifying node_modules.
 const browserCss = path.join(projectRoot, 'out', 'html', 'game.css');
 if (fs.existsSync(browserCss)) {
-  const css = fs.readFileSync(browserCss, 'utf8')
+  let css = fs.readFileSync(browserCss, 'utf8')
     .replace(/\n\.(?:b|save_button|delete_button|hand|pinned-cards|deck) \{\}\n/g, '\n')
     .replace(/(float:\s*(?:left|right);\n)\s*display:\s*inline-block;\n/g, '$1')
     .replace(/\bmarginRight\s*:/g, 'margin-right:')
@@ -154,6 +154,41 @@ if (fs.existsSync(browserCss)) {
   letter-spacing: 0.05em;
   text-transform: uppercase;
 }`);
+  css += `
+
+.government-detail .disclosure-body {
+  padding-top: 0.15em;
+  padding-bottom: 0.35em;
+  font-size: 0.84em;
+}
+
+.government-detail .ledger-row {
+  grid-template-columns: minmax(10em, 45%) minmax(0, 1fr);
+  gap: 0.55em;
+  padding: 0.17em 0;
+  border-bottom: 1px dotted var(--ledger-rule-color);
+}
+
+.government-detail .ledger-row > :first-child {
+  color: var(--ledger-muted-color);
+  font-size: 0.9em;
+}
+
+.government-detail .ledger-row > :last-child {
+  max-width: none;
+}
+
+.government-detail .government-role-row > :last-child {
+  white-space: nowrap;
+}
+
+.government-detail .ledger-subrow {
+  margin: 0.18em 0 0;
+  font-size: 0.82em;
+  line-height: 1.2;
+  text-align: left;
+}
+`;
   fs.writeFileSync(browserCss, css);
 }
 

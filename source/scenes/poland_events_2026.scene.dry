@@ -1429,6 +1429,7 @@ Q.last_policy_authority = Q.president_name;
 if (Q.partnership_presidential_score < 50) {
     Q.partnership_presidential_outcome = "Vetoed";
     Q.last_policy_implementation = "Blocked after parliamentary passage";
+    Q.president_veto_count = (Number(Q.president_veto_count) || 0) + 1;
     Q.president_relation -= 5;
     Q.progressive_credibility -= 2;
     Q.news_headline =
@@ -1613,6 +1614,7 @@ if (Q.partnership_revision_enacted) {
     Q.partnership_revision_result =
         "The narrower bill passed but met another presidential veto";
     Q.president_relation -= 4;
+    Q.president_veto_count = (Number(Q.president_veto_count) || 0) + 1;
     Q.news_headline = "The Palace vetoes the narrower partnership bill";
 } else {
     Q.partnership_revision_result =
@@ -3099,6 +3101,8 @@ if (Q.judiciary_horizon_cabinet_authority) {
             Q.president_name + " refers the judicial-status package";
     } else {
         Q.judiciary_horizon_presidential_action = "Vetoed";
+        Q.president_veto_count =
+            (Number(Q.president_veto_count) || 0) + 1;
         Q.judiciary_status_law_enacted = 0;
         Q.legal_dualism += 2;
         Q.court_backlog += 2;
@@ -4447,6 +4451,13 @@ subtitle: The vote is next month, not on the day the term ends
 new-page: true
 on-arrival: {!
 Q.snap_campaign_active = 1;
+// A dissolution before the ordinary term ends means the 2021-2023 dated
+// calendar no longer describes this timeline, and the events that assume it
+// stop firing.
+if (Number(Q.year) < 2023 ||
+    (Number(Q.year) == 2023 && Number(Q.month) <= 7)) {
+    Q.historical_2023_calendar = 0;
+}
 Q.snap_campaign_start_time = Number(Q.time) || 0;
 Q.snap_campaign_due_time = Q.snap_campaign_start_time + 1;
 Q.snap_campaign_start_year = Number(Q.year) || 0;
@@ -4569,6 +4580,9 @@ go-to: snap_budget_palace_decision
 @snap_formation_attempt_one
 title: First formation attempt — the President's nominee
 new-page: true
+# Runs after this scene's own on-arrival, so the player's join option is
+# judged on the relations this stage just moved.
+call: poland_normalize
 on-arrival: {!
 const firstRight =
     Q.government_party == "pis" ||
@@ -4605,20 +4619,24 @@ Q.snap_formation_nominee_is_left =
         "Robert Biedroń", "Adrian Zandberg"
     ].includes(Q.snap_formation_candidate) ? 1 : 0;
 const pisKonfPledge =
+    Q.coalition_viable_pis_konf &&
     (Number(Q.rival_relation_pis_konf) || 0) >= 50
         ? Math.max(0, Number(Q.konf_seats) || 0)
         : 0;
 const pisPslPledge =
+    Q.coalition_viable_pis_psl &&
     (Number(Q.rival_relation_pis_psl) || 0) >= 55 &&
     (Number(Q.psl_coalition_dissent) || 0) < 65
         ? Math.max(0, Number(Q.psl_seats) || 0)
         : 0;
 const koPslPledge =
+    Q.coalition_viable_ko_psl &&
     (Number(Q.rival_relation_ko_psl) || 0) >= 55 &&
     (Number(Q.psl_coalition_dissent) || 0) < 65
         ? Math.max(0, Number(Q.psl_seats) || 0)
         : 0;
 const koP2050Pledge =
+    Q.coalition_viable_ko_p2050 &&
     (Number(Q.rival_relation_ko_p2050) || 0) >= 55 &&
     (Number(Q.p2050_coalition_dissent) || 0) < 65
         ? Math.max(0, Number(Q.p2050_seats) || 0)
@@ -4683,6 +4701,8 @@ go-to: snap_attempt_one_vote
 title: Join a non-hostile nominee under a written cabinet agreement
 subtitle: Confidence entails real collective responsibility and ministries.
 view-if: snap_formation_first_right = 0
+choose-if: coalition_viable_left_ko = 1
+unavailable-subtitle: KO and Lewica are too far apart, in trust and in programme, to sign a cabinet agreement; confidence from outside is still on offer.
 on-arrival: snap_formation_left_votes = left_committed_seats; snap_left_cabinet_commitment = 1; party_unity += 1; ko_relation += 3; government_coalition_dissent += 2; news_headline = "Lewica joins the first-attempt cabinet under a written programme"
 go-to: snap_attempt_one_vote
 
@@ -4733,6 +4753,7 @@ confidence_abstain +] abstain.** The first attempt requires 231 yes votes.
 title: Second formation attempt — the Sejm's nominee
 new-page: true
 view-if: government_has_confidence = 0
+call: poland_normalize
 on-arrival: {!
 const leftCandidate =
     (Number(Q.ko_relation) || 0) < 34 &&
@@ -4755,11 +4776,13 @@ Q.snap_formation_candidate = leftCandidate
     );
 Q.snap_formation_nominee_is_left = leftCandidate ? 1 : 0;
 const sejmKoPslPledge =
+    Q.coalition_viable_ko_psl &&
     (Number(Q.rival_relation_ko_psl) || 0) >= 55 &&
     (Number(Q.psl_coalition_dissent) || 0) < 65
         ? Math.max(0, Number(Q.psl_seats) || 0)
         : 0;
 const sejmKoP2050Pledge =
+    Q.coalition_viable_ko_p2050 &&
     (Number(Q.rival_relation_ko_p2050) || 0) >= 55 &&
     (Number(Q.p2050_coalition_dissent) || 0) < 65
         ? Math.max(0, Number(Q.p2050_seats) || 0)
@@ -4812,6 +4835,8 @@ go-to: snap_attempt_two_vote
 @snap_attempt_two_join
 title: Join the Sejm nominee under a written coalition agreement
 subtitle: Required when Lewica itself supplies the prime minister.
+choose-if: snap_formation_nominee_is_left = 1 or coalition_viable_left_ko = 1
+unavailable-subtitle: KO and Lewica are too far apart, in trust and in programme, to sign a cabinet agreement; confidence from outside is still on offer.
 on-arrival: snap_formation_left_votes = left_committed_seats; snap_left_cabinet_commitment = 1; ko_relation += 3; party_unity += 2; government_coalition_dissent += 2; news_headline = "Lewica accepts cabinet responsibility in the second attempt"
 go-to: snap_attempt_two_vote
 
@@ -4862,6 +4887,7 @@ confidence_abstain +] abstain.**
 title: Third formation attempt — simple majority
 new-page: true
 view-if: government_has_confidence = 0
+call: poland_normalize
 on-arrival: {!
 const incumbentPresident = String(Q.president_name || "");
 const electedPresidentIsInOffice =
@@ -4887,11 +4913,13 @@ if (hostileThird) {
     Q.snap_formation_candidate =
         Q.pis_split ? "Mateusz Morawiecki" : "Beata Szydło";
     const thirdKonfPledge =
-        (Number(Q.rival_relation_pis_konf) || 0) >= 50
+        Q.coalition_viable_pis_konf &&
+    (Number(Q.rival_relation_pis_konf) || 0) >= 50
             ? Math.max(0, Number(Q.konf_seats) || 0)
             : 0;
     const thirdPslRightPledge =
-        (Number(Q.rival_relation_pis_psl) || 0) >= 55 &&
+        Q.coalition_viable_pis_psl &&
+    (Number(Q.rival_relation_pis_psl) || 0) >= 55 &&
         (Number(Q.psl_coalition_dissent) || 0) < 65
             ? Math.max(0, Number(Q.psl_seats) || 0)
             : 0;
@@ -4910,12 +4938,14 @@ if (hostileThird) {
 } else {
     Q.snap_third_hostile_nominee = 0;
     const thirdPslPledge =
-        (Number(Q.rival_relation_ko_psl) || 0) >= 55 &&
+        Q.coalition_viable_ko_psl &&
+    (Number(Q.rival_relation_ko_psl) || 0) >= 55 &&
         (Number(Q.psl_coalition_dissent) || 0) < 65
             ? Math.max(0, Number(Q.psl_seats) || 0)
             : 0;
     const thirdP2050Pledge =
-        (Number(Q.rival_relation_ko_p2050) || 0) >= 55 &&
+        Q.coalition_viable_ko_p2050 &&
+    (Number(Q.rival_relation_ko_p2050) || 0) >= 55 &&
         (Number(Q.p2050_coalition_dissent) || 0) < 65
             ? Math.max(0, Number(Q.p2050_seats) || 0)
             : 0;
@@ -5057,6 +5087,8 @@ go-to: snap_attempt_three_vote
 title: Join the compromise cabinet under a written programme
 subtitle: Available only for a non-hostile third-attempt nominee.
 view-if: snap_third_hostile_nominee = 0
+choose-if: coalition_viable_left_ko = 1 or coalition_viable_left_psl = 1 or coalition_viable_left_p2050 = 1
+unavailable-subtitle: No centrist party will sign a cabinet programme with Lewica on the trust and distance this chamber records; support and abstention remain.
 on-arrival: snap_formation_left_votes = left_committed_seats; snap_formation_left_abstentions = 0; snap_left_cabinet_commitment = 1; government_coalition_dissent += 3; party_unity += 1; news_headline = "Lewica binds its confidence votes to cabinet entry"
 go-to: snap_attempt_three_vote
 
@@ -5120,6 +5152,16 @@ confidence_threshold +]**.
 title: A cabinet wins confidence
 view-if: government_has_confidence = 1
 on-arrival: {!
+// A confidence vote can be reached without a name having been recorded, and
+// an unset candidate used to be printed literally as the prime minister.
+if (typeof Q.confidence_candidate != "string" || !Q.confidence_candidate) {
+    Q.confidence_candidate = String(
+        Q.office_incompatibility_pm_nominee ||
+        Q.formation_pm_nominee ||
+        Q.prime_minister ||
+        "Mateusz Morawiecki"
+    );
+}
 Q.prime_minister = Q.confidence_candidate;
 Q.government_name =
     Q.confidence_candidate + " constitutional formation cabinet";
@@ -6112,11 +6154,13 @@ Q.coalition_democratic_seats =
 Q.coalition_right_seats =
     Q.pis_seats + Q.konf_seats + Q.rozwoj_seats + Q.korona_seats;
 const snapKoPslPledge =
+    Q.coalition_viable_ko_psl &&
     (Number(Q.rival_relation_ko_psl) || 0) >= 55 &&
     (Number(Q.psl_coalition_dissent) || 0) < 65
         ? Q.psl_seats
         : 0;
 const snapKoP2050Pledge =
+    Q.coalition_viable_ko_p2050 &&
     (Number(Q.rival_relation_ko_p2050) || 0) >= 55 &&
     (Number(Q.p2050_coalition_dissent) || 0) < 65
         ? Q.p2050_seats
@@ -6131,7 +6175,8 @@ Q.snap_centrum_cabinet_committed =
 Q.snap_cabinet_commitments_recorded = 1;
 Q.right_committed_seats =
     Q.pis_seats +
-    (Q.rival_relation_pis_konf >= 50 ? Q.konf_seats : 0);
+    (Q.coalition_viable_pis_konf && Q.rival_relation_pis_konf >= 50
+            ? Q.konf_seats : 0);
 Q.seat_subvention_seats = Q.left_seats;
 Q.snap_election_complete = 1;
 Q.caretaker_government = 1;
@@ -6356,7 +6401,8 @@ if (
     Q.snap_pm_base =
         (Q.pis_split ? 0 : pisSeats) +
         (Q.pis_split ? (Number(Q.rozwoj_seats) || 0) : 0) +
-        (Q.rival_relation_pis_konf >= 50 ? Q.konf_seats : 0);
+        (Q.coalition_viable_pis_konf && Q.rival_relation_pis_konf >= 50
+            ? Q.konf_seats : 0);
     Q.snap_nomination_reason =
         "The PiS rupture makes Morawiecki the right-wing figure with the broadest recruitment claim.";
 } else if (
@@ -6368,7 +6414,8 @@ if (
     Q.snap_pm_is_right = 1;
     Q.snap_pm_base =
         pisSeats +
-        (Q.rival_relation_pis_konf >= 50 ? Q.konf_seats : 0);
+        (Q.coalition_viable_pis_konf && Q.rival_relation_pis_konf >= 50
+            ? Q.konf_seats : 0);
     Q.snap_nomination_reason =
         "A hostile Palace prioritises right-wing consolidation over centrist recruitment.";
     Q.far_right_agenda += 3;
@@ -6378,7 +6425,7 @@ if (
     Q.snap_pm_is_right = 1;
     Q.snap_pm_base =
         pisSeats +
-        (Q.rival_relation_pis_psl >= 55 &&
+        (Q.coalition_viable_pis_psl && Q.rival_relation_pis_psl >= 55 &&
             Q.psl_coalition_dissent < 65 ? pslSeats : 0);
     Q.snap_nomination_reason =
         "The Palace tests whether a welfare-nationalist nominee can recruit rural deputies.";
@@ -6389,8 +6436,9 @@ if (
     Q.snap_pm_is_right = 1;
     Q.snap_pm_base =
         pisSeats +
-        (Q.rival_relation_pis_konf >= 50 ? Q.konf_seats : 0) +
-        (Q.rival_relation_pis_psl >= 55 &&
+        (Q.coalition_viable_pis_konf && Q.rival_relation_pis_konf >= 50
+            ? Q.konf_seats : 0) +
+        (Q.coalition_viable_pis_psl && Q.rival_relation_pis_psl >= 55 &&
             Q.psl_coalition_dissent < 65 ? pslSeats : 0);
     Q.snap_nomination_reason =
         "A non-hostile Palace follows the largest plausible right-led formation claim without endorsing it.";
@@ -6434,6 +6482,7 @@ go-to: poland_ending.final_assessment
 @snap_left_offer
 title: The Palace nominee courts the Left
 new-page: true
+call: poland_normalize
 
 = Confidence is not the same thing as office
 
@@ -6495,6 +6544,8 @@ go-to: snap_first_vote
 title: Enter the democratic cabinet under a written coalition agreement
 subtitle: Lewica votes yes, takes collective responsibility and receives governing capacity.
 view-if: snap_pm_is_right = 0
+choose-if: coalition_viable_left_ko = 1
+unavailable-subtitle: KO and Lewica are too far apart, in trust and in programme, to sign a cabinet agreement; supply and confidence remain available.
 on-arrival: {!
 Q.snap_left_transfer =
     Math.max(0, Number(Q.left_committed_seats) || 0);
@@ -6798,6 +6849,7 @@ go-to: snap_dem_vote
 @snap_democratic_role
 title: Define Lewica's relationship to the nominee
 new-page: true
+call: poland_normalize
 on-arrival: snap_left_cabinet_commitment = 0; snap_dem_left_support = 0
 
 **[+ snap_dem_candidate +]** has **[+ snap_dem_base +]** expected votes
@@ -6811,6 +6863,8 @@ government; cabinet entry requires a separate coalition agreement.
 @snap_dem_join
 title: Join the cabinet and accept collective responsibility
 subtitle: Adds every committed Lewica vote and grants governing capacity only if the cabinet wins.
+choose-if: snap_dem_candidate_left = 1 or coalition_viable_left_ko = 1
+unavailable-subtitle: KO and Lewica are too far apart, in trust and in programme, to sign a cabinet agreement; supply and confidence remain available.
 on-arrival: {!
 Q.snap_dem_base +=
     Math.max(0, Number(Q.left_committed_seats) || 0);
@@ -6975,3 +7029,332 @@ title: Proceed to the President's third attempt
 view-if: government_has_confidence = 0
 on-arrival: snap_formation_context = "Post-election formation"; snap_formation_attempt = 3; news_headline = "The post-election formation enters its final constitutional attempt"
 go-to: snap_formation_attempt_three
+
+
+@airspace_standing_review
+title: Convert the record into a standing parliamentary security review
+subtitle: Requires the command-continuity file opened in 2023. Turns four years of separate incidents into one permanent institution.
+choose-if: defence_command_response = "Operational record demanded" or defence_command_response = "Brokered continuity statement" or defence_command_response = "Joint opposition demand"
+unavailable-subtitle: There is no continuous command record to build on — the 2023 vacancy was answered with a campaign argument, not a file.
+on-arrival: {!
+Q.airspace_response = "Standing security review";
+Q.security_incident_pressure = Math.max(
+    0, (Number(Q.security_incident_pressure) || 0) - 10
+);
+Q.defence_readiness =
+    (Number(Q.defence_readiness) || 46) + 8;
+Q.civil_military_trust =
+    (Number(Q.civil_military_trust) || 50) + 8;
+Q.institutional_trust =
+    (Number(Q.institutional_trust) || 0) + 6;
+Q.administrative_capacity = (Number(Q.administrative_capacity) || 0) +
+    (Q.left_in_government ? 3 : 1);
+Q.constitutional_restraint =
+    (Number(Q.constitutional_restraint) || 0) + 3;
+Q.public_trust = (Number(Q.public_trust) || 0) + 3;
+Q.news_headline =
+    "A standing parliamentary review replaces four years of separate incidents";
+!}
+
+The 2023 file, the drone incursions, the border, the sabotage arrests and this
+month's fragments go into one standing review with a fixed reporting cycle, a
+cross-party membership and a duty on the services to appear. It is the
+institution that should have existed in 2022 and was never built because every
+incident was answered on its own.
+
+Officers who have spent four years being quoted selectively by whichever camp
+found it useful now have a venue that outlasts a news week. So does the next
+government, whoever forms it.
+
+- @poland_event_queue: Establish the standing review
+
+@safe_financing_veto_2026
+# prose-audit: Grade C — The SAFE instrument, the veto and the override arithmetic are set out with three separable answers; the defence firms and units waiting on the money are named as categories.
+title: The President vetoes the SAFE defence financing act
+subtitle: A hostile Palace blocks EU-backed rearmament money rather than a culture-war bill
+new-page: true
+tags: poland_event
+priority: 26
+order: 20
+max-visits: 1
+view-if: continuous_campaign = 1 and year = 2026 and month = 5 and safe_financing_veto_2026_done = 0 and pres_2025_hostile_president = 1 and government_party != "pis" and caretaker_government = 0
+on-arrival: {!
+Q.safe_financing_veto_2026_done = 1;
+Q.president_veto_count =
+    (Number(Q.president_veto_count) || 0) + 1;
+Q.defence_readiness = Math.max(
+    0, (Number(Q.defence_readiness) || 50) - 5
+);
+Q.eu_relations = Math.max(
+    0, (Number(Q.eu_relations) || 50) - 3
+);
+Q.constitutional_conflict_level =
+    (Number(Q.constitutional_conflict_level) || 0) + 8;
+Q.news_headline =
+    "The Palace vetoes the act implementing Poland's EU defence loans";
+!}
+
+= May 2026 — A veto with a delivery date attached
+
+The act sets up how Poland draws and spends its share of the European defence
+financing instrument: which ministry contracts, how the loans are recorded
+against the deficit, which domestic firms qualify, and what the audit trail
+looks like. It passed with the coalition's ordinary majority. President <span class="party-pis"><b>[+
+president_name +]</b></span> vetoes it.
+
+The stated reason is sovereignty over defence procurement. The practical
+effect is that the ammunition, drone and air-defence contracts written against
+that money cannot be signed on the current schedule, and the firms that hired
+for them are told to wait. Overriding a veto needs three-fifths of a voting
+Sejm; the coalition does not have it without help it has no reason to expect.
+
+This is now the **[+ president_veto_count +]** veto of the term. Some of the
+earlier ones were about courts and about who may marry. This one is about
+whether the army receives equipment in 2027, which is a different kind of
+argument and reaches a different set of voters.
+
+[? if left_in_government = 1: Our ministers have to explain a defence
+programme they cannot fund and did not block.?][? if left_in_government = 0:
+We are outside the cabinet and can decide whether a defence veto is a fight
+worth lending our votes to.?]
+[? if mentzen_kingmaker_active = 1: The referendum lock on European defence
+arrangements was point three of the declaration both finalists were handed
+before the runoff. One of them signed it and is now President.?]
+[? if parliament_visibility >= 55: The chamber still draws the audience it
+found in 2023, which means an override roll call is watched rather than
+reported.?]
+[? if left_dominant_current = "razem": Razem's caucus is not automatically on
+the side of a rearmament bill and will say so in public.?][? if
+left_dominant_current = "social_patriot": Our patriotic wing wants to own the
+defence-delivery argument outright and take it into working-class towns.?]
+
+- @safe_veto_override
+- @safe_veto_workaround
+- @safe_veto_campaign
+
+@safe_veto_override
+title: Attempt the override and force every deputy onto the record
+subtitle: Almost certainly fails; it produces a roll call that follows the right into the 2027 campaign.
+on-arrival: {!
+Q.safe_veto_response = "Override attempted";
+Q.parliament_visibility =
+    (Number(Q.parliament_visibility) || 40) + 3;
+Q.public_trust = (Number(Q.public_trust) || 0) + 2;
+Q.president_relation =
+    (Number(Q.president_relation) || 0) - 6;
+Q.pis_relation = (Number(Q.pis_relation) || 0) - 6;
+Q.konf_poll_momentum =
+    (Number(Q.konf_poll_momentum) || 0) + 0.1;
+Q.defence_readiness =
+    (Number(Q.defence_readiness) || 45) + 1;
+Q.news_headline =
+    "The override fails and the defence roll call is published in full";
+!}
+
+The vote is lost, as the whips said it would be. What it produces is a list:
+every deputy who declined to fund air defence, printed against their
+constituency, available to anyone who wants to use it for the next eighteen
+months.
+
+Konfederacja's deputies are on it and are entirely comfortable being on it,
+which is a reminder that the anti-rearmament position now has an electorate of
+its own. The equipment is still not ordered.
+
+- @poland_event_queue: Publish the override roll call
+
+@safe_veto_workaround
+title: Rebuild the financing inside the budget act the President cannot easily block
+subtitle: Cost: 1 resource. Gets the money moving through a constitutionally awkward route the Tribunal may examine.
+choose-if: resources >= 1
+unavailable-subtitle: No fiscal or legal capacity is free to redraft the financing route.
+on-arrival: {!
+Q.resources = (Number(Q.resources) || 0) - 1;
+Q.safe_veto_response = "Budget-act route";
+Q.defence_readiness =
+    (Number(Q.defence_readiness) || 45) + 7;
+Q.eu_relations = (Number(Q.eu_relations) || 47) + 3;
+Q.administrative_capacity =
+    (Number(Q.administrative_capacity) || 0) + 2;
+Q.constitutional_restraint = Math.max(
+    0, (Number(Q.constitutional_restraint) || 0) - 5
+);
+Q.constitutional_conflict_level =
+    (Number(Q.constitutional_conflict_level) || 0) + 6;
+Q.president_relation =
+    (Number(Q.president_relation) || 0) - 4;
+Q.news_headline =
+    "Defence financing is rewritten into the budget act and the contracts proceed";
+!}
+
+The President's veto on the budget act is constitutionally constrained in a way
+his ordinary veto is not, so the financing is rebuilt inside it. The contracts
+are signed, the firms restart, and the delivery schedule survives.
+
+The method is a stretch and the Palace's lawyers say so immediately. We have
+answered an abuse of the veto with an aggressive reading of the budget
+procedure, and the Tribunal now has an invitation to rule on both. The
+equipment arrives; the precedent is available to every future government
+looking for a route around a president.
+
+- @poland_event_queue: Move the financing into the budget act
+
+@safe_veto_campaign
+title: Accept the block and campaign on who left the army waiting
+subtitle: Concedes the programme for a year and takes the defence-competence argument to the right's own voters.
+on-arrival: safe_veto_response = "Campaign on the block"; defence_readiness -= 3; left_poll_momentum += 0.2; social_patriot_support += 6; rural_support += 2; president_relation -= 9; pis_relation -= 8; public_trust += 1; eu_relations -= 2; news_headline = "The Left takes the vetoed defence programme into the right's constituencies"
+
+We stop negotiating and start touring: the garrison towns, the plants that
+hired against these contracts, the counties where the army is the largest
+employer. The message is one sentence — the Palace stopped the money — and it
+is delivered by us rather than by the coalition's liberal wing.
+
+The programme stays blocked for the year. What we gain is the first defence
+argument the Left has been able to make in those towns since 2015, and the
+right's monopoly on the subject weakens in exactly the places the 2027
+campaign will be decided.
+
+- @poland_event_queue: Take the defence argument on tour
+
+@airspace_incident_2026
+# prose-audit: Grade C — The single incident is correctly written as one entry in an accumulating record rather than as news, and the three answers separate readiness, politics and civil protection; the affected village is not yet a place.
+title: Another object comes down in the east
+subtitle: One more incident in a record the state has stopped counting properly
+new-page: true
+tags: poland_event
+priority: 26
+order: 25
+max-visits: 1
+view-if: continuous_campaign = 1 and year = 2026 and month = 7 and airspace_incident_2026_done = 0
+on-arrival: {!
+Q.airspace_incident_2026_done = 1;
+Q.security_incident_pressure =
+    (Number(Q.security_incident_pressure) || 0) + 12;
+const incidents = Number(Q.security_incident_pressure) || 0;
+Q.security_incident_record = incidents >= 40
+    ? "a continuous pattern the public now expects to repeat"
+    : (incidents >= 20
+        ? "a recognisable series rather than a set of accidents"
+        : "a short list that has not yet become a pattern");
+Q.defence_readiness = Math.max(
+    0, (Number(Q.defence_readiness) || 50) - 4
+);
+Q.news_headline =
+    "Debris from an unidentified aerial object is found in eastern Poland";
+!}
+
+= July 2026 — The record, not the object
+
+Fragments of an aerial object come down on farmland in the east. The military
+says it poses no danger and does not say what it was; residents photographed
+it before any uniform arrived; the identification takes days and satisfies
+nobody. It may have been a Russian missile, a drone, or debris from an
+interception over Ukraine.
+
+The individual answer matters less than the accumulation. Together with the
+drone incursions, the border incidents, the railway sabotage attempts and the
+espionage arrests of the previous years, this is **[+
+security_incident_record +]**. There is still no single public register, no
+routine notification to the municipalities involved, and no standing
+explanation of what a resident is supposed to do when something lands in a
+field.
+
+[? if defence_command_response = "Operational record demanded" or defence_command_response = "Brokered continuity statement" or defence_command_response = "Joint opposition demand": We
+asked the command-continuity question in October 2023 and were told it was a
+campaign stunt. The file we opened then is the only continuous record anybody
+has of who was answerable for what.?]
+[? if defence_command_response = "Closing competence attack": We turned the
+2023 command resignations into a campaign argument, and the services have been
+saying less to everybody ever since.?]
+[? if left_in_government = 1: The interior and defence ministries in this
+cabinet own the notification failure, whatever they own of the incident
+itself.?][? if left_in_government = 0: We hold nothing here except the ability
+to insist that the pattern be counted in public.?]
+
+- @airspace_register
+- @airspace_civil_protection
+- @airspace_blame
+- @airspace_standing_review
+
+@airspace_register
+title: Demand a single public register of every incident since 2022
+subtitle: Makes the pattern legible and forces the state to admit how much of it went unrecorded.
+on-arrival: {!
+Q.airspace_response = "Public incident register";
+Q.security_incident_pressure = Math.max(
+    0, (Number(Q.security_incident_pressure) || 0) - 6
+);
+Q.defence_readiness =
+    (Number(Q.defence_readiness) || 46) + 4;
+Q.civil_military_trust =
+    (Number(Q.civil_military_trust) || 50) + 3;
+Q.institutional_trust =
+    (Number(Q.institutional_trust) || 0) + 4;
+Q.administrative_reform_pressure =
+    (Number(Q.administrative_reform_pressure) || 0) + 3;
+Q.public_trust = (Number(Q.public_trust) || 0) + 2;
+Q.news_headline =
+    "One published register replaces four years of separate announcements";
+!}
+
+One register: date, location, object, who identified it, how long it took, and
+what the residents were told. Everything already exists in fragments across
+three ministries; the demand is only that it be published in one place and
+kept current.
+
+It is an unheroic request that changes the argument permanently, because a
+pattern that is written down can be governed, and one that is announced
+incident by incident can only be reacted to. The first version of the register
+is embarrassing to everyone who has held the portfolios since 2022.
+
+- @poland_event_queue: Demand the register
+
+@airspace_civil_protection
+title: Fund municipal civil protection and a standing notification duty
+subtitle: Cost: 1 resource. Puts money and a legal duty where the debris actually lands.
+choose-if: resources >= 1
+unavailable-subtitle: The party cannot staff a civil-protection proposal this month.
+on-arrival: {!
+Q.resources = (Number(Q.resources) || 0) - 1;
+Q.airspace_response = "Municipal civil protection";
+Q.defence_readiness =
+    (Number(Q.defence_readiness) || 46) + 3;
+Q.administrative_capacity = (Number(Q.administrative_capacity) || 0) +
+    (Q.left_in_government ? 3 : 0);
+Q.local_network = (Number(Q.local_network) || 0) + 3;
+Q.rural_support = (Number(Q.rural_support) || 0) + 3;
+Q.institutional_trust =
+    (Number(Q.institutional_trust) || 0) + 3;
+Q.public_trust = (Number(Q.public_trust) || 0) + 3;
+Q.security_incident_pressure = Math.max(
+    0, (Number(Q.security_incident_pressure) || 0) - 4
+);
+Q.news_headline =
+    "Border municipalities get a notification duty and money to answer it";
+!}
+
+The proposal is written for the village rather than the general staff: a legal
+duty to notify the commune within a stated number of hours, a funded local
+contact, and a published instruction that an ordinary person can follow when
+something is smoking in their field.
+
+It is the least dramatic security policy available and the only one that
+reaches the people who keep finding these objects first. Local councils across
+the eastern belt — including several the Left has never won — respond to it
+directly.
+
+- @poland_event_queue: Fund the municipal duty
+
+@airspace_blame
+title: Make it a competence charge against whoever holds the defence ministry
+subtitle: The obvious political use of the incident; it teaches the services to say less next time.
+on-arrival: airspace_response = "Competence attack"; civil_military_trust -= 6; security_incident_pressure += 4; left_poll_momentum += 0.15; public_trust += 1; institutional_trust -= 3; defence_readiness -= 2; news_headline = "The debris becomes an argument about who runs the defence ministry"
+
+Four years of incidents and the state still cannot say what fell on a farm for
+three days. The charge is fair, it lands, and the ministry has no answer that
+is not a classification notice.
+
+The services draw the obvious conclusion, which is that every future
+identification should be slower, vaguer and cleared further up the chain
+before anyone says anything. The next village waits longer.
+
+- @poland_event_queue: Press the competence charge

@@ -2861,6 +2861,24 @@ if (!Q.pres_2025_feedback_applied) {
     }
     Q.pres_2025_feedback_applied = 1;
 }
+// The Status column belongs to this table, so it is written here rather than a
+// fortnight later by the runoff. The second ballot overwrites only its own two.
+for (const key of [
+    "ko", "right", "left", "razem", "mentzen",
+    "braun", "holownia", "stanowski"
+]) {
+    let status25 = "eliminated";
+    if (firstRoundWinnerKey == key) {
+        status25 = "elected";
+    } else if (!firstRoundWinnerKey &&
+        (ranked[0] == key || ranked[1] == key)) {
+        status25 = "runoff";
+    }
+    if (key == "razem" && Q.pres_2025_united_left) {
+        status25 = "no candidate";
+    }
+    Q["pres_2025_status_" + key] = status25;
+}
 Q.pres_2025_round_one_done = 1;
 Q.news_headline = Q.pres_2025_first_round_winner
     ? Q.pres_2025_winner + " wins the presidency in the first round"
@@ -2880,7 +2898,7 @@ Valid votes: **[+ pres_2025_r1_valid_votes_display +]**
 <div class="election-table-row"><span>[+ pres_2025_left_candidate +]</span><span class="party party-lewica">Lewica</span><b>[+ pres_2025_r1_display_left +]%</b><span>[+ pres_2025_r1_votes_left_display +]</span><span>[+ pres_2025_status_left +]</span></div>
 [? if not pres_2025_united_left: <div class="election-table-row"><span>[+ pres_2025_razem_candidate +]</span><span class="party party-razem">Razem</span><b>[+ pres_2025_r1_display_razem +]%</b><span>[+ pres_2025_r1_votes_razem_display +]</span><span>[+ pres_2025_status_razem +]</span></div>?]
 <div class="election-table-row"><span>Sławomir Mentzen</span><span class="party party-konf">Konf.</span><b>[+ pres_2025_r1_display_mentzen +]%</b><span>[+ pres_2025_r1_votes_mentzen_display +]</span><span>[+ pres_2025_status_mentzen +]</span></div>
-<div class="election-table-row"><span>Grzegorz Braun</span><span class="party party-kkp">KKP</span><b>[+ pres_2025_r1_display_braun +]%</b><span>[+ pres_2025_r1_votes_braun_display +]</span><span>[+ pres_2025_status_braun +]</span></div>
+<div class="election-table-row"><span>Grzegorz Braun</span><span class="party party-korona">Korona</span><b>[+ pres_2025_r1_display_braun +]%</b><span>[+ pres_2025_r1_votes_braun_display +]</span><span>[+ pres_2025_status_braun +]</span></div>
 <div class="election-table-row"><span>Szymon Hołownia</span><span class="party party-p2050">PL2050</span><b>[+ pres_2025_r1_display_holownia +]%</b><span>[+ pres_2025_r1_votes_holownia_display +]</span><span>[+ pres_2025_status_holownia +]</span></div>
 <div class="election-table-row"><span>Krzysztof Stanowski</span><span>independent</span><b>[+ pres_2025_r1_display_stanowski +]%</b><span>[+ pres_2025_r1_votes_stanowski_display +]</span><span>[+ pres_2025_status_stanowski +]</span></div>
 <div class="election-table-row"><span>Five smaller committees</span><span>combined</span><b>[+ pres_2025_r1_display_other +]%</b><span>[+ pres_2025_r1_votes_other_display +]</span><span>eliminated</span></div>
@@ -3656,31 +3674,12 @@ Q.pres_2025_hostile_president =
     Q.pres_2025_winner_key == "braun" ? 1 : 0;
 Q.pres_2025_runoff_done = 1;
 Q.news_headline = Q.pres_2025_winner + " wins the presidential runoff";
-const statusByKey = {};
-for (const key of [
-    "ko", "right", "left", "razem", "mentzen",
-    "braun", "holownia", "stanowski"
-]) {
-    if (Q.pres_2025_first_round_winner && Q.pres_2025_winner_key == key) {
-        statusByKey[key] = "elected";
-    } else if (
-        !Q.pres_2025_first_round_winner &&
-        (Q.pres_2025_finalist_a_key == key ||
-            Q.pres_2025_finalist_b_key == key)
-    ) {
-        statusByKey[key] = "runoff";
-    } else {
-        statusByKey[key] = "eliminated";
-    }
-}
-Q.pres_2025_status_ko = statusByKey.ko;
-Q.pres_2025_status_right = statusByKey.right;
-Q.pres_2025_status_left = statusByKey.left;
-Q.pres_2025_status_razem = statusByKey.razem;
-Q.pres_2025_status_mentzen = statusByKey.mentzen;
-Q.pres_2025_status_braun = statusByKey.braun;
-Q.pres_2025_status_holownia = statusByKey.holownia;
-Q.pres_2025_status_stanowski = statusByKey.stanowski;
+// Only the two finalists have anything left to resolve; every other row keeps
+// the status the first-round table already gave it.
+Q["pres_2025_status_" + resultAKey] =
+    Q.pres_2025_winner_key == resultAKey ? "elected" : "defeated";
+Q["pres_2025_status_" + resultBKey] =
+    Q.pres_2025_winner_key == resultBKey ? "elected" : "defeated";
 }
 !}
 
@@ -7527,3 +7526,439 @@ welfare-sovereignty centre under Matysiak.?]
 @leader_primary_finish
 title: Record the sole chair
 go-to: poland_event_queue
+
+
+@nawrocki_apartment_2025
+# prose-audit: Grade C — The transaction, the pensioner and the campaign arithmetic are all present with three distinct Lewica lines; the man who sold the flat is described rather than heard.
+title: The candidate, the flat and the pensioner
+subtitle: A property transaction becomes the right's credibility test days before the first round
+new-page: true
+tags: poland_event
+priority: 46
+order: 5
+max-visits: 1
+view-if: continuous_campaign = 1 and year = 2025 and month = 5 and pres_2025_round_one_done = 0 and nawrocki_apartment_2025_done = 0
+on-arrival: {!
+Q.nawrocki_apartment_2025_done = 1;
+Q.pres_2025_right_credibility_hit = 1;
+Q.institutional_issue_salience =
+    (Number(Q.institutional_issue_salience) || 0) + 2;
+Q.news_headline =
+    "The right's candidate is asked to explain a pensioner's flat";
+!}
+
+= May 2025 — One flat, several answers
+
+Days before the first round, <span class="party-pis"><b>Karol Nawrocki</b></span> is asked about a small Gdańsk
+flat he acquired from an elderly, ill man in exchange for an undertaking of
+care. The candidate has previously described owning one property. The seller
+subsequently entered a municipal care institution; the care that was promised
+is disputed; the account of the transaction changes twice in a week.
+
+None of it is a criminal charge and none of it moves a single policy. It is a
+character question in a campaign the right has built entirely on character:
+the outsider, the historian, the man who is not a politician. He answers by
+donating the flat, which resolves the property and not the question.
+
+Our own candidate is **[+ pres_2025_left_candidate +]**, running on **[+
+pres_2025_transfer_strategy +]** territory in a field where our path to a
+runoff runs through people who dislike both leading candidates.
+
+[? if left_dominant_current = "razem": Razem's people want the pensioner and
+the care system in the story, not the candidate.?][? if left_dominant_current =
+"social_patriot": Our social-patriotic organisers warn that a metropolitan
+pile-on about property makes him sympathetic to exactly the voters we want.?]
+[? if spring_path_route = "market_liberal": Our liberal turn makes an attack on
+a property transaction sound like an attack on property.?]
+[? if church_resolution_result = "Survivor testimony": The survivor network we
+funded in 2023 already knows how to put a vulnerable person's account in front
+of the country without turning them into campaign material.?]
+
+- @nawrocki_flat_care
+- @nawrocki_flat_character
+- @nawrocki_flat_restraint
+- @nawrocki_flat_network
+
+@nawrocki_flat_care
+title: Make it about the care system that let the seller end up in an institution
+subtitle: Converts a campaign scandal into our own policy ground; slower to land than the personal attack.
+on-arrival: health_policy_pressure += 8; pensioner_support += 3; public_trust += 3; labor_credibility += 2; left_poll_momentum += 0.15; media_capacity += 2; news_headline = "The Left answers the flat story with the care system behind it"
+
+We put the actual question on the table: why does an ill man's care depend on
+a private undertaking by a stranger, and how many thousand people are living
+inside that arrangement right now because the state offers nothing else. The
+candidate becomes one example rather than the subject.
+
+It is the only version of this story that is still useful to us in July. It is
+also considerably less exciting than the version everyone else is running, and
+some of our own people would rather be running theirs.
+
+- @poland_event_queue: Take the care argument into the last week
+
+@nawrocki_flat_character
+title: Join the character attack at full volume
+subtitle: The most effective short-term damage to the right's candidate; it hands us a campaign fought entirely on personality.
+on-arrival: pres_2025_right_credibility_hit += 1; pis_relation -= 6; left_poll_momentum += 0.25; public_trust += 1; ko_relation += 3; institutional_issue_salience -= 2; progressives_dissent += 2; news_headline = "Every opposition campaign runs the same week on the same flat"
+
+We run it hard: the outsider who was going to clean up politics cannot give a
+consistent account of how he came to own a sick man's flat. The clips are
+excellent and the numbers move.
+
+They move mostly between the two leading candidates. A campaign week spent on
+character is a week in which nobody asks what any of them intends to do about
+wages, and our own distinct offer is the thing that disappears from coverage.
+
+- @poland_event_queue: Run the character week
+
+@nawrocki_flat_restraint
+title: Refuse the story and spend the week on our own programme
+subtitle: Protects our distinct offer and forfeits the only week in which the right's candidate is genuinely vulnerable.
+on-arrival: public_trust += 2; left_poll_momentum += 0.05; workers_support += 2; media_capacity -= 2; pis_relation += 2; progressives_dissent += 3; news_headline = "The Left declines the flat story and campaigns on wages instead"
+
+Our candidate is asked about the flat at every stop and gives the same answer:
+that is a matter for him and for the prosecutors if there is one, and here is
+what we are proposing about rents. The discipline is total and the coverage is
+minimal.
+
+Whether this is integrity or malpractice depends entirely on the result. What
+is certain is that the week in which the right's candidate was weakest is a
+week we spent talking about something else.
+
+- @poland_event_queue: Hold the programme line
+
+@nawrocki_flat_network
+title: Let the care organisations lead and keep the party's name off it
+subtitle: Requires an established survivor and support network. The most credible version of the argument, and the one we get least credit for.
+choose-if: church_resolution_result = "Survivor testimony" or movement_autonomy >= 55
+unavailable-subtitle: We have no support network with the standing to lead this — a party press conference about a sick man's flat is a party press conference.
+on-arrival: health_policy_pressure += 6; pensioner_support += 4; movement_autonomy += 5; public_trust += 4; media_capacity += 2; left_poll_momentum += 0.1; pres_2025_right_credibility_hit += 1; news_headline = "Care organisations, not parties, put the pensioner's case to the country"
+
+The organisations that spend every week arranging care for people in exactly
+this position hold the press conference. We fund the room and stay out of the
+photograph. What the country hears is not an attack on a candidate but a
+description of a system in which a stranger's promise is the only care
+available.
+
+The candidate's answers get worse against that framing than against any
+politician's question, because there is nobody to accuse of playing politics.
+Our own poll numbers barely move, which is the price of the method working.
+
+@mentzen_declaration_2025
+# prose-audit: Grade C — The kingmaker arithmetic, the eight-point text and the consequences of signing are all present; the interviews themselves are summarised rather than staged.
+title: The kingmaker's eight points
+subtitle: Both finalists queue for an endorsement that comes with a written text
+new-page: true
+tags: poland_event
+priority: 44
+order: 5
+max-visits: 1
+view-if: continuous_campaign = 1 and year = 2025 and month >= 5 and pres_2025_round_one_done = 1 and pres_2025_runoff_done = 0 and pres_2025_finalist_a_key != "mentzen" and pres_2025_finalist_b_key != "mentzen" and mentzen_declaration_2025_done = 0
+on-arrival: {!
+Q.mentzen_declaration_2025_done = 1;
+Q.mentzen_kingmaker_active = 1;
+Q.konf_normalisation =
+    (Number(Q.konf_normalisation) || 0) + 12;
+Q.news_headline =
+    "Both finalists record long interviews with Mentzen before the runoff";
+!}
+
+= Late May 2025 — The interview nobody can refuse
+
+<span class="party-konf"><b>Sławomir Mentzen</b></span> did not reach the runoff and controls the electorate
+that decides it. He does not endorse. He invites **[+ pres_2025_finalist_a +]**
+and **[+ pres_2025_finalist_b +]** onto his own channel, separately, for long
+unedited interviews in which each is asked to sign an eight-point declaration:
+no new taxes, no restriction on cash, no ratification of the European
+ceasefire-and-defence arrangements without a referendum, no limits on speech,
+no Polish troops in Ukraine, and three further commitments written to be
+uncomfortable for both of them.
+
+This is not an endorsement market. It is a public examination of two
+candidates by a third who has replaced the traditional broadcasters as the
+place where the right-wing electorate decides, and it is being watched by more
+people than the televised debates.
+
+[? if pres_2025_right_credibility_hit >= 2: The right's candidate arrives at
+this interview already damaged by the property story, which is precisely why he
+will sign anything put in front of him.?]
+[? if pres_2025_player_finalist = 1: Our own candidate has been invited. The
+invitation is not a courtesy and refusing it is a decision with a
+number attached.?][? if pres_2025_player_finalist = 0: We are not in the
+runoff. Our influence is limited to what we say about the process and to
+whether the electorate we still hold treats a signature as disqualifying.?]
+
+- @mentzen_expose_text
+- @mentzen_contest_channel
+- @mentzen_counter_offer
+
+@mentzen_expose_text
+title: Publish what each of the eight points actually costs
+subtitle: Turns a loyalty ritual into a costed document; nobody in that audience is waiting for our arithmetic.
+on-arrival: konf_normalisation -= 5; public_trust += 3; institutional_issue_salience += 3; media_capacity += 2; left_poll_momentum += 0.1; news_headline = "The Left costs the eight points line by line"
+
+We take the declaration seriously enough to price it: what a cash guarantee
+does to tax enforcement, what a referendum lock does to defence financing,
+what "no new taxes" means for the hospital budget of the person watching. The
+document is answered as a programme, because that is what it is.
+
+The audience it was written for is not reading our costings. Everyone who has
+to govern afterwards is, and the signature becomes something a president can
+be held to rather than a gesture that evaporates on inauguration day.
+
+- @poland_event_queue: Publish the costings
+
+@mentzen_contest_channel
+title: Attack the format: a private channel is not a national examination
+subtitle: Defends broadcast pluralism and sounds exactly like the old media class the audience already rejected.
+on-arrival: konf_normalisation += 4; media_capacity += 1; institutional_trust += 2; public_trust -= 1; konf_poll_momentum += 0.2; left_poll_momentum -= 0.05; news_headline = "The Left disputes a private channel's role as the runoff's examiner"
+
+We say it plainly: an unregulated commercial channel with no obligation to
+balance has become the venue where a presidential runoff is decided, and no
+electoral rule covers it. The point is correct.
+
+It is also delivered by a party asking to be trusted with the state, about a
+man whose entire appeal is that the state's approved venues excluded people
+like his audience. He plays the clip himself, twice.
+
+- @poland_event_queue: File the format objection
+
+@mentzen_counter_offer
+title: Offer his voters the two points where we actually agree
+subtitle: Cost: 1 resource. Takes the parts of the declaration a left party can honestly sign and refuses the rest in public.
+choose-if: resources >= 1
+unavailable-subtitle: The party has no capacity to run a separate appeal into that audience.
+on-arrival: resources -= 1; konf_normalisation -= 3; anti_system_trust += 4; workers_support += 2; left_poll_momentum += 0.15; progressives_dissent += 5; spring_dissent += 3; public_trust += 1; media_capacity += 2; news_headline = "The Left signs two of the eight points and rejects six on the record"
+
+Speech protections and the limit on committing troops are positions we hold
+already and have held longer than he has. We sign those two publicly, name the
+six we refuse and why, and take the argument to the audience rather than
+around it.
+
+Our progressive organisers hate the photograph. Some of the young men who left
+us for him in 2023 listen to a Left answer for the first time in two years,
+which is either the beginning of a recovery or the first step of becoming a
+softer version of the thing we oppose.
+
+- @poland_event_queue: Publish the two signatures
+
+@presidential_protests_2025
+# prose-audit: Grade C — The distinction between documented commission errors and a delegitimising claim is the whole point of the event and it is made cleanly; the protest lawyers and commission members remain unnamed.
+title: Protests, recounts and the size of the claim
+subtitle: Real polling-station errors meet a demand to annul the whole result
+new-page: true
+tags: poland_event
+priority: 40
+order: 8
+max-visits: 1
+view-if: continuous_campaign = 1 and year = 2025 and month >= 6 and pres_2025_runoff_done = 1 and presidential_protests_2025_done = 0
+on-arrival: {!
+Q.presidential_protests_2025_done = 1;
+const margin = Math.abs(Number(Q.pres_2025_runoff_margin) || 2);
+Q.pres_2025_protest_scale = margin < 2
+    ? "close enough that arithmetic alone sustains the doubt"
+    : (margin < 5
+        ? "narrow enough for the errors to be argued about"
+        : "wide enough that no commission error could have changed it");
+Q.pres_2025_recount_commissions = 13;
+Q.institutional_trust = Math.max(
+    0, (Number(Q.institutional_trust) || 0) - 3
+);
+Q.institutional_issue_salience =
+    (Number(Q.institutional_issue_salience) || 0) + 5;
+Q.news_headline =
+    "Thousands of protests reach the Supreme Court over the presidential count";
+!}
+
+= June 2025 — Two different claims wearing the same words
+
+The margin was **[+ pres_2025_runoff_margin +] points** — [+
+pres_2025_protest_scale +]. Tens of thousands of electoral protests are lodged
+with the Supreme Court. Most are form letters. A small number are not:
+volunteers comparing published commission protocols against the national
+totals find precincts where the two candidates' figures were transposed, where
+a total does not reconcile, where a protocol was signed with an obvious
+arithmetic error. Recounts are ordered in **[+ pres_2025_recount_commissions
++]** commissions.
+
+Both facts are true at once and they are not the same fact. Some commissions
+got it wrong, as they do in every election, and the errors run in both
+directions. Separately, a political claim is circulating that the errors are
+evidence the national result was manufactured — a claim whose size does not
+depend on the evidence and which will not be retired if the recounts confirm
+the winner.
+
+[? if referendum_2023_stance = "Organised ballot refusal" or referendum_2023_stance = "Refusal plus counter-questions": We
+spent the 2023 campaign teaching our own voters how commission procedure works
+and how a refusal is recorded. Several thousand of those people are the
+volunteers now photographing protocols.?]
+[? if electoral_confidence >= 65: Public confidence in the count is high enough
+that a documented error still reads as an error rather than as proof.?]
+[? if electoral_confidence < 50: Confidence in the count was already low before
+a single protocol was photographed, which is the condition in which arithmetic
+stops persuading anybody.?]
+[? if left_in_government = 1: Our ministers are in a government that will be
+accused of stealing the election if it defends the count, and of abandoning
+the state if it does not.?][? if left_in_government = 0: We are outside the
+government and outside the Palace, which makes it cheap for us to be correct
+and easy for us to be ignored.?]
+
+- @protests_verify
+- @protests_amplify
+- @protests_dismiss
+
+@protests_verify
+title: Fund the protocol verification and publish every error found, in both directions
+subtitle: Cost: 1 resource. Separates documented errors from the delegitimising claim by proving the errors were counted.
+choose-if: resources >= 1
+unavailable-subtitle: No legal or volunteer capacity is free for a national protocol audit.
+on-arrival: resources -= 1; institutional_trust += 7; judicial_legitimacy += 4; constitutional_restraint += 5; public_trust += 4; media_capacity += 2; electoral_confidence += 8; news_headline = "The published error audit runs in both directions and closes the arithmetic"
+
+Our volunteers do the least glamorous work in politics: photograph every
+disputed protocol, compare it to the published total, publish the corrections
+including the ones that favour the candidate we opposed. The recounts
+confirm the pattern — real errors, no direction, no scale.
+
+It does not persuade the people who wanted a stolen election. It gives every
+institution, journalist and future court a document that exists, and it means
+the party that ran the audit is not the party that has to be believed on
+trust.
+
+- @poland_event_queue: Publish the protocol audit
+
+@protests_amplify
+title: Treat the errors as grounds to question the whole result
+subtitle: Available and satisfying if the margin was thin; it puts our name on a claim we cannot subsequently retire.
+on-arrival: electoral_confidence -= 14; institutional_trust -= 8; constitutional_restraint -= 8; judicial_legitimacy -= 4; left_poll_momentum += 0.15; public_trust -= 2; far_right_agenda += 3; news_headline = "The Left joins the demand that the presidential result be annulled"
+
+We say the count cannot be trusted. Given the protocols and the margin the
+sentence is not absurd, and it is enormously popular with people who cannot
+accept the outcome.
+
+The claim is now ours as well. When the Supreme Court confirms the result, we
+will either abandon our own supporters or continue disputing a certified
+presidential election — and the next time somebody makes this argument against
+a result we like, our words will be read back to us.
+
+- @poland_event_queue: Join the annulment demand
+
+@protests_dismiss
+title: Refuse the whole subject and treat every protest as bad faith
+subtitle: Defends the result at the cost of the volunteers who found genuine errors.
+on-arrival: electoral_confidence += 3; institutional_trust += 2; constitutional_restraint += 3; public_trust -= 2; movement_autonomy -= 4; far_right_agenda += 2; anti_system_trust -= 3; news_headline = "The Left dismisses the electoral protests as a manufactured campaign"
+
+The line is short: the result stands, the protests are a campaign, move on. It
+is defensible, it protects the winner's legitimacy, and it takes about a day.
+
+It also tells several thousand volunteers who spent a fortnight checking
+protocols — many of them ours — that noticing an error is indistinguishable
+from denying an election. They stop checking. The next time the errors are not
+random, nobody is looking.
+
+- @poland_event_queue: Close the subject
+
+@criminal_group_probe_2025
+# prose-audit: Grade C — The constitutional stakes of a criminal investigation into a serving cabinet are set out with three real answers; the prosecutors on both sides of the case remain institutional roles.
+title: A criminal investigation into the government itself
+subtitle: Prosecutors examine whether ministers acted as an organised group
+new-page: true
+tags: poland_event
+priority: 30
+order: 12
+max-visits: 1
+view-if: continuous_campaign = 1 and year = 2025 and month = 12 and criminal_group_probe_2025_done = 0 and government_party != "pis" and pres_2025_hostile_president = 1
+on-arrival: {!
+Q.criminal_group_probe_2025_done = 1;
+Q.constitutional_conflict_level =
+    (Number(Q.constitutional_conflict_level) || 0) + 20;
+Q.prosecution_independence = Math.max(
+    0, (Number(Q.prosecution_independence) || 0) - 6
+);
+Q.institutional_trust = Math.max(
+    0, (Number(Q.institutional_trust) || 0) - 5
+);
+Q.news_headline =
+    "Prosecutors open a file naming serving ministers as an organised group";
+!}
+
+= December 2025 — The charge that has no ordinary answer
+
+A prosecutorial file is opened on a notification alleging that the Prime
+Minister and senior ministers acted as an organised criminal group in taking
+control of the prosecution service, the public media and the state companies —
+described in the notification as a coup against the constitutional order.
+
+This is not opposition rhetoric with a legal costume. A notification obliges
+prosecutors to act, the prosecution service is itself the object of the
+dispute, and the Palace has an interest in the outcome. Whatever the file
+contains, the state has now produced a document in which its own government is
+a suspect and its own courts are the venue.
+
+There is no institutionally clean response. Ignoring it concedes that a
+criminal file against a serving cabinet is normal. Suppressing it proves the
+charge. Answering it in substance accepts that a prosecutor decides which
+government is lawful.
+
+[? if surveillance_scandal_stage >= 2: We have already lived through one
+argument about services being turned on the other camp, and both sides took
+away the lesson that it works.?]
+[? if szmydt_response = "Clearance review": The clearance review we forced in
+2024 is the reason several of the officials now handling this file were vetted
+at all, and it is being cited by both sides.?]
+[? if left_in_government = 1: Our own ministers are inside the perimeter of
+the notification, whether or not they are named in it.?][? if
+left_in_government = 0: We are outside the cabinet, which lets us defend the
+constitutional point
+without defending every decision that produced it.?]
+
+- @probe_procedural
+- @probe_political
+- @probe_counter
+
+@probe_procedural
+title: Insist the file runs its ordinary course, publicly and without interference
+subtitle: The only answer that does not concede the premise; it leaves a criminal file open over the cabinet for months.
+on-arrival: constitutional_restraint += 8; prosecution_independence += 8; judicial_legitimacy += 4; institutional_trust += 5; public_trust += 2; left_poll_momentum -= 0.1; constitutional_conflict_level -= 6; news_headline = "The coalition lets the file proceed and refuses to touch it"
+
+No minister comments on the case, no instruction reaches a prosecutor, and the
+file proceeds exactly as any other would. The dates and the decisions are
+published so that interference would be visible if it occurred.
+
+The cost is real and unavoidable: for as long as the file is open, every
+foreign partner and every domestic institution deals with a government under
+criminal examination. We have decided that this is less dangerous than a
+government that decides which files exist.
+
+- @poland_event_queue: Let the file proceed
+
+@probe_political
+title: Name it publicly as an attempted constitutional coup by prosecution
+subtitle: Correct in substance and it escalates a legal conflict into an open question about who governs.
+on-arrival: constitutional_conflict_level += 15; prosecution_independence -= 5; institutional_trust -= 4; public_trust += 2; left_poll_momentum += 0.2; pis_relation -= 10; president_relation -= 8; news_headline = "The government calls the criminal file an attempt to remove it by prosecution"
+
+We say what it is: an attempt to settle by criminal procedure a question that
+belongs to the Sejm and the electorate. Our supporters need to hear it and
+much of the country agrees.
+
+From this point there are two publicly declared coups in Polish politics and
+each side has named the other. Neither institution involved can now act
+without being read as a participant, and every subsequent prosecutorial
+decision is received as a move in a war.
+
+- @poland_event_queue: Name the file publicly
+
+@probe_counter
+title: Legislate a clear procedure for investigating serving ministers
+subtitle: Cost: 1 resource. Builds the missing rule instead of winning the argument; the President will almost certainly veto it.
+choose-if: resources >= 1
+unavailable-subtitle: There is no legislative capacity to draft a ministerial-liability procedure.
+on-arrival: resources -= 1; constitutional_restraint += 6; prosecution_command_clarity += 8; institutional_trust += 5; administrative_reform_pressure += 3; president_relation -= 4; president_veto_count += 1; public_trust += 2; news_headline = "A ministerial-liability procedure is tabled and sent towards a certain veto"
+
+The gap is genuine: Poland has a Tribunal of State that nobody uses and no
+workable rule for what an ordinary prosecutor may do with a serving minister.
+We write one, applying to every future cabinet including our opponents'.
+
+The Palace vetoes it, as everyone in the chamber expected when it was tabled.
+The text survives the veto and will be picked up by whoever next discovers, in
+government, that this hole is still open.
+
+- @poland_event_queue: Table the liability procedure

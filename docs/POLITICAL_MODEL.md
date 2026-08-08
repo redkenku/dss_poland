@@ -305,6 +305,39 @@ merger, surviving components, individual recruitment and progressive or
 classical-liberal splinters all preserve the relevant records. The Greens do
 not dissolve merely because the other components reach an agreement.
 
+### Five affiliations, none of which implies another
+
+`rival_group_records` carries five independent affiliation fields alongside
+`active` (the organisation exists) and `allied` (it is friendly to its parent
+bloc). None of them is derived from any other:
+
+| Field | Meaning |
+| --- | --- |
+| `list_committee` | The electoral committee it files under. `"pis"`, `"psl"` (Koalicja Polska), `"ko"`, `"third_way"` or its own id. |
+| `club` | The parliamentary club or circle it sits in. |
+| `in_cabinet` | Whether it holds Council of Ministers portfolios. |
+| `support_mode` | `coalition`, `toleration`, `opposition` or `none`. |
+| `independent` | Whether it is a separately registered party. |
+
+This is the distinction the 2020–2021 collapse of the United Right turns on.
+Solidarna Polska is `independent` from the first month and never leaves
+`list_committee: "pis"`; a walkout moves its club, cabinet and support mode and
+leaves the committee alone, and only `suwerenna_own_list` detaches it. Partia
+Republikańska and OdNowa RP are generated out of named Porozumienie deputies
+and join the PiS list and club without transferring a single mandate, because
+their `exclusive_seats` stay at zero while they sit on PiS mandates.
+Porozumienie's August 2021 expulsion is the one beat where all five move at
+once. Koalicja Polska is the same mechanism seen from the other side: PSL,
+Kukiz'15 and the minor partners share `list_committee: "psl"` and `club: "kp"`,
+and Kukiz's departure changes only those two fields while both parties survive
+intact. Trzecia Droga and a post-2021 Porozumienie reuse it unchanged.
+
+Events own the seat totals. `poland_normalize` derives only read-only
+roll-ups — `pis_list_members`, `kp_list_members`, `pis_list_attached_seats`,
+`kp_list_attached_seats`, `government_toleration_seats`,
+`allied_cabinet_parties` — so there is one place to test the arithmetic
+against. `scripts/gowin-path-check.js` asserts that consistency on every branch.
+
 ## The annual budget is the season finale
 
 Every political year should end with the state budget or, before the Left
@@ -829,6 +862,23 @@ and attacks remain much larger shocks, so passive convergence cannot erase
 political memory in a few months. Polling converts the matrix, ideological
 distance and the player's own relations into visible compatibility scores for
 four coalition families.
+
+The same two inputs also decide which coalitions can be signed at all.
+`poland_normalize` publishes a `coalition_viable_<a>_<b>` flag for every pair
+of the player and the five rival parties, measured on the economic and
+cultural axes with the economic axis discounted, because Polish coalitions
+break on culture rather than on tax policy. Close partners demand no
+particular relation, so ordinary blocs stay available at their opening
+values; the required relation then climbs with distance, and past a hard
+distance ceiling no relation value is enough. A socially liberal KO therefore
+loses Konfederacja as a possible partner by moving, not by an authored veto,
+and a courted PiS becomes reachable for the player without one either.
+Formation menus and cabinet-entry options read the flags and grey the blocked
+arrangement with its reason rather than hiding it, so the arithmetic stays
+visible; when no bloc in the chamber is compatible, the formation menu opens
+the constitutional ladder instead of looping. The rival-side seat pledges
+apply the flag on top of their existing relation thresholds, so ideological
+drift can dissolve a pact that trust alone would have kept.
 
 The underlying coordinates, caucus shares, acceptance scores and pairwise
 relations are deliberately not printed. The ledger reports the national

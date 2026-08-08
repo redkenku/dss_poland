@@ -73,10 +73,11 @@ and
 | **Result beat** | Shows what the selected action caused. | Append to the event page and retain its premise. | An explicit button then opens the next desk or the hand on a clean page. |
 
 The central implementation is [`poland_event_queue.scene.dry`](../source/scenes/poland_event_queue.scene.dry).
-Its routing scene deliberately has no page break: on return from an event, the
-`afterword` appends the consequence headline to the retained event. The player
-then chooses to return to the desk or leadership table, whose own scene starts
-the next page.
+Its routing scene deliberately has no page break. The result beat belongs to the
+event's own choice scene: it appends to the retained premise and ends in an
+explicit button back to the queue. The queue then routes straight to the desk or
+the leadership table, whose own scene starts the next page. There is no separate
+summary screen between the two, so early and late events read the same way.
 
 ### Page-break rules
 

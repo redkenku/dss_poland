@@ -458,6 +458,27 @@ historical breakup.
 | **LFT-20 — Issue deal with PiS** | **H/P** | Pensions, labour enforcement, housing or EU money creates a policy majority with PiS or a successor faction. | Deliverable policy versus KO trust and activist dissent. A formal coalition must not follow automatically. |
 | **LFT-21 — Formal Left–PiS government** | **E** | Only after KO rupture, extraordinary security/economic crisis, compatible election arithmetic and written social/constitutional guarantees. | Massive left dissent, likely splinter and legitimacy crisis; government may fall as soon as the emergency ends. |
 
+### Wiosna ascendant — implemented
+
+[`poland_wiosna_path.scene.dry`](../source/scenes/poland_wiosna_path.scene.dry)
+implements the branch in which Wiosna, rather than the SLD machine or Razem,
+ends up owning the common project. Availability, mode and labels are derived
+each month in `poland_normalize`; the standing card is
+[`poland_wiosna_project.scene.dry`](../source/scenes/cards/poland_wiosna_project.scene.dry);
+`npm run check:wiosna` drives the whole chain.
+
+| ID | Label | Trigger and branches | Delayed consequences |
+| --- | --- | --- | --- |
+| **WIO-01 — The ownership congress** | **P** | Fires from 2024 once `spring_path_mode` is `dual` (protected dual chairs), `sole` (Wiosna-led successor) or `independent` (unmerged Wiosna is the strongest current). Write the constitution, take the chair without the machine, or refuse the claim. | Refusal closes the path permanently and converts Wiosna's claim into grievance. Either takeover sets `spring_path_stage = 2` and opens the doctrine convention two months later. |
+| **WIO-02 — The doctrine convention** | **P** | Equality-first social liberalism, or Ruch Postępu: fiscally conservative and socially liberal, gated on `left_economic_position >= 56` or an active Market Left caucus. Deferral is available and repeatable. | The route is the party's identity for the rest of the campaign: it renames the party (`Wiosna` / `Ruch Postępu`), sets the drift applied in `poland_advance`, and decides which branch events exist. |
+| **WIO-03 — Two bills and one parliament** | **P** | Social-liberal route only. Cross-party rights bloc with KO's liberal wing, partnership-first sequencing, or a campaign outside parliament. | Feeds `marriage_*`/`abortion_*` commitments, salience and backlash into the existing major-reform resolution rather than legislating directly. |
+| **WIO-04 — The Concordat question** | **P** | Social-liberal route only. Reopen the treaty, move catechism and audit the Church Fund, or hold fire while the bills are live. | Secular-state ownership and backlash, conservative-partner relations, and progressive dissent when the leadership defers. |
+| **WIO-05 — Ruch Postępu goes to market** | **P** | Market route only. Full tax and contribution package, self-employment relief only, or 2011-style anti-clerical spectacle instead of a tax bill. | Moves the economic axis and the professional vote; the labour flank and Razem pay for it through the existing right-turn pressure model. |
+| **WIO-06 — Razem will not stay** | **N** | Market route only, while Razem is still inside and unprotected. Let the exit congress run, buy the alliance back with a costed social floor, or negotiate a clean divorce. | Routes into the existing `poland_caucus_dynamics` ladder: escalation stage 7 for the rupture, an orderly `resolve_exit` for the divorce. The buy-back walks the economic line back and costs the market pitch. |
+| **WIO-07 — The right picks its line** | **P** | Both routes, four months in. PiS and Konfederacja attack the two doctrines with different weapons. Escalate on rights, contest Konfederacja's freedom argument, or refuse the framing. | Polarisation, the young anti-system vote, and the credibility the leadership loses on its own flank when it declines the fight. |
+| **WIO-08 — The liberal centre's offer** | **N** | Both routes, once `spring_liberal_bridge >= 55`. Accept a common list, price it in legislation, or refuse and stand alone. | Absorption trades independence and regional organisation for seats; pricing converts the bridge into written commitments; refusal costs the party's friendliest relationship. |
+| **WIO-09 — The verdict** | **P** | August 2027. Reads the enacted reform stages, the surviving left flank and the doctrine actually chosen. | Sets the campaign frame and the closing record of the project. |
+
 ## Social-policy and culture-war chains
 
 ### COVID-19
@@ -977,3 +998,35 @@ Before any `.scene.dry` work, the best candidates should receive a second,
 implementation-shaped ledger with: exact date window, actor availability,
 preconditions, visible choices, hidden checks, immediate effects, delayed scene
 IDs, cancellation conditions and sources.
+
+## Gowin crisis and the collapse of the United Right (2020–2023)
+
+Added `poland_gowin_crisis`, `poland_porozumienie_war`, `poland_minority_sejm`
+and `poland_porozumienie_after`, plus five orthogonal affiliation fields on
+`rival_group_records` (`list_committee`, `club`, `in_cabinet`, `support_mode`,
+`independent`) documented in `POLITICAL_MODEL.md`.
+
+* **Act I–II (2020).** Gowin's postal-election rebellion, his 6 April
+  resignation — which leaves Porozumienie in the cabinet, the club and the PiS
+  list — four May outcomes (6 May compromise, clean postponement, forced postal
+  vote, constitutional extension), Emilewicz's September defection and the
+  autumn reconstruction. Replaces the single `poland_events.postal` popup.
+* **Act III–IV (2021 H1).** The Bielan leadership dispute, Partia Republikańska
+  generated out of named Porozumienie deputies, the Koalicja Polska rupture, and
+  the Kaczyński–Kukiz negotiation resolving to `pis_current`, `toleration` or
+  `refused` on programmatic concessions rather than office.
+* **Act V–VII (2021 H2 onward).** Polski Ład and Lex TVN, Porozumienie's OECD
+  amendment (which PiS can accept), Gowin's dismissal, OdNowa RP, the 11 August
+  adjournment and reassumption resolved from the actual arithmetic, and a
+  minority parliament that does not collapse the government. A formal
+  PiS–Konfederacja coalition is never the automatic answer. `@august_2021`
+  keeps its eight Lewica strategy routes and now reads the result instead of
+  hard-coding a six-MP transfer.
+* **Act VIII (2021–2024).** Porozumienie's search for a place in the opposition,
+  the Sroka succession, the AgroUnia experiment, 2023 list placement for both
+  Porozumienie and Kukiz'15, Tyszka's conditional defection to Konfederacja,
+  clean removal of a dissolved party, and the postal-election commission written
+  from what the 2020 chain actually recorded.
+
+An early dissolution before August 2023 clears `historical_2023_calendar`, which
+gates the dated 2021–2023 router. Verified by `npm run check:gowin`.

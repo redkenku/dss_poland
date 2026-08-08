@@ -45,6 +45,28 @@ Q.reform_pressure_actor_live =
         (Q.government_party == "p2050" || Q.ministry_p2050_in_cabinet))
         ? 1 : 0;
 Q.reform_pressure_bargain_available = actor != "president" ? 1 : 0;
+// The Sejm freezer needs a Marshal who takes our calls. The chair belongs to a
+// person, not a party, so the holder is matched by name against the Left's own
+// front bench and its elected leadership.
+const leftMarshalNames = [
+    "Włodzimierz Czarzasty", "Robert Biedroń",
+    "Agnieszka Dziemianowicz-Bąk", "Magdalena Biejat",
+    "Adrian Zandberg", "Krzysztof Gawkowski", "Anna Maria Żukowska",
+    "Katarzyna Kotula", "Krzysztof Śmiszek", "Tomasz Trela",
+    "Paulina Matysiak", "Joanna Scheuring-Wielgus", "Wanda Nowicka"
+];
+const marshalName = String(Q.sejm_speaker || "").trim();
+Q.left_holds_marshal =
+    marshalName.length &&
+    (leftMarshalNames.indexOf(marshalName) >= 0 ||
+        marshalName == String(Q.left_leader || "").trim())
+        ? 1 : 0;
+Q.frozen_demand_count = Math.max(0, Number(Q.frozen_demand_count) || 0);
+Q.frozen_demand_credibility = Math.max(
+    0, 2 - Q.frozen_demand_count
+);
+Q.reform_pressure_freeze_available =
+    Q.left_holds_marshal && Q.frozen_demand_credibility > 0 ? 1 : 0;
 Q.reform_pressure_override_votes = Math.max(
     Number(Q.coalition_seats) || 0,
     Math.min(
@@ -341,8 +363,24 @@ The partner offers a budget priority for agreement, accepts a lawful or
 narrower version if we spend political capacity, and threatens coalition
 peace if we refuse.
 
+[? if reform_pressure_frozen_return = 1 and frozen_demand_count = 1: This is
+the second time this file has crossed our table. Last time we promised
+parliamentary action and delivered a committee referral that has not met.
+**[+ reform_pressure_actor_name +]** has checked the order paper.?]
+[? if reform_pressure_frozen_return = 1 and frozen_demand_count >= 2: This
+file has been promised parliamentary action **[+ frozen_demand_count +]**
+times and has not reached a first reading once. Nobody in the partner's caucus
+is pretending any more that the delay is procedural.?]
+[? if left_holds_marshal = 1 and reform_pressure_freeze_available = 1: We hold
+the Marshal's chair, which means we control the order paper. A bill can be
+promised, referred and simply never scheduled — for a while.?]
+[? if left_holds_marshal = 1 and reform_pressure_freeze_available = 0: We still
+hold the Marshal's chair and the order paper, but this partner has stopped
+accepting a promise of parliamentary action as an answer.?]
+
 - @demand_accept
 - @demand_amend
+- @demand_freeze
 - @demand_refuse
 
 @demand_accept
@@ -357,6 +395,14 @@ subtitle: Cost: 1 resource. Reduce the damage while keeping a coalition agreemen
 choose-if: resources >= 1
 unavailable-subtitle: A counter-draft and coalition campaign need one resource.
 on-arrival: resources -= 1; reform_pressure_resolution = "amend"
+go-to: apply_demand
+
+@demand_freeze
+title: Promise parliamentary action and put the bill in the Sejm freezer
+subtitle: Requires the Marshal's chair. Buys quiet now; the demand returns angrier and the anger compounds each time.
+choose-if: reform_pressure_freeze_available = 1
+unavailable-subtitle: [? if left_holds_marshal = 0: The Marshal's chair is not ours, so we do not control the order paper and cannot promise a reading we can quietly withhold.?][? if left_holds_marshal = 1: We have used this promise as far as it will go — this partner no longer accepts a committee referral as an answer.?]
+on-arrival: reform_pressure_resolution = "freeze"
 go-to: apply_demand
 
 @demand_refuse
@@ -374,6 +420,9 @@ const resolution = Q.reform_pressure_resolution;
 const intensity = Number(Q.reform_pressure_intensity) || 50;
 const illegality = Number(Q.reform_pressure_illegality) || 0;
 const relationKey = actor + "_relation";
+// Each previous freeze on this file raises the political price of every later
+// answer to it, including another freeze.
+const freezeAnger = 1 + 0.6 * Math.max(0, Number(Q.frozen_demand_count) || 0);
 const thirdWayMarketisation =
     issue == "marketisation" &&
     (actor == "psl" || actor == "p2050");
@@ -390,14 +439,49 @@ if (resolution == "accept") {
     if (actor == "ko") Q.ko_coalition_dissent += 1;
     if (actor == "psl") Q.psl_coalition_dissent += 1;
     if (actor == "p2050") Q.p2050_coalition_dissent += 1;
+} else if (resolution == "freeze") {
+    // The promise is believed once, tolerated twice and never a third time.
+    Q[relationKey] += Math.round(3 - 4 * (freezeAnger - 1));
+    Q.government_coalition_dissent += Math.round(2 * freezeAnger);
+    if (actor == "ko") Q.ko_coalition_dissent += Math.round(2 * freezeAnger);
+    if (actor == "psl") Q.psl_coalition_dissent += Math.round(2 * freezeAnger);
+    if (actor == "p2050") {
+        Q.p2050_coalition_dissent += Math.round(2 * freezeAnger);
+    }
+    Q.coalition_blur = (Number(Q.coalition_blur) || 0) + 2;
+    Q.early_election_risk =
+        (Number(Q.early_election_risk) || 0) + Math.round(2 * freezeAnger);
+    Q.frozen_demand_count = Math.max(0, Number(Q.frozen_demand_count) || 0) + 1;
+    Q.frozen_demand_issue = issue;
+    Q.frozen_demand_actor = actor;
+    Q.frozen_demand_actor_name = Q.reform_pressure_actor_name;
+    Q.frozen_demand_issue_name = Q.reform_pressure_issue_name;
+    Q.frozen_demand_intensity = intensity;
+    Q.frozen_demand_illegality = illegality;
+    Q.reform_pressure_frozen = 1;
+    Q.frozen_demand_due_time =
+        (Number(Q.time) || 0) + (Q.frozen_demand_count >= 2 ? 2 : 3);
+    Q.frozen_demand_log =
+        (Q.frozen_demand_log ? Q.frozen_demand_log + " · " : "") +
+        Q.reform_pressure_issue_name + " (" + Q.reform_pressure_actor_name +
+        ")";
+    if (Q.frozen_demand_count >= 3) {
+        Q.coalition_break_threat = 1;
+    }
 } else {
-    Q[relationKey] -= 8;
-    Q.government_coalition_dissent += 8;
-    if (actor == "ko") Q.ko_coalition_dissent += 7;
-    if (actor == "psl") Q.psl_coalition_dissent += 7;
-    if (actor == "p2050") Q.p2050_coalition_dissent += 7;
-    Q.early_election_risk += 6;
-    if (intensity >= 70) Q.coalition_break_threat = 1;
+    Q[relationKey] -= Math.round(8 * freezeAnger);
+    Q.government_coalition_dissent += Math.round(8 * freezeAnger);
+    if (actor == "ko") Q.ko_coalition_dissent += Math.round(7 * freezeAnger);
+    if (actor == "psl") Q.psl_coalition_dissent += Math.round(7 * freezeAnger);
+    if (actor == "p2050") {
+        Q.p2050_coalition_dissent += Math.round(7 * freezeAnger);
+    }
+    Q.early_election_risk += Math.round(6 * freezeAnger);
+    if (intensity >= 70 || Q.frozen_demand_count >= 2) {
+        Q.coalition_break_threat = 1;
+    }
+    Q.reform_pressure_frozen = 0;
+    Q.frozen_demand_count = 0;
 }
 
 if (issue == "judicial_reset") {
@@ -566,8 +650,22 @@ if (!(issue == "marketisation" &&
 }
 Q.reform_pressure_pending = 0;
 Q.reform_pressure_mode = "None";
-Q.reform_pressure_cooldown = illegality >= 55 ? 3 : 5;
+Q.reform_pressure_frozen_return = 0;
+if (resolution == "accept" || resolution == "amend") {
+    // Settling the file empties the freezer for it.
+    Q.reform_pressure_frozen = 0;
+    Q.frozen_demand_count = 0;
+    Q.frozen_demand_due_time = -1;
+}
+// A frozen file keeps its own clock and must be able to come back before the
+// ordinary pressure cooldown expires; that is the whole point of freezing it.
+Q.reform_pressure_cooldown = resolution == "freeze"
+    ? 0
+    : (illegality >= 55 ? 3 : 5);
 Q.reform_pressure_due_time = -1;
-Q.news_headline = Q.reform_pressure_last_result;
+Q.news_headline = resolution == "freeze"
+    ? Q.reform_pressure_actor_name + " accepts a promise of parliamentary " +
+        "action on " + Q.reform_pressure_issue_name
+    : Q.reform_pressure_last_result;
 !}
 go-to: poland_polling

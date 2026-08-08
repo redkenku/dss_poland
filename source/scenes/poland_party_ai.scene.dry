@@ -2021,13 +2021,72 @@ if (Q.social_patriot_party_formed) {
 // parties and never changes their leader or transfers their whole following.
 const autonomousGroupIds = [
     "porozumienie", "solidarna", "rozwoj_plus", "nowoczesna", "ipl",
-    "greens", "ko_splinter"
+    "greens", "ko_splinter", "republikanie", "odnowa", "kukiz15"
 ];
 const autonomousGroups = (Q.rival_group_records || []).filter(
     function(record) {
         return record.active && autonomousGroupIds.includes(record.id);
     }
 );
+// Three actors with their own logic rather than the generic component tick.
+// Gowin looks for compromise first, threatens second, and only leaves when
+// staying costs him his political identity; Kukiz sells programme and not
+// office; Kaczynski's answer to both is to cultivate their internal rivals.
+const gowinRecord = (Q.rival_group_records || []).find(function(record) {
+    return record.id == "porozumienie" && record.active;
+});
+if (gowinRecord && !Q.porozumienie_exit_done) {
+    const squeezed = Math.max(0, 55 - Math.max(0, Number(Q.gowin_standing) || 55));
+    gowinRecord.grievance_memory = Math.min(
+        100,
+        (Number(gowinRecord.grievance_memory) || 0) + (squeezed > 12 ? 2 : 0)
+    );
+    // Threatening is cheap and always costs him cohesion; it is the trap the
+    // whole chain is about.
+    if (squeezed > 18 && randomAI() <= 0.35) {
+        gowinRecord.cohesion = Math.max(
+            0,
+            (Number(gowinRecord.cohesion) || 55) - 1
+        );
+        Q.rival_group_month_action =
+            gowinRecord.name + " threatens the coalition and loses another deputy's patience";
+        headlines.push(Q.rival_group_month_action);
+    }
+    // PiS answers by paying his internal rivals rather than him.
+    if (Q.republikanie_formed && randomAI() <= 0.4) {
+        const republicans = (Q.rival_group_records || []).find(function(record) {
+            return record.id == "republikanie";
+        });
+        if (republicans) {
+            republicans.organisation = Math.min(
+                100,
+                (Number(republicans.organisation) || 26) + 1
+            );
+        }
+    }
+}
+const kukizRecord = (Q.rival_group_records || []).find(function(record) {
+    return record.id == "kukiz15" && record.active;
+});
+if (kukizRecord && Q.kukiz_left_kp) {
+    const credit = Math.max(0, Number(Q.kukiz_programme_credit) || 0);
+    // He is not buyable with offices, so the only thing that moves him is
+    // whether anybody is actually passing his bills.
+    if (credit >= 30 && randomAI() <= 0.3) {
+        kukizRecord.relation = Math.min(
+            100,
+            (Number(kukizRecord.relation) || 16) + 1
+        );
+        Q.rival_group_month_action =
+            "Kukiz'15 votes with the opposition on an anti-corruption clause";
+        headlines.push(Q.rival_group_month_action);
+    } else if (String(Q.kukiz_alignment || "") == "toleration" &&
+        randomAI() <= 0.25) {
+        Q.rival_group_month_action =
+            "Kukiz'15 withholds its votes until somebody names a committee date";
+        headlines.push(Q.rival_group_month_action);
+    }
+}
 for (const independentId of ["solidarna", "porozumienie"]) {
     const independent = autonomousGroups.find(function(record) {
         return record.id == independentId &&

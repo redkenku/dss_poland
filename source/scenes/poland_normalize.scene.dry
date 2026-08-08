@@ -139,6 +139,35 @@ if (Q.started) {
     Q.abortion_referendum_mandate = Q.abortion_referendum_mandate ? 1 : 0;
     Q.marriage_referendum_mandate = Q.marriage_referendum_mandate ? 1 : 0;
     Q.reform_pressure_pending = Q.reform_pressure_pending ? 1 : 0;
+    // A demand put in the Sejm freezer keeps its own clock. When it matures it
+    // re-arms itself as the same partner's same file, and the apply step
+    // scales every penalty by how often we have promised action already.
+    Q.reform_pressure_frozen = Q.reform_pressure_frozen ? 1 : 0;
+    Q.frozen_demand_count = Math.max(0, Number(Q.frozen_demand_count) || 0);
+    if (
+        Q.reform_pressure_frozen &&
+        !Q.reform_pressure_pending &&
+        Q.left_in_government &&
+        !Q.caretaker_government &&
+        Number(Q.frozen_demand_due_time) >= 0 &&
+        Number(Q.time) >= Number(Q.frozen_demand_due_time)
+    ) {
+        Q.reform_pressure_pending = 1;
+        Q.reform_pressure_mode = "partner_demand";
+        Q.reform_pressure_frozen_return = 1;
+        Q.reform_pressure_actor = Q.frozen_demand_actor;
+        Q.reform_pressure_actor_name = Q.frozen_demand_actor_name;
+        Q.reform_pressure_issue = Q.frozen_demand_issue;
+        Q.reform_pressure_issue_name = Q.frozen_demand_issue_name;
+        Q.reform_pressure_intensity = Math.min(
+            100,
+            (Number(Q.frozen_demand_intensity) || 50) +
+                8 * Math.max(1, Number(Q.frozen_demand_count) || 1)
+        );
+        Q.reform_pressure_illegality = Number(Q.frozen_demand_illegality) || 0;
+        Q.reform_pressure_cooldown = 0;
+        Q.frozen_demand_due_time = -1;
+    }
     Q.reform_pressure_referendum_used =
         Q.reform_pressure_referendum_used ? 1 : 0;
     Q.reform_pressure_intensity = clamp(
@@ -488,7 +517,19 @@ if (Q.started) {
         ["ipl", "ko", "party", "Inicjatywa Polska", "Barbara Nowacka", "Koalicja Obywatelska", "allied party", 1, 1, 27, 66, 54, 5],
         ["greens", "ko", "party", "Zieloni", "collective leadership", "Koalicja Obywatelska", "allied separate party", 1, 1, 24, 64, 58, 3],
         ["ko_party", "ko", "party", "Koalicja Obywatelska", "Donald Tusk", "Civic coalition", "electoral alliance", 0, 1, 0, 0, 44, 0],
-        ["ko_splinter", "ko", "party", "KO dissenters", "collective committee", "Civic coalition", "not formed", 0, 0, 0, 0, 30, 0]
+        ["ko_splinter", "ko", "party", "KO dissenters", "collective committee", "Civic coalition", "not formed", 0, 0, 0, 0, 30, 0],
+        ["psl_party", "psl", "party", "Polskie Stronnictwo Ludowe", "Władysław Kosiniak-Kamysz", "Koalicja Polska", "allied party", 1, 1, 68, 74, 40, 24],
+        ["kukiz15", "psl", "party", "Kukiz'15", "Paweł Kukiz", "Koalicja Polska", "allied party", 1, 1, 22, 44, 16, 6],
+        ["kp_partners", "psl", "party", "Unia Europejskich Demokratów (UED)", "Elżbieta Bińczycka", "Koalicja Polska", "allied minor partner", 1, 1, 14, 50, 30, 0],
+        ["p2050_party", "psl", "party", "Polska 2050", "Szymon Hołownia", "Koalicja Polska", "not formed", 0, 1, 0, 0, 30, 0],
+        ["kp_committee", "psl", "party", "Koalicja Polska", "Władysław Kosiniak-Kamysz", "Koalicja Polska", "electoral alliance", 1, 1, 40, 56, 34, 0],
+        ["nowa_nadzieja", "konf", "party", "Wolność", "Janusz Korwin-Mikke", "Konfederacja", "allied party", 1, 1, 26, 48, 2, 5],
+        ["ruch_narodowy", "konf", "party", "Ruch Narodowy", "Krzysztof Bosak", "Konfederacja", "allied party", 1, 1, 32, 62, 4, 5],
+        ["kkp", "konf", "party", "Konfederacja Korony Polskiej", "Grzegorz Braun", "Konfederacja", "allied party", 1, 1, 16, 70, -8, 1],
+        ["konf_committee", "konf", "party", "Konfederacja Wolność i Niepodległość", "collective presidium", "Konfederacja Wolność i Niepodległość", "electoral alliance", 1, 1, 34, 44, 2, 0],
+        ["zp_committee", "pis", "party", "Zjednoczona Prawica", "Jarosław Kaczyński", "Zjednoczona Prawica", "electoral alliance", 1, 1, 70, 66, 8, 0],
+        ["republikanie", "pis", "party", "Partia Republikańska", "Adam Bielan", "United Right", "not formed", 0, 1, 0, 0, 18, 0],
+        ["odnowa", "pis", "party", "OdNowa RP", "Marcin Ociepa", "United Right", "not formed", 0, 1, 0, 0, 20, 0]
     ];
     if (!Array.isArray(Q.rival_group_records)) {
         Q.rival_group_records = [];
@@ -564,7 +605,63 @@ if (Q.started) {
             Math.round(record.exclusive_seats)
         );
     }
-    Q.rival_group_schema_version = 2;
+    // Five affiliations that historically move independently. A party can be
+    // its own legal organisation, sit in a parliamentary club it does not
+    // control, run on somebody else's list, hold portfolios and vote with the
+    // government — and it can lose any one of those without losing the rest.
+    // Nothing here is derived from anything else. `allied` still means
+    // "friendly to the parent bloc" and `active` still means "the
+    // organisation exists"; neither implies list, club or cabinet membership.
+    const affiliationDefaults = {
+        pis_apparatus: ["pis", "pis", 1, "coalition", 0],
+        porozumienie: ["pis", "pis", 1, "coalition", 1],
+        solidarna: ["pis", "pis", 1, "coalition", 1],
+        morawiecki: ["pis", "pis", 1, "coalition", 0],
+        pis_welfare: ["pis", "pis", 1, "coalition", 0],
+        pis_security: ["pis", "pis", 1, "coalition", 0],
+        pis_culture: ["pis", "pis", 1, "coalition", 0],
+        rozwoj_plus: ["pis", "pis", 0, "coalition", 0],
+        republikanie: ["pis", "pis", 0, "none", 1],
+        odnowa: ["pis", "pis", 0, "none", 1],
+        psl_party: ["psl", "kp", 0, "opposition", 1],
+        p2050_party: ["p2050", "p2050", 0, "opposition", 1],
+        kp_committee: ["psl", "kp", 0, "opposition", 0],
+        nowa_nadzieja: ["konf", "konf", 0, "opposition", 1],
+        ruch_narodowy: ["konf", "konf", 0, "opposition", 1],
+        kkp: ["konf", "konf", 0, "opposition", 1],
+        konf_committee: ["konf", "konf", 0, "opposition", 0],
+        zp_committee: ["pis", "pis", 1, "coalition", 0],
+        kukiz15: ["psl", "kp", 0, "opposition", 1],
+        kp_partners: ["psl", "kp", 0, "opposition", 1],
+        po: ["ko", "ko", 0, "opposition", 1],
+        nowoczesna: ["ko", "ko", 0, "opposition", 1],
+        ipl: ["ko", "ko", 0, "opposition", 1],
+        greens: ["ko", "ko", 0, "opposition", 1],
+        ko_party: ["ko", "ko", 0, "opposition", 1],
+        ko_splinter: ["ko", "ko", 0, "opposition", 1]
+    };
+    const affiliationFields = [
+        "list_committee", "club", "in_cabinet", "support_mode", "independent"
+    ];
+    const supportModes = ["coalition", "toleration", "opposition", "none"];
+    for (const record of Q.rival_group_records) {
+        const values = affiliationDefaults[record.id] ||
+            [record.id, record.id, 0, "none", 1];
+        for (let index = 0; index < affiliationFields.length; index += 1) {
+            const field = affiliationFields[index];
+            if (record[field] === undefined || record[field] === null) {
+                record[field] = values[index];
+            }
+        }
+        record.list_committee = String(record.list_committee || record.id);
+        record.club = String(record.club || record.id);
+        record.in_cabinet = record.in_cabinet ? 1 : 0;
+        record.independent = record.independent ? 1 : 0;
+        if (!supportModes.includes(String(record.support_mode))) {
+            record.support_mode = "none";
+        }
+    }
+    Q.rival_group_schema_version = 3;
     if (typeof Q.rival_group_month_action != "string") {
         Q.rival_group_month_action =
             "No component organisation has acted yet";
@@ -593,6 +690,12 @@ if (Q.started) {
         ["baszko", "Mieczysław Baszko", "Sejm", "pis", "porozumienie", "undecided", "United Right MP"],
         ["piechowiak", "Grzegorz Piechowiak", "Sejm", "pis", "porozumienie", "undecided", "United Right MP"],
         ["dabrowska_banaszek", "Anna Dąbrowska-Banaszek", "Sejm", "pis", "porozumienie", "undecided", "United Right MP"],
+        ["emilewicz", "Jadwiga Emilewicz", "Sejm", "pis", "porozumienie", "undecided", "United Right MP"],
+        ["bielan", "Adam Bielan", "European Parliament", "pis", "porozumienie", "undecided", "United Right MEP"],
+        ["bortniczuk", "Kamil Bortniczuk", "Sejm", "pis", "porozumienie", "undecided", "United Right MP"],
+        ["strzezek", "Jacek Strzeżek", "Sejm", "pis", "porozumienie", "Porozumienie", "United Right MP"],
+        ["kukiz", "Paweł Kukiz", "Sejm", "psl", "kukiz15", "Kukiz'15", "Koalicja Polska MP"],
+        ["tyszka", "Stanisław Tyszka", "Sejm", "psl", "kukiz15", "Kukiz'15", "Koalicja Polska MP"],
         ["morawiecki", "Mateusz Morawiecki", "Sejm", "pis", "pis", "PiS", "PiS MP"],
         ["semieniuk", "Olga Semeniuk-Patkowska", "Sejm", "pis", "pis", "PiS", "PiS MP"],
         ["cieszynski", "Janusz Cieszyński", "Sejm", "pis", "pis", "PiS", "PiS MP"],
@@ -631,7 +734,15 @@ if (Q.started) {
         Math.round(Number(Q.porozumienie_seats) || 0)
     );
     if (Q.porozumienie_exit_done) {
+        // Unlike Solidarna Polska, Gowin's party left the electoral committee
+        // as well as the cabinet, so all five affiliations move together here.
         porozumienieRecord.allied = 0;
+        porozumienieRecord.independent = 1;
+        porozumienieRecord.in_cabinet = 0;
+        porozumienieRecord.support_mode = "opposition";
+        porozumienieRecord.club = "porozumienie";
+        porozumienieRecord.list_committee =
+            String(Q.porozumienie_list_committee || "porozumienie");
         porozumienieRecord.legal_status = "independent parliamentary party";
         porozumienieRecord.mp_count = Math.max(
             porozumienieRecord.mp_count,
@@ -642,8 +753,15 @@ if (Q.started) {
     const solidarnaRecord = rivalGroup("solidarna");
     if (Q.suwerenna_renamed) solidarnaRecord.name = "Suwerenna Polska";
     if (Q.suwerenna_walkout) {
+        // A walkout ends cabinet membership and coalition discipline. It does
+        // not by itself end the shared electoral committee: Solidarna Polska
+        // stayed on the PiS list throughout its independence, and only an
+        // explicit decision to file its own committee changes that.
         solidarnaRecord.active = 1;
-        solidarnaRecord.allied = 0;
+        solidarnaRecord.independent = 1;
+        solidarnaRecord.club = "sp";
+        solidarnaRecord.in_cabinet = 0;
+        solidarnaRecord.support_mode = "opposition";
         solidarnaRecord.legal_status = "independent party after walkout";
         solidarnaRecord.exclusive_seats = Math.max(
             0,
@@ -656,8 +774,11 @@ if (Q.started) {
         solidarnaRecord.active = 0;
         solidarnaRecord.allied = 1;
         solidarnaRecord.kind = "caucus";
+        solidarnaRecord.independent = 0;
+        solidarnaRecord.club = "pis";
         solidarnaRecord.legal_status = "merged current inside PiS";
     }
+    solidarnaRecord.list_committee = Q.suwerenna_own_list ? "solidarna" : "pis";
     const rozwojRecord = rivalGroup("rozwoj_plus");
     if (Q.rozwoj_association_active) {
         const morawieckiRecord = rivalGroup("morawiecki");
@@ -735,6 +856,196 @@ if (Q.started) {
         koSplinterRecord.name = Q.ko_splinter_type + " KO splinter";
         koSplinterRecord.legal_status = "independent organisation";
     }
+
+    const zpCommittee = rivalGroup("zp_committee");
+    const zpMembers = Q.rival_group_records.filter(function(record) {
+        return record.active && record.id != "zp_committee" &&
+            record.kind == "party" && record.list_committee == "pis";
+    });
+    zpCommittee.active = zpMembers.length > 1 ? 1 : 0;
+    zpCommittee.leader = String(Q.pis_leader || "Jarosław Kaczyński");
+    zpCommittee.mp_count = Math.max(0, Math.round(Number(Q.pis_seats) || 0));
+    zpCommittee.sejm_mps = zpCommittee.mp_count;
+    Q.zp_committee_name = zpCommittee.active
+        ? zpCommittee.name
+        : "Prawo i Sprawiedliwość";
+
+    // Konfederacja is a federation of surviving parties on one committee, in
+    // the same shape as the PiS and Koalicja Polska families. The libertarian
+    // component has changed its name three times without ever ceasing to be
+    // the same organisation, so the name is derived rather than stored.
+    const nowaNadziejaRecord = rivalGroup("nowa_nadzieja");
+    const konfCommittee = rivalGroup("konf_committee");
+    const konfYear = Number(Q.year) || 2019;
+    const konfMonth = Number(Q.month) || 10;
+    if (Q.konf_succession_2022_done) {
+        nowaNadziejaRecord.name = Q.konf_korwin_countercoup_2022
+            ? "KORWiN"
+            : "Nowa Nadzieja";
+    } else if (konfYear > 2021 || (konfYear == 2021 && konfMonth >= 12)) {
+        nowaNadziejaRecord.name = "KORWiN";
+    } else {
+        nowaNadziejaRecord.name = "Wolność";
+    }
+    nowaNadziejaRecord.leader =
+        String(Q.konf_libertarian_leader || "Janusz Korwin-Mikke");
+    const kkpRecord = rivalGroup("kkp");
+    if (Q.far_right_split) {
+        // Braun's organisation leaves the committee and the club without
+        // ceasing to exist, exactly as Porozumienie and Kukiz'15 can.
+        kkpRecord.name = "Korona";
+        kkpRecord.list_committee = "korona";
+        kkpRecord.club = "korona";
+        kkpRecord.allied = 0;
+        kkpRecord.legal_status = "independent party after the split";
+        kkpRecord.exclusive_seats = Math.max(
+            0,
+            Math.round(Number(Q.korona_seats) || 0)
+        );
+    }
+    const konfMembers = Q.rival_group_records.filter(function(record) {
+        return record.active && record.id != "konf_committee" &&
+            record.list_committee == "konf";
+    });
+    konfCommittee.active = konfMembers.length > 1 ? 1 : 0;
+    konfCommittee.leader = String(Q.konf_leader || "collective presidium");
+    konfCommittee.mp_count = konfMembers.reduce(function(total, record) {
+        return total + Math.max(0, Number(record.mp_count) || 0);
+    }, 0);
+    konfCommittee.sejm_mps = konfCommittee.mp_count;
+    Q.konf_committee_name = konfCommittee.active
+        ? konfCommittee.name
+        : "No shared committee";
+    Q.konf_libertarian_party_name = nowaNadziejaRecord.name;
+
+    const kpPartnersRecord = rivalGroup("kp_partners");
+    if (kpPartnersRecord.name == "Koalicja Polska partners") {
+        kpPartnersRecord.name = "Unia Europejskich Demokratów (UED)";
+    }
+    const kpCommittee = rivalGroup("kp_committee");
+    const p2050Party = rivalGroup("p2050_party");
+    // An alliance whose two components end up on opposite sides of a cabinet
+    // is not an alliance. Recording the split here keeps the polling committee,
+    // the seat table and the party panel from disagreeing about who exists:
+    // without it PSL renders as an independent party while Poland 2050's vote
+    // is still folded into a Trzecia Droga committee nothing draws.
+    if (
+        (!!Q.third_way_active || !!Q.third_way_2023_done) &&
+        !Q.third_way_split &&
+        !!Q.p2050_emerged &&
+        Boolean(Q.ministry_p2050_in_cabinet) !=
+            Boolean(Q.ministry_psl_in_cabinet)
+    ) {
+        Q.third_way_split = 1;
+        Q.third_way_active = 0;
+        Q.third_way_future = "Split by a cabinet only one of them joined";
+    }
+    const thirdWayFormed =
+        (!!Q.third_way_active || !!Q.third_way_2023_done) && !Q.third_way_split;
+    p2050Party.active = Q.p2050_emerged && !Q.p2050_joined_left ? 1 : 0;
+    if (p2050Party.active) {
+        p2050Party.leader = String(Q.p2050_leader || "Szymon Hołownia");
+        p2050Party.legal_status = thirdWayFormed
+            ? "allied party inside Trzecia Droga"
+            : "independent party";
+    }
+    const kpCommitteeId = thirdWayFormed ? "third_way" : "psl";
+    for (const member of Q.rival_group_records) {
+        if (["psl_party", "kp_partners"].includes(member.id) && member.active) {
+            member.list_committee = kpCommitteeId;
+            member.parent = thirdWayFormed ? "Trzecia Droga" : "Koalicja Polska";
+        }
+    }
+    if (p2050Party.active && thirdWayFormed) {
+        p2050Party.list_committee = "third_way";
+        p2050Party.club = "third_way";
+        p2050Party.parent = "Trzecia Droga";
+    } else if (p2050Party.active) {
+        p2050Party.list_committee = "p2050";
+        p2050Party.club = "p2050";
+        p2050Party.parent = "Polska 2050";
+    }
+    const kpMembers = Q.rival_group_records.filter(function(record) {
+        return record.active && record.id != "kp_committee" &&
+            record.list_committee == kpCommitteeId;
+    });
+    kpCommittee.list_committee = kpCommitteeId;
+    kpCommittee.club = thirdWayFormed ? "third_way" : "kp";
+    kpCommittee.name = thirdWayFormed ? "Trzecia Droga" : "Koalicja Polska";
+    kpCommittee.parent = kpCommittee.name;
+    kpCommittee.legal_status = "electoral alliance";
+    // A committee with one component is not a committee.
+    kpCommittee.active = kpMembers.length > 1 ? 1 : 0;
+    kpCommittee.mp_count = kpMembers.reduce(function(total, record) {
+        return total + Math.max(0, Number(record.mp_count) || 0);
+    }, 0);
+    kpCommittee.sejm_mps = kpCommittee.mp_count;
+    // Koalicja Polska is green; its successor keeps the Third Way colour.
+    Q.kp_committee_class = thirdWayFormed ? "party-third-way" : "party-psl";
+    Q.kp_committee_name = kpCommittee.active
+        ? kpCommittee.name
+        : "No shared committee";
+    Q.third_way_committee_active =
+        kpCommittee.active && thirdWayFormed ? 1 : 0;
+
+    // Read-only affiliation roll-ups. Events own the seat totals themselves —
+    // this only reports who is currently attached to which committee, club and
+    // cabinet, so a scene never has to re-derive it and the path checks have
+    // one place to test the arithmetic against.
+    const affiliationRoll = function(field, value) {
+        return Q.rival_group_records.filter(function(record) {
+            return record.active && record[field] == value;
+        });
+    };
+    const affiliationNames = function(records) {
+        return records.length
+            ? records.map(function(record) { return record.name; }).join(", ")
+            : "None";
+    };
+    const affiliationSeats = function(records) {
+        return records.reduce(function(total, record) {
+            return total + Math.max(0, Number(record.exclusive_seats) || 0);
+        }, 0);
+    };
+    const konfListRecords = affiliationRoll("list_committee", "konf").filter(
+        function(record) { return record.id != "konf_committee"; }
+    );
+    Q.konf_list_members = affiliationNames(konfListRecords);
+    const pisListRecords = affiliationRoll("list_committee", "pis").filter(
+        function(record) { return record.kind == "party"; }
+    );
+    // The PSL committee is Koalicja Polska, or Trzecia Droga once the centrist
+    // bloc has formed on top of it. It is the same record either way.
+    const kpListRecords = affiliationRoll("list_committee", kpCommitteeId)
+        .filter(function(record) { return record.id != "kp_committee"; });
+    Q.pis_list_members = affiliationNames(pisListRecords);
+    Q.kp_list_members = affiliationNames(kpListRecords);
+    Q.pis_list_attached_seats = affiliationSeats(pisListRecords);
+    Q.kp_list_attached_seats = affiliationSeats(kpListRecords);
+    Q.government_toleration_seats = affiliationSeats(
+        affiliationRoll("support_mode", "toleration")
+    );
+    // Named separately from coalition_cabinet_parties, which is owned by the
+    // Lewica-era cabinet ledger further down this scene.
+    Q.allied_cabinet_parties = affiliationNames(
+        affiliationRoll("in_cabinet", 1).filter(function(record) {
+            return record.kind == "party";
+        })
+    );
+    Q.kp_coalition_active = kpListRecords.length > 1 ? 1 : 0;
+    // Anything that has isolated itself still exists and still has to be
+    // visible somewhere, so it is collected rather than dropped.
+    const sharedCommittees = ["pis", "psl", "ko", "konf", "third_way"];
+    const isolatedRecords = Q.rival_group_records.filter(function(record) {
+        return record.active && record.kind == "party" &&
+            !String(record.id).endsWith("_committee") &&
+            !sharedCommittees.includes(String(record.list_committee));
+    });
+    Q.independent_bucket_members = affiliationNames(isolatedRecords);
+    Q.independent_bucket_count = isolatedRecords.length;
+    Q.independent_bucket_seats = affiliationSeats(isolatedRecords);
+    Q.porozumienie_relation = porozumienieRecord.relation;
+    Q.kukiz_relation = rivalGroup("kukiz15").relation;
 
     // KO's structural health is one derived number rather than four hidden
     // convention meters. Every term is a failure the player can already see:
@@ -2723,6 +3034,73 @@ if (Q.started) {
         Q[canonicalKey] = clamp(relationValue, 0, 100);
         Q[compatibilityKey] = Q[canonicalKey];
     }
+    // A coalition needs trust and a survivable common programme. Distance is
+    // measured on the same 0-100 economic and cultural axes the rival AI
+    // already drifts, with the economic axis discounted because Polish
+    // coalitions break on culture rather than on tax policy: that is what
+    // separates a plausible PiS-Konfederacja cabinet from an impossible
+    // KO-Konfederacja one, even though the two pairs sit a similar raw
+    // distance apart. Small distances demand nothing, so ordinary partners
+    // stay available at their opening relations; the required relation then
+    // climbs with distance, and past coalitionMaxDistance no relation value
+    // is enough. A socially liberal KO therefore loses Konfederacja as a
+    // partner by moving, not by an authored veto.
+    // ponytail: two axes and a linear floor; the three weights below are the
+    // calibration knobs if a bloc turns out too easy or too hard to sign.
+    const coalitionEconomicWeight = 0.7;
+    const coalitionDistanceFloor = 30;
+    const coalitionMaxDistance = 55;
+    const coalitionPositionDefaults = {
+        left: {economic: 52, cultural: 52},
+        pis: {economic: 31, cultural: 86},
+        ko: {economic: 60, cultural: 43},
+        psl: {economic: 49, cultural: 68},
+        konf: {economic: 86, cultural: 91},
+        p2050: {economic: 55, cultural: 51}
+    };
+    const coalitionPosition = function(id, axis) {
+        const value = Number(Q[id + "_" + axis + "_position"]);
+        return Number.isFinite(value)
+            ? value
+            : coalitionPositionDefaults[id][axis];
+    };
+    // "left" is the player. Its pairs read the player's own relation
+    // qualities; every other pair reads the hidden rival matrix above.
+    const coalitionOrder = ["left", "pis", "ko", "psl", "konf", "p2050"];
+    coalitionOrder.forEach(function(first, firstIndex) {
+        coalitionOrder.slice(firstIndex + 1).forEach(function(second) {
+            const economicGap =
+                Math.abs(
+                    coalitionPosition(first, "economic") -
+                    coalitionPosition(second, "economic")
+                ) * coalitionEconomicWeight;
+            const culturalGap = Math.abs(
+                coalitionPosition(first, "cultural") -
+                coalitionPosition(second, "cultural")
+            );
+            const distance = Math.round(
+                Math.sqrt(
+                    economicGap * economicGap + culturalGap * culturalGap
+                )
+            );
+            const relationKey = first == "left"
+                ? second + "_relation"
+                : "rival_relation_" + first + "_" + second;
+            const relation = Number.isFinite(Number(Q[relationKey]))
+                ? Number(Q[relationKey])
+                : 0;
+            const required = Math.round(
+                Math.max(0, distance - coalitionDistanceFloor) * 1.2
+            );
+            const pair = first + "_" + second;
+            Q["coalition_distance_" + pair] = distance;
+            Q["coalition_required_relation_" + pair] = required;
+            Q["coalition_viable_" + pair] =
+                distance <= coalitionMaxDistance && relation >= required
+                    ? 1
+                    : 0;
+        });
+    });
     const issueSalienceDefaults = {
         national_turnout_climate: 61,
         economic_issue_salience: 38,

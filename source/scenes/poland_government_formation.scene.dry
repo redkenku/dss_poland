@@ -995,19 +995,19 @@ Q.left_committed_seats = 26;
 Q.spring_merged = 1;
 Q.spring_active = 0;
 Q.spring_in_left = 0;
-Q.spring_strength = 0;
+Q.spring_strength = 30;
 Q.barons_active = 1;
 Q.barons_in_left = 1;
-Q.barons_strength = 26;
+Q.barons_strength = 40;
 Q.labor_active = 1;
 Q.labor_in_left = 1;
-Q.labor_strength = 22;
+Q.labor_strength = 5;
 Q.progressives_active = 1;
 Q.progressives_in_left = 1;
 Q.progressives_strength = 28;
 Q.razem_active = 1;
 Q.razem_in_left = 1;
-Q.razem_strength = 21;
+Q.razem_strength = 10;
 Q.pps_active = 1;
 Q.pps_in_left = 1;
 Q.pps_strength = 3;
@@ -1283,17 +1283,17 @@ Q.p2050_accept_market = 48;
 Q.p2050_coalition_openness = 61;
 
 Q.factions = ["barons", "labor", "progressives", "razem", "pps"];
-Q.barons_strength = 26;
-Q.spring_strength = 0;
-Q.labor_strength = 22;
+Q.barons_strength = 40;
+Q.spring_strength = 30;
+Q.labor_strength = 5;
 Q.progressives_strength = 28;
-Q.razem_strength = 21;
+Q.razem_strength = 10;
 Q.pps_strength = 3;
-Q.barons_dissent = 25;
-Q.spring_dissent = 0;
-Q.labor_dissent = 21;
+Q.barons_dissent = 5;
+Q.spring_dissent = 5;
+Q.labor_dissent = 5;
 Q.progressives_dissent = 16;
-Q.razem_dissent = 31;
+Q.razem_dissent = 35;
 Q.pps_dissent = 20;
 Q.internal_dissent = 23;
 Q.faction_vetoes = 0;
@@ -2321,6 +2321,11 @@ go-to: sejm_candidate
 @formation_coalition_menu
 title: Build a coalition before naming offices
 new-page: true
+# poland_normalize republishes the pairwise coalition_viable_* gates the
+# options below read, so an election or a courting round that just moved
+# relations or party positions is reflected in this menu rather than in the
+# next one.
+call: poland_normalize
 on-arrival: {!
 Q.formation_coalition_selected = 0;
 Q.formation_coalition_locked = 0;
@@ -2394,52 +2399,63 @@ seat blocks</div>
 - @formation_pick_ko_left
 - @formation_fallback_menu: Explore fallback governments
 - @formation_toleration_menu: Offer outside toleration without ministries
+- @formation_no_arrangement
+
+@formation_no_arrangement
+title: Record that no bloc in this chamber can sign a contract
+subtitle: Every arrangement on offer, including the fallback cabinets, fails on trust or programme distance rather than on seats.
+# The compatibility half of every option above. When none of these holds, the
+# whole menu and both fallback menus are grey, so the chamber needs the
+# constitutional ladder rather than another look at the same arithmetic.
+view-if: not (coalition_viable_left_ko = 1 or coalition_viable_left_pis = 1 or (coalition_viable_left_psl = 1 and coalition_viable_left_p2050 = 1) or coalition_viable_pis_konf = 1 or coalition_viable_ko_konf = 1 or (coalition_viable_ko_psl = 1 and coalition_viable_ko_p2050 = 1))
+on-arrival: coalition_status = "No coalition contract available in this Sejm"; news_headline = "No bloc in the new Sejm can sign a governing contract"
+go-to: presidential_first_fails if presidential_majority_designation = 1; third_marshal_gate
 
 @formation_pick_democratic
 title: Build a democratic coalition (KO + Third Way + Lewica)
 subtitle: The full democratic bloc governs together; no outside toleration is assumed.
-choose-if: formation_option_democratic >= formation_majority_needed
-unavailable-subtitle: KO, Poland 2050, PSL and Lewica together hold [+ formation_option_democratic +] seats — short of the [+ formation_majority_needed +] a cabinet needs.
+choose-if: formation_option_democratic >= formation_majority_needed and coalition_viable_left_ko = 1 and coalition_viable_left_psl = 1 and coalition_viable_left_p2050 = 1 and coalition_viable_ko_psl = 1 and coalition_viable_ko_p2050 = 1
+unavailable-subtitle: [? if formation_option_democratic < formation_majority_needed: KO, Poland 2050, PSL and Lewica together hold [+ formation_option_democratic +] seats — short of the [+ formation_majority_needed +] a cabinet needs. ?][? if coalition_viable_left_ko = 0 or coalition_viable_left_psl = 0 or coalition_viable_left_p2050 = 0 or coalition_viable_ko_psl = 0 or coalition_viable_ko_p2050 = 0: Distrust and programme distance inside this bloc rule out a joint cabinet contract. ?]
 on-arrival: {! Q.formation_coalition_selected = 1; Q.formation_coalition_code = "democratic_2023"; Q.formation_coalition_label = "KO + Poland 2050 + PSL + Lewica"; Q.formation_coalition_seats = (Number(Q.ko_seats) || 0) + (Number(Q.p2050_seats) || 0) + (Number(Q.psl_seats) || 0) + (Number(Q.left_committed_seats) || 0); Q.formation_coalition_support_seats = Q.formation_coalition_seats; Q.formation_government_party = "ko"; Q.formation_pm_default = Q.ko_leader || "KO nominee"; Q.coalition_status = "Democratic coalition talks"; Q.candidate_ko_votes = Q.ko_seats; Q.candidate_p2050_votes = Q.p2050_seats; Q.candidate_psl_cap = Q.psl_seats; Q.candidate_psl_votes = Q.candidate_psl_cap; Q.candidate_left_votes = Q.left_committed_seats; Q.ko_relation += 3; Q.p2050_relation += 4; Q.psl_relation += 3; Q.news_headline = "The democratic parties open a coalition contract before office ballots"; !}
 go-to: formation_marshal_ballot
 
 @formation_pick_ko_psl_left
 title: Split the Third Way: KO + PSL + Lewica
 subtitle: PSL enters government; Poland 2050 keeps its own caucus and decides whether to tolerate the cabinet.
-choose-if: formation_option_ko_psl_left >= formation_majority_needed
-unavailable-subtitle: KO, PSL and Lewica reach only [+ formation_option_ko_psl_left +] seats even with Poland 2050 tolerating from outside.
+choose-if: formation_option_ko_psl_left >= formation_majority_needed and coalition_viable_left_ko = 1 and coalition_viable_left_psl = 1 and coalition_viable_ko_psl = 1
+unavailable-subtitle: [? if formation_option_ko_psl_left < formation_majority_needed: KO, PSL and Lewica reach only [+ formation_option_ko_psl_left +] seats even with Poland 2050 tolerating from outside. ?][? if coalition_viable_left_ko = 0 or coalition_viable_left_psl = 0 or coalition_viable_ko_psl = 0: Distrust and programme distance between KO, PSL and Lewica rule out a joint cabinet contract. ?]
 on-arrival: {! Q.formation_coalition_selected = 1; Q.formation_coalition_code = "ko_psl_left"; Q.formation_coalition_label = "KO + PSL + Lewica"; Q.formation_coalition_seats = (Number(Q.ko_seats) || 0) + (Number(Q.psl_seats) || 0) + (Number(Q.left_committed_seats) || 0); Q.formation_coalition_support_seats = Q.formation_coalition_seats + Math.min(6, Number(Q.p2050_seats) || 0); Q.formation_government_party = "psl"; Q.formation_pm_default = Q.psl_leader || "PSL nominee"; Q.coalition_status = "PSL-led Third Way wing signs the coalition contract"; Q.candidate_ko_votes = Q.ko_seats; Q.candidate_p2050_votes = 0; Q.candidate_psl_cap = Q.psl_seats; Q.candidate_psl_votes = Q.candidate_psl_cap; Q.candidate_left_votes = Q.left_committed_seats; Q.news_headline = "PSL breaks from Poland 2050 and signs a separate coalition contract"; !}
 go-to: formation_marshal_ballot
 
 @formation_pick_ko_p2050_left
 title: Split the Third Way: KO + Poland 2050 + Lewica
 subtitle: Hołownia's caucus enters; PSL withholds ministers and becomes the hinge in every confidence vote.
-choose-if: formation_option_ko_p2050_left >= formation_majority_needed
-unavailable-subtitle: KO, Poland 2050 and Lewica reach only [+ formation_option_ko_p2050_left +] seats even with PSL tolerating from outside.
+choose-if: formation_option_ko_p2050_left >= formation_majority_needed and coalition_viable_left_ko = 1 and coalition_viable_left_p2050 = 1 and coalition_viable_ko_p2050 = 1
+unavailable-subtitle: [? if formation_option_ko_p2050_left < formation_majority_needed: KO, Poland 2050 and Lewica reach only [+ formation_option_ko_p2050_left +] seats even with PSL tolerating from outside. ?][? if coalition_viable_left_ko = 0 or coalition_viable_left_p2050 = 0 or coalition_viable_ko_p2050 = 0: Distrust and programme distance between KO, Poland 2050 and Lewica rule out a joint cabinet contract. ?]
 on-arrival: {! Q.formation_coalition_selected = 1; Q.formation_coalition_code = "ko_p2050_left"; Q.formation_coalition_label = "KO + Poland 2050 + Lewica"; Q.formation_coalition_seats = (Number(Q.ko_seats) || 0) + (Number(Q.p2050_seats) || 0) + (Number(Q.left_committed_seats) || 0); Q.formation_coalition_support_seats = Q.formation_coalition_seats + Math.min(6, Number(Q.psl_seats) || 0); Q.formation_government_party = "ko"; Q.formation_pm_default = Q.ko_leader || "KO nominee"; Q.coalition_status = "Poland 2050 signs while PSL remains outside"; Q.candidate_ko_votes = Q.ko_seats; Q.candidate_p2050_votes = Q.p2050_seats; Q.candidate_psl_cap = 0; Q.candidate_psl_votes = Q.candidate_psl_cap; Q.candidate_left_votes = Q.left_committed_seats; Q.news_headline = "Poland 2050 separates from PSL and signs the coalition contract"; !}
 go-to: formation_marshal_ballot
 
 @formation_pick_third_left_pis
 title: Let PiS tolerate a Third Way–Lewica cabinet
 subtitle: Poland 2050, PSL and Lewica propose the government; PiS supplies toleration without taking the premiership.
-choose-if: formation_option_third_left_pis >= formation_majority_needed
-unavailable-subtitle: Poland 2050, PSL and Lewica reach only [+ formation_option_third_left_pis +] seats even with the most PiS toleration on offer.
+choose-if: formation_option_third_left_pis >= formation_majority_needed and coalition_viable_left_psl = 1 and coalition_viable_left_p2050 = 1 and coalition_viable_psl_p2050 = 1 and coalition_viable_left_pis = 1
+unavailable-subtitle: [? if formation_option_third_left_pis < formation_majority_needed: Poland 2050, PSL and Lewica reach only [+ formation_option_third_left_pis +] seats even with the most PiS toleration on offer. ?][? if coalition_viable_left_psl = 0 or coalition_viable_left_p2050 = 0 or coalition_viable_psl_p2050 = 0: Distrust and programme distance between Poland 2050, PSL and Lewica rule out a joint cabinet contract. ?][? if coalition_viable_left_pis = 0 and coalition_viable_left_psl = 1 and coalition_viable_left_p2050 = 1 and coalition_viable_psl_p2050 = 1: PiS will not tolerate a cabinet led by a party it neither trusts nor shares a programme with. ?]
 on-arrival: {! Q.formation_coalition_selected = 1; Q.formation_coalition_code = "third_left_pis"; Q.formation_coalition_label = "Poland 2050 + PSL + Lewica, PiS toleration"; Q.formation_coalition_seats = (Number(Q.p2050_seats) || 0) + (Number(Q.psl_seats) || 0) + (Number(Q.left_committed_seats) || 0); Q.formation_coalition_support_seats = Q.formation_coalition_seats + Math.min(20, Number(Q.pis_seats) || 0); Q.formation_government_party = "lewica"; Q.formation_pm_default = "Włodzimierz Czarzasty"; Q.coalition_status = "Third Way–Lewica cabinet seeking PiS toleration"; Q.candidate_ko_votes = 0; Q.candidate_p2050_votes = Q.p2050_seats; Q.candidate_psl_cap = Q.psl_seats; Q.candidate_psl_votes = Q.candidate_psl_cap; Q.candidate_left_votes = Q.left_committed_seats; Q.news_headline = "A Third Way–Lewica cabinet asks PiS for toleration"; !}
 go-to: formation_marshal_ballot
 
 @formation_pick_left_pis
 title: Attempt a PiS-Lewica arrangement
 subtitle: A hard bargain path: institutional seats first, then candidate choice.
-choose-if: formation_option_left_pis >= formation_majority_needed
-unavailable-subtitle: PiS and Lewica together hold [+ formation_option_left_pis +] seats — no cabinet can be built on that arithmetic.
+choose-if: formation_option_left_pis >= formation_majority_needed and coalition_viable_left_pis = 1
+unavailable-subtitle: [? if formation_option_left_pis < formation_majority_needed: PiS and Lewica together hold [+ formation_option_left_pis +] seats — no cabinet can be built on that arithmetic. ?][? if coalition_viable_left_pis = 0: Neither the relationship nor the programme distance between PiS and Lewica survives a shared cabinet table. ?]
 on-arrival: {! Q.formation_coalition_selected = 1; Q.formation_coalition_code = "left_pis"; Q.formation_coalition_label = "PiS + Lewica"; Q.formation_coalition_seats = (Number(Q.pis_seats) || 0) + (Number(Q.left_committed_seats) || 0); Q.formation_coalition_support_seats = Q.formation_coalition_seats; Q.formation_government_party = "pis"; Q.formation_pm_default = "Mateusz Morawiecki"; Q.coalition_status = "PiS-Lewica exploratory pact"; Q.candidate_ko_votes = 0; Q.candidate_p2050_votes = 0; Q.candidate_psl_cap = 0; Q.candidate_psl_votes = Q.candidate_psl_cap; Q.candidate_left_votes = Q.left_committed_seats; Q.pis_relation += 10; Q.ko_relation -= 14; Q.p2050_relation -= 14; Q.psl_relation -= 12; Q.party_unity -= 8; Q.news_headline = "Lewica opens a high-risk coalition path with PiS"; !}
 go-to: formation_marshal_ballot
 
 @formation_pick_ko_left
 title: Build a KO-Lewica arrangement without Third Way
 subtitle: A narrow format that still needs outside votes later.
-choose-if: formation_option_ko_left >= formation_majority_needed
-unavailable-subtitle: KO and Lewica reach only [+ formation_option_ko_left +] seats even with the Third Way toleration this format can expect.
+choose-if: formation_option_ko_left >= formation_majority_needed and coalition_viable_left_ko = 1
+unavailable-subtitle: [? if formation_option_ko_left < formation_majority_needed: KO and Lewica reach only [+ formation_option_ko_left +] seats even with the Third Way toleration this format can expect. ?][? if coalition_viable_left_ko = 0: Distrust and programme distance between KO and Lewica rule out a joint cabinet contract. ?]
 on-arrival: {! Q.formation_coalition_selected = 1; Q.formation_coalition_code = "ko_left"; Q.formation_coalition_label = "KO + Lewica"; Q.formation_coalition_seats = (Number(Q.ko_seats) || 0) + (Number(Q.left_committed_seats) || 0); Q.formation_coalition_support_seats = Q.formation_coalition_seats + Math.min(10, (Number(Q.p2050_seats) || 0) + (Number(Q.psl_seats) || 0)); Q.formation_government_party = "ko"; Q.formation_pm_default = Q.ko_leader || "KO nominee"; Q.coalition_status = "KO-Lewica minority protocol"; Q.candidate_ko_votes = Q.ko_seats; Q.candidate_p2050_votes = 0; Q.candidate_psl_cap = 0; Q.candidate_psl_votes = Q.candidate_psl_cap; Q.candidate_left_votes = Q.left_committed_seats; Q.ko_relation += 5; Q.p2050_relation -= 8; Q.psl_relation -= 9; Q.news_headline = "KO and Lewica open a minority-first coalition format"; !}
 go-to: formation_marshal_ballot
 
@@ -2493,30 +2509,40 @@ and trade confidence for safeguards.
 @formation_fallback_pis_konf
 title: PiS + Konfederacja
 subtitle: A formal right-wing cabinet, or a right-wing cabinet tolerated from outside.
+choose-if: coalition_viable_pis_konf = 1
+unavailable-subtitle: PiS and Konfederacja are too far apart, in trust and in programme, to sign a cabinet contract in this Sejm.
 on-arrival: formation_fallback_code = "pis_konf"; formation_fallback_label = "PiS + Konfederacja"; formation_fallback_role = "Undecided"
 go-to: formation_fallback_role
 
 @formation_fallback_pis_konf_third
 title: PiS + Konfederacja + Third Way
 subtitle: PiS seeks a broader right-wing arrangement and the Third Way's institutional cover.
+choose-if: coalition_viable_pis_konf = 1 and coalition_viable_pis_psl = 1 and coalition_viable_pis_p2050 = 1
+unavailable-subtitle: [? if coalition_viable_pis_konf = 0: PiS and Konfederacja cannot sign a cabinet contract in this Sejm. ?][? if coalition_viable_pis_psl = 0 or coalition_viable_pis_p2050 = 0: The Third Way parties will not give institutional cover to a right-wing cabinet on these terms. ?]
 on-arrival: formation_fallback_code = "pis_konf_third"; formation_fallback_label = "PiS + Konfederacja + Third Way"; formation_fallback_role = "Undecided"
 go-to: formation_fallback_role
 
 @formation_fallback_pis_konf_psl
 title: PiS + Konfederacja + PSL
 subtitle: A PiS–Konfederacja core offers PSL rural guarantees and ministries.
+choose-if: coalition_viable_pis_konf = 1 and coalition_viable_pis_psl = 1
+unavailable-subtitle: [? if coalition_viable_pis_konf = 0: PiS and Konfederacja cannot sign a cabinet contract in this Sejm. ?][? if coalition_viable_pis_psl = 0: PSL will not take ministries from a cabinet it neither trusts nor shares a programme with. ?]
 on-arrival: formation_fallback_code = "pis_konf_psl"; formation_fallback_label = "PiS + Konfederacja + PSL"; formation_fallback_role = "Undecided"
 go-to: formation_fallback_role
 
 @formation_fallback_ko_third
 title: KO + Third Way
 subtitle: A centrist cabinet that excludes the player and must find confidence elsewhere.
+choose-if: coalition_viable_ko_psl = 1 and coalition_viable_ko_p2050 = 1
+unavailable-subtitle: KO and the Third Way parties are too far apart, in trust and in programme, to sign a cabinet contract in this Sejm.
 on-arrival: formation_fallback_code = "ko_third"; formation_fallback_label = "KO + Third Way"; formation_fallback_role = "Undecided"
 go-to: formation_fallback_role
 
 @formation_fallback_ko_konf
 title: KO + Konfederacja
 subtitle: A poisonous institutional bargain: KO takes the premiership and Konfederacja takes leverage.
+choose-if: coalition_viable_ko_konf = 1
+unavailable-subtitle: A liberal KO and Konfederacja are too far apart, in trust and in programme, to sign a cabinet contract in this Sejm.
 on-arrival: formation_fallback_code = "ko_konf"; formation_fallback_label = "KO + Konfederacja"; formation_fallback_role = "Undecided"
 go-to: formation_fallback_role
 

@@ -632,13 +632,8 @@ function validateCorrectnessInvariants() {
     'The queue router cannot erase a dated event before its result beat'
   );
   assert(
-    /^go-to:.*afterword/m.test(queueRoot),
-    'A dated decision must retain its consequence until the player leaves it'
-  );
-  const afterword = sectionNamed('poland_event_queue.scene.dry', 'afterword');
-  assert(
-    !/^new-page:\s*true\b/m.test(afterword) && afterword.includes('news_headline'),
-    'The queue result beat must append the consequence headline to the event page'
+    !/afterword/.test(queueRoot),
+    'A dated result must return to the desk directly, without a summary beat'
   );
   assert(
     /^new-page:\s*true\b/m.test(
