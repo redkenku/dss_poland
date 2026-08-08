@@ -1,0 +1,466 @@
+title: Score a major reform against its veto players
+# Pure computation. Nothing here is displayed; scenes reach it with
+# `call: poland_reform_ceiling` after setting reform_ceiling_issue and
+# reform_ceiling_target.
+#
+# The old model capped settlement tiers from the president's name and the
+# premiership alone, checked that cap before any commitment, and therefore made
+# every negotiation round mathematically incapable of changing the outcome.
+# This replaces it with one idea: each veto player scores the bill on its own
+# terms, and the ceiling is the lowest tier all of them will tolerate. Every
+# negotiating action raises a named veto player's score, so every round moves a
+# number the player can see. Nothing here is a freebie: a conservative Palace
+# still holds a hard profile cap that no amount of spending lifts, and PSL, PiS
+# and KO keep the specific conservatisms that make them awkward partners.
+on-arrival: {!
+const issue = String(Q.reform_ceiling_issue || "");
+const reformModel = {
+    abortion: {
+        field: "abortion_rights", axis: "rights", progressive: 1,
+        ministries: ["equality", "health", "justice"],
+        base: { pis: -25, ko: 6, psl: -20, p2050: -10, konf: -25 }
+    },
+    marriage: {
+        field: "lgbt_equality", axis: "rights", progressive: 1,
+        ministries: ["equality", "justice"],
+        base: { pis: -25, ko: -2, psl: -22, p2050: -8, konf: -25 }
+    },
+    church: {
+        field: "secular_state", axis: "rights", progressive: 1,
+        ministries: ["family", "science"],
+        base: { pis: -25, ko: 4, psl: -20, p2050: -10, konf: -18 }
+    },
+    asylum: {
+        field: "refugee_solidarity", axis: "order", progressive: 1,
+        ministries: ["interior", "foreign"],
+        base: { pis: -25, ko: -8, psl: -18, p2050: -12, konf: -25 }
+    },
+    border: {
+        field: "border_security", axis: "order", progressive: 0,
+        ministries: ["interior", "defence"],
+        base: { pis: 12, ko: 8, psl: 10, p2050: 6, konf: 15 }
+    },
+    defence: {
+        field: "national_security", axis: "order", progressive: 0,
+        ministries: ["defence", "foreign"],
+        base: { pis: 15, ko: 18, psl: 10, p2050: 10, konf: -5 }
+    },
+    labor: {
+        field: "social_spending", axis: "social", progressive: 1,
+        ministries: ["labor", "economy", "finance"],
+        base: { pis: -4, ko: -18, psl: -8, p2050: -10, konf: -25 }
+    },
+    health: {
+        field: "vaccination", axis: "social", progressive: 1,
+        ministries: ["health", "finance"],
+        base: { pis: 4, ko: -10, psl: 0, p2050: 2, konf: -25 }
+    },
+    courts: {
+        field: "rule_of_law", axis: "institution", progressive: 1,
+        ministries: ["justice"],
+        base: { pis: -25, ko: 20, psl: 2, p2050: 10, konf: -12 }
+    }
+};
+const model = reformModel[issue];
+Q.reform_ceiling_valid = model ? 1 : 0;
+if (model) {
+    const clamp = function(value, low, high) {
+        const number = Number(value);
+        if (!Number.isFinite(number)) {
+            return low;
+        }
+        return Math.max(low, Math.min(high, number));
+    };
+    const number = function(value, fallback) {
+        const parsed = Number(value);
+        return Number.isFinite(parsed) ? parsed : (fallback || 0);
+    };
+    const target = Math.round(clamp(Q.reform_ceiling_target, 1, 4));
+    const axis = model.axis;
+
+    // A tier is a settlement, not a step. The requirements climb steeply so
+    // that the maximal bill needs several levers near their limit at once.
+    // Calibrated so that tier 4 needs the premiership, a Palace that will sign,
+    // maxed commitments, a public mandate and a finished bill more or less at
+    // once. Tier 3 is a hard but ordinary success; tier 4 is a decade's work.
+    const tierNeed = [0, 45, 65, 86, 108];
+
+    // ---- Public mandate ----------------------------------------------------
+    // The mood board finally does something: support, backlash, attention and
+    // the Left's ownership of the field all price a veto player's resistance.
+    // Attention amplifies whichever side is already winning the field.
+    const support = clamp(Q[model.field + "_support"], 0, 100);
+    const salience = clamp(Q[model.field + "_salience"], 0, 100);
+    const backlash = clamp(Q[model.field + "_backlash"], 0, 100);
+    const ownership = clamp(Q[model.field + "_left_ownership"], 0, 100);
+    const referendum = Q[issue + "_referendum_mandate"] ? 1 : 0;
+    const mandateRaw =
+        (support - 50) * 0.40 +
+        ownership * 0.10 -
+        Math.max(0, backlash - 50) * 0.28 +
+        (support >= 50 ? salience * 0.05 : -salience * 0.05) +
+        (referendum ? 12 : 0);
+    const mandate = clamp(mandateRaw, -16, 20);
+    Q.reform_ceiling_mandate = Math.round(mandate);
+    Q.reform_ceiling_support = Math.round(support);
+    Q.reform_ceiling_salience = Math.round(salience);
+    Q.reform_ceiling_backlash = Math.round(backlash);
+    Q.reform_ceiling_field = model.field;
+
+    // ---- Standing ----------------------------------------------------------
+    const pollTerm = clamp((number(Q.left_poll, 8) - 8) * 1.4, -6, 10);
+    const blurTerm = clamp(number(Q.coalition_blur, 0) * 0.10, 0, 6);
+    const headwind = model.progressive
+        ? clamp(number(Q.eu_progressive_headwind, 0) * 0.5, 0, 12)
+        : 0;
+    const prep = clamp(number(Q[issue + "_reform_progress"], 0) * 0.12, 0, 12);
+    Q.reform_ceiling_poll_term = Math.round(pollTerm);
+    Q.reform_ceiling_prep_term = Math.round(prep);
+    Q.reform_ceiling_headwind_term = Math.round(headwind);
+
+    // ---- Party stance ------------------------------------------------------
+    const wingTerm = function(party) {
+        const share = function(key) {
+            return clamp(Q[key], 0, 100);
+        };
+        if (party == "pis") {
+            if (axis == "social") {
+                return clamp(
+                    (share("pis_solidarist_share") -
+                        share("pis_market_hardliner_share")) * 0.22,
+                    -16, 16
+                );
+            }
+            return clamp(-share("pis_market_hardliner_share") * 0.06, -16, 0);
+        }
+        if (party == "ko") {
+            const liberal = share("ko_classical_liberal_share");
+            const social = share("ko_social_liberal_share");
+            if (axis == "social") {
+                // KO's classical-liberal current is the reason economic
+                // reform is the hard sell inside a KO-led cabinet.
+                return clamp(-Math.max(0, liberal - 35) * 0.34, -16, 0);
+            }
+            if (axis == "rights") {
+                return clamp((social - liberal) * 0.16, -16, 16);
+            }
+            return 0;
+        }
+        if (party == "psl") {
+            const conservative = share("psl_conservative_share");
+            if (axis == "rights") {
+                return clamp(-conservative * 0.34, -16, 0);
+            }
+            if (axis == "social") {
+                return clamp(share("psl_agrarian_pragmatist_share") * 0.08, 0, 8);
+            }
+            return 0;
+        }
+        if (party == "p2050") {
+            if (axis == "rights") {
+                return clamp(-share("p2050_christian_dem_share") * 0.26, -16, 0);
+            }
+            if (axis == "social") {
+                return clamp(share("p2050_state_capacity_share") * 0.12, 0, 12);
+            }
+            return 0;
+        }
+        return 0;
+    };
+    const acceptKey = axis == "rights"
+        ? "accept_rights"
+        : (axis == "social"
+            ? "accept_social"
+            : (axis == "order" ? "accept_order" : "accept_rights"));
+    const commitmentToken = function(party) {
+        return party == "psl" || party == "p2050" ? "third_way" : party;
+    };
+    const partyStance = function(party) {
+        const relation = number(Q[party + "_relation"], 30);
+        const accept = clamp(Q[party + "_" + acceptKey], 0, 100);
+        const commitment = clamp(
+            Q[issue + "_" + commitmentToken(party) + "_commitment"], 0, 4
+        );
+        return Math.round(
+            50 +
+            number(model.base[party], -20) +
+            clamp((relation - 45) * 0.30, -15, 18) +
+            clamp((accept - 45) * 0.28, -12, 12) +
+            wingTerm(party) +
+            commitment * 9 +
+            mandate +
+            pollTerm +
+            prep -
+            blurTerm -
+            headwind
+        );
+    };
+    const tierFromScore = function(score) {
+        let tier = 0;
+        for (let step = 1; step <= 4; step += 1) {
+            if (score >= tierNeed[step]) {
+                tier = step;
+            }
+        }
+        return tier;
+    };
+
+    // ---- Who actually holds a veto ----------------------------------------
+    const inCabinet = function(party) {
+        return Q.government_party == party ||
+            Q["ministry_" + party + "_in_cabinet"] ? 1 : 0;
+    };
+    const authorityLive =
+        Q.left_in_government && Q.government_has_confidence &&
+        !Q.caretaker_government ? 1 : 0;
+    const leftHoldsPremiership =
+        Q.government_party == "lewica" || Q.prime_minister_party == "lewica"
+            ? 1 : 0;
+    let ministryCount = 0;
+    for (const portfolio of model.ministries) {
+        if (Q[portfolio + "_minister_party"] == "Lewica") {
+            ministryCount += 1;
+        }
+    }
+    // Holding the premiership is what makes the maximal bill tabl(e)able at
+    // all; a junior partner can carry a strong settlement but not the whole
+    // programme.
+    let authorityTier = 0;
+    if (authorityLive) {
+        authorityTier = leftHoldsPremiership ? 4 : 3;
+        if (!leftHoldsPremiership && ministryCount >= 2) {
+            // Owning the relevant portfolios is not the premiership, but it
+            // does let a junior partner write the bill it is fighting for.
+            authorityTier = 3;
+        }
+    }
+    Q.reform_ceiling_authority_tier = authorityTier;
+    Q.reform_ceiling_ministries = ministryCount;
+    Q.reform_ceiling_premiership = leftHoldsPremiership;
+
+    // ---- The Palace --------------------------------------------------------
+    const presidentName = String(Q.president_name || "");
+    const rightPalaceNames = [
+        "Andrzej Duda", "Karol Nawrocki", "Mateusz Morawiecki",
+        "Beata Szydło", "Przemysław Czarnek"
+    ];
+    const farRightPalaceNames = [
+        "Krzysztof Bosak", "Sławomir Mentzen", "Grzegorz Braun"
+    ];
+    const liberalPalaceNames = ["Rafał Trzaskowski", "Szymon Hołownia"];
+    const vacantPalace =
+        presidentName.indexOf("acting") >= 0 ||
+        presidentName.indexOf("disputed") >= 0;
+    let palaceCamp = "right";
+    if (vacantPalace) {
+        palaceCamp = "vacuum";
+    } else if (Q.left_president || Q.president_party == "lewica") {
+        palaceCamp = "left";
+    } else if (farRightPalaceNames.indexOf(presidentName) >= 0) {
+        palaceCamp = "farright";
+    } else if (liberalPalaceNames.indexOf(presidentName) >= 0) {
+        palaceCamp = "liberal";
+    } else if (
+        rightPalaceNames.indexOf(presidentName) >= 0 ||
+        Q.pres_2025_hostile_president
+    ) {
+        palaceCamp = "right";
+    } else {
+        palaceCamp = "liberal";
+    }
+    // The profile cap is the hard part of a presidential veto. No quantity of
+    // resources, relationship or public mandate converts a right-wing Palace
+    // into a signature on marriage equality; only a lawful three-fifths
+    // override or a different president does that.
+    const palaceProfileCaps = {
+        right: { rights: 1, order: 4, social: 2, institution: 1 },
+        farright: { rights: 0, order: 4, social: 1, institution: 1 },
+        liberal: { rights: 3, order: 3, social: 2, institution: 4 },
+        left: { rights: 4, order: 4, social: 4, institution: 4 },
+        vacuum: { rights: 1, order: 2, social: 1, institution: 1 }
+    };
+    const palaceCommitmentValid =
+        Q[issue + "_palace_president"] == presidentName ? 1 : 0;
+    const palaceCommitment = palaceCommitmentValid
+        ? clamp(Q[issue + "_palace_commitment"], 0, 4)
+        : 0;
+    const palaceStance = Math.round(
+        50 +
+        (palaceCamp == "left"
+            ? 18
+            : (palaceCamp == "liberal"
+                ? 4
+                : (palaceCamp == "vacuum" ? -12 : -22))) +
+        clamp((number(Q.president_relation, 30) - 45) * 0.30, -15, 18) +
+        palaceCommitment * 9 +
+        mandate +
+        pollTerm +
+        prep -
+        headwind
+    );
+    const palaceProfileCap = number(
+        palaceProfileCaps[palaceCamp][axis], 1
+    );
+    let palaceTier = Math.min(palaceProfileCap, tierFromScore(palaceStance));
+    if (Q.reform_pressure_palace_override) {
+        palaceTier = 4;
+    }
+    Q.reform_ceiling_palace_camp = palaceCamp;
+    Q.reform_ceiling_palace_cap = palaceProfileCap;
+    Q.reform_ceiling_palace_score = palaceStance;
+    Q.reform_ceiling_palace_tier = palaceTier;
+    Q.reform_ceiling_palace_commitment = palaceCommitment;
+
+    // ---- Bind the ceiling to the least willing live veto player ------------
+    // Partner resistance and palace resistance are tracked apart because they
+    // answer to different levers: forcing the issue coerces coalition votes and
+    // does nothing at all to a signature.
+    const partnerNames = {
+        pis: "PiS",
+        ko: "KO",
+        psl: Q.third_way_display_name || "PSL",
+        p2050: Q.third_way_display_name || "Poland 2050",
+        konf: "Konfederacja"
+    };
+    let partnerCeiling = 4;
+    let worstPartner = "";
+    let worstPartnerName = "";
+    let worstPartnerScore = 0;
+    let worstPartnerTier = 4;
+    for (const party of ["pis", "ko", "psl", "p2050", "konf"]) {
+        if (!inCabinet(party)) {
+            continue;
+        }
+        const stance = partyStance(party);
+        const tier = tierFromScore(stance);
+        Q["reform_ceiling_" + party + "_score"] = stance;
+        Q["reform_ceiling_" + party + "_tier"] = tier;
+        if (tier < worstPartnerTier || !worstPartner) {
+            worstPartner = party;
+            worstPartnerName = partnerNames[party];
+            worstPartnerScore = stance;
+            worstPartnerTier = tier;
+        }
+        partnerCeiling = Math.min(partnerCeiling, tier);
+    }
+    const ceilingTier = Math.min(authorityTier, palaceTier, partnerCeiling);
+    // Naming the binding veto player: the partner first when it is the tighter
+    // constraint, because that is the one negotiation can actually move.
+    let blocker = "";
+    let blockerName = "";
+    let blockerScore = 0;
+    let blockerTier = ceilingTier;
+    if (target > ceilingTier) {
+        if (worstPartner && worstPartnerTier <= palaceTier &&
+            worstPartnerTier <= authorityTier) {
+            blocker = worstPartner;
+            blockerName = worstPartnerName;
+            blockerScore = worstPartnerScore;
+            blockerTier = worstPartnerTier;
+        } else if (palaceTier <= authorityTier) {
+            blocker = "president";
+            blockerName = "President " + presidentName;
+            blockerScore = palaceStance;
+            blockerTier = palaceTier;
+        } else {
+            blocker = leftHoldsPremiership ? "authority" : "premiership";
+            blockerName = leftHoldsPremiership
+                ? "The cabinet's own authority"
+                : "Prime Minister " + (Q.prime_minister || "the Chancellery");
+            blockerScore = 0;
+            blockerTier = authorityTier;
+        }
+    }
+    Q.reform_ceiling_partner_tier = partnerCeiling;
+    // Forcing coerces coalition votes for exactly one tier. It cannot coerce a
+    // signature and it cannot manufacture governing authority.
+    Q.reform_ceiling_forceable = Math.min(
+        authorityTier, palaceTier, partnerCeiling + 1
+    );
+    Q.reform_ceiling_referendum_live = referendum;
+    // The highest tier still worth negotiating for. Partner resistance is a
+    // price and can be bought; governing authority and the Palace's profile
+    // ceiling are not. Narrowing to this tier keeps the fight open instead of
+    // banking whatever is available this minute.
+    Q.reform_ceiling_negotiable = Q.reform_pressure_palace_override
+        ? authorityTier
+        : Math.min(authorityTier, palaceProfileCap);
+    Q.reform_ceiling_negotiable_label =
+        Q[issue + "_reform_label_" + Q.reform_ceiling_negotiable] ||
+        "no settlement";
+    Q.reform_ceiling_negotiable_room =
+        Q.reform_ceiling_negotiable > ceilingTier ? 1 : 0;
+    Q.reform_ceiling_reachable_label =
+        Q[issue + "_reform_label_" + ceilingTier] || "no settlement";
+    const fieldLabels = {
+        abortion_rights: "abortion rights",
+        lgbt_equality: "LGBT equality",
+        secular_state: "the secular state and schools",
+        refugee_solidarity: "refugee and asylum solidarity",
+        border_security: "eastern-border security",
+        national_security: "defence and allied security",
+        social_spending: "social spending and public services",
+        vaccination: "vaccination and public health",
+        rule_of_law: "rule-of-law repair"
+    };
+    Q.reform_ceiling_field_label = fieldLabels[model.field] || model.field;
+    Q.reform_ceiling_tier = ceilingTier;
+    Q.reform_ceiling_blocker = blocker;
+    Q.reform_ceiling_blocker_name = blockerName;
+    Q.reform_ceiling_blocker_score = Math.round(blockerScore);
+    Q.reform_ceiling_blocker_tier = blockerTier;
+    Q.reform_ceiling_need = tierNeed[target];
+    Q.reform_ceiling_gap = Math.max(
+        0, tierNeed[target] - Math.round(blockerScore)
+    );
+    Q.reform_ceiling_target_resolved = target;
+
+    // ---- Player-facing explanation ----------------------------------------
+    // The old flow never told the player what was reachable, so narrowing and
+    // bargaining both looked like nothing had happened.
+    const tierWord = ["no settlement", "tier 1", "tier 2", "tier 3", "tier 4"];
+    Q.reform_ceiling_tier_label = tierWord[ceilingTier];
+    Q.reform_ceiling_blocker_kind = blocker == "president"
+        ? "palace"
+        : (blocker == "premiership" || blocker == "authority"
+            ? "authority"
+            : (blocker ? "partner" : "none"));
+    Q.reform_ceiling_palace_locked =
+        blocker == "president" && palaceProfileCap < target &&
+        !Q.reform_pressure_palace_override ? 1 : 0;
+    Q.reform_ceiling_breakdown =
+        "Public mandate " + (mandate >= 0 ? "+" : "") +
+        Math.round(mandate) +
+        " (support " + Math.round(support) +
+        ", attention " + Math.round(salience) +
+        ", backlash " + Math.round(backlash) +
+        (referendum ? ", referendum mandate" : "") +
+        ") · polling " + (pollTerm >= 0 ? "+" : "") + Math.round(pollTerm) +
+        " · preparation +" + Math.round(prep) +
+        (headwind > 0 ? " · European headwind -" + Math.round(headwind) : "") +
+        " · Lewica portfolios " + ministryCount +
+        (leftHoldsPremiership ? " · Lewica holds the premiership" : "");
+} else {
+    // Partner-demand files and legacy pressure issues are not slate reforms.
+    // Blank the outputs rather than leave the previous bill's numbers on
+    // screen.
+    Q.reform_ceiling_tier = 0;
+    Q.reform_ceiling_tier_label = "not a settlement ladder";
+    Q.reform_ceiling_blocker = "";
+    Q.reform_ceiling_blocker_name = "";
+    Q.reform_ceiling_blocker_kind = "none";
+    Q.reform_ceiling_blocker_score = 0;
+    Q.reform_ceiling_blocker_tier = 0;
+    Q.reform_ceiling_need = 0;
+    Q.reform_ceiling_gap = 0;
+    Q.reform_ceiling_target_resolved = 0;
+    Q.reform_ceiling_forceable = 0;
+    Q.reform_ceiling_partner_tier = 0;
+    Q.reform_ceiling_palace_locked = 0;
+    Q.reform_ceiling_palace_cap = 0;
+    Q.reform_ceiling_referendum_live = 0;
+    Q.reform_ceiling_reachable_label = "no settlement";
+    Q.reform_ceiling_field_label = "no public field";
+    Q.reform_ceiling_breakdown = "No settlement ladder applies to this file";
+}
+!}

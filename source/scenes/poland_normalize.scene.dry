@@ -26,53 +26,18 @@ if (Q.started) {
     // Major reforms are persistent projects rather than one-off cabinet
     // cards. Explicit defaults keep old saves safe when raw JavaScript reads
     // progress, commitments or a pending coalition dispute.
+    // Nine reform fields exist, one per public-mood issue, but a ten-year
+    // campaign cannot carry them all. The slate is the scarcity: three picks,
+    // chosen once, for the whole game.
+    const majorReformIssues = [
+        "abortion", "marriage", "church", "asylum", "border",
+        "defence", "labor", "health", "courts"
+    ];
     const majorReformDefaults = {
-        poland_abortion_reform_timer: 0,
-        poland_marriage_reform_timer: 0,
-        poland_labor_reform_timer: 0,
-        abortion_reform_stage: 0,
-        abortion_reform_defined: 0,
-        abortion_reform_goal_stage: 4,
-        abortion_reform_proposal_stage: 4,
-        abortion_reform_settled: 0,
-        abortion_reform_progress: 0,
-        abortion_reform_power: 0,
-        abortion_reform_threshold: 0,
-        abortion_reform_next_stage: 4,
-        abortion_ko_commitment: 0,
-        abortion_pis_commitment: 0,
-        abortion_third_way_commitment: 0,
-        abortion_palace_commitment: 0,
-        abortion_referendum_mandate: 0,
-        abortion_referendum_score: 0,
-        marriage_reform_stage: 0,
-        marriage_reform_defined: 0,
-        marriage_reform_goal_stage: 4,
-        marriage_reform_proposal_stage: 4,
-        marriage_reform_settled: 0,
-        marriage_reform_progress: 0,
-        marriage_reform_power: 0,
-        marriage_reform_threshold: 0,
-        marriage_reform_next_stage: 4,
-        marriage_ko_commitment: 0,
-        marriage_pis_commitment: 0,
-        marriage_third_way_commitment: 0,
-        marriage_palace_commitment: 0,
-        marriage_referendum_mandate: 0,
-        marriage_referendum_score: 0,
-        labor_reform_stage: 0,
-        labor_reform_defined: 0,
-        labor_reform_goal_stage: 4,
-        labor_reform_proposal_stage: 4,
-        labor_reform_settled: 0,
-        labor_reform_progress: 0,
-        labor_reform_power: 0,
-        labor_reform_threshold: 0,
-        labor_reform_next_stage: 4,
-        labor_ko_commitment: 0,
-        labor_pis_commitment: 0,
-        labor_third_way_commitment: 0,
-        labor_palace_commitment: 0,
+        reform_slate_max: 3,
+        reform_slate_count: 0,
+        reform_slate_closed: 0,
+        reform_pressure_rounds: 0,
         reform_pressure_pending: 0,
         reform_pressure_actor_live: 0,
         reform_pressure_authority_live: 0,
@@ -98,12 +63,31 @@ if (Q.started) {
         anticlerical_edge: 70,
         pzpr_history_concessions: 0
     };
+    for (const issue of majorReformIssues) {
+        majorReformDefaults["poland_" + issue + "_reform_timer"] = 0;
+        majorReformDefaults[issue + "_reform_stage"] = 0;
+        majorReformDefaults[issue + "_reform_defined"] = 0;
+        majorReformDefaults[issue + "_reform_goal_stage"] = 4;
+        majorReformDefaults[issue + "_reform_proposal_stage"] = 4;
+        majorReformDefaults[issue + "_reform_settled"] = 0;
+        majorReformDefaults[issue + "_reform_progress"] = 0;
+        majorReformDefaults[issue + "_reform_power"] = 0;
+        majorReformDefaults[issue + "_reform_threshold"] = 0;
+        majorReformDefaults[issue + "_reform_next_stage"] = 4;
+        majorReformDefaults[issue + "_reform_abandoned"] = 0;
+        majorReformDefaults[issue + "_on_slate"] = 0;
+        majorReformDefaults[issue + "_referendum_mandate"] = 0;
+        majorReformDefaults[issue + "_referendum_score"] = 0;
+        for (const partner of ["ko", "pis", "third_way", "palace"]) {
+            majorReformDefaults[issue + "_" + partner + "_commitment"] = 0;
+        }
+    }
     for (const key of Object.keys(majorReformDefaults)) {
         if (!Number.isFinite(Number(Q[key]))) {
             Q[key] = majorReformDefaults[key];
         }
     }
-    for (const issue of ["abortion", "marriage", "labor"]) {
+    for (const issue of majorReformIssues) {
         Q[issue + "_reform_stage"] = Math.round(clamp(
             Q[issue + "_reform_stage"], 0, 4
         ));
@@ -136,8 +120,41 @@ if (Q.started) {
                     : "";
         }
     }
-    Q.abortion_referendum_mandate = Q.abortion_referendum_mandate ? 1 : 0;
-    Q.marriage_referendum_mandate = Q.marriage_referendum_mandate ? 1 : 0;
+    for (const issue of majorReformIssues) {
+        Q[issue + "_referendum_mandate"] =
+            Q[issue + "_referendum_mandate"] ? 1 : 0;
+    }
+    // The slate is recounted from the flags rather than trusted, so a legacy
+    // save that already settled a reform keeps that pick.
+    Q.reform_slate_max = Math.round(clamp(Q.reform_slate_max, 1, 9));
+    let slateCount = 0;
+    for (const issue of majorReformIssues) {
+        if (Q[issue + "_reform_stage"] > 0 || Q[issue + "_reform_defined"]) {
+            Q[issue + "_on_slate"] = 1;
+        }
+        Q[issue + "_on_slate"] = Q[issue + "_on_slate"] ? 1 : 0;
+        slateCount += Q[issue + "_on_slate"];
+    }
+    Q.reform_slate_count = slateCount;
+    Q.reform_slate_slots_left = Math.max(0, Q.reform_slate_max - slateCount);
+    Q.reform_slate_closed = Q.reform_slate_slots_left <= 0 ? 1 : 0;
+    // The deck's own view-if cannot loop over nine issues, so the "is there
+    // anything to draw" question is answered here.
+    let deckLive = Q.reform_slate_slots_left > 0 &&
+        Number(Q.poland_reform_slate_timer) <= 0 ? 1 : 0;
+    for (const issue of majorReformIssues) {
+        if (
+            Q[issue + "_on_slate"] &&
+            !Q[issue + "_reform_settled"] &&
+            Number(Q["poland_" + issue + "_reform_timer"]) <= 0
+        ) {
+            deckLive = 1;
+        }
+    }
+    Q.major_reform_deck_live = deckLive;
+    Q.reform_pressure_rounds = Math.max(
+        0, Math.round(Number(Q.reform_pressure_rounds) || 0)
+    );
     Q.reform_pressure_pending = Q.reform_pressure_pending ? 1 : 0;
     // A demand put in the Sejm freezer keeps its own clock. When it matures it
     // re-arms itself as the same partner's same file, and the apply step
@@ -213,7 +230,7 @@ if (Q.started) {
     if (!Q.labor_reform_settled && Q.pip_law_enacted) {
         Q.labor_reform_stage = Math.max(Q.labor_reform_stage, 2);
     }
-    for (const issue of ["abortion", "marriage", "labor"]) {
+    for (const issue of majorReformIssues) {
         if (Q[issue + "_reform_stage"] > 0) {
             Q[issue + "_reform_defined"] = 1;
             Q[issue + "_reform_settled"] = 1;
@@ -221,17 +238,38 @@ if (Q.started) {
                 Q[issue + "_reform_stage"];
         }
     }
+    // The programme closes when every reform the party actually chose has a
+    // settlement, not when all nine fields are legislated. Ten years buys three
+    // fights.
+    let slatePicked = 0;
+    let slateSettled = 0;
+    let slateWeight = 0;
+    for (const issue of majorReformIssues) {
+        if (!Q[issue + "_on_slate"]) {
+            continue;
+        }
+        slatePicked += 1;
+        if (Q[issue + "_reform_settled"]) {
+            slateSettled += 1;
+            slateWeight += Math.round(clamp(Q[issue + "_reform_stage"], 0, 4));
+        }
+    }
+    Q.reform_slate_settled = slateSettled;
+    Q.reform_slate_weight = slateWeight;
     if (
         !Q.major_reforms_complete &&
-        Q.abortion_reform_settled &&
-        Q.marriage_reform_settled &&
-        Q.labor_reform_settled
+        slatePicked >= Q.reform_slate_max &&
+        slateSettled >= slatePicked
     ) {
         Q.major_reforms_complete = 1;
-        Q.left_poll += 2;
-        Q.public_trust += 4;
-        Q.winner_reputation += 5;
-        Q.issue_ownership += 5;
+        // The reward scales with how far the chosen settlements actually went.
+        // Three token compromises are not the same achievement as three
+        // maximal laws.
+        const closingScale = Math.max(0.4, Math.min(1.6, slateWeight / 7.5));
+        Q.left_poll += 2 * closingScale;
+        Q.public_trust += Math.round(4 * closingScale);
+        Q.winner_reputation += Math.round(5 * closingScale);
+        Q.issue_ownership += Math.round(5 * closingScale);
         for (const group of [
             "metropolitan_liberals", "liberal_professionals",
             "public_service_families", "industrial_logistics",
@@ -239,10 +277,12 @@ if (Q.started) {
             "older_welfare_households", "anti_establishment_youth"
         ]) {
             const affinityKey = group + "_left_affinity";
-            Q[affinityKey] = (Number(Q[affinityKey]) || 0) + 2;
+            Q[affinityKey] =
+                (Number(Q[affinityKey]) || 0) + 2 * closingScale;
         }
-        Q.news_headline =
-            "Lewica closes the Third Republic's three defining reform disputes";
+        Q.news_headline = slateWeight >= 10
+            ? "Lewica closes its whole reform programme on its own terms"
+            : "Lewica closes its reform programme on compromise settlements";
     }
 
     // New project enactments also satisfy the older dated-chain flags. This
@@ -278,6 +318,9 @@ if (Q.started) {
             "Superseded by the enacted major-reform settlement";
     }
 
+    // The settlement ladders are the only place tier text is authored. Every
+    // other scene reads the flattened *_reform_label_N qualities so that the
+    // ladder never has to be duplicated into a second file.
     const reformLabels = {
         abortion: [
             "No durable reform",
@@ -293,15 +336,68 @@ if (Q.started) {
             "Civil partnerships",
             "Marriage equality and adoption"
         ],
+        church: [
+            "The concordat settlement stands",
+            "Catechism funding moved off the school budget",
+            "Religion out of the timetable and the school grade",
+            "Church Fund abolished and clerical finances audited",
+            "Concordat renegotiation and a secular state"
+        ],
+        asylum: [
+            "Pushbacks remain the operating practice",
+            "Humanitarian access at the border strip restored",
+            "A lawful asylum procedure with legal aid",
+            "Reception capacity, work rights and municipal funding",
+            "A European solidarity settlement and an end to pushbacks"
+        ],
+        border: [
+            "Improvised militarised emergency",
+            "Statutory footing for the border emergency",
+            "Civilian oversight of the border regime",
+            "A funded technical border with accountable rules",
+            "A lawful, audited border service under civilian command"
+        ],
+        defence: [
+            "Procurement improvisation continues",
+            "An audited procurement pipeline",
+            "Conscript-free readiness and veteran provision",
+            "Industrial policy and domestic defence production",
+            "A civilian-controlled defence settlement with European integration"
+        ],
         labor: [
             "Existing enforcement settlement",
             "Funded inspection and token enforcement",
             "PIP reclassification and enforcement powers",
             "Contract and labour-law protections",
             "Full Razem labour package"
+        ],
+        health: [
+            "The queue is the health policy",
+            "Emergency staffing and waiting-list money",
+            "A funded primary-care and psychiatric network",
+            "Public financing raised and private lanes closed",
+            "A rebuilt universal health service"
+        ],
+        courts: [
+            "Legal dualism is permanent",
+            "Neo-judge status resolved case by case",
+            "A lawful KRS and a restored appointment procedure",
+            "Constitutional Tribunal repair with statutory backing",
+            "A complete constitutional reset of the courts"
         ]
     };
-    for (const issue of Object.keys(reformLabels)) {
+    const reformDisplayNames = {
+        abortion: "reproductive-rights reform",
+        marriage: "legal recognition and equal marriage",
+        church: "the church, school and secular-state settlement",
+        asylum: "asylum and refugee reception",
+        border: "the eastern-border regime",
+        defence: "the defence and allied-security settlement",
+        labor: "labour-law reconstruction",
+        health: "public health service reconstruction",
+        courts: "rule-of-law repair"
+    };
+    for (const issue of majorReformIssues) {
         const stage = Q[issue + "_reform_stage"];
         const goal = Q[issue + "_reform_goal_stage"];
         const proposal = Q[issue + "_reform_proposal_stage"];
@@ -309,12 +405,13 @@ if (Q.started) {
         Q[issue + "_reform_stage_label"] = reformLabels[issue][stage];
         Q[issue + "_reform_goal_label"] = reformLabels[issue][goal];
         Q[issue + "_reform_next_label"] = reformLabels[issue][proposal];
-    }
-    if (typeof Q.abortion_referendum_result != "string") {
-        Q.abortion_referendum_result = "No referendum campaign";
-    }
-    if (typeof Q.marriage_referendum_result != "string") {
-        Q.marriage_referendum_result = "No referendum campaign";
+        Q[issue + "_reform_display_name"] = reformDisplayNames[issue];
+        for (let tier = 0; tier <= 4; tier += 1) {
+            Q[issue + "_reform_label_" + tier] = reformLabels[issue][tier];
+        }
+        if (typeof Q[issue + "_referendum_result"] != "string") {
+            Q[issue + "_referendum_result"] = "No referendum campaign";
+        }
     }
     if (typeof Q.reform_pressure_mode != "string") {
         Q.reform_pressure_mode = "None";
@@ -504,8 +601,9 @@ if (Q.started) {
     }
 
     const rivalGroupDefaults = [
+        ["pis_party", "pis", "party", "Prawo i Sprawiedliwość", "Jarosław Kaczyński", "Zjednoczona Prawica", "lead party", 1, 1, 88, 90, 8, 199],
         ["pis_apparatus", "pis", "caucus", "Kaczyński apparatus", "Jarosław Kaczyński", "Prawo i Sprawiedliwość", "internal caucus", 1, 1, 88, 90, 8, 118],
-        ["porozumienie", "pis", "party", "Porozumienie", "Jarosław Gowin", "United Right", "allied party", 1, 1, 34, 58, 22, 12],
+        ["porozumienie", "pis", "party", "Porozumienie", "Jarosław Gowin", "United Right", "allied party", 1, 1, 34, 58, 22, 18],
         ["solidarna", "pis", "party", "Solidarna Polska", "Zbigniew Ziobro", "United Right", "allied party", 1, 1, 42, 78, 10, 18],
         ["morawiecki", "pis", "caucus", "Morawiecki developmental camp", "Mateusz Morawiecki", "Prawo i Sprawiedliwość", "internal network", 1, 1, 46, 52, 20, 36],
         ["pis_welfare", "pis", "current", "Welfare-conservative current", "Beata Szydło", "Prawo i Sprawiedliwość", "cross-cutting current", 1, 1, 52, 62, 26, 44],
@@ -513,14 +611,14 @@ if (Q.started) {
         ["pis_culture", "pis", "current", "Culture-war current", "Przemysław Czarnek", "Prawo i Sprawiedliwość", "cross-cutting current", 1, 1, 40, 68, 4, 31],
         ["rozwoj_plus", "pis", "association", "Rozwój+", "Mateusz Morawiecki", "Morawiecki developmental camp", "not formed", 0, 1, 0, 0, 20, 0],
         ["po", "ko", "party", "Platforma Obywatelska", "Grzegorz Schetyna", "Koalicja Obywatelska", "allied party", 1, 1, 82, 76, 44, 106],
-        ["nowoczesna", "ko", "party", "Nowoczesna", "Adam Szłapka", "Koalicja Obywatelska", "allied party", 1, 1, 30, 60, 38, 8],
-        ["ipl", "ko", "party", "Inicjatywa Polska", "Barbara Nowacka", "Koalicja Obywatelska", "allied party", 1, 1, 27, 66, 54, 5],
+        ["nowoczesna", "ko", "party", "Nowoczesna", "Adam Szłapka", "Koalicja Obywatelska", "allied party", 1, 1, 30, 60, 38, 10],
+        ["ipl", "ko", "party", "Inicjatywa Polska", "Barbara Nowacka", "Koalicja Obywatelska", "allied party", 1, 1, 27, 66, 54, 2],
         ["greens", "ko", "party", "Zieloni", "collective leadership", "Koalicja Obywatelska", "allied separate party", 1, 1, 24, 64, 58, 3],
         ["ko_party", "ko", "party", "Koalicja Obywatelska", "Donald Tusk", "Civic coalition", "electoral alliance", 0, 1, 0, 0, 44, 0],
         ["ko_splinter", "ko", "party", "KO dissenters", "collective committee", "Civic coalition", "not formed", 0, 0, 0, 0, 30, 0],
-        ["psl_party", "psl", "party", "Polskie Stronnictwo Ludowe", "Władysław Kosiniak-Kamysz", "Koalicja Polska", "allied party", 1, 1, 68, 74, 40, 24],
+        ["psl_party", "psl", "party", "Polskie Stronnictwo Ludowe", "Władysław Kosiniak-Kamysz", "Koalicja Polska", "allied party", 1, 1, 68, 74, 40, 20],
         ["kukiz15", "psl", "party", "Kukiz'15", "Paweł Kukiz", "Koalicja Polska", "allied party", 1, 1, 22, 44, 16, 6],
-        ["kp_partners", "psl", "party", "Unia Europejskich Demokratów (UED)", "Elżbieta Bińczycka", "Koalicja Polska", "allied minor partner", 1, 1, 14, 50, 30, 0],
+        ["kp_partners", "psl", "party", "Unia Europejskich Demokratów (UED)", "Elżbieta Bińczycka", "Koalicja Polska", "allied minor partner", 1, 1, 14, 50, 30, 1],
         ["p2050_party", "psl", "party", "Polska 2050", "Szymon Hołownia", "Koalicja Polska", "not formed", 0, 1, 0, 0, 30, 0],
         ["kp_committee", "psl", "party", "Koalicja Polska", "Władysław Kosiniak-Kamysz", "Koalicja Polska", "electoral alliance", 1, 1, 40, 56, 34, 0],
         ["nowa_nadzieja", "konf", "party", "Wolność", "Janusz Korwin-Mikke", "Konfederacja", "allied party", 1, 1, 26, 48, 2, 5],
@@ -613,6 +711,7 @@ if (Q.started) {
     // "friendly to the parent bloc" and `active` still means "the
     // organisation exists"; neither implies list, club or cabinet membership.
     const affiliationDefaults = {
+        pis_party: ["pis", "pis", 1, "coalition", 0],
         pis_apparatus: ["pis", "pis", 1, "coalition", 0],
         porozumienie: ["pis", "pis", 1, "coalition", 1],
         solidarna: ["pis", "pis", 1, "coalition", 1],
@@ -827,8 +926,11 @@ if (Q.started) {
     );
     if (Q.rozwoj_party_formed && !Q.rozwoj_joined_left) {
         rozwojRecord.bloc = "rozwoj";
+        rozwojRecord.kind = "party";
         rozwojRecord.parent = "Rozwój+";
         rozwojRecord.allied = 0;
+        rozwojRecord.list_committee = "rozwoj";
+        rozwojRecord.club = "rozwoj";
     }
     const koPartyRecord = rivalGroup("ko_party");
     if (Q.ko_consolidated) {
@@ -855,7 +957,118 @@ if (Q.started) {
     if (Q.ko_splinter_active) {
         koSplinterRecord.name = Q.ko_splinter_type + " KO splinter";
         koSplinterRecord.legal_status = "independent organisation";
+        koSplinterRecord.list_committee = "ko_splinter";
+        koSplinterRecord.club = "ko_splinter";
+        koSplinterRecord.exclusive_seats = Math.max(
+            0,
+            Math.round(Number(Q.ko_splinter_seats) || 0)
+        );
+        koSplinterRecord.mp_count = koSplinterRecord.exclusive_seats;
+        koSplinterRecord.sejm_mps = koSplinterRecord.exclusive_seats;
     }
+
+    // A prime minister's own electoral family is not the same fact as which
+    // party controls the cabinet. A Lewica compromise candidate heading a
+    // KO-led coalition is both a Lewica politician and the head of a KO
+    // government, and events that want one of those must not read the other.
+    const pmFamilyRoster = [
+        ["left", [
+            "Agnieszka Dziemianowicz-Bąk", "Magdalena Biejat",
+            "Krzysztof Gawkowski", "Włodzimierz Czarzasty",
+            "Robert Biedroń", "Adrian Zandberg", "Anna Maria Żukowska",
+            "Tomasz Trela", "Joanna Senyszyn", "Marcelina Zawisza",
+            "Dariusz Wieczorek", "Katarzyna Kotula"
+        ]],
+        ["ko", [
+            "Donald Tusk", "Rafał Trzaskowski", "Radosław Sikorski",
+            "Marcin Kierwiński", "Borys Budka", "Adam Szłapka",
+            "Barbara Nowacka", "Grzegorz Schetyna", "Adam Bodnar"
+        ]],
+        ["psl", [
+            "Władysław Kosiniak-Kamysz", "Krzysztof Hetman",
+            "Czesław Siekierski", "Piotr Zgorzelski"
+        ]],
+        ["p2050", [
+            "Szymon Hołownia", "Katarzyna Pełczyńska-Nałęcz",
+            "Paulina Hennig-Kloska", "Michał Gramatyka"
+        ]],
+        ["pis", [
+            "Mateusz Morawiecki", "Beata Szydło", "Przemysław Czarnek",
+            "Jarosław Kaczyński", "Mariusz Błaszczak", "Piotr Müller",
+            "Tobiasz Bocheński", "Karol Nawrocki", "Zbigniew Ziobro"
+        ]],
+        ["konf", [
+            "Sławomir Mentzen", "Krzysztof Bosak", "Grzegorz Braun",
+            "Janusz Korwin-Mikke"
+        ]]
+    ];
+    const pmDynamicFamilies = [
+        ["left", Q.left_leader], ["left", Q.prime_minister_left_nominee],
+        ["ko", Q.ko_leader], ["psl", Q.psl_leader],
+        ["p2050", Q.p2050_leader], ["pis", Q.pis_leader],
+        ["konf", Q.konf_libertarian_leader]
+    ];
+    const primeMinisterName = String(Q.prime_minister || "");
+    let pmFamily = "";
+    for (const entry of pmFamilyRoster) {
+        if (entry[1].includes(primeMinisterName)) { pmFamily = entry[0]; break; }
+    }
+    if (!pmFamily && primeMinisterName) {
+        for (const entry of pmDynamicFamilies) {
+            if (entry[1] && String(entry[1]) == primeMinisterName) {
+                pmFamily = entry[0];
+                break;
+            }
+        }
+    }
+    if (!pmFamily) {
+        // Fall back to whoever controls the cabinet, which is the only other
+        // thing we know about them.
+        const governingParty = String(Q.government_party || "");
+        pmFamily = governingParty == "lewica"
+            ? "left"
+            : (["ko", "psl", "p2050", "pis", "konf"].includes(governingParty)
+                ? governingParty
+                : "independent");
+    }
+    Q.pm_political_family = pmFamily;
+    // A premiership Lewica holds because it is the largest party in the
+    // cabinet is a different asset from one it holds because the larger
+    // partners could not agree on anybody else. The second is borrowed.
+    const cabinetPartnerSeats = [
+        Q.ministry_ko_in_cabinet ? Number(Q.ko_seats) || 0 : 0,
+        Q.ministry_psl_in_cabinet ? Number(Q.psl_seats) || 0 : 0,
+        Q.ministry_p2050_in_cabinet ? Number(Q.p2050_seats) || 0 : 0
+    ];
+    const largestPartnerSeats = cabinetPartnerSeats.reduce(
+        function(best, seats) { return Math.max(best, seats); }, 0
+    );
+    Q.left_is_strongest_coalition_partner =
+        (Number(Q.left_seats) || 0) >= largestPartnerSeats ? 1 : 0;
+    Q.left_pm_is_borrowed =
+        pmFamily == "left" && !Q.left_is_strongest_coalition_partner &&
+        largestPartnerSeats > 0 ? 1 : 0;
+    const pmFamilyNames = {
+        left: String(Q.left_party_name || "Lewica"),
+        ko: "Koalicja Obywatelska",
+        psl: "Polskie Stronnictwo Ludowe",
+        p2050: "Polska 2050",
+        pis: "Prawo i Sprawiedliwość",
+        konf: "Konfederacja Wolność i Niepodległość",
+        independent: "No party affiliation"
+    };
+    const pmFamilyClasses = {
+        left: "party-lewica", ko: "party-ko", psl: "party-psl",
+        p2050: "party-p2050", pis: "party-pis", konf: "party-konf",
+        independent: "party-independent"
+    };
+    Q.pm_party_name = pmFamilyNames[pmFamily];
+    Q.pm_party_class = pmFamilyClasses[pmFamily];
+    // The two facts, kept separate and both printable.
+    Q.pm_is_left = pmFamily == "left" ? 1 : 0;
+    Q.pm_leads_own_party_government =
+        (pmFamily == "left" && String(Q.government_party || "") == "lewica") ||
+        pmFamily == String(Q.government_party || "") ? 1 : 0;
 
     const zpCommittee = rivalGroup("zp_committee");
     const zpMembers = Q.rival_group_records.filter(function(record) {
@@ -1033,17 +1246,343 @@ if (Q.started) {
         })
     );
     Q.kp_coalition_active = kpListRecords.length > 1 ? 1 : 0;
-    // Anything that has isolated itself still exists and still has to be
-    // visible somewhere, so it is collected rather than dropped.
+    // Anything outside the four rival electoral families still exists and
+    // still has to be visible somewhere, including the player's breakaways.
     const sharedCommittees = ["pis", "psl", "ko", "konf", "third_way"];
     const isolatedRecords = Q.rival_group_records.filter(function(record) {
         return record.active && record.kind == "party" &&
             !String(record.id).endsWith("_committee") &&
             !sharedCommittees.includes(String(record.list_committee));
     });
-    Q.independent_bucket_members = affiliationNames(isolatedRecords);
-    Q.independent_bucket_count = isolatedRecords.length;
-    Q.independent_bucket_seats = affiliationSeats(isolatedRecords);
+    const independentQualityParties = [
+        [Q.barons_party_formed, Q.barons_party_name || "SLD breakaway",
+            Q.sld_breakaway_seats, "barons_party"],
+        [Q.social_patriot_party_formed,
+            Q.social_patriot_party_name || "Social-Patriot party",
+            Q.social_patriot_seats, "social_patriot_party"],
+        [Q.spring_party_formed, Q.spring_party_name || "Wiosna",
+            Q.spring_breakaway_seats, "spring_party"],
+        [Q.labor_party_formed, Q.labor_party_name || "Labour Left",
+            Q.labor_left_seats, "labor_party"],
+        [Q.progressives_party_formed,
+            Q.progressives_party_name || "Young Left",
+            Q.young_left_seats, "progressives_party"],
+        [Q.razem_party_formed, Q.razem_party_name || "Razem",
+            Q.razem_party_seats, "razem_party"],
+        [Q.pps_party_formed, Q.pps_party_name || "PPS",
+            Q.pps_party_seats, "pps_party"],
+        [Q.tak_dla_rozwoju_party_formed,
+            Q.tak_dla_rozwoju_party_name || "Tak dla Rozwoju",
+            Q.tak_rozwoj_seats, "tak_rozwoj_party"],
+        [Q.unia_centrum_formed, "Unia Centrum", Q.centrum_seats,
+            "unia_centrum"],
+        [Q.p0_formed, Q.p0_name || "Partia Zero", Q.p0_seats,
+            "p0_party"],
+        [Number(Q.other_seats) > 0,
+            Number(Q.year) <= 2023
+                ? "German Minority"
+                : "Other independent lists",
+            Q.other_seats, "other_independent"]
+    ].filter(function(entry) {
+        return entry[0] && Math.max(0, Number(entry[2]) || 0) > 0;
+    }).map(function(entry) {
+        return {
+            id: entry[3],
+            name: entry[1],
+            exclusive_seats: Math.max(0, Math.round(Number(entry[2]) || 0)),
+            senators: 0
+        };
+    });
+    const isolatedParties = isolatedRecords.map(function(record) {
+        return {
+            id: record.id,
+            name: record.name,
+            exclusive_seats: record.id == "p2050_party"
+                ? Math.max(0, Math.round(Number(Q.p2050_seats) || 0))
+                : Math.max(0, Math.round(Number(record.exclusive_seats) || 0)),
+            senators: Math.max(0, Math.round(Number(record.senators) || 0))
+        };
+    });
+    const independentParties = isolatedParties.concat(
+        independentQualityParties
+    );
+    Q.independent_bucket_members = affiliationNames(independentParties);
+    Q.independent_bucket_count = independentParties.length;
+    Q.independent_bucket_seats = affiliationSeats(independentParties);
+    Q.independent_bucket_senators = Math.max(
+        0,
+        Math.round(Number(Q.senate_independent_seats) || 0)
+    );
+
+    // One parliamentary roster reconciles electoral-family totals with the
+    // parties that actually compose them. Events continue to own the family
+    // totals; this read-only allocation is the shared source for every member
+    // display and always adds back to those totals.
+    const parliamentaryParties = [];
+    const parliamentaryFamilies = [];
+    const apportion = function(totalValue, entries, weightField) {
+        const total = Math.max(0, Math.round(Number(totalValue) || 0));
+        const result = new Map(entries.map(function(entry) {
+            return [entry.id, 0];
+        }));
+        if (!entries.length || !total) return result;
+        let weights = entries.map(function(entry) {
+            return Math.max(0, Number(entry[weightField]) || 0);
+        });
+        if (!weights.some(function(weight) { return weight > 0; })) {
+            weights[0] = 1;
+        }
+        const weightTotal = weights.reduce(function(sum, weight) {
+            return sum + weight;
+        }, 0);
+        const ranked = entries.map(function(entry, index) {
+            const exact = total * weights[index] / weightTotal;
+            const seats = Math.floor(exact);
+            result.set(entry.id, seats);
+            return { id: entry.id, remainder: exact - seats, index: index };
+        }).sort(function(left, right) {
+            return right.remainder - left.remainder || left.index - right.index;
+        });
+        let assigned = Array.from(result.values()).reduce(function(sum, seats) {
+            return sum + seats;
+        }, 0);
+        for (let index = 0; assigned < total; index += 1, assigned += 1) {
+            const id = ranked[index % ranked.length].id;
+            result.set(id, result.get(id) + 1);
+        }
+        return result;
+    };
+    const addFamily = function(id, name, sejmTotal, senateTotal, entries) {
+        const sejm = apportion(sejmTotal, entries, "sejm_weight");
+        const senate = apportion(senateTotal, entries, "senate_weight");
+        for (const entry of entries) {
+            const party = {
+                id: entry.id,
+                name: entry.name,
+                family: id,
+                list_committee: entry.list_committee,
+                sejm_mps: sejm.get(entry.id) || 0,
+                senators: senate.get(entry.id) || 0
+            };
+            parliamentaryParties.push(party);
+            if (entry.record) {
+                entry.record.sejm_mps = party.sejm_mps;
+                entry.record.senators = party.senators;
+            }
+        }
+        parliamentaryFamilies.push({
+            id: id,
+            name: name,
+            sejm_seats: Array.from(sejm.values()).reduce(function(sum, seats) {
+                return sum + seats;
+            }, 0),
+            senate_seats: Array.from(senate.values()).reduce(
+                function(sum, seats) { return sum + seats; }, 0
+            )
+        });
+    };
+    const externalPartyEntries = function(listCommittee, order, weights) {
+        return Q.rival_group_records.filter(function(record) {
+            return record.active && record.kind == "party" &&
+                record.list_committee == listCommittee &&
+                !String(record.id).endsWith("_committee");
+        }).sort(function(left, right) {
+            return (order[left.id] || 99) - (order[right.id] || 99);
+        }).map(function(record) {
+            return {
+                id: record.id,
+                name: record.name,
+                record: record,
+                list_committee: listCommittee,
+                sejm_weight: weights[record.id] !== undefined
+                    ? weights[record.id]
+                    : Math.max(0, Number(record.mp_count) || 0),
+                senate_weight: 0
+            };
+        });
+    };
+
+    const zpEntries = externalPartyEntries(
+        "pis",
+        { pis_party: 1, porozumienie: 2, solidarna: 3 },
+        {}
+    );
+    const zpLead = zpEntries.find(function(entry) {
+        return entry.id == "pis_party";
+    });
+    if (zpLead) {
+        const juniorSejm = zpEntries.reduce(function(total, entry) {
+            return total + (entry.id == "pis_party" ? 0 : entry.sejm_weight);
+        }, 0);
+        zpLead.sejm_weight = Math.max(
+            0,
+            (Number(Q.pis_seats) || 0) - juniorSejm
+        );
+    }
+    for (const entry of zpEntries) {
+        entry.senate_weight = ["porozumienie", "solidarna"].includes(entry.id)
+            ? 2
+            : 0;
+    }
+    if (zpLead) {
+        const juniorSenate = zpEntries.reduce(function(total, entry) {
+            return total + (entry.id == "pis_party" ? 0 : entry.senate_weight);
+        }, 0);
+        zpLead.senate_weight = Math.max(
+            0,
+            (Number(Q.senate_pis_seats) || 0) - juniorSenate
+        );
+    }
+    addFamily(
+        "zp", Q.zp_committee_name,
+        Q.pis_seats, Q.senate_pis_seats, zpEntries
+    );
+
+    const koEntries = externalPartyEntries(
+        "ko",
+        { ko_party: 1, po: 1, nowoczesna: 2, ipl: 3, greens: 4 },
+        {}
+    );
+    if (!Q.ko_consolidated) {
+        koEntries.push({
+            id: "ko_independent_parliamentarians",
+            name: "KO-affiliated independent parliamentarians",
+            list_committee: "ko",
+            sejm_weight: 13,
+            senate_weight: 0
+        });
+    }
+    const koHost = koEntries.find(function(entry) {
+        return ["ko_party", "po"].includes(entry.id);
+    });
+    if (koHost) {
+        const koJuniorSejm = koEntries.reduce(function(total, entry) {
+            return total + (entry.id == koHost.id ? 0 : entry.sejm_weight);
+        }, 0);
+        koHost.sejm_weight = Math.max(
+            0,
+            (Number(Q.ko_seats) || 0) - koJuniorSejm
+        );
+    }
+    for (const entry of koEntries) {
+        entry.senate_weight = ["ko_party", "po"].includes(entry.id) ? 1 : 0;
+    }
+    addFamily(
+        "ko", "Koalicja Obywatelska",
+        Q.ko_seats, Q.senate_ko_seats, koEntries
+    );
+
+    const kpListCommittee = thirdWayFormed ? "third_way" : "psl";
+    const kpEntries = externalPartyEntries(
+        kpListCommittee,
+        { psl_party: 1, p2050_party: 2, kukiz15: 3, kp_partners: 4 },
+        {}
+    );
+    if (!thirdWayFormed) {
+        kpEntries.push({
+            id: "kp_independent_parliamentarians",
+            name: "KP-affiliated independent parliamentarians",
+            list_committee: "psl",
+            sejm_weight: 3,
+            senate_weight: 0
+        });
+    }
+    for (const entry of kpEntries) {
+        if (entry.id == "kp_partners") entry.senate_weight = 1;
+    }
+    const kpJuniorSeats = kpEntries.reduce(function(total, entry) {
+        if (["psl_party", "p2050_party"].includes(entry.id)) return total;
+        return total + Math.max(0, Number(entry.sejm_weight) || 0);
+    }, 0);
+    const kpJuniorSenators = kpEntries.reduce(function(total, entry) {
+        if (["psl_party", "p2050_party"].includes(entry.id)) return total;
+        return total + Math.max(0, Number(entry.senate_weight) || 0);
+    }, 0);
+    for (const entry of kpEntries) {
+        if (entry.id == "psl_party") {
+            entry.sejm_weight = Math.max(
+                1,
+                (Number(Q.psl_seats) || 0) - kpJuniorSeats
+            );
+            entry.senate_weight = Math.max(
+                0,
+                (Number(Q.senate_psl_seats) || 0) - kpJuniorSenators
+            );
+        } else if (entry.id == "p2050_party") {
+            entry.sejm_weight = Math.max(0, Number(Q.p2050_seats) || 0);
+            entry.senate_weight = Math.max(
+                0,
+                Number(Q.senate_p2050_seats) || 0
+            );
+        }
+    }
+    addFamily(
+        "kp", Q.kp_committee_name,
+        (Number(Q.psl_seats) || 0) +
+            (thirdWayFormed ? Number(Q.p2050_seats) || 0 : 0),
+        (Number(Q.senate_psl_seats) || 0) +
+            (thirdWayFormed ? Number(Q.senate_p2050_seats) || 0 : 0),
+        kpEntries
+    );
+
+    const konfEntries = externalPartyEntries(
+        "konf",
+        { nowa_nadzieja: 1, ruch_narodowy: 2, kkp: 3 },
+        {}
+    );
+    for (const entry of konfEntries) entry.senate_weight = entry.sejm_weight;
+    addFamily(
+        "konf", Q.konf_committee_name,
+        Q.konf_seats, Q.senate_konf_seats, konfEntries
+    );
+
+    addFamily("left", String(Q.left_party_name || "Lewica"),
+        Q.left_seats, Q.senate_left_seats, [{
+            id: "left_party",
+            name: String(Q.left_party_name || "Lewica"),
+            list_committee: "left",
+            sejm_weight: 1,
+            senate_weight: 1
+        }]);
+
+    for (const party of independentParties) {
+        parliamentaryParties.push({
+            id: party.id,
+            name: party.name,
+            family: "independent",
+            list_committee: party.id,
+            sejm_mps: Math.max(0, Number(party.exclusive_seats) || 0),
+            senators: Math.max(0, Number(party.senators) || 0)
+        });
+    }
+    const assignedIndependentSenators = independentParties.reduce(
+        function(total, party) {
+            return total + Math.max(0, Number(party.senators) || 0);
+        },
+        0
+    );
+    const unaffiliatedSenators = Math.max(
+        0,
+        Q.independent_bucket_senators - assignedIndependentSenators
+    );
+    if (unaffiliatedSenators) {
+        parliamentaryParties.push({
+            id: "independent_parliamentarians",
+            name: "Unaffiliated parliamentarians",
+            family: "independent",
+            list_committee: "independent",
+            sejm_mps: 0,
+            senators: unaffiliatedSenators
+        });
+    }
+    parliamentaryFamilies.push({
+        id: "independent",
+        name: "Independent parties",
+        sejm_seats: Q.independent_bucket_seats,
+        senate_seats: Q.independent_bucket_senators
+    });
+    Q.parliamentary_party_records = parliamentaryParties;
+    Q.parliamentary_family_records = parliamentaryFamilies;
     Q.porozumienie_relation = porozumienieRecord.relation;
     Q.kukiz_relation = rivalGroup("kukiz15").relation;
 
@@ -3462,6 +4001,51 @@ if (Q.started) {
     );
     Q.public_opinion_hottest_issue =
         publicIssueLabels[hottestPublicIssue];
+    // Climate trend defaults, so old saves and the pre-first-month state read
+    // the same qualities the monthly model writes.
+    let progressiveTotal = 0;
+    let ownershipTotal = 0;
+    const progressiveFields = [
+        "abortion_rights", "lgbt_equality", "secular_state",
+        "refugee_solidarity"
+    ];
+    for (const field of progressiveFields) {
+        progressiveTotal += clamp(Q[field + "_support"], 0, 100);
+        ownershipTotal += clamp(Q[field + "_left_ownership"], 0, 100);
+    }
+    Q.public_climate_progressive_index =
+        progressiveTotal / progressiveFields.length;
+    Q.public_climate_left_ownership_index =
+        ownershipTotal / progressiveFields.length;
+    if (!Number.isFinite(Number(Q.public_climate_progressive_trend))) {
+        Q.public_climate_progressive_trend = 0;
+    }
+    const climateTrend = Number(Q.public_climate_progressive_trend);
+    Q.public_climate_direction = climateTrend >= 1.6
+        ? "progressive wave"
+        : (climateTrend >= 0.5
+            ? "slow liberalisation"
+            : (climateTrend <= -1.6
+                ? "reactionary surge"
+                : (climateTrend <= -0.5
+                    ? "conservative drift"
+                    : "settled trench")));
+    Q.public_climate_band =
+        Q.public_climate_progressive_index >= 58
+            ? "permissive"
+            : (Q.public_climate_progressive_index >= 50
+                ? "balanced"
+                : (Q.public_climate_progressive_index >= 43
+                    ? "resistant"
+                    : "hostile"));
+    Q.public_climate_report =
+        "National climate: " + Q.public_climate_band + " terrain, " +
+        Q.public_climate_direction + ". Hottest field: " +
+        Q.public_opinion_hottest_issue + ".";
+    if (!Number.isFinite(Number(Q.public_climate_media_bonus))) {
+        Q.public_climate_media_bonus = 0;
+    }
+    Q.public_climate_media_bonus = clamp(Q.public_climate_media_bonus, -6, 6);
     Q.public_opinion_last_delta = Number.isFinite(
         Number(Q.public_opinion_last_delta)
     )

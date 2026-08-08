@@ -142,6 +142,22 @@ const porozumienie = (Q.rival_group_records || []).find(function(record) {
 const odnowa = (Q.rival_group_records || []).find(function(record) {
     return record.id == "odnowa";
 });
+// Paths that skipped the leadership-dispute scene still arrive in August
+// with the same twelve-person Porozumienie core. Earlier departures remain in
+// the PiS family and therefore cannot disappear from the member ledger.
+if (porozumienie && Number(porozumienie.mp_count) > 12) {
+    const departedBeforeAugust = Number(porozumienie.mp_count) - 12;
+    porozumienie.mp_count = 12;
+    porozumienie.sejm_mps = 12;
+    const pisParty = (Q.rival_group_records || []).find(function(record) {
+        return record.id == "pis_party";
+    });
+    if (pisParty) {
+        pisParty.mp_count = Math.max(0, Number(pisParty.mp_count) || 0) +
+            departedBeforeAugust;
+        pisParty.sejm_mps = pisParty.mp_count;
+    }
+}
 const remaining = Math.max(0, Math.round(
     Number(porozumienie ? porozumienie.mp_count : 11) || 0
 ));

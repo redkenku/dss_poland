@@ -2261,18 +2261,19 @@ window.disableGrayMode = function() {
 
   var pressReviewOutlets = [
     {
-      id: 'onet', name: 'Onet', mark: 'ONET', accent: '#d71920',
+      id: 'onet', name: 'Onet', mark: 'ONET', accent: '#ffd200',
+      foreground: '#171717',
       from: 0, patron: 'ko'
     },
     {
-      id: 'wp', name: 'WP', mark: 'WP', accent: '#7c2a90',
+      id: 'wp', name: 'WP', mark: 'WP', accent: '#d71920',
       from: 0, patron: 'neutral'
     },
     {
       id: 'rzeczpospolita',
       name: 'Rzeczpospolita',
       mark: 'RZ',
-      accent: '#b51f24',
+      accent: '#343434',
       from: 0,
       patron: 'konf'
     },
@@ -3479,6 +3480,830 @@ window.disableGrayMode = function() {
     }
   };
 
+  // Authored reactions to player-made outcomes. These take precedence over the
+  // monthly desk; the generic live story is only the final fallback.
+  var pressEventStories = {
+    "Biedroń becomes the Left's presidential candidate": {
+      rzeczpospolita: pressStory(
+        'Robert Biedroń takes the nomination. The Left chooses recognition over ideological peace',
+        'The former Słupsk mayor gives Lewica a candidate voters already know. He also inherits a coalition in which Wiosna expects ownership, Razem expects a programme and the old SLD expects control of everything surrounding both.'
+      ),
+      tvp: pressStory(
+        'PiS begins governing as Lewica returns to Robert Biedroń',
+        'The governing camp is promising continuity and another term of social programmes. Lewica answers with a familiar liberal-left candidate whose first task will be persuading voters that the alliance represents more than the politics of the largest cities.'
+      ),
+      tvn: pressStory(
+        'Lewica chooses Biedroń. Forty-nine seats now face a presidential test',
+        'The nomination ends one argument and begins another: whether an independent Left campaign can enlarge the democratic opposition rather than divide it. KO will watch the transfer arithmetic as closely as Biedroń’s own result.'
+      )
+    },
+    'Zandberg turns the election into a programme fight': {
+      rzeczpospolita: pressStory(
+        'Zandberg gets his campaign. Lewica will now have to put a price beside every promise',
+        'The Razem leader offers discipline, economic clarity and little comfort to the alliance’s inherited apparatus. A candidacy built on housing, wages and public provision will be judged less by applause than by whether the sums survive hostile examination.'
+      ),
+      tvp: pressStory(
+        'Lewica nominates Zandberg and turns left as PiS starts a new term',
+        'The opposition candidate promises a larger state and a confrontation over work and housing. PiS will answer that its social transfers already reach the families whom Zandberg is asking to finance another experiment.'
+      ),
+      tvn: pressStory(
+        'Zandberg wins the Left nomination. The campaign gains an argument—and a coalition problem',
+        'Lewica has chosen the candidate least likely to disappear inside a KO–PiS contest. Wiosna and SLD must now decide whether they will campaign for a programme that also challenges the economic instincts of the liberal opposition.'
+      )
+    },
+    'The Left opens a presidential primary': {
+      rzeczpospolita: pressStory(
+        'Lewica cannot choose a candidate, so it asks its members to settle the balance of power',
+        'An open ballot may give the eventual nominee legitimacy. It may also turn every disagreement over rules, turnout and endorsements into a public audit of an alliance that has existed for only a few months.'
+      ),
+      tvp: pressStory(
+        'While PiS forms a government, Lewica begins an expensive contest with itself',
+        'The Left has postponed its presidential answer and opened a primary between competing organisations. The governing camp enters the new term with a programme; its opponents enter another round of internal campaigning.'
+      ),
+      tvn: pressStory(
+        'A Left primary could produce a real candidate—or six weeks of avoidable damage',
+        'Members will get a choice that party leaders could not make for them. The democratic opposition now waits to see whether the ballot creates energy beyond Lewica or merely documents the divisions inside it.'
+      )
+    },
+
+    'A small newsroom begins to contest the first frame': {
+      onet: pressStory(
+        'Lewica builds a rapid-response desk. The opposition media war gains another player',
+        'Researchers, regional contacts and trained television guests will work from one daily brief. KO figures welcome help against PiS, but privately ask whether the new operation will spend as much time competing with them.'
+      ),
+      wp: pressStory(
+        'A newsroom run for a party: who pays, who edits and what will appear on screen?',
+        'Lewica says the unit will verify claims and move local stories into national coverage. It is not an independent publication: its success will depend on whether useful information can travel beyond people already inclined to trust the party.'
+      ),
+      rzeczpospolita: pressStory(
+        'Lewica discovers media infrastructure. A party newsroom remains a party newsroom',
+        'Professional preparation may spare candidates the usual improvisation. It cannot purchase credibility, and a rapid-response team built to win each morning risks becoming another machine that mistakes message discipline for reporting.'
+      )
+    },
+    'Subscriptions finance a small Left media operation': {
+      onet: pressStory(
+        'Lewica asks supporters to fund its own channel—and immediately learns the limits of the list',
+        'Recurring payments buy a mailing operation and regular video, not a national newsroom. The party gains an audience it can reach without an editor, while remaining dependent on commercial media whenever it needs anybody else.'
+      ),
+      wp: pressStory(
+        'Ten złoty a month for Left media. The subscriptions add up more slowly than the expectations',
+        'Supporters receive direct briefings and campaign clips in exchange for recurring donations. Organisers now have to ask the same people for money, time and votes—and explain which of those requests comes first.'
+      ),
+      rzeczpospolita: pressStory(
+        'A subscriber list is not a press market, but it may be the organisation Lewica lacks',
+        'The modest operation gives the party predictable revenue and control over distribution. Its ceiling is equally clear: loyal readers can sustain a niche without making its claims persuasive outside that niche.'
+      )
+    },
+    'The candidate becomes the entire media strategy': {
+      onet: pressStory(
+        'Every camera now wants the candidate. Lewica has quietly bet the campaign on one face',
+        'Bookings rise and regional candidates begin waiting for clips they can repost. A strong performance will look like momentum; one failed interview will travel through an organisation that has built no second voice.'
+      ),
+      wp: pressStory(
+        'One candidate, dozens of interviews and no safety net: Lewica chooses reach over infrastructure',
+        'The strategy is cheap, immediate and brutally personal. The campaign can move as quickly as its star, but policy work and local stories disappear whenever the principal performer is somewhere else.'
+      ),
+      rzeczpospolita: pressStory(
+        'Lewica replaces a media strategy with a personality',
+        'A recognisable candidate can command attention that no party channel could buy. The arrangement also transfers every mistake, fatigue and private ambition directly onto an alliance whose institutions remain too weak to correct course.'
+      )
+    },
+    "The Left again answers yesterday's story": {
+      onet: pressStory(
+        'Lewica saves its campaign money and gives its opponents the first draft of every story',
+        'The party will continue accepting invitations and issuing corrections after hostile frames are established. KO operatives see one less rival for the morning agenda—and one less partner capable of helping set it.'
+      ),
+      wp: pressStory(
+        'No newsroom, no subscription drive, no star system. Lewica waits for the phone to ring',
+        'Resources remain available for the formal campaign. Until then, spokespeople will enter interviews prepared by other producers and discover which controversy they are meant to answer after it has already spread.'
+      ),
+      rzeczpospolita: pressStory(
+        'Lewica declines to build the media operation it says the market denies it',
+        'Fiscal caution is defensible for a small party. So is the consequence: an organisation unwilling to finance preparation cannot treat poor coverage as proof that preparation would never have mattered.'
+      )
+    },
+
+    'The lockdown debate turns toward work and care': {
+      tvn: pressStory(
+        'Lewica backs restrictions—but only with wages, care and scrutiny attached',
+        'The opposition package links public-health rules to sick pay, workplace protection and support for carers. The government must now explain why emergency discipline arrived faster than protection for the people expected to observe it.'
+      ),
+      republika: pressStory(
+        'The Left sees a pandemic and writes a permanent spending programme',
+        'PiS is moving emergency support to firms and families while Lewica demands a longer list of guarantees and controls. The virus requires action; it does not make every old socialist proposal newly affordable.'
+      ),
+      onet: pressStory(
+        'Lockdown without a social shield? Lewica puts the people keeping Poland open at the centre',
+        'Hospitals, care homes and insecure workplaces become the test of the restrictions rather than an appendix to them. Mayors want usable rules and money now, not another Warsaw promise that arrives after the shift ends.'
+      )
+    },
+    'The Left makes the election calendar a constitutional issue': {
+      tvn: pressStory(
+        'An emergency without the constitutional emergency: Lewica challenges the May election timetable',
+        'The government has closed schools and restricted movement while refusing the legal instrument that would postpone the presidential vote. Lewica is asking the democratic opposition to make that contradiction, not campaign tactics, the common case.'
+      ),
+      republika: pressStory(
+        'Lewica reaches for the constitution while Poland fights the virus',
+        'Hospitals and families need decisions, but the opposition has returned immediately to the election calendar. PiS says the state can protect health without handing its opponents an indefinite postponement.'
+      ),
+      onet: pressStory(
+        'Can Poland hold an election in lockdown? The constitutional clock is now the opposition’s strongest case',
+        'Lewica has moved the argument from campaign fairness to the legal basis of the emergency. KO mayors blocking an improvised ballot have gained an ally, though households still want an answer about tomorrow’s income.'
+      )
+    },
+    'The opposition lowers its voice as the virus spreads': {
+      tvn: pressStory(
+        'Lewica offers PiS a temporary truce. Oversight cannot be another casualty',
+        'A calmer opposition may help public confidence during the first shock. The unanswered question is what information, committee access and expiry dates the government must provide before national unity becomes silence.'
+      ),
+      republika: pressStory(
+        'At last, responsibility: Lewica backs national unity against the epidemic',
+        'The Left has recognised that a virus cannot be defeated by permanent campaign warfare. PiS gains room to act quickly; voters will remember which opposition parties helped when the state required discipline.'
+      ),
+      onet: pressStory(
+        'The shouting stops for a moment. Lewica gives the government room—and takes a risk',
+        'A national-unity posture may reassure people watching case numbers rise. It also lets PiS control the briefings, the timetable and the first account of every failure unless the truce comes with enforceable oversight.'
+      )
+    },
+    'The Left enters an anti-lockdown field already owned by Konfederacja': {
+      tvn: pressStory(
+        'Lewica turns against lockdown and abandons the public-health opposition',
+        'The decision puts the party beside a movement already organised around denial and distrust. Civil-liberties questions are real; entering this coalition without a credible health plan hands their loudest answer to Konfederacja.'
+      ),
+      republika: pressStory(
+        'Lewica copies Konfederacja and calls it a defence of freedom',
+        'After years of demanding a larger state, the Left has discovered limits when an epidemic requires them. PiS now faces criticism from two sides and responsibility from neither.'
+      ),
+      onet: pressStory(
+        'A stunning turn: Lewica joins the anti-lockdown revolt as hospitals brace for more cases',
+        'The party hopes to separate constitutional liberty from conspiracy politics. It enters a field where Konfederacja owns the networks, the slogans and the angry young audience—and where every rise in deaths will carry Lewica’s signature.'
+      )
+    },
+
+    'The social shield acquires a Left edge': {
+      rzeczpospolita: pressStory(
+        'Lewica adds workers to the rescue bill—and several permanent obligations to the ledger',
+        'The opposition has found the vulnerable point in a firm-centred shield: jobs can be subsidised while employees still lose income and security. Its amendments deserve a hearing; their recurring cost deserves one too.'
+      ),
+      tvp: pressStory(
+        'The government protects jobs as Lewica claims the shield should cover everything',
+        'PiS has mobilised unprecedented support during an unprecedented shutdown. The Left backs the restrictions but treats every gap in an emergency programme as proof that only its own, larger programme counts.'
+      ),
+      tvn: pressStory(
+        'Who does the shield protect? Lewica forces workers into the government’s headline numbers',
+        'Wage guarantees and protection against dismissal now sit beside aid for balance sheets. The amendments give the democratic opposition a social argument of its own—and the government a choice between accepting it and explaining the omissions.'
+      )
+    },
+    "Local survival becomes the opposition's test": {
+      rzeczpospolita: pressStory(
+        'Lewica moves the rescue argument from ministries to municipalities',
+        'Counties and cities are carrying health, transport and welfare costs while their revenue collapses. A local package may be less dramatic than a national entitlement, but it asks the more practical question: which services can still open on Monday?'
+      ),
+      tvp: pressStory(
+        'Opposition mayors demand another rescue as government aid reaches the country',
+        'Lewica has joined local authorities asking Warsaw to replace lost revenue and fund services. PiS says national programmes already protect communities and warns that city halls want cash without common rules.'
+      ),
+      tvn: pressStory(
+        'The crisis reaches city hall. Lewica makes local services the next shield',
+        'Buses, clinics and social-assistance offices cannot furlough the people who need them. Opposition-run municipalities now have a parliamentary package—and a test of whether the government’s promises work beyond its own agencies.'
+      )
+    },
+    'Lewica makes private payroll survival its emergency red line': {
+      rzeczpospolita: pressStory(
+        'Lewica chooses payroll liquidity over a larger public rescue',
+        'Direct support for private wages is an unexpectedly market-conscious line from the Left. It may preserve viable firms quickly, but unions will ask why public capacity and employee rights became secondary precisely when bargaining power collapsed.'
+      ),
+      tvp: pressStory(
+        'Lewica discovers employers after the government builds the shield',
+        'The opposition now proposes protecting private payrolls with public money while criticising PiS for doing the same through a national programme. The conversion is welcome; the attempt to claim authorship is less convincing.'
+      ),
+      tvn: pressStory(
+        'A pro-business turn from Lewica: save payrolls first, settle the ideological bill later',
+        'The proposal aims at speed and may reassure professionals and smaller firms. It also opens a fight inside the Left over whether the emergency should preserve existing employers or build stronger public and worker guarantees around them.'
+      )
+    },
+    'A maximal shield wins applause and a costing attack': {
+      rzeczpospolita: pressStory(
+        'Lewica promises the complete shield. The missing line is still the total',
+        'Income guarantees, public investment and universal support answer almost every constituency touched by the shutdown. They also convert emergency politics into a fiscal commitment whose duration and financing the party has not credibly bounded.'
+      ),
+      tvp: pressStory(
+        'Billions more, no limit named: Lewica turns the crisis into a spending auction',
+        'The government is financing hospitals, firms and families under conditions no cabinet planned for. The Left’s answer is to promise every additional demand at once and leave taxpayers to discover the total later.'
+      ),
+      tvn: pressStory(
+        'The biggest opposition shield is also the easiest one to attack',
+        'Lewica has assembled a programme broad enough to excite workers, tenants and public services. Unless it publishes priorities and financing quickly, PiS will reduce the whole package to one number and the democratic opposition will keep its distance.'
+      )
+    },
+    'PiS owns both the restrictions and the rescue': {
+      rzeczpospolita: pressStory(
+        'Lewica leaves the economic field and lets PiS define both emergency and relief',
+        'The party has preserved resources and avoided an uncosted promise. It has also accepted the worst position available to an opposition: responsibility for criticism without a recognisable alternative against which government delivery can be judged.'
+      ),
+      tvp: pressStory(
+        'Government acts, Lewica watches: the shield passes without a Left alternative',
+        'PiS carries the burden of restrictions and the programme designed to protect jobs and families. Lewica has chosen commentary over responsibility and will now struggle to claim any improvement the rescue produces.'
+      ),
+      tvn: pressStory(
+        'The government owns the shield because Lewica declined to contest it',
+        'KO will keep pressing for transparency and local support, but the social opposition has left no proposal of its own on the table. PiS can now present every payment as evidence that only the governing camp understands material security.'
+      )
+    },
+
+    'The Left works behind a movement it does not own': {
+      onet: pressStory(
+        'Lewica steps back from the cameras and puts lawyers behind the Women’s Strike',
+        'The party is funding safety, legal defence and organisers without demanding its logo at the front. The restraint may build trust that no television appearance can manufacture, though KO figures will still compete to represent the revolt in parliament.'
+      ),
+      wp: pressStory(
+        'No party flags, more lawyers: Lewica chooses the machinery behind the protest',
+        'Hotlines, legal teams and safety volunteers are less visible than a leaders’ march. They may matter longer, especially if arrests and employment consequences continue after the largest crowds have gone home.'
+      )
+    },
+    'Party flags fill a movement larger than the party': {
+      onet: pressStory(
+        'Lewica races to the front of the Women’s Strike—and immediately meets resistance',
+        'Party leaders want to convert the revolt into parliamentary power before its energy fades. Organisers who built it without them are asking whether support means a microphone, a logo or the discipline to follow somebody else’s lead.'
+      ),
+      wp: pressStory(
+        'Whose protest is it? Lewica banners spread through crowds that never joined the party',
+        'The flags create television recognition and a clear political target. They also let the government describe an autonomous revolt as an opposition campaign, raising the cost for demonstrators who wanted neither label.'
+      )
+    },
+    'The ruling meets a broad constitutional front': {
+      onet: pressStory(
+        'From the streets to the courts: KO and Lewica build one front against the abortion ruling',
+        'The joint line treats reproductive rights and institutional capture as the same crisis. It gives the opposition reach beyond any one party, while leaving activists to ask whether the old compromise will quietly return when leaders negotiate the details.'
+      ),
+      wp: pressStory(
+        'Parties, lawyers and protesters agree on one demand. They do not yet agree what comes after it',
+        'The constitutional front can challenge the Tribunal’s authority and protect demonstrations. Restoring a lawful process is only the first question; the abortion law that should emerge from it remains unresolved.'
+      )
+    },
+    'The old guard asks the streets to go home': {
+      onet: pressStory(
+        'Lewica defends the old abortion compromise as a new generation rejects it',
+        'Senior figures are offering de-escalation, Palace access and a return to the settlement destroyed by PiS. The price is a rupture with protesters who no longer regard that settlement as either protection or peace.'
+      ),
+      wp: pressStory(
+        'The Left tells the Women’s Strike to accept yesterday’s compromise. The answer is immediate',
+        'Party leaders hope a familiar legal settlement will lower the temperature. Organisers hear a request to abandon the demand that put them in the street, and younger members are deciding which side they belong to.'
+      )
+    },
+
+    'Lewica trades its votes for recovery-fund safeguards': {
+      rzeczpospolita: pressStory(
+        'Lewica gives PiS the recovery votes and receives a promise ledger in return',
+        'Ratification matters and the negotiated controls are not imaginary. Neither is the political fact: the government secured its majority in a private bargain, while the opposition learned that Lewica’s European solidarity has a bilateral price.'
+      ),
+      tvp: pressStory(
+        'Recovery money above party warfare: PiS and Lewica secure ratification',
+        'The government has assembled the votes needed to bring European investment to Poland. Lewica chose concrete safeguards over KO’s demand for opposition discipline and helped prevent a tactical dispute from endangering national recovery.'
+      ),
+      tvn: pressStory(
+        'Lewica rescues PiS on the recovery fund—and insists the receipts will justify it',
+        'The safeguards may improve local spending, but the method splits the democratic opposition and hands the government a victory it could not produce alone. Every missed condition will now be charged to the party that accepted the bargain.'
+      )
+    },
+    'The opposition writes one recovery-fund control package and ratifies the law': {
+      rzeczpospolita: pressStory(
+        'The opposition votes yes together and makes oversight the price of recovery',
+        'KO, Lewica and Poland 2050 have avoided both obstruction and a private auction of amendments. The test moves to enforceability: controls celebrated before the money arrives must still survive ministries that did not volunteer for them.'
+      ),
+      tvp: pressStory(
+        'Government wins recovery funds despite an opposition attempt to seize the credit',
+        'PiS brought ratification to parliament and will remain responsible for delivery. Opposition parties voted for money Poland needs, then presented routine safeguards as if they had authored the national recovery plan.'
+      ),
+      tvn: pressStory(
+        'One opposition standard, one yes vote: Lewica declines a separate deal with PiS',
+        'The democratic parties have shown they can support European recovery without suspending scrutiny. KO gains the unity it demanded; Lewica keeps a social imprint without appearing as the government’s emergency majority.'
+      )
+    },
+    'Lewica abstains and leaves ratification to the recorded PiS–PSL count': {
+      rzeczpospolita: pressStory(
+        'Lewica abstains on recovery and discovers that arithmetic continues without it',
+        'PiS and PSL have supplied the recorded majority. The Left avoided a bilateral bargain and gained no control package in exchange; principled distance is a thin asset when somebody else writes both the law and the conditions.'
+      ),
+      tvp: pressStory(
+        'Recovery funds pass without Lewica as responsible deputies supply the majority',
+        'The government has secured ratification despite another opposition attempt to avoid a clear choice. Lewica will benefit from the investment while explaining why it could neither support the law nor stop it.'
+      ),
+      tvn: pressStory(
+        'Lewica refuses the PiS deal, but its abstention produces no common opposition plan',
+        'The party avoided becoming the government’s partner and still left KO without the leverage it wanted. PSL’s votes settled the result, turning Lewica’s carefully defended position into an absence from the decisive count.'
+      )
+    },
+    'The President sponsors a recovery-fund control package for a Sejm vote': {
+      rzeczpospolita: pressStory(
+        'The Palace enters the recovery bargain and changes the coalition geometry',
+        'Presidential sponsorship gives a cross-party package institutional weight without replacing the Sejm majority it still needs. The route may unlock ratification; it also creates another centre entitled to claim delivery and police the conditions.'
+      ),
+      tvp: pressStory(
+        'President convenes parties around recovery as opposition abandons obstruction',
+        'The Palace has moved the dispute toward a vote and kept European investment above party tactics. PiS remains the government responsible for implementation, even as opposition leaders compete to attach their names to its safeguards.'
+      ),
+      tvn: pressStory(
+        'A presidential route breaks the recovery deadlock—and denies PiS sole ownership',
+        'KO, Lewica and the centre can support one control package without entering a private government bargain. The Palace gains credit and responsibility; failure to enforce the safeguards will now implicate more than the cabinet.'
+      )
+    },
+
+    'The Left proposes a lawful border operation': {
+      tvn: pressStory(
+        'Security, asylum and cameras at the frontier: Lewica offers one border plan',
+        'The proposal accepts the operation organised by Minsk without accepting an exclusion zone beyond law. Screening, medical teams and monitored press access give the democratic opposition an answer that is harder to caricature as an open border.'
+      ),
+      republika: pressStory(
+        'Lewica discovers border control—and brings activists and cameras with it',
+        'PiS says the state is already stopping a hostile operation. The Left’s plan adds outside monitors and asylum access at the moment officers need a clear command, turning operational security into another opposition seminar.'
+      ),
+      onet: pressStory(
+        'A guarded border without a lawless zone: the opposition finally has an operating plan',
+        'Lewica has joined security screening to humanitarian access and invited KO, PSL and Poland 2050 to defend the details. The government must now answer a proposal rather than the easier accusation that its critics deny the threat.'
+      )
+    },
+    'Rights organisations gain an unqualified parliamentary ally': {
+      tvn: pressStory(
+        'Lewica makes access to asylum the red line at the Belarus frontier',
+        'Lawyers, medics and families gain a party willing to document every pushback. The principled stand also leaves a gap on operational control that PiS will fill immediately unless the Left can answer the fears of border communities.'
+      ),
+      republika: pressStory(
+        'Lewica chooses the activists over the officers defending Poland’s border',
+        'The Left demands wider access to a zone targeted by Lukashenko’s services and says law must come before deterrence. PiS answers that a state unable to control entry will soon lose the ability to protect anybody inside.'
+      ),
+      onet: pressStory(
+        'Inside the exclusion zone, aid groups finally gain an ally with Sejm votes',
+        'Lewica will carry testimony, pushbacks and blocked medical access into parliament without qualification. Liberal opposition figures welcome the scrutiny and worry that the party has left the security half of the argument unanswered.'
+      )
+    },
+    'The Left gives security priority at the border': {
+      tvn: pressStory(
+        'Lewica backs the emergency and postpones scrutiny until after the damage can be done',
+        'The party says Lukashenko’s operation requires unity and a secure frontier. Journalists and aid groups remain outside, while progressive MPs ask why rights deferred during an emergency should be expected to return on the government’s timetable.'
+      ),
+      republika: pressStory(
+        'A common front at the border: Lewica supports the state of emergency',
+        'Even the Left has recognised that sovereignty begins with control of the frontier. PiS welcomes the votes and rejects the demand that officers defend each operational decision in real time to politicians far from the line.'
+      ),
+      onet: pressStory(
+        'Lewica chooses security first. Its own activists call “later scrutiny” an empty promise',
+        'The decision may reassure border communities and reduce an immediate opposition split. It also grants PiS the exclusion zone it wanted and asks people pushed back tonight to wait for a committee that does not yet exist.'
+      )
+    },
+    'The border argument proceeds without a Left frame': {
+      tvn: pressStory(
+        'Lewica leaves the border response to KO—and escapes neither side of the argument',
+        'The party avoided choosing between security and humanitarian access. KO becomes the principal democratic critic, while PiS and Konfederacja define strength and aid groups look elsewhere for an unqualified parliamentary advocate.'
+      ),
+      republika: pressStory(
+        'No answer from Lewica as Poland faces pressure at the frontier',
+        'The Left has delegated its position to the liberal opposition rather than tell voters whether the border should be controlled. PiS will continue the operation; silence cannot be mistaken for responsibility.'
+      ),
+      onet: pressStory(
+        'The border crisis forces every party to choose. Lewica chooses not to',
+        'Deferring to KO preserves fragile internal peace but gives away the month’s defining issue. Neither officers nor humanitarian organisations can identify the Left’s demand, and both sides of the coalition notice the absence.'
+      )
+    },
+
+    'The Left joins defence solidarity without accepting austerity': {
+      rzeczpospolita: pressStory(
+        'Lewica backs arms for Ukraine and puts a domestic invoice beside every vote',
+        'The party has joined the strategic consensus without offering the government a blank cheque. A shield for households and public services is defensible; it must not become a device for treating every pre-war spending demand as a security cost.'
+      ),
+      tvp: pressStory(
+        'Parliament unites behind Ukraine as Lewica adds conditions at home',
+        'PiS welcomes support for weapons, sanctions and allied reinforcement. The Left’s social shield can be discussed without weakening the clear first duty: helping Ukraine resist Russia and protecting Poland’s eastern flank.'
+      )
+    },
+    "Humanitarian solidarity becomes the Left's war policy": {
+      rzeczpospolita: pressStory(
+        'Lewica chooses refugees and diplomacy while Ukraine asks for weapons',
+        'Civilian protection is indispensable and Polish municipalities will need sustained support. It is not an answer to the armoured columns moving toward Kyiv, and a party separating relief from Ukrainian self-defence is avoiding the central fact of the war.'
+      ),
+      tvp: pressStory(
+        'Aid without arms: Lewica breaks from Poland’s security consensus',
+        'The government is opening the border to refugees while sending Ukraine the means to defend its cities. The Left supports the first task and retreats from the second, leaving Kyiv with sympathy where it asked Warsaw for material help.'
+      )
+    },
+    'The opposition suspends hostilities over Ukraine': {
+      rzeczpospolita: pressStory(
+        'A necessary truce gives the government necessary power—and a future accounting',
+        'Parliamentary unity strengthens Poland’s answer in the first days of invasion. It also concentrates intelligence, procurement and patriotic credit inside the cabinet; today’s urgency cannot cancel tomorrow’s obligation to disclose how that authority was used.'
+      ),
+      tvp: pressStory(
+        'One Polish answer to Russian aggression: opposition joins the government and President',
+        'Party leaders have backed arms, sanctions and allied reinforcement without turning the first days of war into another domestic contest. The common mandate tells Kyiv, Moscow and NATO that Poland’s commitment will survive parliamentary division.'
+      )
+    },
+    'Neutrality isolates the Left inside the opposition': {
+      rzeczpospolita: pressStory(
+        'Lewica declares neutrality in a war whose refugees are already crossing into Poland',
+        'Negotiations and humanitarian relief do not require pretending that arms delivered to the invaded state cause the invasion. The party has placed itself outside the national consensus and outside the regional solidarity claimed by much of its own left.'
+      ),
+      tvp: pressStory(
+        'Lewica refuses arms for Ukraine as Poland mobilises support',
+        'PiS, the President and the democratic opposition have agreed that Ukraine must be able to defend itself. The Left’s neutrality leaves it sharing a slogan with anti-system voices while Ukrainian families cross the border that disproves its distance.'
+      )
+    },
+
+    "The Left refuses to become a current inside Tusk's list": {
+      rzeczpospolita: pressStory(
+        'Lewica rejects Tusk’s single list and accepts the arithmetic of independence',
+        'A separate committee preserves programme, subsidy and candidate control. It also makes the threshold a permanent participant in every campaign meeting; identity will be valuable only if enough voters can still find it on election night.'
+      ),
+      tvp: pressStory(
+        'The opposition cannot unite: Lewica rejects Tusk’s common list',
+        'KO’s attempt to assemble one anti-PiS bloc has met the interests of another party apparatus. PiS enters the coming campaign against several rivals who agree on removing the government and not on who should replace it.'
+      ),
+      tvn: pressStory(
+        'Lewica says no to one list. Now it must prove independence is more than a logo',
+        'The Left has protected its name and its economic argument from absorption by KO. The democratic opposition will judge the decision by a harsher standard: whether the separate campaign brings new voters or merely divides familiar ones.'
+      )
+    },
+    'One opposition list becomes a live negotiation': {
+      rzeczpospolita: pressStory(
+        'Lewica accepts Tusk’s premise before negotiating Tusk’s terms',
+        'The common-list logic may reduce wasted votes and clarify the contest with PiS. It also places KO at the head of the table and turns every Left demand over programme, districts and subsidy into a possible explanation for failed unity.'
+      ),
+      tvp: pressStory(
+        'Tusk gathers the opposition under one banner with no common programme beneath it',
+        'Lewica has accepted negotiations over a shared list despite profound differences on spending, culture and leadership. PiS says the project has one binding idea: returning Donald Tusk to power.'
+      ),
+      tvn: pressStory(
+        'The single-list door opens. Lewica enters before the difficult terms are written',
+        'KO gains the direction of travel it wanted and the Left keeps a place at the negotiating table. Candidate order, social guarantees and the party name can still break the talks, but they can no longer be dismissed as a hypothetical dispute.'
+      )
+    },
+    'The Left turns one-list rhetoric into written conditions': {
+      rzeczpospolita: pressStory(
+        'Lewica sends Tusk a contract instead of another unity photograph',
+        'A social floor, Senate coordination, winnable places and subsidy rules make the proposed alliance legible. The document may protect a smaller partner; it may equally provide KO with a precise list of reasons to say the price is too high.'
+      ),
+      tvp: pressStory(
+        'Posts, money and guarantees: Lewica publishes its price for Tusk’s list',
+        'The opposition describes the talks as a democratic duty until candidate places and public subsidy reach the page. PiS says the written terms reveal a coalition organised around division of power before voters have cast a ballot.'
+      ),
+      tvn: pressStory(
+        'No blank cheque for unity: Lewica gives KO four conditions for a common list',
+        'The demands force both parties beyond moral appeals and into the mechanics that decide whether cooperation survives. A transparent bargain could strengthen the democratic front; a maximal one could end it before formal talks begin.'
+      )
+    },
+    'Lewica asks Kaczyński for winnable places on the PiS list': {
+      rzeczpospolita: pressStory(
+        'Lewica seeks shelter on the PiS list and puts its remaining identity up for negotiation',
+        'Winnable places may preserve MPs, but the host controls nominations, subsidy and the governing record carried onto the ballot. The arrangement would not be a tactical vote; it would reorganise Poland’s party system around a social-statist bloc.'
+      ),
+      tvp: pressStory(
+        'A broader social camp? PiS opens its candidate books to Lewica talks',
+        'The Left has recognised that family policy and economic security can matter more than the liberal opposition’s permanent culture war. Any agreement will require loyalty to the governing programme and respect for the voters who gave PiS the mandate.'
+      ),
+      tvn: pressStory(
+        'Lewica asks for places on Kaczyński’s list. The democratic opposition calls it a crossing',
+        'A parliamentary bargain has become an electoral negotiation under PiS control. KO will now describe every Left criticism of government as an internal dispute, while Razem and progressive organisers decide whether to leave before the ballot is filed.'
+      )
+    },
+    'Lewica prices PiS list talks with a written social and candidate compact': {
+      rzeczpospolita: pressStory(
+        'Lewica writes conditions for a PiS alliance that can no longer be called temporary',
+        'Candidate quotas, free votes and a social chapter would limit host-party control without removing it. The document clarifies the bargain and therefore its scale: this is an attempt to build an electoral bloc, not merely pass one disputed law.'
+      ),
+      tvp: pressStory(
+        'Lewica offers terms for joining the governing list',
+        'PiS will consider social commitments and candidates who respect the coalition’s mandate. It will not surrender control of its own list to a smaller party seeking both safe seats and public distance from decisions it helped enact.'
+      ),
+      tvn: pressStory(
+        'A quota, a programme and free votes: Lewica tries to make a PiS list defensible',
+        'Putting the price in writing prevents leaders from hiding behind tactical language. It does not answer the democratic opposition’s central charge: candidates elected from Kaczyński’s list would owe their places and subsidy to Kaczyński’s party.'
+      )
+    },
+    "Lewica rejects both Tusk's front and Kaczyński's host list": {
+      rzeczpospolita: pressStory(
+        'Lewica refuses both large hosts and chooses the threshold on its own terms',
+        'The independent route restores a coherent name after flirtation with two incompatible blocs. It also removes every external guarantee: the party must finance, staff and clear the election without blaming either host for the final arithmetic.'
+      ),
+      tvp: pressStory(
+        'Lewica walks away from PiS talks and Tusk’s list alike',
+        'The party has chosen isolation over a broader governing or opposition camp. Voters will decide whether this is principle or an attempt to preserve an apparatus that wanted guarantees from both sides and accepted responsibility from neither.'
+      ),
+      tvn: pressStory(
+        'Neither Tusk nor Kaczyński: Lewica attempts to rebuild an independent campaign',
+        'The decision ends a damaging ambiguity and gives activists a common ballot project. It also leaves the democratic opposition without certainty over coordination and the Left without protection if tactical voting accelerates.'
+      )
+    },
+
+    'The Left contests Konfederacja on who pays for insecurity': {
+      onet: pressStory(
+        'Lewica goes after Konfederacja’s tax revolt with one question: what disappears next?',
+        'The campaign puts schools, hospitals, rent and wages beside promises of radical tax cuts. It is a direct bid for younger and insecure voters who dislike the establishment but still expect the state to work when they need it.'
+      ),
+      wp: pressStory(
+        'Lower taxes, weaker services? Lewica calculates the other side of Konfederacja’s offer',
+        'The argument shifts from outrage to household arithmetic: which payments fall, which services shrink and who covers the difference. Konfederacja will answer that voters spend their own money better than any ministry.'
+      ),
+      rzeczpospolita: pressStory(
+        'Lewica answers the tax-cut right with universal security—and avoids the reform question',
+        'Public services do insure households against risks markets price badly. That does not prove every current programme is efficient, and defending the state as it exists may leave Konfederacja alone in speaking to voters angry at how it works.'
+      )
+    },
+    'Competence becomes the common opposition answer': {
+      onet: pressStory(
+        'KO and Lewica agree: make the election a test of whether the state works',
+        'The common line moves away from competing promises and toward the government’s record on prices, procurement and institutions. Lewica gains a route into the democratic campaign but risks becoming the social appendix to KO’s competence brand.'
+      ),
+      wp: pressStory(
+        'One opposition word for the summer: competence. Will it stop Konfederacja’s rise?',
+        'KO and Lewica are asking voters to compare administration rather than anger. The message is safe and broad; its weakness is that anti-system voters already regard the people delivering it as the system they want to punish.'
+      ),
+      rzeczpospolita: pressStory(
+        'The opposition promises competent government, the minimum offer of any opposition',
+        'Administrative repair is necessary after years of politicisation and error. It is not yet a programme, and cooperation around the word postpones every argument over taxes, spending and authority that a future coalition would have to settle.'
+      )
+    },
+    'Every party is asked whether it would govern with Konfederacja': {
+      onet: pressStory(
+        'The question that follows every candidate now: would you govern with Konfederacja?',
+        'Lewica wants a democratic cordon stated before tactical ambiguity becomes a coalition option. KO agrees easily; PSL resists surrendering future arithmetic, and Konfederacja welcomes another chance to present itself as the party everyone fears.'
+      ),
+      wp: pressStory(
+        'Yes or no: Lewica turns one coalition question into an election test',
+        'Candidates will be pressed to rule out governing with Konfederacja before the seat count exists. Clear answers may help tactical voters, but every refusal also reinforces the radical right’s claim that established parties form one closed club.'
+      ),
+      rzeczpospolita: pressStory(
+        'A cordon before the count gives Konfederacja the exclusion story it wants',
+        'Parties are entitled to define coalition limits, especially on constitutional questions. Turning that limit into the campaign’s organising test substitutes moral classification for an argument capable of winning back the voters behind it.'
+      )
+    },
+    'The Left follows the right onto its chosen ground': {
+      onet: pressStory(
+        'Lewica answers Konfederacja with stricter borders and tax relief. Its own party recoils',
+        'The campaign is chasing younger and socially conservative voters through the issues on which the right already has credibility. Any short-term gain will be measured against activists and minorities now asking what remains distinctively Left.'
+      ),
+      wp: pressStory(
+        'Smaller taxes, harder borders: Lewica makes its sharpest turn of the campaign',
+        'Leaders call the package an answer to material and security fears. Critics see imitation without ownership: voters attracted to the message already have right-wing parties, while existing supporters did not ask Lewica to become one.'
+      ),
+      rzeczpospolita: pressStory(
+        'Lewica borrows the right’s programme and discovers that positioning is not credibility',
+        'Border enforcement and relief for small firms are legitimate subjects, not ideological property. A late conversion designed around a rival’s polling surge will nevertheless be judged as tactics unless it rests on a longer record than this campaign can supply.'
+      )
+    },
+
+    'The Left follows contracts, names and consular files': {
+      tvn: pressStory(
+        'Lewica follows the visa money past one dismissed deputy minister',
+        'Contracts, intermediaries and consular posts are being assembled into a chain of responsibility that reaches beyond Piotr Wawrzyk. The inquiry denies PiS an easy ending in which one resignation closes a system supervised by the Foreign Ministry.'
+      ),
+      republika: pressStory(
+        'Lewica turns the visa affair into another prosecution file while the border question remains',
+        'Any official who sold access must answer for it. The Left nevertheless refuses the question voters are asking: how many people entered, under what rules and whether the state can still control the process.'
+      ),
+      onet: pressStory(
+        'Names, contracts, consulates: Lewica publishes the map PiS hoped would end with Wawrzyk',
+        'The party is resisting the easiest migration slogan and following who signed, paid and supervised. That makes for slower campaign television—and a record capable of surviving after the election posters disappear.'
+      )
+    },
+    "A lawful border doctrine replaces the opposition's slogan auction": {
+      tvn: pressStory(
+        'After the visa scandal, Lewica proposes a migration system the state can actually audit',
+        'Staffing, eligibility, labour inspection and published routes sit beside the corruption inquiry. The proposal gives the democratic opposition an administrative answer instead of another competition over who can sound least welcoming.'
+      ),
+      republika: pressStory(
+        'Lewica answers corrupt visas with a plan for more orderly visas',
+        'The Left promises better staffing and transparent rules, but its conclusion remains that migration should continue under a larger administration. PiS says the first obligation is to close the channel that officials abused.'
+      ),
+      onet: pressStory(
+        'A visa without a broker: the Left turns scandal into a plan for lawful entry',
+        'Applicants would receive published rules while consulates gain staff and audit duties. It is less explosive than accusing PiS of hypocrisy and more useful to every honest official and family trapped behind the scandal.'
+      )
+    },
+    "The opposition scandal message adopts the right's premise": {
+      tvn: pressStory(
+        'Lewica attacks PiS for “importing migrants” and validates the campaign it meant to expose',
+        'The hypocrisy charge is immediate and effective: officials sold access while their party manufactured fear. It also tells lawful migrants that they are the scandal, allowing Konfederacja to repeat the accusation without the word corruption.'
+      ),
+      republika: pressStory(
+        'PiS preached border control while officials sold visas. Even Lewica can see the betrayal',
+        'The Left has finally admitted that entry numbers and enforcement matter. It cannot erase years of progressive migration politics by borrowing the right’s charge in the final weeks of a campaign.'
+      ),
+      onet: pressStory(
+        'The visa attack that may haunt Lewica: “PiS brought in the people it told you to fear”',
+        'The line cuts through the government’s strongest campaign claim. It cuts through immigrant neighbours too, turning people with lawful lives in Poland into evidence before the party has established who actually profited.'
+      )
+    },
+
+    'The opposition turns ballot refusal into one common instruction': {
+      tvn: pressStory(
+        'One election, two papers: the democratic opposition tells voters to refuse the referendum ballot',
+        'KO, Lewica and Third Way have settled on the only tactic that can deny PiS a binding result without depressing the parliamentary vote. Thousands of commission members must now understand the procedure well enough to record refusal correctly.'
+      ),
+      republika: pressStory(
+        'The opposition fears four questions and orders its voters not to answer',
+        'Poles are being asked about state assets, retirement, the border and relocation. Lewica and KO prefer a procedural boycott because an honest national answer would expose how far their programme stands from the majority.'
+      ),
+      onet: pressStory(
+        'Take one ballot, refuse the other: the opposition’s October instruction in plain language',
+        'The tactic can keep the referendum below its binding threshold while preserving election turnout. It also forces canvassers to spend the closing month teaching paperwork when they would rather be talking about government.'
+      )
+    },
+    'The Left answers the referendum instead of refusing it': {
+      tvn: pressStory(
+        'Lewica breaks with the boycott and risks making PiS’s referendum binding',
+        'The party wants to contest retirement age, privatisation and the border on substance. KO warns that every accepted ballot helps a state-funded campaign cross the threshold, whatever answers the voter finally marks.'
+      ),
+      republika: pressStory(
+        'Lewica will answer the referendum. The opposition’s boycott begins to crack',
+        'The Left has recognised that voters deserve positions on questions affecting national property, pensions and security. Its answers will differ from PiS; at least they will be answers rather than an instruction to look away.'
+      ),
+      onet: pressStory(
+        'Four questions, four answers and one furious opposition: Lewica rejects the boycott',
+        'Campaigning on the substance may recover issues the Left once owned, especially pensions. The price is mathematical: participation can legitimise wording written by PiS and help the result acquire legal force.'
+      )
+    },
+    'Refusal is paired with four questions the government refuses to ask': {
+      tvn: pressStory(
+        'Lewica refuses the PiS ballot and prints its own questions about rents, hospitals and work',
+        'The counter-campaign preserves the opposition’s turnout tactic while giving Left canvassers something material to discuss. Its questions have no legal force; that may be precisely why they sound less manipulated than the official four.'
+      ),
+      republika: pressStory(
+        'Lewica invents a private referendum after telling voters to reject the legal one',
+        'The party wants the publicity of national questions without accepting the answers to those ordered by parliament. Cards about rents and hospitals cannot disguise a boycott of borders, relocation and national property.'
+      ),
+      onet: pressStory(
+        'Refuse this paper, read that card: Lewica’s complicated plan has four surprisingly simple questions',
+        'Voters are asked to decline the official referendum and consider waiting times, rent, contracts and energy bills instead. The message is harder to explain at the door but gives the last campaign weeks a life beyond PiS’s wording.'
+      )
+    },
+    "The referendum's public funding becomes an electoral-commission file": {
+      tvn: pressStory(
+        'Lewica follows referendum spending into the electoral commission',
+        'Ministerial tours, state-company sponsorship and public-media promotion are being filed as campaign benefits outside the PiS account. No ruling will arrive before polling day, but the party subsidy may eventually depend on the record opened now.'
+      ),
+      republika: pressStory(
+        'Unable to win the referendum argument, Lewica asks officials to police the campaign',
+        'Government ministers are entitled to explain a lawful national vote. The Left is constructing a future subsidy dispute from public appearances because it cannot persuade voters to oppose the questions themselves.'
+      ),
+      onet: pressStory(
+        'The bill for PiS’s referendum campaign may arrive a year after the election',
+        'Lewica has sent state-funded appearances and advertising to the electoral commission. The remedy is slow enough to change nothing in October and serious enough to threaten party money when the audit finally closes.'
+      )
+    },
+    'The audit chamber is asked what the referendum campaign is costing the state': {
+      tvn: pressStory(
+        'Who paid for the referendum campaign? The audit trail begins before voting day',
+        'The Supreme Audit Office can reach ministry budgets, state-company invoices and public-media hours that parliamentary questions cannot. Its answer will arrive late, but with documents the governing campaign cannot dismiss as opposition rhetoric.'
+      ),
+      republika: pressStory(
+        'Lewica sends the national referendum to an audit chief it once wanted removed',
+        'The opposition hopes a future report will recast lawful public information as party expenditure. Voters will answer in October; auditors should not become a substitute electorate months later.'
+      ),
+      onet: pressStory(
+        'A referral with a long fuse: auditors will count every public złoty behind the referendum',
+        'The filing cannot change the ballot or stop the ministerial tour. It can establish who authorised each expense, leaving the electoral commission a statutory record rather than a stack of campaign accusations.'
+      )
+    },
+
+    'The Left demands a rule against election pricing in state companies': {
+      tvn: pressStory(
+        'Cheap fuel before the vote, a governance rule after it: Lewica targets Orlen’s political switch',
+        'The proposal would force boards and supervising ministers to disclose exceptional pricing and its cost. It attacks the mechanism rather than asking drivers to resent a lower bill—a harder campaign message and a more durable one.'
+      ),
+      republika: pressStory(
+        'Lewica wants another rule for Orlen because drivers are paying less',
+        'The state refiner says its prices are commercial and PiS points to relief for households. The Left sees affordable fuel and reaches first for reporting duties, supervisors and a new political accusation.'
+      ),
+      onet: pressStory(
+        'Who ordered the price below six złoty? Lewica wants the answer written into law',
+        'Board decisions, margins and ministerial recommendations would have to be disclosed when a state company moves prices during a campaign. The rule is designed for this election—and for the next government tempted by the same lever.'
+      )
+    },
+    'The opposition promises the price rise arrives the week after the election': {
+      tvn: pressStory(
+        '“Fill the tank now”: the opposition predicts Orlen’s election price will vanish in November',
+        'The attack is simple enough to cross every party line and avoids endorsing the mechanism behind the discount. It also reduces a state-company governance scandal to a forecast that voters may forgive if cheap fuel lasts a little longer.'
+      ),
+      republika: pressStory(
+        'The opposition cannot bear cheaper fuel, so it promises a price rise',
+        'Drivers are saving money while KO and Lewica insist the benefit must be manipulation. PiS says its opponents have revealed the household economy they expect to deliver after taking power.'
+      ),
+      onet: pressStory(
+        'Will fuel jump after 15 October? The opposition bets its easiest attack on one price board',
+        'The line is travelling faster than any explanation of refinery margins. If prices rise, it will look prophetic; if supplies tighten first, the more important story may be what the discount has already done to distribution.'
+      )
+    },
+    'Empty pumps and late tankers are documented station by station': {
+      tvn: pressStory(
+        'The cheap-fuel campaign reaches empty pumps. Station managers bring the receipts',
+        'Delivery notices, rationing and late tankers are turning an argument over motive into evidence of supply failure. Independent operators can show what political pricing did without asking customers to object to paying less.'
+      ),
+      republika: pressStory(
+        'Opposition photographs empty pumps and declares a national Orlen crisis',
+        'Temporary delivery problems are being assembled into a campaign case by parties unable to attack the low price directly. The company says supply continues; Lewica says each station now has a dated record.'
+      ),
+      onet: pressStory(
+        'Map: the stations rationing fuel as Orlen insists the system is working',
+        'Managers and hauliers are sharing allocation letters, missed deliveries and empty-tank photographs. The crowdsourced file follows the shortage town by town and gives a later inquiry evidence beyond rival press conferences.'
+      )
+    },
+    "Auditors are sent after the refinery's margin, not its pump price": {
+      tvn: pressStory(
+        'Auditors seek Orlen board papers behind the pre-election fuel discount',
+        'The referral asks who approved the margin, what the Treasury ministry knew and how supply risks were assessed. It will not change today’s price; it may establish whether a public company absorbed a political campaign cost.'
+      ),
+      republika: pressStory(
+        'Lewica calls auditors after Orlen for making fuel affordable',
+        'The opposition has failed to convince drivers that a lower price is a scandal and now wants confidential board papers. Orlen says commercial decisions belong to management, not parties shopping for a post-election case.'
+      ),
+      onet: pressStory(
+        'Not the number on the sign—the margin behind it: Orlen faces an audit referral',
+        'Board minutes and ministry correspondence may reveal whether the discount was sustainable, ordered or merely convenient. The finding will arrive after the vote, when a new cabinet may control the same tempting instrument.'
+      )
+    },
+
+    'The Left asks who is commanding the eastern flank on Sunday': {
+      onet: pressStory(
+        'Two generals resign five days before voting. Lewica asks one question the ministry has not answered',
+        'Who holds operational command until successors are appointed? The party is keeping the officers out of its closing rallies and demanding a named chain of responsibility before Poland votes beside a war.'
+      ),
+      wp: pressStory(
+        'Who commands now? The dates, offices and vacancy after two military resignations',
+        'The Constitution leaves civilian authority intact, but the operational handover still requires names and orders. Lewica wants the ministry and Palace to publish them before election Sunday.'
+      )
+    },
+    "The command crisis becomes the opposition's last campaign argument": {
+      onet: pressStory(
+        'The generals walk out and the opposition puts their resignations in its final campaign speech',
+        'Lewica calls the departures the endpoint of eight years of politicised defence management. The attack may move late voters; serving officers will remember that their command crisis was converted into a partisan closing line.'
+      ),
+      wp: pressStory(
+        'Five days, two resignations, one final attack on government competence',
+        'The opposition says the people expected to run a war have lost confidence in the ministry. No general has endorsed that campaign conclusion, and neither can publicly correct it without entering the election himself.'
+      )
+    },
+    'Palace and ministry publish a joint command-continuity statement': {
+      onet: pressStory(
+        'A rare joint statement names the command chain after the generals resign',
+        'The Palace and Defence Ministry have set out who exercises authority until permanent successors are appointed. Lewica sacrificed an obvious campaign attack to broker the answer allies and officers wanted before polling day.'
+      ),
+      wp: pressStory(
+        'The command vacancy has a temporary answer. Here is who holds each responsibility',
+        'A joint Palace–ministry document establishes operational continuity and an appointment timetable. Voters may barely notice; military staffs and eastern-flank partners were waiting for exactly this information.'
+      )
+    },
+    'Three opposition caucuses sign one demand on the command vacancy': {
+      onet: pressStory(
+        'Three opposition parties put one security demand above their final campaign quarrels',
+        'KO, Lewica and the centre want a named successor, a written handover and a briefing on the eastern flank. The joint paper is harder for PiS to dismiss as one party exploiting the generals’ resignations.'
+      ),
+      wp: pressStory(
+        'One page, three signatures, four questions after the military command resigns',
+        'The opposition security committee has published a common request on continuity and appointments. It does not answer why the generals left; it establishes what the state must clarify before election day.'
+      )
+    }
+  };
+
+  var pressEventIssues = {
+    'The lockdown debate turns toward work and care': 'vaccination',
+    'The Left makes the election calendar a constitutional issue': 'vaccination',
+    'The opposition lowers its voice as the virus spreads': 'vaccination',
+    'The Left enters an anti-lockdown field already owned by Konfederacja': 'vaccination',
+    'The social shield acquires a Left edge': 'social_spending',
+    "Local survival becomes the opposition's test": 'social_spending',
+    'Lewica makes private payroll survival its emergency red line': 'social_spending',
+    'A maximal shield wins applause and a costing attack': 'social_spending',
+    'PiS owns both the restrictions and the rescue': 'social_spending',
+    'The Left works behind a movement it does not own': 'abortion_rights',
+    'Party flags fill a movement larger than the party': 'abortion_rights',
+    'The ruling meets a broad constitutional front': 'abortion_rights',
+    'The old guard asks the streets to go home': 'abortion_rights',
+    'The Left proposes a lawful border operation': 'border_security',
+    'Rights organisations gain an unqualified parliamentary ally': 'refugee_solidarity',
+    'The Left gives security priority at the border': 'border_security',
+    'The border argument proceeds without a Left frame': 'border_security',
+    'The Left joins defence solidarity without accepting austerity': 'national_security',
+    "Humanitarian solidarity becomes the Left's war policy": 'refugee_solidarity',
+    'The opposition suspends hostilities over Ukraine': 'national_security',
+    'Neutrality isolates the Left inside the opposition': 'national_security',
+    'The Left contests Konfederacja on who pays for insecurity': 'social_spending',
+    'The Left follows the right onto its chosen ground': 'border_security',
+    'The Left follows contracts, names and consular files': 'rule_of_law',
+    "A lawful border doctrine replaces the opposition's slogan auction": 'border_security',
+    "The opposition scandal message adopts the right's premise": 'refugee_solidarity',
+    'The opposition turns ballot refusal into one common instruction': 'rule_of_law',
+    'The Left answers the referendum instead of refusing it': 'rule_of_law',
+    'Refusal is paired with four questions the government refuses to ask': 'rule_of_law',
+    "The referendum's public funding becomes an electoral-commission file": 'rule_of_law',
+    'The audit chamber is asked what the referendum campaign is costing the state': 'rule_of_law',
+    'The Left demands a rule against election pricing in state companies': 'rule_of_law',
+    'The opposition promises the price rise arrives the week after the election': 'social_spending',
+    'Empty pumps and late tankers are documented station by station': 'social_spending',
+    "Auditors are sent after the refinery's margin, not its pump price": 'rule_of_law',
+    'The Left asks who is commanding the eastern flank on Sunday': 'national_security',
+    "The command crisis becomes the opposition's last campaign argument": 'national_security',
+    'Palace and ministry publish a joint command-continuity statement': 'national_security',
+    'Three opposition caucuses sign one demand on the command vacancy': 'national_security'
+  };
+
   var pressPatronParty = function(outlet, qualities) {
     var turn = Math.abs(Number(qualities.time) || 0);
     if (outlet.patron === 'government') {
@@ -3500,53 +4325,108 @@ window.disableGrayMode = function() {
     return outlet.patron;
   };
 
-  var pressRelationshipFrame = function(outlet, qualities) {
-    var party = pressPatronParty(outlet, qualities);
-    if (party === 'left-friendly') {
-      return {
-        kicker: 'HARD-LEFT LINE',
-        label: 'HARD LEFT · FRIENDLY',
-        text: 'Równość treats Lewica’s media investment as proof that the Left is finally building power of its own.'
-      };
-    }
-    if (party === 'neutral') {
-      return {kicker: 'NEWS DESK', label: 'NEUTRAL', text: ''};
-    }
-    if (party === 'left') {
-      return {
-        kicker: 'GOVERNMENT LINE',
-        label: 'GOVERNMENT · ALIGNED',
-        text: 'Public television treats Lewica as part of the governing line.'
-      };
-    }
+  var pressIssueLabels = {
+    abortion_rights: 'abortion rights',
+    refugee_solidarity: 'refugees and asylum',
+    border_security: 'security at the eastern border',
+    vaccination: 'vaccination and public health',
+    social_spending: 'social spending and public services',
+    lgbt_equality: 'LGBT equality',
+    secular_state: 'the secular state and schools',
+    rule_of_law: 'repairing the rule of law',
+    national_security: 'defence and allied security'
+  };
 
-    var relation = Number(qualities[party + '_relation']);
-    relation = Number.isFinite(relation) ? relation : 0;
-    var stance = relation >= 40 ? 'TOLERATES LEFT' :
-      (relation <= 15 ? 'HOSTILE TO LEFT' : 'WARY OF LEFT');
-    var labels = {ko: 'KO LINE', pis: 'PiS LINE', konf: 'HARD-RIGHT LINE'};
-    var tails = {
-      ko: relation >= 40
-        ? 'KO-aligned coverage treats Lewica as a tolerable partner—for now.'
-        : (relation <= 15
-          ? 'The KO camp now presents Lewica as an obstacle, not an ally.'
-          : 'KO wants Lewica useful, quiet and firmly junior.'),
-      pis: relation >= 40
-        ? 'The PiS line leaves Lewica a narrow path to usefulness.'
-        : (relation <= 15
-          ? 'The PiS line casts Lewica as a threat, not a partner.'
-          : 'PiS keeps Lewica at arm’s length and under suspicion.'),
-      konf: relation >= 40
-        ? 'The hard right finds Lewica briefly useful against the centre.'
-        : (relation <= 15
-          ? 'The hard right frames Lewica as an enemy of nation and market.'
-          : 'The hard right treats Lewica as a convenient opponent.')
-    };
+  var pressPublicMood = function(qualities, selectedIssue) {
+    var hottest = pressIssueLabels[selectedIssue] ? selectedIssue :
+      'social_spending';
+    var hottestHeat = -1;
+    if (!pressIssueLabels[selectedIssue]) Object.keys(pressIssueLabels).forEach(function(issue) {
+      var salience = Number(qualities[issue + '_salience']);
+      var backlash = Number(qualities[issue + '_backlash']);
+      salience = Number.isFinite(salience) ? salience : 0;
+      backlash = Number.isFinite(backlash) ? backlash : 0;
+      var heat = salience * 0.65 + backlash * 0.35;
+      if (heat > hottestHeat) {
+        hottest = issue;
+        hottestHeat = heat;
+      }
+    });
+    var support = Number(qualities[hottest + '_support']);
     return {
-      kicker: labels[party],
-      label: labels[party] + ' · ' + stance,
-      text: tails[party]
+      issue: hottest,
+      label: pressIssueLabels[hottest],
+      support: Number.isFinite(support) ? support : 50,
+      salience: Number(qualities[hottest + '_salience']) || 0,
+      backlash: Number(qualities[hottest + '_backlash']) || 0
     };
+  };
+
+  var pressRelevantIssue = function(story, qualities) {
+    var event = String(qualities.news_headline || '');
+    if (Object.prototype.hasOwnProperty.call(pressEventStories, event)) {
+      return pressEventIssues[event] || '';
+    }
+    var copy = ((story && story.headline) || '') + ' ' +
+      ((story && story.text) || '') + ' ' + (qualities.news_headline || '');
+    copy = copy.toLowerCase();
+    var subjects = {
+      abortion_rights: /abort|pregnan|women.s strike|tribunal ruling/,
+      refugee_solidarity: /refuge|asylum|humanitarian|migrant/,
+      border_security: /border|frontier|lukashenko|belarus/,
+      vaccination: /vaccin|pandemic|hospital|health|virus|covid/,
+      social_spending: /budget|spending|wage|pension|housing|welfare|tax|worker|public service/,
+      lgbt_equality: /lgbt|equality|same.sex|marriage/,
+      secular_state: /church|religio|secular|clergy/,
+      rule_of_law: /court|judge|judicial|constitution|rule of law|tribunal/,
+      national_security: /defen|army|military|nato|ukraine|security/
+    };
+    return Object.keys(subjects).find(function(issue) {
+      return subjects[issue].test(copy);
+    }) || '';
+  };
+
+  var pressGovernmentParty = function(qualities) {
+    return qualities.government_party === 'pis' ? 'pis' :
+      (qualities.government_party === 'lewica' ? 'left' : 'ko');
+  };
+
+  var pressVoice = function(outlet, qualities) {
+    var patron = pressPatronParty(outlet, qualities);
+    var government = pressGovernmentParty(qualities);
+    if (outlet.id === 'rownosc') {
+      return 'pro-left';
+    }
+    if (outlet.id === 'wp') {
+      return 'neutral';
+    }
+    if (outlet.id === 'rzeczpospolita') {
+      return 'anti-left';
+    }
+    if (outlet.id === 'kanal-zero') {
+      return 'anti-establishment';
+    }
+    if (patron === government) {
+      return 'pro-government';
+    }
+    if (patron === 'ko') {
+      return Number(qualities.ko_relation) >= 40 ? 'neutral-left' :
+        'anti-government';
+    }
+    return patron === 'left' ? 'pro-left' : 'anti-government';
+  };
+
+  var pressSection = function(outlet) {
+    return {
+      onet: 'WIADOMOŚCI',
+      wp: 'POLITYKA',
+      rzeczpospolita: 'ANALIZA',
+      'kanal-zero': 'PROGRAM DNIA',
+      rownosc: 'SPOŁECZEŃSTWO',
+      tvp: 'KRAJ',
+      tvn: 'FAKTY',
+      republika: 'POLSKA'
+    }[outlet.id] || 'POLITYKA';
   };
 
   var pressTVPStory = function(outlet, story, qualities) {
@@ -3554,92 +4434,165 @@ window.disableGrayMode = function() {
       return story;
     }
     var patron = pressPatronParty(outlet, qualities);
+    var backsGovernment = patron === pressGovernmentParty(qualities);
+    if (backsGovernment && !story.live) {
+      return story;
+    }
     var headlinePrefixes = {
-      pis: 'Government under fire: ',
-      ko: 'Government restores order: ',
-      left: 'Lewica delivers: ',
-      neutral: 'Public record: '
+      pis: backsGovernment ? 'Cabinet acts: ' : 'Government under fire: ',
+      ko: backsGovernment ? 'Government moves: ' : 'Opposition presses: ',
+      left: backsGovernment ? 'Lewica secures: ' : 'The Left responds: ',
+      neutral: ''
     };
-    var leads = {
-      pis: 'PiS-aligned public television presents the development as evidence against the governing camp and its Left partner.',
-      ko: 'KO-aligned public television presents the development as proof that the governing coalition is restoring competent rule.',
-      left: 'Left-aligned public television foregrounds Lewica’s role and the social case for government action.',
-      neutral: 'The pluralist public broadcaster separates the institutional record from the governing parties’ claims.'
-    };
+    var lead = patron === 'neutral'
+      ? 'The decision now moves to the next institutional stage as parties dispute its likely effects.'
+      : (backsGovernment
+        ? 'Ministers say the decision keeps the government’s programme on schedule despite opposition criticism.'
+        : 'Opposition parties say the decision exposes delays and divisions the cabinet has failed to explain.');
     return {
       headline: (headlinePrefixes[patron] || '') + story.headline,
-      text: (leads[patron] ? leads[patron] + ' ' : '') + story.text,
+      text: lead + ' ' + story.text,
       sourceUrl: story.sourceUrl,
       sourceDate: story.sourceDate
     };
   };
 
-  var pressNarrativeBeat = function(outlet, qualities, dateKey, turn) {
-    var beatsByOutlet = {
+  var pressLiveStory = function(outlet, qualities, dateKey, turn) {
+    var event = String(qualities.news_headline ||
+      qualities.public_opinion_last_action || 'Poland enters a new political month')
+      .replace(/[.!?]+$/, '');
+    var seed = Math.abs((Number(turn) || 0) * 17 + (Number(dateKey) || 0) +
+      outlet.id.length * 11);
+    var headlines = {
       onet: [
-        'Editors frame the next forty-eight hours as a coalition stress test.',
-        'The desk tracks who can still coordinate after the latest parliamentary clash.',
-        'Coverage leans into tactical consequences rather than party mythology.'
+        event + '. The coalition now has a problem it cannot spin away',
+        event + '. The next 48 hours could decide who owns this crisis',
+        event + '. What happened behind the scenes—and what comes next'
       ],
       wp: [
-        'Producers follow logistics first: calendar math, signatures and vote margins.',
-        'The bulletin treats implementation capacity as the real plot behind speeches.',
-        'The newsroom watches institutions as systems, not only as campaign stages.'
+        event + '. What changes now and who will feel it first?',
+        event + '. Five questions after a turbulent day in Warsaw',
+        event + '. The dates, votes and consequences in one place'
       ],
       rzeczpospolita: [
-        'Columnists translate every promise into mandate, cost and enforceability.',
-        'Commentary asks which actor can carry legal risk once slogans expire.',
-        'Analysis reframes applause lines as long-run institutional commitments.'
+        event + '. Politics ends where the bill begins',
+        event + '. The state will live with the consequences',
+        event + '. A victory announced before the costs are counted'
       ],
       'kanal-zero': [
-        'Panel television blurs reporting and performance, amplifying personality over paperwork.',
-        'Stream-format debate turns procedural disputes into audience theatre.',
-        'The format rewards confrontation clips before committee detail.'
+        event + '. Everyone says they won. We check who is bluffing',
+        event + '. A breakthrough—or another Warsaw performance?',
+        event + '. The argument politicians do not want to have'
+      ],
+      rownosc: [
+        event + '. The people expected to pay are finally speaking',
+        event + '. Lewica can turn this moment into material change',
+        event + '. Rights on paper will not be enough'
       ],
       tvp: [
-        'The public bulletin casts procedural choices as a mandate question.',
-        'Broadcast framing centers continuity, state capacity and cabinet authority.',
-        'Coverage packages institutional friction as a test of governing competence.'
+        event + '. The government presents its next steps',
+        event + '. A decisive day for the cabinet and parliament',
+        event + '. Parties prepare for the next vote'
       ],
       tvn: [
-        'Evening segments chase documentary detail before accepting cabinet spin.',
-        'Reporters foreground witness accounts and procedural contradictions.',
-        'The editorial line treats oversight as part of democratic normality.'
+        event + '. The documents leave ministers with new questions',
+        event + '. Dates, contradictions and the vote still to come',
+        event + '. The cabinet’s account does not close the case'
       ],
       republika: [
-        'Commentary prioritizes identity conflict over inter-party compromise mechanics.',
-        'Producers push the argument toward values, sovereignty and cultural threat.',
-        'The segment style rewards rhetorical escalation over coalition arithmetic.'
+        event + '. The government calls it progress. Poland should read the fine print',
+        event + '. The Left sees an opening and taxpayers see the invoice',
+        event + '. Another elite bargain, another test for the right'
       ]
     };
-    var commonBeats = [
-      'By evening, every caucus must convert tone into a countable majority.',
-      'Before the next sitting, party discipline matters more than conference rhetoric.',
-      'The next vote will test not the slogan, but the machinery behind it.',
-      'The morning line is loud; the legislative calendar is louder.',
-      'As the cycle closes, visible momentum and legal durability are no longer the same thing.'
-    ];
-    var seasonalBeats = [
-      'Campaign tempo is rising faster than coalition trust can regenerate.',
-      'Policy bandwidth narrows as concurrent crises compete for administrative attention.',
-      'Media oxygen now rewards clear sequencing over maximalist demand lists.',
-      'Institutional fatigue is becoming a political variable of its own.'
-    ];
-
-    var outletBeats = beatsByOutlet[outlet.id] || commonBeats;
-    var seed = Math.abs((Number(turn) || 0) * 17 + (Number(dateKey) || 0) +
-      (outlet.id ? outlet.id.length * 11 : 0));
-    var outletLine = outletBeats[seed % outletBeats.length];
-    var commonLine = commonBeats[(seed + 3) % commonBeats.length];
-    var seasonalLine = seasonalBeats[(seed + 5) % seasonalBeats.length];
-
-    if (qualities.left_in_government) {
-      return outletLine + ' ' + commonLine;
-    }
-    return outletLine + ' ' + seasonalLine;
+    var copy = {
+      onet: [
+        'The declaration has started a race to define the day before voters do it themselves. Ministers point to delivery, opponents to the missing guarantees; the next parliamentary move may decide which account survives the week.',
+        'Talks continued after the cameras left. The governing camp wants a clean success, while its partners are already protecting themselves from the possibility that the promise proves larger than the result.',
+        'The public announcement settled the headline, not the dispute. Behind it sit an uneasy majority, an opposition looking for a weak seam and a Left deciding whether leverage is worth another open quarrel.'
+      ],
+      wp: [
+        'Behind today’s declaration are deadlines, signatures and a vote count that remains less certain than the podium suggested. For households, the practical question is when any change begins and who is left outside it.',
+        'The immediate decision is only the first step. Officials must still publish the rules, find the money and explain what happens if parliament or the President refuses to cooperate.',
+        'Party leaders have offered sharply different versions of the same day. The calendar is clearer: a formal decision, an implementation test and then a political bill at the next election.'
+      ],
+      rzeczpospolita: [
+        'A press conference can distribute credit; it cannot suspend arithmetic or law. Every promise now meets the budget, the limits of administration and a President entitled to read the text rather than the applause.',
+        'Lewica wants the decision measured by its declared purpose. Taxpayers and institutions will instead measure enforceability, cost and the precedents created when a temporary political bargain becomes permanent policy.',
+        'The majority has mistaken agreement among leaders for a settled public mandate. The difficult questions—authority, financing and legal durability—begin only after the victory photographs.'
+      ],
+      'kanal-zero': [
+        'Government and opposition arrived with ready-made clips, each carefully avoiding the least convenient part of the record. Once the slogans are stripped away, the fight is about who controls the timetable and who gets blamed for the compromise.',
+        'Every camp is selling courage to its own audience. The numbers are less heroic: uncertain votes, nervous partners and a decision whose practical effect may be smaller than today’s outrage.',
+        'The loudest claim of the day will travel furthest online, but it is not necessarily true. We put the promises beside the dates, the parliamentary arithmetic and what the parties said last time.'
+      ],
+      rownosc: [
+        'The people living with the decision are not scenery for another leaders’ summit. Tenants, workers, patients and organisers want enforceable rights, funded services and a timetable they can use.',
+        'Lewica has a chance to move the argument from personalities to power: who works, who pays and who gets a voice before the final text is filed. A symbolic win will not survive contact with everyday life.',
+        'The dispute is being narrated as a contest among party leaders. Outside parliament, the demand is simpler: turn the promise into a right and fund the people expected to deliver it.'
+      ],
+      tvp: [
+        'The cabinet says the decision protects stability and keeps the state moving. Opposition parties dispute both the timetable and the claimed benefits as parliament prepares for the next formal step.',
+        'Ministers presented the measure as an answer to a growing national concern. Critics say the announcement came before the legal and financial details needed to judge it.',
+        'The political dispute now moves from the conference room to state institutions. The government is asking for a mandate to proceed; its opponents are organising a test of that claim.'
+      ],
+      tvn: [
+        'The official account leaves gaps in the chronology and in the government’s explanation of who authorised what. Parliamentary scrutiny will now test whether those omissions are political convenience or a deeper failure of procedure.',
+        'Ministers called the matter settled, but documents and earlier statements point to questions the cabinet has not answered. Coalition partners must decide whether to demand corrections or defend the common version.',
+        'The decision may survive the day’s argument; the process behind it still requires scrutiny. Dates, legal opinions and testimony from those affected tell a less orderly story than the government presentation.'
+      ],
+      republika: [
+        'The governing camp has dressed another compromise as necessity and expects conservative voters to applaud the absence of a worse outcome. The right will ask who surrendered first and what the country receives in return.',
+        'Lewica is using the opening to demand a larger state, a larger bill and a smaller place for dissent. Government partners may accept the language today; voters will decide whether they accept the consequences.',
+        'Warsaw’s political class has found common ground where it usually does: more authority for itself and a promise that somebody else will meet the cost. The opposition on the right is preparing its answer.'
+      ]
+    };
+    var outletHeadlines = headlines[outlet.id] || headlines.wp;
+    var outletCopy = copy[outlet.id] || copy.wp;
+    var story = pressStory(
+      outletHeadlines[seed % outletHeadlines.length],
+      outletCopy[(seed + 1) % outletCopy.length]
+    );
+    story.live = true;
+    return story;
   };
 
-  var pressComposeTease = function(outlet, story, frame, qualities, dateKey, turn) {
+  var pressChoiceStory = function(outlet, story, qualities, dateKey) {
+    var eventStories = pressEventStories[String(qualities.news_headline || '')];
+    return eventStories && eventStories[outlet.id] ?
+      eventStories[outlet.id] : story;
+  };
+
+  var pressMoodSentence = function(outlet, qualities, issue) {
+    if (!issue) {
+      return '';
+    }
+    var mood = pressPublicMood(qualities, issue);
+    if (mood.salience < 45) {
+      return '';
+    }
+    var voice = pressVoice(outlet, qualities);
+    var support = mood.support >= 62 ? 'most voters are already on board' :
+      (mood.support <= 38 ? 'most voters remain unconvinced' :
+        'the country remains closely divided');
+    var reaction = mood.backlash >= 60 ?
+      'opponents are highly mobilised' :
+      (mood.backlash >= 40 ? 'the opposition still has room to mobilise' :
+        'a wider backlash has so far remained limited');
+    var supportLead = support.charAt(0).toUpperCase() + support.slice(1);
+    var sentences = {
+      neutral: 'On ' + mood.label + ', ' + support + '; ' + reaction + '.',
+      'neutral-left': 'Lewica believes ' + mood.label + ' can broaden the opposition’s appeal. ' + supportLead + ', but ' + reaction + '.',
+      'pro-left': 'The Left enters the fight over ' + mood.label + ' with an advantage: ' + support + '. Even so, ' + reaction + '.',
+      'anti-left': 'Lewica is betting heavily on ' + mood.label + '. ' + supportLead + ', although ' + reaction + '.',
+      'pro-government': 'The cabinet says its position on ' + mood.label + ' reflects the national mood. ' + supportLead + ', though ' + reaction + '.',
+      'anti-government': 'The government is under pressure over ' + mood.label + ': ' + support + ', while ' + reaction + '.',
+      'anti-establishment': 'Party strategists have noticed the movement on ' + mood.label + '. ' + supportLead + '; ' + reaction + '.'
+    };
+    return sentences[voice] || sentences.neutral;
+  };
+
+  var pressComposeTease = function(outlet, story, qualities, dateKey, turn) {
     if (!story) {
       return '';
     }
@@ -3647,24 +4600,19 @@ window.disableGrayMode = function() {
       return story.text;
     }
 
-    var parts = [story.text];
-    if (frame && frame.text) {
-      parts.push(frame.text);
+    var issue = pressRelevantIssue(story, qualities);
+    var eventStories = pressEventStories[String(qualities.news_headline || '')];
+    if (eventStories) {
+      var moodOutlet = ['wp', 'rzeczpospolita', 'onet', 'tvn', 'tvp', 'republika']
+        .find(function(id) { return eventStories[id]; });
+      if (outlet.id !== moodOutlet) {
+        issue = '';
+      }
+    } else if (['wp', 'rzeczpospolita', 'onet'].indexOf(outlet.id) < 0) {
+      issue = '';
     }
-    parts.push(pressNarrativeBeat(outlet, qualities, dateKey, turn));
-    return parts.join(' ');
-  };
-
-  var appendPressSkeleton = function(host, className, widths) {
-    var skeleton = document.createElement('span');
-    skeleton.className = className;
-    skeleton.setAttribute('aria-hidden', 'true');
-    for (var i = 0; i < widths.length; i++) {
-      var line = document.createElement('i');
-      line.style.width = widths[i] + '%';
-      skeleton.appendChild(line);
-    }
-    host.appendChild(skeleton);
+    var moodSentence = pressMoodSentence(outlet, qualities, issue);
+    return story.text + (moodSentence ? ' ' + moodSentence : '');
   };
 
   window.renderPressReview = function() {
@@ -3706,22 +4654,23 @@ window.disableGrayMode = function() {
     for (var i = 0; i < count; i++) {
       var outlet = available[(start + i) % available.length];
       var stories = pressReviewStories[dateKey] || {};
-      var story = pressTVPStory(outlet, stories[outlet.id], qualities);
-      if (!story && outlet.id === 'rownosc') {
-        story = pressStory(
-          'The Left finally has a media network willing to fight for its own side',
-          'Równość praises the shared broadcaster for putting tenants, workers and organisers on air without asking liberal editors for permission.'
-        );
+      var story = stories[outlet.id];
+      if (!story) {
+        story = pressLiveStory(outlet, qualities, dateKey, turn);
       }
-      var frame = pressRelationshipFrame(outlet, qualities);
+      story = pressChoiceStory(outlet, story, qualities, dateKey);
+      story = pressTVPStory(outlet, story, qualities);
       var article = document.createElement('article');
       article.className = 'press-card press-' + outlet.id;
       article.style.setProperty('--press-accent', outlet.accent);
+      article.style.setProperty(
+        '--press-mark-color', outlet.foreground || '#fff'
+      );
       article.setAttribute('data-outlet', outlet.id);
-      article.setAttribute('aria-label', story
-        ? outlet.name + (story.sourceUrl ? ' sourced report: ' :
-          ' simulated article: ') + story.headline
-        : outlet.name + ' article slot; editorial content is not yet written');
+      article.setAttribute('data-mood-issue', pressPublicMood(qualities).issue);
+      article.setAttribute('aria-label', outlet.name +
+        (story.sourceUrl ? ' sourced report: ' : ' simulated article: ') +
+        story.headline);
 
       var masthead = document.createElement('div');
       masthead.className = 'press-masthead';
@@ -3738,31 +4687,24 @@ window.disableGrayMode = function() {
 
       var kicker = document.createElement('p');
       kicker.className = 'press-kicker';
-      kicker.textContent = story
-        ? (story.sourceUrl ? 'FROM THE ARCHIVE' : frame.kicker)
-        : 'EDITORIAL SLOT';
+      kicker.textContent = story.sourceUrl ? 'FROM THE ARCHIVE' :
+        pressSection(outlet);
       article.appendChild(kicker);
 
-      if (story) {
-        var headline = document.createElement('h2');
-        headline.className = 'press-headline';
-        headline.textContent = story.headline;
-        var tease = document.createElement('p');
-        tease.className = 'press-tease';
-        tease.textContent = pressComposeTease(
-          outlet,
-          story,
-          frame,
-          qualities,
-          dateKey,
-          turn
-        );
-        article.appendChild(headline);
-        article.appendChild(tease);
-      } else {
-        appendPressSkeleton(article, 'press-title-skeleton', [94, 72]);
-        appendPressSkeleton(article, 'press-copy-skeleton', [100, 96, 82]);
-      }
+      var headline = document.createElement('h2');
+      headline.className = 'press-headline';
+      headline.textContent = story.headline;
+      var tease = document.createElement('p');
+      tease.className = 'press-tease';
+      tease.textContent = pressComposeTease(
+        outlet,
+        story,
+        qualities,
+        dateKey,
+        turn
+      );
+      article.appendChild(headline);
+      article.appendChild(tease);
 
       var footer = document.createElement('footer');
       if (story && story.sourceUrl) {
@@ -3773,9 +4715,7 @@ window.disableGrayMode = function() {
         sourceLink.textContent = 'SOURCED · ' + story.sourceDate;
         footer.appendChild(sourceLink);
       } else {
-        footer.textContent = story
-          ? 'SIMULATED · ' + frame.label
-          : 'Turn-specific copy to follow';
+        footer.textContent = 'SIMULATED REPORT';
       }
       article.appendChild(footer);
       panel.appendChild(article);

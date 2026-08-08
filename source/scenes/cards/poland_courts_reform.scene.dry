@@ -1,0 +1,247 @@
+title: Rule-of-Law Repair
+subtitle: Begin with a complete constitutional reset of the courts; case-by-case triage is a fallback, not a first rung.
+new-page: true
+is-card: true
+tags: poland_major_reform_card
+frequency: 130
+view-if: month_actions < max_month_actions and poland_courts_reform_timer <= 0 and courts_reform_settled = 0 and courts_on_slate = 1 and reform_pressure_pending = 0
+on-arrival: {!
+Q.month_actions += 1;
+Q.poland_courts_reform_timer = 3;
+Q.courts_reform_next_stage = Number(Q.courts_reform_proposal_stage) || 4;
+const thresholds = [0, 26, 42, 62, 86];
+Q.courts_reform_threshold = thresholds[Q.courts_reform_next_stage];
+const ministryBonus =
+    (Q.justice_minister_party == "Lewica" ? 14 : 0) +
+    (Q.digital_minister_party == "Lewica" ? 3 : 0);
+const koCabinet = Q.government_party == "ko" || Q.ministry_ko_in_cabinet;
+const pslCabinet = Q.government_party == "psl" || Q.ministry_psl_in_cabinet;
+const p2050Cabinet =
+    Q.government_party == "p2050" || Q.ministry_p2050_in_cabinet;
+const thirdWayCabinet = pslCabinet || p2050Cabinet;
+let partnerBonus = 0;
+if (Q.government_party == "pis") {
+    // A PiS-led cabinet does not repair the courts it built.
+    partnerBonus = -40 + Number(Q.courts_pis_commitment) * 5;
+} else {
+    partnerBonus =
+        (koCabinet
+            ? Number(Q.ko_relation) * 0.12 +
+                Number(Q.courts_ko_commitment) * 8 + 6
+            : 0) +
+        (thirdWayCabinet
+            ? Number(Q.courts_third_way_commitment) * 5 +
+                (p2050Cabinet
+                    ? Number(Q.p2050_state_capacity_share) * 0.06
+                    : 0)
+            : 0);
+}
+const palaceBonus =
+    Number(Q.president_relation) * 0.07 +
+    (Q.courts_palace_president == Q.president_name
+        ? Number(Q.courts_palace_commitment) * 6
+        : 0);
+const publicBonus =
+    (Number(Q.rule_of_law_support) - 45) * 0.35 +
+    Number(Q.judicial_repair_mandate) * 0.12 +
+    Math.max(0, Number(Q.left_poll) - 5) * 0.45 -
+    Math.max(0, Number(Q.rule_of_law_backlash) - 50) * 0.14;
+Q.courts_reform_power = Math.round(Math.max(
+    0,
+    Math.min(
+        140,
+        Number(Q.courts_reform_progress) * 0.62 +
+        partnerBonus + palaceBonus + publicBonus + ministryBonus +
+        Number(Q.constitutional_restraint) * 0.4
+    )
+));
+Q.reform_ceiling_issue = "courts";
+Q.reform_ceiling_target = Q.courts_reform_next_stage;
+!}
+call: poland_reform_ceiling
+card-image: img/poland/cards/group-institutional.webp
+
+= The courts as a whole-game project
+
+**Campaign goal:** [? if courts_reform_defined: [+ courts_reform_goal_label
++].?][? if not courts_reform_defined: Not yet defined.?]
+[? if courts_reform_defined: **Bill currently on the table:** [+
+courts_reform_next_label +].
+**Passage power:** **[+ courts_reform_power +]**; tabling this bill needs **[+
+courts_reform_threshold +]**.
+**Settlement ceiling:** [+ reform_ceiling_tier_label +] — [+
+reform_ceiling_reachable_label +].
+[? if reform_ceiling_blocker_kind != "none": Binding veto player: **[+
+reform_ceiling_blocker_name +]** — scores the bill [+
+reform_ceiling_blocker_score +] against the [+ reform_ceiling_need +] a tier-[+
+reform_ceiling_target_resolved +] settlement needs.?]
+[+ reform_ceiling_breakdown +].?][? if not courts_reform_defined: The first
+project action must define the ambitious bill before preparation or bargaining
+can begin.?]
+
+KO wants this more than we do, which makes it the cheapest reform to pass and
+the easiest to pass badly. A reset carried out by resolution rather than statute
+repairs the personnel and leaves the precedent that a majority may reorganise
+the courts.
+
+[? if legal_dualism > 40: Legal dualism is already deep. Two lines of
+authority issue conflicting rulings, and the longer that lasts the more a fast,
+lawless repair looks reasonable to our own side.?]
+
+[? if courts_reform_defined and courts_reform_next_stage = 4: A complete
+constitutional reset needs a President who will sign it. That is the whole
+constraint on this field: no relationship substitutes for a signature on a
+Tribunal bill.?]
+
+- @define_goal
+- @draft
+- @coalition_round
+- @cash_relation
+- @ministry
+- @palace
+- @advance
+
+@define_goal
+title: Define the goal as a complete lawful reset of the courts
+subtitle: KRS, neo-judge status and the Constitutional Tribunal enter as one statutory demand.
+view-if: courts_reform_defined = 0
+on-arrival: courts_reform_defined = 1; courts_on_slate = 1; courts_reform_goal_stage = 4; courts_reform_proposal_stage = 4; courts_reform_next_stage = 4; courts_reform_progress += 12; constitutional_restraint += 2; rule_of_law_salience += 3; news_headline = "Lewica defines a lawful constitutional reset as its judicial bill"
+
+Committing to a statutory route now is what makes it possible to refuse the
+resolution route later, when the coalition is impatient and the courts are still
+broken.
+
+- #poland_card_finish
+
+@draft
+title: Keep the constitutionalists and judges drafting
+subtitle: Free. Preparation +10.
+view-if: courts_reform_defined = 1
+on-arrival: courts_reform_progress += 10; judicial_legitimacy += 1; news_headline = "Lewica keeps its lawful judicial-reset statute ready for the next opening"
+
+Constitutional lawyers, sitting judges and the neo-judges' own cases produce a
+transition that survives a Tribunal challenge rather than provoking one.
+
+- #poland_card_finish
+
+@coalition_round
+title: Put the judicial file on a partner's table
+subtitle: Cost: 1 resource. Choose KO, [+ third_way_display_name +] or PiS and record one commitment.
+choose-if: resources >= 1
+unavailable-subtitle: A serious negotiating round needs one resource.
+view-if: courts_reform_defined = 1
+new-page: true
+
+- @round_ko
+- @round_third_way
+- @round_pis
+
+@round_ko
+title: Ask KO to record a statutory-route commitment
+on-arrival: resources -= 1; courts_reform_progress += 8; courts_ko_commitment += 1; ko_relation += 4; constitutional_restraint += 1; news_headline = "KO records a statutory route for judicial repair"
+
+- #poland_card_finish
+
+@round_third_way
+title: Make [+ third_way_display_name +] name the transition it would back
+view-if: p2050_emerged = 1 or third_way_active = 1
+on-arrival: {! Q.resources -= 1; Q.courts_reform_progress += 8; Q.courts_third_way_commitment += 1; Q.psl_relation += 3; Q.p2050_relation += 4; Q.news_headline = Q.third_way_display_name + " records a judicial-transition commitment"; !}
+
+- #poland_card_finish
+
+@round_pis
+title: Open a neo-judge status channel with PiS
+choose-if: (left_in_government = 1 and government_party = "pis") or pis_relation >= 30 or national_crisis_pressure >= 30
+unavailable-subtitle: PiS will not discuss the status of its own appointments without coalition ties or acute pressure.
+on-arrival: resources -= 1; courts_reform_progress += 5; courts_pis_commitment += 1; pis_relation += 2; news_headline = "PiS opens a narrow channel on neo-judge status"
+
+- #poland_card_finish
+
+@cash_relation
+title: Cash in a party relationship instead of spending a resource
+subtitle: Choose a 55+ relationship; it falls by 10 and becomes one recorded commitment.
+choose-if: ko_relation >= 55 or pis_relation >= 55 or ((p2050_emerged = 1 or third_way_active = 1) and (psl_relation >= 55 or p2050_relation >= 55))
+unavailable-subtitle: No potential governing partner trusts us enough yet.
+view-if: courts_reform_defined = 1
+new-page: true
+
+- @cash_ko
+- @cash_third_way
+- @cash_pis
+
+@cash_ko
+title: Spend KO goodwill on the lawful judicial route
+choose-if: ko_relation >= 55
+on-arrival: ko_relation -= 10; courts_ko_commitment += 1; courts_reform_progress += 10; news_headline = "Lewica converts KO goodwill into a lawful judicial route"
+
+- #poland_card_finish
+
+@cash_third_way
+title: Spend [+ third_way_display_name +] goodwill on judicial transition
+view-if: p2050_emerged = 1 or third_way_active = 1
+choose-if: psl_relation >= 55 or p2050_relation >= 55
+on-arrival: {!
+if (Number(Q.psl_relation) >= Number(Q.p2050_relation)) {
+    Q.psl_relation -= 10;
+} else {
+    Q.p2050_relation -= 10;
+}
+Q.courts_third_way_commitment += 1;
+Q.courts_reform_progress += 10;
+Q.news_headline = "Lewica converts " + Q.third_way_display_name + " goodwill into judicial transition";
+!}
+
+- #poland_card_finish
+
+@cash_pis
+title: Spend PiS goodwill on neo-judge transition rules
+choose-if: pis_relation >= 55
+on-arrival: pis_relation -= 10; courts_pis_commitment += 1; courts_reform_progress += 8; news_headline = "Lewica converts PiS goodwill into neo-judge transition rules"
+
+- #poland_card_finish
+
+@ministry
+title: Make the Justice Ministry produce the transition file
+subtitle: Cost: 1 budget capacity. Preparation +14.
+choose-if: left_in_government = 1 and budget >= 1 and justice_minister_party = "Lewica"
+unavailable-subtitle: Requires the Justice portfolio and one budget point.
+view-if: courts_reform_defined = 1
+on-arrival: budget -= 1; courts_reform_progress += 14; administrative_capacity += 2; judicial_legitimacy += 3; prosecution_oversight_capacity += 2; news_headline = "The Justice Ministry maps the KRS, neo-judge and Tribunal transition"
+
+Every contested appointment acquires a route and a date. The repair stops being
+a purge and becomes a procedure a court can uphold.
+
+- #poland_card_finish
+
+@palace
+title: Put the constitutional transition before the President
+subtitle: Cost: 1 resource. Presidential commitment +1; preparation +6.
+choose-if: resources >= 1
+unavailable-subtitle: The Palace delegation needs one resource.
+view-if: courts_reform_defined = 1
+on-arrival: {!
+Q.resources -= 1;
+if (Q.courts_palace_president != Q.president_name) {
+    Q.courts_palace_commitment = 0;
+    Q.courts_palace_president = Q.president_name;
+}
+Q.courts_palace_commitment += 1;
+Q.courts_reform_progress += 6;
+Q.president_relation += 3;
+Q.news_headline = "The Palace receives the constitutional transition protocol";
+!}
+
+A President whose own camp made these appointments has the narrowest ceiling in
+the game on this field. The file is worth building anyway: it is what a friendly
+successor signs on the first day.
+
+- #poland_card_finish
+
+@advance
+title: Table the bill: [+ courts_reform_next_label +]
+subtitle: Requires government and passage power at or above the displayed threshold; veto players may force a narrower final settlement.
+view-if: courts_reform_defined = 1
+choose-if: left_in_government = 1 and government_has_confidence = 1 and caretaker_government = 0 and courts_reform_power >= courts_reform_threshold
+unavailable-subtitle: We either lack executive access or have not assembled enough coalition, public and presidential power.
+on-arrival: reform_pressure_issue = "courts"; reform_pressure_target_stage = courts_reform_proposal_stage; reform_pressure_previous_stage = 0; reform_pressure_return_mode = "card"; reform_pressure_palace_override = 0; reform_pressure_referendum_used = 0
+go-to: poland_major_reforms.resolve

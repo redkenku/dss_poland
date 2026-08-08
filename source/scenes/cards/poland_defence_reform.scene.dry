@@ -1,0 +1,244 @@
+title: The Defence and Allied-Security Settlement
+subtitle: Begin with a civilian-controlled settlement and European integration; an audited pipeline is a fallback, not a first rung.
+new-page: true
+is-card: true
+tags: poland_major_reform_card
+frequency: 130
+view-if: month_actions < max_month_actions and poland_defence_reform_timer <= 0 and defence_reform_settled = 0 and defence_on_slate = 1 and reform_pressure_pending = 0
+on-arrival: {!
+Q.month_actions += 1;
+Q.poland_defence_reform_timer = 3;
+Q.defence_reform_next_stage = Number(Q.defence_reform_proposal_stage) || 4;
+const thresholds = [0, 22, 34, 50, 70];
+Q.defence_reform_threshold = thresholds[Q.defence_reform_next_stage];
+const ministryBonus =
+    (Q.defence_minister_party == "Lewica" ? 12 : 0) +
+    (Q.foreign_minister_party == "Lewica" ? 6 : 0) +
+    (Q.economy_minister_party == "Lewica" ? 4 : 0);
+const koCabinet = Q.government_party == "ko" || Q.ministry_ko_in_cabinet;
+const pslCabinet = Q.government_party == "psl" || Q.ministry_psl_in_cabinet;
+const p2050Cabinet =
+    Q.government_party == "p2050" || Q.ministry_p2050_in_cabinet;
+const thirdWayCabinet = pslCabinet || p2050Cabinet;
+let partnerBonus = 0;
+if (Q.government_party == "pis") {
+    partnerBonus =
+        Number(Q.pis_relation) * 0.14 +
+        Number(Q.defence_pis_commitment) * 7 +
+        Number(Q.pis_accept_order) * 0.10 - 10;
+} else {
+    partnerBonus =
+        (koCabinet
+            ? Number(Q.ko_relation) * 0.12 +
+                Number(Q.ko_accept_order) * 0.10 +
+                Number(Q.defence_ko_commitment) * 7
+            : 0) +
+        (thirdWayCabinet
+            ? Number(Q.defence_third_way_commitment) * 5
+            : 0);
+}
+const palaceBonus =
+    Number(Q.president_relation) * 0.07 +
+    (Q.defence_palace_president == Q.president_name
+        ? Number(Q.defence_palace_commitment) * 6
+        : 0);
+const publicBonus =
+    (Number(Q.national_security_support) - 45) * 0.35 +
+    Math.max(0, Number(Q.left_poll) - 5) * 0.45 -
+    Math.max(0, Number(Q.national_security_backlash) - 50) * 0.10;
+Q.defence_reform_power = Math.round(Math.max(
+    0,
+    Math.min(
+        140,
+        Number(Q.defence_reform_progress) * 0.62 +
+        partnerBonus + palaceBonus + publicBonus + ministryBonus
+    )
+));
+Q.reform_ceiling_issue = "defence";
+Q.reform_ceiling_target = Q.defence_reform_next_stage;
+!}
+call: poland_reform_ceiling
+card-image: img/poland/cards/polish-dossier.webp
+
+= Defence as a whole-game project
+
+**Campaign goal:** [? if defence_reform_defined: [+ defence_reform_goal_label
++].?][? if not defence_reform_defined: Not yet defined.?]
+[? if defence_reform_defined: **Bill currently on the table:** [+
+defence_reform_next_label +].
+**Passage power:** **[+ defence_reform_power +]**; tabling this bill needs **[+
+defence_reform_threshold +]**.
+**Settlement ceiling:** [+ reform_ceiling_tier_label +] — [+
+reform_ceiling_reachable_label +].
+[? if reform_ceiling_blocker_kind != "none": Binding veto player: **[+
+reform_ceiling_blocker_name +]** — scores the bill [+
+reform_ceiling_blocker_score +] against the [+ reform_ceiling_need +] a tier-[+
+reform_ceiling_target_resolved +] settlement needs.?]
+[+ reform_ceiling_breakdown +].?][? if not defence_reform_defined: The first
+project action must define the ambitious bill before preparation or bargaining
+can begin.?]
+
+Nobody in Polish politics is against defence spending. The unclaimed ground is
+what the money buys: audited procurement instead of announcement contracts,
+domestic industrial capacity instead of imports, and veteran provision that
+treats service as employment.
+
+[? if government_party = "pis": PiS owns the spending and resists the audit.
+Trading volume for accountability is the available bargain.?][? if government_party != "pis":
+KO is the most enthusiastic partner on this field in the whole game — and the
+most reluctant to write the industrial-policy clauses.?]
+
+[? if defence_minister_party = "Lewica": Holding Defence turns a Left position
+on this field from a curiosity into a governing programme.?]
+
+- @define_goal
+- @draft
+- @coalition_round
+- @cash_relation
+- @ministry
+- @palace
+- @advance
+
+@define_goal
+title: Define the goal as civilian control, industry and allied integration
+subtitle: Audit, domestic production, veteran provision and European integration enter as one demand.
+view-if: defence_reform_defined = 0
+on-arrival: defence_reform_defined = 1; defence_on_slate = 1; defence_reform_goal_stage = 4; defence_reform_proposal_stage = 4; defence_reform_next_stage = 4; defence_reform_progress += 12; government_delivery += 1; national_security_salience += 3; news_headline = "Lewica defines an audited, industrial defence settlement as its security bill"
+
+A left defence policy that is not simply a smaller number is the version nobody
+has had to argue against yet.
+
+- #poland_card_finish
+
+@draft
+title: Keep the procurement auditors and industry drafting
+subtitle: Free. Preparation +10.
+view-if: defence_reform_defined = 1
+on-arrival: defence_reform_progress += 10; government_delivery += 1; news_headline = "Lewica keeps its defence-procurement statute ready for the next opening"
+
+Auditors, shipyard and armaments managers and veterans' organisations produce a
+pipeline with delivery dates rather than a press conference.
+
+- #poland_card_finish
+
+@coalition_round
+title: Put the defence file on a partner's table
+subtitle: Cost: 1 resource. Choose KO, [+ third_way_display_name +] or PiS and record one commitment.
+choose-if: resources >= 1
+unavailable-subtitle: A serious negotiating round needs one resource.
+view-if: defence_reform_defined = 1
+new-page: true
+
+- @round_ko
+- @round_third_way
+- @round_pis
+
+@round_ko
+title: Ask KO to record a procurement-audit floor
+on-arrival: resources -= 1; defence_reform_progress += 8; defence_ko_commitment += 1; ko_relation += 5; news_headline = "KO records a procurement-audit floor for the defence budget"
+
+- #poland_card_finish
+
+@round_third_way
+title: Make [+ third_way_display_name +] name the domestic capacity it would fund
+view-if: p2050_emerged = 1 or third_way_active = 1
+on-arrival: {! Q.resources -= 1; Q.defence_reform_progress += 8; Q.defence_third_way_commitment += 1; Q.psl_relation += 4; Q.p2050_relation += 4; Q.news_headline = Q.third_way_display_name + " records domestic defence-production commitments"; !}
+
+- #poland_card_finish
+
+@round_pis
+title: Trade spending volume with PiS for procurement audit
+choose-if: (left_in_government = 1 and government_party = "pis") or pis_relation >= 15 or national_crisis_pressure >= 20
+unavailable-subtitle: PiS will not open the procurement books without coalition ties, a channel or national pressure.
+on-arrival: resources -= 1; defence_reform_progress += 8; defence_pis_commitment += 1; pis_relation += 4; news_headline = "PiS trades procurement transparency for defence-budget support"
+
+- #poland_card_finish
+
+@cash_relation
+title: Cash in a party relationship instead of spending a resource
+subtitle: Choose a 55+ relationship; it falls by 10 and becomes one recorded commitment.
+choose-if: ko_relation >= 55 or pis_relation >= 55 or ((p2050_emerged = 1 or third_way_active = 1) and (psl_relation >= 55 or p2050_relation >= 55))
+unavailable-subtitle: No potential governing partner trusts us enough yet.
+view-if: defence_reform_defined = 1
+new-page: true
+
+- @cash_ko
+- @cash_third_way
+- @cash_pis
+
+@cash_ko
+title: Spend KO goodwill on the defence settlement
+choose-if: ko_relation >= 55
+on-arrival: ko_relation -= 10; defence_ko_commitment += 1; defence_reform_progress += 10; news_headline = "Lewica converts KO goodwill into defence-procurement reform"
+
+- #poland_card_finish
+
+@cash_third_way
+title: Spend [+ third_way_display_name +] goodwill on defence industry
+view-if: p2050_emerged = 1 or third_way_active = 1
+choose-if: psl_relation >= 55 or p2050_relation >= 55
+on-arrival: {!
+if (Number(Q.psl_relation) >= Number(Q.p2050_relation)) {
+    Q.psl_relation -= 10;
+} else {
+    Q.p2050_relation -= 10;
+}
+Q.defence_third_way_commitment += 1;
+Q.defence_reform_progress += 10;
+Q.news_headline = "Lewica converts " + Q.third_way_display_name + " goodwill into defence industrial policy";
+!}
+
+- #poland_card_finish
+
+@cash_pis
+title: Spend PiS goodwill on procurement transparency
+choose-if: pis_relation >= 55
+on-arrival: pis_relation -= 10; defence_pis_commitment += 1; defence_reform_progress += 10; news_headline = "Lewica converts PiS goodwill into procurement transparency"
+
+- #poland_card_finish
+
+@ministry
+title: Make the Defence Ministry produce the pipeline and audit file
+subtitle: Cost: 1 budget capacity. Preparation +14.
+choose-if: left_in_government = 1 and budget >= 1 and (defence_minister_party = "Lewica" or economy_minister_party = "Lewica")
+unavailable-subtitle: Requires the Defence or Economy portfolio and one budget point.
+view-if: defence_reform_defined = 1
+on-arrival: budget -= 1; defence_reform_progress += 14; administrative_capacity += 2; government_delivery += 2; news_headline = "The Defence Ministry maps procurement, domestic capacity and veteran provision"
+
+Contracts, delivery schedules and plant capacity acquire numbers. The audit
+stops being an accusation and becomes a process.
+
+- #poland_card_finish
+
+@palace
+title: Put the defence settlement before the President
+subtitle: Cost: 1 resource. Presidential commitment +1; preparation +6.
+choose-if: resources >= 1
+unavailable-subtitle: The Palace delegation needs one resource.
+view-if: defence_reform_defined = 1
+on-arrival: {!
+Q.resources -= 1;
+if (Q.defence_palace_president != Q.president_name) {
+    Q.defence_palace_commitment = 0;
+    Q.defence_palace_president = Q.president_name;
+}
+Q.defence_palace_commitment += 1;
+Q.defence_reform_progress += 6;
+Q.president_relation += 4;
+Q.news_headline = "The Palace receives the defence procurement and readiness file";
+!}
+
+This is the President's own office and the one file where the Palace is
+usually an ally rather than an obstacle. That does not make the industrial
+clauses free — it makes them negotiable.
+
+- #poland_card_finish
+
+@advance
+title: Table the bill: [+ defence_reform_next_label +]
+subtitle: Requires government and passage power at or above the displayed threshold; veto players may force a narrower final settlement.
+view-if: defence_reform_defined = 1
+choose-if: left_in_government = 1 and government_has_confidence = 1 and caretaker_government = 0 and defence_reform_power >= defence_reform_threshold
+unavailable-subtitle: We either lack executive access or have not assembled enough coalition, public and presidential power.
+on-arrival: reform_pressure_issue = "defence"; reform_pressure_target_stage = defence_reform_proposal_stage; reform_pressure_previous_stage = 0; reform_pressure_return_mode = "card"; reform_pressure_palace_override = 0; reform_pressure_referendum_used = 0
+go-to: poland_major_reforms.resolve

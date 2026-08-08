@@ -1285,13 +1285,27 @@ function testPartyPresentationAssets() {
     ) && presentationSource.includes('return qualities.public_media_patron;') &&
       presentationSource.includes('var pressTVPStory = function') &&
       presentationSource.includes(
-        'var story = pressTVPStory(outlet, stories[outlet.id], qualities);'
+        'story = pressTVPStory(outlet, story, qualities);'
       ),
     'TVP framing and simulated copy do not follow the public-media patron'
   );
+  assert(
+    presentationSource.includes("accent: '#ffd200'") &&
+      presentationSource.includes("accent: '#d71920'") &&
+      presentationSource.includes("accent: '#343434'") &&
+      !presentationSource.includes('HARD-RIGHT LINE') &&
+      !presentationSource.includes('PiS LINE') &&
+      !presentationSource.includes('KO LINE'),
+    'Press colors or reader-facing editorial labels regressed'
+  );
   const testablePresentationSource = presentationSource.replace(
     '  window.renderPressReview = function() {',
-    '  window.__testPressTVPStory = pressTVPStory;\n' +
+      '  window.__testPressTVPStory = pressTVPStory;\n' +
+      '  window.__testPressLiveStory = pressLiveStory;\n' +
+      '  window.__testPressChoiceStory = pressChoiceStory;\n' +
+      '  window.__testPressEventStories = pressEventStories;\n' +
+      '  window.__testPressMoodSentence = pressMoodSentence;\n' +
+      '  window.__testPressRelevantIssue = pressRelevantIssue;\n' +
       '  window.__testTVPOutlet = pressReviewOutlets.filter(function(outlet) {' +
       ' return outlet.id === \'tvp\'; })[0];\n\n' +
       '  window.renderPressReview = function() {'
@@ -1303,12 +1317,13 @@ function testPartyPresentationAssets() {
     text: 'Parliament begins the count.',
     sourceUrl: '',
     sourceDate: '',
+    live: true,
   };
   [
-    ['pis', 'Government under fire: ', 'PiS-aligned public television'],
-    ['ko', 'Government restores order: ', 'KO-aligned public television'],
-    ['left', 'Lewica delivers: ', 'Left-aligned public television'],
-    ['neutral', 'Public record: ', 'pluralist public broadcaster'],
+    ['pis', 'Government under fire: ', 'Opposition parties'],
+    ['ko', 'Government moves: ', 'Ministers say'],
+    ['left', 'The Left responds: ', 'Opposition parties'],
+    ['neutral', 'The coalition files its bill', 'next institutional stage'],
   ].forEach(function(expected) {
     const story = sandbox.window.__testPressTVPStory(
       sandbox.window.__testTVPOutlet,
@@ -1317,6 +1332,87 @@ function testPartyPresentationAssets() {
     );
     assert(story.headline.startsWith(expected[1]));
     assert(story.text.includes(expected[2]));
+  });
+
+  const moodQualities = {
+    news_headline: 'The housing bill survives a coalition revolt',
+    government_party: 'ko',
+    ko_relation: 45,
+    social_spending_support: 76,
+    social_spending_salience: 90,
+    social_spending_backlash: 30,
+  };
+  const wpOutlet = {id: 'wp', patron: 'neutral'};
+  const liveStory = sandbox.window.__testPressLiveStory(
+    wpOutlet,
+    moodQualities,
+    202501,
+    1
+  );
+  assert(liveStory.headline.includes(moodQualities.news_headline));
+  assert(
+    sandbox.window.__testPressMoodSentence(
+      wpOutlet,
+      moodQualities,
+      'social_spending'
+    ).includes('social spending and public services'),
+    'Press copy does not follow the hottest public-mood issue'
+  );
+  moodQualities.abortion_rights_support = 25;
+  moodQualities.abortion_rights_salience = 100;
+  moodQualities.abortion_rights_backlash = 100;
+  assert(
+    sandbox.window.__testPressMoodSentence(
+      wpOutlet,
+      moodQualities,
+      'abortion_rights'
+    ).includes('abortion rights'),
+    'Press copy did not react when the public mood changed'
+  );
+  assert.strictEqual(
+    sandbox.window.__testPressRelevantIssue(
+      {headline: 'Biedroń becomes the Left’s presidential candidate', text: ''},
+      {news_headline: 'Biedroń becomes the Left’s presidential candidate'}
+    ),
+    '',
+    'Unrelated public mood leaked into candidate coverage'
+  );
+  const candidateHeadlines = ['rzeczpospolita', 'tvp', 'tvn'].map(
+    function(id) {
+      return sandbox.window.__testPressChoiceStory(
+        {id: id},
+        baseTVPStory,
+        {news_headline: "Biedroń becomes the Left's presidential candidate"},
+        201911
+      ).headline;
+    }
+  );
+  assert.strictEqual(new Set(candidateHeadlines).size, 3);
+  candidateHeadlines.forEach(function(headline) {
+    assert(headline.includes('Biedroń'));
+  });
+  const eventStorySets = Object.values(
+    sandbox.window.__testPressEventStories
+  );
+  assert(eventStorySets.length >= 58, 'Too few authored event outcomes');
+  assert(
+    eventStorySets.reduce(function(total, stories) {
+      return total + Object.keys(stories).length;
+    }, 0) >= 160,
+    'Too few authored outlet reports'
+  );
+  eventStorySets.forEach(function(stories) {
+    const reports = Object.values(stories);
+    assert.strictEqual(
+      new Set(reports.map(function(story) { return story.headline; })).size,
+      reports.length,
+      'An authored outcome repeats a headline across outlets'
+    );
+    assert.strictEqual(
+      new Set(reports.map(function(story) { return story.text; })).size,
+      reports.length,
+      'An authored outcome repeats article prose across outlets'
+    );
   });
 
   const rendered = sandbox.window.displayText(
@@ -1369,6 +1465,44 @@ function testPartyPresentationAssets() {
   sandbox.window.dendryUI.dendryEngine.state.sceneId = 'main';
   const legacy = 'Together, they welcomed the Prussian Spring.';
   assert.strictEqual(sandbox.window.displayText(legacy), legacy);
+}
+
+function testPickingEnemiesChoices(game) {
+  const engine = new dendry.DendryEngine(new dendry.UserInterface(), game);
+  engine.beginGame(['picking-enemies-choice-check']);
+  const choose = function(sceneId) {
+    const choices = engine.getCurrentChoices();
+    const index = choices.findIndex(function(choice) {
+      return choice.id === sceneId;
+    });
+    assert(index >= 0, 'Missing setup choice: ' + sceneId);
+    engine.choose(index);
+  };
+  choose('root.campaign_game');
+  choose('root.standard');
+
+  const qualities = engine.state.qualities;
+  Object.assign(qualities, {
+    konf_seats: 18,
+    konf_poll: 8,
+    p0_formed: 0,
+    p0_seats: 0,
+    p0_poll: 0,
+    far_right_split: 0,
+    korona_seats: 0,
+    korona_poll: 0,
+    suwerenna_walkout: 0,
+    suwerenna_merger_result: 'None',
+  });
+  const enemyChoices = function() {
+    return engine._compileChoices(game.scenes.poland_picking_enemies)
+      .map(function(choice) { return choice.id; });
+  };
+  assert(enemyChoices().includes('poland_picking_enemies.konf'));
+  assert(!enemyChoices().includes('poland_picking_enemies.far_right'));
+
+  qualities.p0_formed = 1;
+  assert(enemyChoices().includes('poland_picking_enemies.far_right'));
 }
 
 function runSmoke(game) {
@@ -9366,6 +9500,8 @@ function runSmoke(game) {
     }
 
     function setProject(qualities, issue, proposal) {
+      // A reform field must be on the slate before its project card exists.
+      qualities[issue + '_on_slate'] = 1;
       qualities[issue + '_reform_defined'] = 1;
       qualities[issue + '_reform_goal_stage'] = 4;
       qualities[issue + '_reform_proposal_stage'] = proposal;
@@ -9516,12 +9652,18 @@ function runSmoke(game) {
       false
     );
 
-    startStandard('major-reform-three-question-completion');
+    // The programme closes when the chosen slate is settled, not when all nine
+    // public-mood fields are legislated, and the closing reward scales with how
+    // far those settlements actually went.
+    startStandard('major-reform-slate-completion');
     qualities = engine.state.qualities;
-    qualities.abortion_reform_settled = 1;
-    qualities.marriage_reform_settled = 1;
-    qualities.labor_reform_settled = 1;
+    ['abortion', 'marriage', 'labor'].forEach(function(issue) {
+      qualities[issue + '_on_slate'] = 1;
+      qualities[issue + '_reform_settled'] = 1;
+      qualities[issue + '_reform_stage'] = 3;
+    });
     qualities.major_reforms_complete = 0;
+    const completionScale = Math.max(0.4, Math.min(1.6, 9 / 7.5));
     const completionPollBefore = qualities.left_poll;
     const completionTrustBefore = qualities.public_trust;
     const completionReputationBefore = qualities.winner_reputation;
@@ -9531,47 +9673,66 @@ function runSmoke(game) {
         return qualities[group + '_left_affinity'];
       }
     );
-    engine.goToScene('poland_normalize');
-    assert.strictEqual(qualities.major_reforms_complete, 1);
-    assert.strictEqual(qualities.left_poll, completionPollBefore + 2);
-    assert.strictEqual(qualities.public_trust, completionTrustBefore + 4);
-    assert.strictEqual(
-      qualities.winner_reputation,
-      completionReputationBefore + 5
-    );
-    assert.strictEqual(
-      qualities.issue_ownership,
-      completionOwnershipBefore + 5
-    );
-    qualities.voter_groups.forEach(function(group, index) {
+    const assertCompletionReward = function(note) {
+      assert.strictEqual(qualities.major_reforms_complete, 1, note);
       assert.strictEqual(
-        qualities[group + '_left_affinity'],
-        completionAffinityBefore[index] + 2,
-        'Completing all major reforms did not reward ' + group
+        qualities.left_poll,
+        completionPollBefore + 2 * completionScale,
+        note
       );
-    });
+      assert.strictEqual(
+        qualities.public_trust,
+        completionTrustBefore + Math.round(4 * completionScale),
+        note
+      );
+      assert.strictEqual(
+        qualities.winner_reputation,
+        completionReputationBefore + Math.round(5 * completionScale),
+        note
+      );
+      assert.strictEqual(
+        qualities.issue_ownership,
+        completionOwnershipBefore + Math.round(5 * completionScale),
+        note
+      );
+      qualities.voter_groups.forEach(function(group, index) {
+        assert.strictEqual(
+          qualities[group + '_left_affinity'],
+          completionAffinityBefore[index] + 2 * completionScale,
+          note + ' — ' + group
+        );
+      });
+    };
+    engine.goToScene('poland_normalize');
+    assert.strictEqual(qualities.reform_slate_count, 3);
+    assert.strictEqual(qualities.reform_slate_settled, 3);
+    assert.strictEqual(qualities.reform_slate_weight, 9);
+    assertCompletionReward('Completing the reform slate did not reward the party');
     assert.strictEqual(
       game.scenes.poland_major_reform_deck.viewIf(engine, qualities),
       false
     );
     engine.goToScene('poland_normalize');
-    assert.strictEqual(qualities.left_poll, completionPollBefore + 2);
-    assert.strictEqual(qualities.public_trust, completionTrustBefore + 4);
-    assert.strictEqual(
-      qualities.winner_reputation,
-      completionReputationBefore + 5
-    );
-    assert.strictEqual(
-      qualities.issue_ownership,
-      completionOwnershipBefore + 5
-    );
-    qualities.voter_groups.forEach(function(group, index) {
-      assert.strictEqual(
-        qualities[group + '_left_affinity'],
-        completionAffinityBefore[index] + 2,
-        'The major-reform completion reward repeated for ' + group
-      );
+    assertCompletionReward('The slate completion reward repeated');
+
+    // A slate of token compromises must not pay the same as a maximal one.
+    startStandard('major-reform-slate-compromise-reward');
+    qualities = engine.state.qualities;
+    ['abortion', 'marriage', 'labor'].forEach(function(issue) {
+      qualities[issue + '_on_slate'] = 1;
+      qualities[issue + '_reform_settled'] = 1;
+      qualities[issue + '_reform_stage'] = 1;
     });
+    qualities.major_reforms_complete = 0;
+    const compromiseTrustBefore = qualities.public_trust;
+    engine.goToScene('poland_normalize');
+    assert.strictEqual(qualities.major_reforms_complete, 1);
+    assert.strictEqual(qualities.reform_slate_weight, 3);
+    assert(
+      qualities.public_trust - compromiseTrustBefore <
+        Math.round(4 * completionScale),
+      'Three token settlements paid the same as three strong ones'
+    );
 
     const abortionPassagePower = function(ministryOwner, seed) {
       startStandard(seed);
@@ -9618,8 +9779,26 @@ function runSmoke(game) {
       'Equality, Health and Justice ownership did not add passage power'
     );
     assert(qualities.abortion_reform_power >= qualities.abortion_reform_threshold);
+    // Passage power buys the right to table the bill. Whether it passes is a
+    // separate question answered by the veto players: Lewica is the junior
+    // partner in a KO-led cabinet here, and a liberal Palace will not sign the
+    // maximal rights bill, so the ceiling is tier 3 and tier 4 is refused.
+    assert.strictEqual(qualities.reform_ceiling_authority_tier, 3,
+      'A junior coalition partner must not hold tier-4 authority');
+    assert.strictEqual(qualities.reform_ceiling_palace_cap, 3,
+      'A liberal Palace must cap rights reform at tier 3');
     choose('poland_abortion_reform.advance');
-    assert.strictEqual(qualities.abortion_reform_stage, 4);
+    assert.strictEqual(qualities.abortion_reform_stage, 0,
+      'A tier-4 bill must not pass over the authority and Palace ceilings');
+    assert.strictEqual(qualities.reform_pressure_pending, 1);
+    assert.strictEqual(qualities.reform_ceiling_tier, 3);
+
+    // Settling on the reachable tier closes the project in one move.
+    qualities.reform_pressure_return_mode = 'pressure';
+    engine.goToScene('poland_reform_pressure');
+    assert.strictEqual(engine.state.sceneId, 'poland_reform_pressure.objection');
+    choose('poland_reform_pressure.objection_narrow');
+    assert.strictEqual(qualities.abortion_reform_stage, 3);
     assert.strictEqual(qualities.abortion_reform_settled, 1);
     assertProjectHidden(qualities, 'abortion');
 
@@ -9636,8 +9815,16 @@ function runSmoke(game) {
       const settlementQualities = engine.state.qualities;
       setExecutive(settlementQualities, 'lewica');
       setProject(settlementQualities, issue, settlement);
-      settlementQualities.president_name = 'Rafał Trzaskowski';
+      // This fixture measures what an enacted settlement does, not whether it
+      // can be reached, so every veto player is cleared out of the way: a Left
+      // premiership, a Left Palace with a maximal written commitment and no
+      // coalition partner holding a portfolio.
+      settlementQualities.president_name = 'Magdalena Biejat';
+      settlementQualities.left_president = 1;
       settlementQualities.pres_2025_hostile_president = 0;
+      settlementQualities.president_relation = 80;
+      settlementQualities[issue + '_palace_president'] = 'Magdalena Biejat';
+      settlementQualities[issue + '_palace_commitment'] = 4;
       if (issue === 'abortion') {
         settlementQualities.abortion_cabinet_deadline = 1;
       }
@@ -9731,13 +9918,24 @@ function runSmoke(game) {
 
     startStandard('major-reform-forced-maximal-reward');
     qualities = engine.state.qualities;
-    setExecutive(qualities, 'ko');
+    // Forcing the issue coerces coalition votes for exactly one tier above what
+    // the partner would carry voluntarily. It cannot coerce a signature and it
+    // cannot manufacture governing authority, so the maximal forced settlement
+    // needs the premiership, a Palace that will sign and a partner already at
+    // tier 3.
+    setExecutive(qualities, 'lewica');
+    qualities.ministry_ko_in_cabinet = 1;
     setProject(qualities, 'labor', 4);
-    qualities.president_name = 'Rafał Trzaskowski';
+    qualities.president_name = 'Magdalena Biejat';
+    qualities.left_president = 1;
     qualities.pres_2025_hostile_president = 0;
-    qualities.ko_relation = 0;
-    qualities.ko_classical_liberal_share = 80;
-    qualities.labor_ko_commitment = 0;
+    qualities.president_relation = 80;
+    qualities.labor_palace_president = 'Magdalena Biejat';
+    qualities.labor_palace_commitment = 4;
+    qualities.ko_relation = 70;
+    qualities.ko_accept_social = 70;
+    qualities.ko_classical_liberal_share = 35;
+    qualities.labor_ko_commitment = 4;
     qualities.resources = 5;
     qualities.left_poll = 10;
     ['pis', 'ko', 'psl', 'p2050', 'konf'].forEach(function(rival) {
@@ -9782,7 +9980,11 @@ function runSmoke(game) {
     });
     assert(qualities.news_headline.includes('survives coalition opposition'));
 
-    startStandard('major-reform-forced-fallback');
+    // The negotiation has to be able to change the answer. This is the exact
+    // scenario the old model could not represent: PSL blocks the maximal bill,
+    // paid bargaining raises PSL's own score, and the ceiling that bargaining
+    // lifts is the ceiling the common line then settles on.
+    startStandard('major-reform-bargaining-lifts-the-ceiling');
     qualities = engine.state.qualities;
     setExecutive(qualities, 'ko');
     setProject(qualities, 'marriage', 4);
@@ -9790,10 +9992,20 @@ function runSmoke(game) {
     qualities.pres_2025_hostile_president = 0;
     qualities.ministry_psl_in_cabinet = 1;
     qualities.ko_relation = 80;
+    qualities.ko_accept_rights = 80;
+    qualities.ko_social_liberal_share = 60;
     qualities.ko_classical_liberal_share = 20;
-    qualities.psl_relation = 40;
     qualities.marriage_ko_commitment = 4;
-    qualities.marriage_third_way_commitment = 0;
+    qualities.psl_relation = 70;
+    qualities.psl_accept_rights = 65;
+    qualities.psl_conservative_share = 25;
+    qualities.marriage_third_way_commitment = 2;
+    // The Palace has to have been worked too, or the presidency is the binding
+    // constraint and no amount of coalition bargaining shows up in the ceiling.
+    qualities.president_relation = 60;
+    qualities.marriage_palace_president = 'Rafał Trzaskowski';
+    qualities.marriage_palace_commitment = 2;
+    qualities.resources = 5;
     qualities.reform_pressure_issue = 'marriage';
     qualities.reform_pressure_target_stage = 4;
     qualities.reform_pressure_previous_stage = 0;
@@ -9802,31 +10014,43 @@ function runSmoke(game) {
     const resourcesBeforeBargain = qualities.resources;
     engine.goToScene('poland_major_reforms.resolve');
     assert.strictEqual(qualities.reform_pressure_pending, 1);
-    assert.strictEqual(qualities.reform_pressure_actor, 'psl');
+    assert.strictEqual(qualities.reform_pressure_actor, 'psl',
+      'PSL must be the named blocker, not KO or the Palace');
     assert.strictEqual(qualities.reform_pressure_target_stage, 4);
     assert.strictEqual(qualities.marriage_reform_proposal_stage, 4);
+    const ceilingBeforeBargain = qualities.reform_ceiling_tier;
+    const pslScoreBeforeBargain = qualities.reform_ceiling_blocker_score;
+    assert.strictEqual(ceilingBeforeBargain, 1,
+      'This fixture needs a tier-1 opening ceiling; got ' +
+      ceilingBeforeBargain);
+
+    qualities.reform_pressure_return_mode = 'pressure';
+    engine.goToScene('poland_reform_pressure');
+    choose('poland_reform_pressure.objection_bargain');
+    assert.strictEqual(qualities.marriage_third_way_commitment, 3);
+    assert.strictEqual(qualities.reform_pressure_pending, 1);
+    assert(qualities.reform_ceiling_blocker_score > pslScoreBeforeBargain,
+      'A paid bargaining round did not move the blocker score');
+
+    qualities.reform_pressure_return_mode = 'pressure';
+    engine.goToScene('poland_reform_pressure');
+    choose('poland_reform_pressure.objection_bargain');
+    assert.strictEqual(qualities.marriage_third_way_commitment, 4);
+    assert.strictEqual(qualities.reform_pressure_pending, 1);
+    assert.strictEqual(qualities.reform_ceiling_tier, 2,
+      'Two bargaining rounds must have lifted the ceiling to tier 2');
+    assert.strictEqual(qualities.resources, resourcesBeforeBargain - 2);
+    assert(
+      qualities.government_coalition_dissent > dissentBeforeBargain,
+      'Bargaining must still cost coalition dissent'
+    );
+
+    // Now the common line settles on the tier the bargaining actually bought.
+    qualities.reform_pressure_return_mode = 'pressure';
     engine.goToScene('poland_reform_pressure');
     choose('poland_reform_pressure.objection_narrow');
-    assert.strictEqual(qualities.reform_pressure_target_stage, 3);
-    assert.strictEqual(qualities.marriage_reform_proposal_stage, 3);
-    assert.strictEqual(qualities.reform_pressure_pending, 1);
-    assert.strictEqual(engine.state.sceneId, 'poland_reform_pressure.objection');
-    choose('poland_reform_pressure.objection_narrow');
-    assert.strictEqual(qualities.reform_pressure_target_stage, 2);
-    assert.strictEqual(qualities.marriage_reform_proposal_stage, 2);
-    assert.strictEqual(qualities.reform_pressure_pending, 1);
-    choose('poland_reform_pressure.objection_bargain');
-    assert.strictEqual(qualities.marriage_third_way_commitment, 1);
-    assert.strictEqual(qualities.reform_pressure_pending, 1);
-    choose('poland_reform_pressure.objection_bargain');
-    assert.strictEqual(qualities.marriage_third_way_commitment, 2);
     assert.strictEqual(qualities.marriage_reform_stage, 2);
     assert.strictEqual(qualities.marriage_reform_settled, 1);
-    assert.strictEqual(qualities.resources, resourcesBeforeBargain - 2);
-    assert.strictEqual(
-      qualities.government_coalition_dissent,
-      dissentBeforeBargain + 16
-    );
     assertProjectHidden(qualities, 'marriage');
 
     const assertReferendumLoss = function(
@@ -9958,22 +10182,31 @@ function runSmoke(game) {
     assert.strictEqual(qualities.reform_pressure_pending, 0);
     assert.strictEqual(qualities.government_delivery, deliveryBeforeAuthorityLoss);
 
+    // A written Palace commitment belongs to the person who signed it. A new
+    // president inherits nothing. The bill is tabled at tier 1 here because a
+    // right-wing Palace has a hard profile ceiling of tier 1 on rights, and
+    // above that ceiling the Chancellery protocol is refused outright instead of
+    // taking another resource for nothing.
     startStandard('major-reform-palace-commitment-ownership');
     qualities = engine.state.qualities;
     setExecutive(qualities, 'lewica');
-    setProject(qualities, 'marriage', 4);
+    setProject(qualities, 'marriage', 1);
     qualities.president_name = 'Karol Nawrocki';
     qualities.pres_2025_hostile_president = 1;
     qualities.president_relation = 0;
     qualities.marriage_palace_commitment = 4;
     qualities.marriage_palace_president = 'Andrzej Duda';
+    qualities.resources = 5;
     qualities.reform_pressure_issue = 'marriage';
-    qualities.reform_pressure_target_stage = 4;
+    qualities.reform_pressure_target_stage = 1;
     qualities.reform_pressure_previous_stage = 0;
     qualities.reform_pressure_return_mode = 'card';
     engine.goToScene('poland_major_reforms.resolve');
     assert.strictEqual(qualities.reform_pressure_actor, 'president');
     assert.strictEqual(qualities.marriage_reform_stage, 0);
+    assert.strictEqual(qualities.reform_ceiling_palace_locked, 0,
+      'A tier at the Palace profile ceiling must not be reported as locked');
+    qualities.reform_pressure_return_mode = 'pressure';
     engine.goToScene('poland_reform_pressure');
     choose('poland_reform_pressure.palace_reconsider');
     assert.strictEqual(qualities.marriage_palace_president, 'Karol Nawrocki');
@@ -9981,6 +10214,36 @@ function runSmoke(game) {
     assert.strictEqual(qualities.marriage_reform_stage, 0);
     assert.strictEqual(qualities.reform_pressure_pending, 1);
     assert.strictEqual(qualities.reform_pressure_actor, 'president');
+
+    // Above the profile ceiling the same protocol must be refused rather than
+    // sold. This is the resource sink the old model created.
+    startStandard('major-reform-palace-profile-veto-refuses-spending');
+    qualities = engine.state.qualities;
+    setExecutive(qualities, 'lewica');
+    setProject(qualities, 'marriage', 4);
+    qualities.president_name = 'Karol Nawrocki';
+    qualities.pres_2025_hostile_president = 1;
+    qualities.president_relation = 100;
+    qualities.resources = 5;
+    qualities.reform_pressure_issue = 'marriage';
+    qualities.reform_pressure_target_stage = 4;
+    qualities.reform_pressure_previous_stage = 0;
+    qualities.reform_pressure_return_mode = 'card';
+    engine.goToScene('poland_major_reforms.resolve');
+    assert.strictEqual(qualities.reform_pressure_actor, 'president');
+    assert.strictEqual(qualities.reform_ceiling_palace_locked, 1);
+    qualities.reform_pressure_return_mode = 'pressure';
+    engine.goToScene('poland_reform_pressure');
+    const lockedResources = qualities.resources;
+    ['palace_reconsider', 'palace_relation'].forEach(function(option) {
+      const choice = engine.getCurrentChoices().find(function(c) {
+        return c.id === 'poland_reform_pressure.' + option;
+      });
+      assert(choice && !choice.canChoose,
+        option + ' must be visible but refused against a profile veto');
+    });
+    assert.strictEqual(qualities.resources, lockedResources,
+      'A profile veto must not consume resources');
 
     startStandard('major-reform-lawful-override-count');
     qualities = engine.state.qualities;
@@ -10148,14 +10411,45 @@ function runSmoke(game) {
     assert(qualities.labor_reform_power >= qualities.labor_reform_threshold);
     choose('poland_labor_reform.advance');
     assert.strictEqual(qualities.reform_pressure_target_stage, 4);
-    assert.strictEqual(qualities.reform_pressure_actor, 'pis');
+    // PiS's social-solidarist wing really will carry a strong labour bill — it
+    // scores tier 3 here — so the binding veto player is the right-wing Palace,
+    // whose profile ceiling on material questions is tier 2.
+    assert.strictEqual(qualities.reform_ceiling_pis_tier, 3,
+      'A solidarist-led PiS must reach tier 3 on labour');
+    assert.strictEqual(qualities.reform_pressure_actor, 'president',
+      'The Palace, not PiS, is the tighter constraint in this configuration');
+    // A cold relationship and no implementation file mean Duda only signs tier
+    // 1 today, even though his profile ceiling on material questions is tier 2.
+    assert.strictEqual(qualities.reform_ceiling_tier, 1);
+    assert.strictEqual(qualities.reform_ceiling_negotiable, 2);
+    assert.strictEqual(qualities.reform_ceiling_palace_locked, 1,
+      'A tier-4 labour bill is above this Palace profile ceiling');
+    qualities.reform_pressure_return_mode = 'pressure';
     engine.goToScene('poland_reform_pressure');
-    choose('poland_reform_pressure.objection_narrow');
-    assert.strictEqual(qualities.reform_pressure_target_stage, 3);
-    assert.strictEqual(qualities.labor_reform_proposal_stage, 3);
+
+    // Cutting the bill back to what the Palace could ever sign reopens the
+    // Chancellery route instead of banking tier 1 immediately.
+    choose('poland_reform_pressure.objection_narrow_to_cap');
+    assert.strictEqual(qualities.reform_pressure_target_stage, 2);
+    assert.strictEqual(qualities.labor_reform_stage, 0,
+      'Cutting the bill back must not settle it');
     assert.strictEqual(qualities.reform_pressure_pending, 1);
-    choose('poland_reform_pressure.objection_narrow');
-    assert.strictEqual(qualities.labor_reform_stage, 2);
+    qualities.reform_pressure_return_mode = 'pressure';
+    engine.goToScene('poland_reform_pressure');
+    assert.strictEqual(qualities.reform_ceiling_palace_locked, 0,
+      'Inside the profile ceiling the Palace must be negotiable again');
+
+    // Two Palace protocols lift the presidential score over the tier-2 bar.
+    qualities.resources = 5;
+    choose('poland_reform_pressure.palace_reconsider');
+    assert.strictEqual(qualities.labor_palace_commitment, 1);
+    assert.strictEqual(qualities.reform_pressure_pending, 1);
+    qualities.reform_pressure_return_mode = 'pressure';
+    engine.goToScene('poland_reform_pressure');
+    choose('poland_reform_pressure.palace_reconsider');
+    assert.strictEqual(qualities.labor_palace_commitment, 2);
+    assert.strictEqual(qualities.labor_reform_stage, 2,
+      'Working the Palace inside its profile ceiling must carry the bill');
     assert.strictEqual(qualities.labor_reform_proposal_stage, 2);
     assert.strictEqual(qualities.labor_reform_settled, 1);
     assertProjectHidden(qualities, 'labor');
@@ -16099,6 +16393,7 @@ if (
   testRadioFiles(game);
 }
 testPartyPresentationAssets();
+testPickingEnemiesChoices(game);
 if (process.env.DSS_RADIO_SMOKE === '1') {
   console.log('Embedded radio smoke passed.');
   process.exit(0);

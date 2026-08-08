@@ -198,6 +198,9 @@ Q.lgbt_zones_2019_done = 0;
 Q.left_discipline_2021_done = 0;
 Q.ventilators_2020_done = 0;
 Q.animals_2020_done = 0;
+Q.fiore_braun_2020_done = 0;
+Q.fiore_2020_response = "No response";
+Q.fiore_palace = "duda";
 Q.churches_2020_done = 0;
 Q.eu_budget_veto_2020_done = 0;
 Q.nik_banas_2019_done = 0;
@@ -365,9 +368,16 @@ Q.poland_senate_docket_timer = 0;
 Q.poland_labor_inspection_timer = 0;
 Q.poland_housing_fund_timer = 0;
 Q.poland_equality_bill_timer = 0;
+Q.poland_reform_slate_timer = 0;
 Q.poland_abortion_reform_timer = 0;
 Q.poland_marriage_reform_timer = 0;
 Q.poland_labor_reform_timer = 0;
+Q.poland_church_reform_timer = 0;
+Q.poland_asylum_reform_timer = 0;
+Q.poland_border_reform_timer = 0;
+Q.poland_defence_reform_timer = 0;
+Q.poland_health_reform_timer = 0;
+Q.poland_courts_reform_timer = 0;
 Q.poland_health_compact_timer = 0;
 Q.poland_digital_state_timer = 0;
 Q.poland_science_compact_timer = 0;
@@ -508,6 +518,45 @@ Q.reform_pressure_due_time = -1;
 Q.reform_pressure_demands = 0;
 Q.reform_pressure_objections = 0;
 Q.reform_pressure_last_result = "No coalition reform pressure yet";
+Q.reform_pressure_rounds = 0;
+Q.reform_pressure_rounds_left = 3;
+// Nine reform fields, three slots. The slate is chosen in play; poland_normalize
+// derives the counters from these flags every turn.
+Q.reform_slate_max = 3;
+Q.reform_slate_count = 0;
+Q.reform_slate_slots_left = 3;
+Q.reform_slate_closed = 0;
+Q.reform_slate_settled = 0;
+Q.reform_slate_weight = 0;
+Q.major_reform_deck_live = 1;
+for (const reformIssue of [
+    "abortion", "marriage", "church", "asylum", "border",
+    "defence", "labor", "health", "courts"
+]) {
+    Q[reformIssue + "_on_slate"] = 0;
+}
+// abortion, marriage and labor keep their own explicit blocks further down
+// because they also carry historical-chain flags and ladder labels.
+for (const reformIssue of [
+    "church", "asylum", "border", "defence", "health", "courts"
+]) {
+    Q[reformIssue + "_reform_stage"] = 0;
+    Q[reformIssue + "_reform_defined"] = 0;
+    Q[reformIssue + "_reform_goal_stage"] = 4;
+    Q[reformIssue + "_reform_proposal_stage"] = 4;
+    Q[reformIssue + "_reform_next_stage"] = 4;
+    Q[reformIssue + "_reform_settled"] = 0;
+    Q[reformIssue + "_reform_progress"] = 0;
+    Q[reformIssue + "_reform_power"] = 0;
+    Q[reformIssue + "_reform_threshold"] = 0;
+    Q[reformIssue + "_referendum_mandate"] = 0;
+    Q[reformIssue + "_referendum_score"] = 0;
+    Q[reformIssue + "_referendum_result"] = "No referendum campaign";
+    Q[reformIssue + "_palace_president"] = "";
+    for (const reformPartner of ["ko", "pis", "third_way", "palace"]) {
+        Q[reformIssue + "_" + reformPartner + "_commitment"] = 0;
+    }
+}
 Q.major_reforms_complete = 0;
 Q.coalition_judicial_pressure_concessions = 0;
 Q.coalition_media_takeover_concessions = 0;
@@ -914,7 +963,7 @@ Q.rival_group_records = [
         name: "Porozumienie", leader: "Jarosław Gowin",
         parent: "United Right", legal_status: "allied party",
         active: 1, allied: 1, organisation: 34, cohesion: 58,
-        relation: 22, mp_count: 12, exclusive_seats: 0
+        relation: 22, mp_count: 18, exclusive_seats: 0
     },
     {
         id: "solidarna", bloc: "pis", kind: "party",
@@ -970,14 +1019,14 @@ Q.rival_group_records = [
         name: "Nowoczesna", leader: "Adam Szłapka",
         parent: "Koalicja Obywatelska", legal_status: "allied party",
         active: 1, allied: 1, organisation: 30, cohesion: 60,
-        relation: 38, mp_count: 8, exclusive_seats: 0
+        relation: 38, mp_count: 10, exclusive_seats: 0
     },
     {
         id: "ipl", bloc: "ko", kind: "party",
         name: "Inicjatywa Polska", leader: "Barbara Nowacka",
         parent: "Koalicja Obywatelska", legal_status: "allied party",
         active: 1, allied: 1, organisation: 27, cohesion: 66,
-        relation: 54, mp_count: 5, exclusive_seats: 0
+        relation: 54, mp_count: 2, exclusive_seats: 0
     },
     {
         id: "greens", bloc: "ko", kind: "party",
@@ -1875,6 +1924,17 @@ Q.public_opinion_last_reception = "No recent test";
 Q.public_opinion_last_delta = 0;
 Q.public_opinion_last_action = "No public-opinion test yet";
 Q.public_opinion_last_updated = "October 2019 baseline";
+// The climate trend is what makes a decade of opinion movement legible: the
+// monthly briefing, the ledger and the story model all read these.
+Q.public_climate_progressive_index = 46.75;
+Q.public_climate_left_ownership_index = 30.5;
+Q.public_climate_progressive_trend = 0;
+Q.public_climate_direction = "settled trench";
+Q.public_climate_band = "resistant";
+Q.public_climate_media_bonus = 0;
+Q.public_climate_report =
+    "National climate: resistant terrain, settled trench. Hottest field: " +
+    "Social spending and public services.";
 Q.public_opinion_bridge_pressure = 0;
 Q.left_issue_reception_baseline = -999;
 Q.card_public_response = "contested";
@@ -2526,6 +2586,14 @@ Q.ko_coalition_dissent = 0;
 Q.psl_coalition_dissent = 0;
 Q.p2050_coalition_dissent = 0;
 Q.left_coalition_dissent = 0;
+Q.left_pm_borrowed_mandate = 0;
+Q.left_is_strongest_coalition_partner = 1;
+Q.left_pm_is_borrowed = 0;
+Q.pm_political_family = "pis";
+Q.pm_party_name = "Prawo i Sprawiedliwość";
+Q.pm_party_class = "party-pis";
+Q.pm_is_left = 0;
+Q.pm_leads_own_party_government = 1;
 Q.coalition_seats = 0;
 Q.sejm_total = 460;
 Q.sejm_quorum_floor = 230;
@@ -2616,7 +2684,10 @@ Q.hate_incident_severity_2026 = 0;
 Q.border_response_2026 = "No response";
 Q.refugee_empathy = 58;
 Q.anti_ukrainian_pressure = 8;
+// far_right_split is a 0/1 flag owned by the Braun split event alone.
+// far_right_fragmentation is the separate pressure meter events add to.
 Q.far_right_split = 0;
+Q.far_right_fragmentation = 0;
 Q.braun_martyrdom = 0;
 Q.braun_legal_preparation = 0;
 Q.braun_hospital_2025_done = 0;

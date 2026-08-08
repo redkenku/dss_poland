@@ -27,9 +27,16 @@ if (
         actorNames[Q.reform_pressure_actor] || Q.reform_pressure_actor_name;
 }
 Q.reform_pressure_issue_name =
+    Q[Q.reform_pressure_issue + "_reform_display_name"] ||
     issueNames[Q.reform_pressure_issue] || Q.reform_pressure_issue_name;
 const actor = Q.reform_pressure_actor;
 const issue = Q.reform_pressure_issue;
+// Recompute the settlement ceiling on arrival so the negotiation page shows
+// the live number every option is trying to move.
+Q.reform_ceiling_issue = issue;
+Q.reform_ceiling_target = Math.max(
+    1, Math.min(4, Math.round(Number(Q.reform_pressure_target_stage) || 1))
+);
 Q.reform_pressure_authority_live =
     Q.left_in_government && Q.government_has_confidence &&
     !Q.caretaker_government ? 1 : 0;
@@ -77,7 +84,18 @@ Q.reform_pressure_override_votes = Math.max(
 );
 Q.reform_pressure_override_available =
     Q.reform_pressure_override_votes >= 276 ? 1 : 0;
+// Partners stop taking the meeting after three rounds on the same bill. The
+// round counter used to be incremented and never read, which is how the old
+// flow became an unbounded resource sink.
+Q.reform_pressure_rounds = Math.max(
+    0, Math.round(Number(Q.reform_pressure_rounds) || 0)
+);
+Q.reform_pressure_rounds_left = Math.max(0, 3 - Q.reform_pressure_rounds);
+Q.reform_pressure_bill_label =
+    Q[issue + "_reform_label_" + Q.reform_ceiling_target] ||
+    Q.reform_pressure_issue_name;
 !}
+call: poland_reform_ceiling
 go-to: poland_major_reforms.authority_lost if reform_pressure_pending = 1 and reform_pressure_mode = "partner_objection" and reform_pressure_authority_live = 0; objection_actor_left if reform_pressure_pending = 1 and reform_pressure_mode = "partner_objection" and reform_pressure_authority_live = 1 and reform_pressure_actor_live = 0; demand_lapsed if reform_pressure_pending = 1 and reform_pressure_mode = "partner_demand" and (reform_pressure_authority_live = 0 or reform_pressure_actor_live = 0); objection if reform_pressure_pending = 1 and reform_pressure_mode = "partner_objection" and reform_pressure_authority_live = 1 and reform_pressure_actor_live = 1; demand if reform_pressure_pending = 1 and reform_pressure_mode = "partner_demand" and reform_pressure_authority_live = 1 and reform_pressure_actor_live = 1; poland_polling if reform_pressure_pending = 0
 
 @objection_actor_left
@@ -100,33 +118,61 @@ concession is extracted and no agenda outcome is applied.
 title: [+ reform_pressure_actor_name +] opposes our action
 new-page: true
 
-= [+ reform_pressure_actor_name +] opposes the reform
+= [+ reform_pressure_actor_name +] blocks the bill
 
 Lewica assembled enough public, ministerial and parliamentary power to table
-**[+ reform_pressure_issue_name +]** at fallback level **[+
-reform_pressure_target_stage +]**. [+ reform_pressure_actor_name +] now
-withholds the votes or signature that turns the proposal into law.
+**[+ reform_pressure_issue_name +]** at tier **[+
+reform_pressure_target_stage +]** — [+ reform_pressure_bill_label +]. [+
+reform_pressure_actor_name +] withholds the votes or signature that turns the
+proposal into law.
 
-This is no longer another drafting round. The coalition must either pay for a
-bargain, surrender accumulated trust, narrow the scope, or discover whether
-the partner's threat to the government is real.
+**Settlement ceiling this month: [+ reform_ceiling_tier_label +]** ([+
+reform_ceiling_reachable_label +]).
+**[+ reform_pressure_actor_name +] scores the bill [+
+reform_ceiling_blocker_score +]; tier [+ reform_ceiling_target_resolved +]
+needs [+ reform_ceiling_need +].** Short by **[+ reform_ceiling_gap +]**.
+
+[+ reform_ceiling_breakdown +].
+
+[? if reform_ceiling_palace_locked = 1: **This is a profile veto, not a
+price.** [+ reform_ceiling_blocker_name +] will not sign a tier-[+
+reform_ceiling_target_resolved +] version of this bill at any relationship or
+mandate; the Palace ceiling on this field is tier [+ reform_ceiling_palace_cap
++]. Only a lawful three-fifths override, a narrower settlement or a different
+president gets past it. Spending further resources on the Chancellery's
+protocol will not move the signature.
+[? if reform_ceiling_negotiable >= 1: Cutting the bill to tier [+
+reform_ceiling_negotiable +] brings it back inside what this Palace could sign,
+and the Chancellery protocol becomes worth building again.?]?]
+
+[? if reform_ceiling_blocker_kind = "partner": Commitments are the lever that
+moves this actor. Each recorded commitment is worth nine points of its score;
+public mandate, polling and the relationship supply the rest.?]
+
+[? if reform_pressure_rounds_left <= 0: **The partners have stopped taking the
+meeting on this bill.** Three negotiating rounds have already been spent; what
+remains is the reachable settlement, a survival confrontation or withdrawal.?]
+[? if reform_pressure_rounds_left = 1: One more negotiating round is available
+on this bill before the partners stop taking the meeting.?]
 
 - @objection_bargain
 - @objection_relation
+- @objection_mandate
 - @objection_force
 - @palace_reconsider
 - @palace_relation
 - @palace_referendum
 - @palace_override
+- @objection_narrow_to_cap
 - @objection_narrow
 - @objection_withdraw
 
 @objection_bargain
 title: Spend a resource on another coalition bargain
-subtitle: Cost: 1 resource. Raise this actor's commitment by one level and count every veto player again.
+subtitle: Cost: 1 resource. One more recorded commitment (+9 to their score), then recount. Rounds left: [+ reform_pressure_rounds_left +].
 view-if: reform_pressure_actor != "president"
-choose-if: resources >= 1 and reform_pressure_bargain_available = 1
-unavailable-subtitle: This negotiating round requires one resource.
+choose-if: resources >= 1 and reform_pressure_bargain_available = 1 and reform_pressure_rounds_left > 0
+unavailable-subtitle: [? if reform_pressure_rounds_left <= 0: This bill has already used its three negotiating rounds; the partner will not open another.?][? if reform_pressure_rounds_left > 0: This negotiating round requires one resource.?]
 on-arrival: resources -= 1; reform_pressure_resolution = "bargain"
 go-to: apply_objection
 
@@ -139,21 +185,29 @@ unavailable-subtitle: The relationship is not strong enough to cash in.
 on-arrival: reform_pressure_resolution = "relationship"
 go-to: apply_objection
 
+@objection_mandate
+title: Go over their heads and campaign the country on this bill
+subtitle: Cost: 1 resource. Raise support and attention on [+ reform_ceiling_field_label +]; every veto player's score moves with the public mood.
+choose-if: resources >= 1 and reform_pressure_rounds_left > 0
+unavailable-subtitle: [? if reform_pressure_rounds_left <= 0: The bill has run out of negotiating rounds; a fresh campaign belongs to a later attempt.?][? if reform_pressure_rounds_left > 0: A national campaign round needs one resource.?]
+on-arrival: resources -= 1; reform_pressure_resolution = "mandate"
+go-to: apply_objection
+
 @objection_force
 title: Force the full issue and put the coalition under threat
-subtitle: Cost: 2 resources. Bind this actor to the current bill, then count remaining partners and the Palace.
+subtitle: Cost: 2 resources. Carry the bill one tier above the coalition's ceiling and risk the government.
 view-if: reform_pressure_actor != "president"
-choose-if: resources >= 2
-unavailable-subtitle: A survival confrontation requires two resources.
+choose-if: resources >= 2 and reform_ceiling_target_resolved <= reform_ceiling_forceable
+unavailable-subtitle: [? if resources < 2: A survival confrontation requires two resources.?][? if resources >= 2: Forcing buys one tier above the coalition's ceiling, and this bill is further above it than that.?]
 on-arrival: resources -= 2; reform_pressure_resolution = "force"
 go-to: apply_objection
 
 @palace_reconsider
 title: Return with a narrower constitutional and implementation brief
-subtitle: Cost: 1 resource. Build one Palace commitment, then submit the bill to the presidential test again.
+subtitle: Cost: 1 resource. One more Palace commitment (+9 to the presidential score), then resubmit.
 view-if: reform_pressure_actor = "president"
-choose-if: resources >= 1
-unavailable-subtitle: A new presidential protocol needs one resource.
+choose-if: resources >= 1 and reform_ceiling_palace_locked = 0 and reform_pressure_rounds_left > 0
+unavailable-subtitle: [? if reform_ceiling_palace_locked = 1: No implementation brief changes this Palace's position on this field. The presidential ceiling here is tier [+ reform_ceiling_palace_cap +].?][? if reform_ceiling_palace_locked = 0: A new presidential protocol needs one resource and an unspent negotiating round.?]
 on-arrival: resources -= 1; reform_pressure_resolution = "palace_reconsider"
 go-to: apply_objection
 
@@ -161,15 +215,17 @@ go-to: apply_objection
 title: Cash in the presidential relationship for a written commitment
 subtitle: Requires President relation 58+. Spend that trust on this issue, then count the Palace again.
 view-if: reform_pressure_actor = "president"
-choose-if: president_relation >= 58
-unavailable-subtitle: The President does not trust Lewica enough to make a written commitment.
+choose-if: president_relation >= 58 and reform_ceiling_palace_locked = 0
+unavailable-subtitle: [? if reform_ceiling_palace_locked = 1: Trust is not the obstacle. This Palace will not sign a tier-[+ reform_ceiling_target_resolved +] bill on this field at all.?][? if reform_ceiling_palace_locked = 0: The President does not trust Lewica enough to make a written commitment.?]
 on-arrival: reform_pressure_resolution = "palace_relation"
 go-to: apply_objection
 
 @palace_referendum
 title: Put the referendum mandate directly before the President
-subtitle: Use a successful rights referendum as political pressure; it does not itself override a veto.
-view-if: reform_pressure_actor = "president" and reform_pressure_referendum_used = 0 and ((reform_pressure_issue = "abortion" and abortion_referendum_mandate = 1) or (reform_pressure_issue = "marriage" and marriage_referendum_mandate = 1))
+subtitle: Use a successful referendum as political pressure; it does not itself override a veto.
+view-if: reform_pressure_actor = "president" and reform_pressure_referendum_used = 0 and reform_ceiling_referendum_live = 1
+choose-if: reform_ceiling_palace_locked = 0
+unavailable-subtitle: A referendum is a mandate, not a signature. This Palace's ceiling on this field is tier [+ reform_ceiling_palace_cap +].
 on-arrival: reform_pressure_resolution = "palace_referendum"
 go-to: apply_objection
 
@@ -182,10 +238,17 @@ unavailable-subtitle: A lawful veto override requires two resources and at least
 on-arrival: resources -= 2; reform_pressure_resolution = "palace_override"
 go-to: apply_objection
 
+@objection_narrow_to_cap
+title: Cut the bill to [+ reform_ceiling_negotiable_label +] and keep fighting for it
+subtitle: Free. Drop to the most this Palace and this cabinet could ever carry — tier [+ reform_ceiling_negotiable +] — which is still above what they will carry today. The negotiation stays open.
+view-if: reform_ceiling_negotiable_room = 1 and reform_ceiling_negotiable < reform_pressure_target_stage and reform_ceiling_negotiable >= 1
+on-arrival: reform_pressure_resolution = "narrow_to_cap"
+go-to: apply_objection
+
 @objection_narrow
-title: Accept one lower fallback and count the bill again
-subtitle: Free. Preserve the government, but any compromise that passes will close the campaign.
-view-if: reform_pressure_target_stage > 1
+title: Find the common line: settle at [+ reform_ceiling_reachable_label +]
+subtitle: Free. Drop straight to the tier the veto players will actually carry, in one move. Whatever passes closes this project.
+view-if: reform_pressure_target_stage > 1 and reform_ceiling_tier >= 1
 on-arrival: reform_pressure_resolution = "narrow"
 go-to: apply_objection
 
@@ -226,6 +289,15 @@ if (
     Q[palacePresidentKey] = Q.president_name;
 }
 Q.reform_pressure_abandoned = 0;
+// Every paid option consumes a round, so the negotiation is finite and the
+// player can see how much rope is left.
+if (
+    resolution == "bargain" || resolution == "mandate" ||
+    resolution == "palace_reconsider"
+) {
+    Q.reform_pressure_rounds =
+        Math.max(0, Number(Q.reform_pressure_rounds) || 0) + 1;
+}
 let dissent = 0;
 if (resolution == "bargain") {
     dissent = 4 + proposed * 2;
@@ -233,6 +305,44 @@ if (resolution == "bargain") {
     Q[commitmentKey] = Math.min(4, Number(Q[commitmentKey]) + 1);
     Q.reform_pressure_last_result =
         "Another bargain adds one issue-specific coalition commitment";
+} else if (resolution == "mandate") {
+    // The public route. It moves the field for every veto player at once
+    // rather than one party's private commitment, and it can misfire: a
+    // campaign into an organised backlash raises the backlash too.
+    const field = Q.reform_ceiling_field || "";
+    const supportNow = Number(Q[field + "_support"]) || 50;
+    const backlashNow = Number(Q[field + "_backlash"]) || 50;
+    const reach =
+        4 +
+        Math.max(0, Number(Q.media_capacity) || 0) * 0.05 +
+        Math.max(0, Number(Q.left_poll) - 8) * 0.25 +
+        Number(Q.progressive_credibility) * 0.02;
+    const hostileClimate = backlashNow >= 60 ? 1 : 0;
+    const swing = Math.round(
+        hostileClimate ? reach * 0.45 : reach
+    );
+    const clampField = function(key, change) {
+        Q[key] = Math.max(
+            0, Math.min(100, (Number(Q[key]) || 0) + change)
+        );
+    };
+    clampField(field + "_support", swing);
+    clampField(field + "_salience", 6);
+    clampField(field + "_backlash", hostileClimate ? 4 : 1);
+    clampField(field + "_left_ownership", 4);
+    Q[issue + "_reform_progress"] =
+        (Number(Q[issue + "_reform_progress"]) || 0) + 5;
+    Q.public_opinion_last_issue = field;
+    Q.public_opinion_last_action =
+        "National campaign for " + Q.reform_pressure_issue_name;
+    Q.public_opinion_last_delta = swing;
+    Q.public_opinion_last_reception = hostileClimate
+        ? (swing >= 3 ? "contested" : "backlash")
+        : (swing >= 5 ? "breakthrough" : "favourable");
+    Q.reform_pressure_last_result = hostileClimate
+        ? "The campaign moves the field slowly against an organised backlash"
+        : "A national campaign raises public support behind the bill";
+    dissent = 3 + proposed;
 } else if (resolution == "relationship") {
     dissent = 6 + proposed * 2;
     Q[relationKey] -= 12;
@@ -269,10 +379,31 @@ if (resolution == "bargain") {
     Q.constitutional_restraint += 2;
     Q.reform_pressure_last_result =
         "Three-fifths of the Sejm overrides the presidential veto";
+} else if (resolution == "narrow_to_cap") {
+    // Not a settlement — a reduction in ambition that keeps the fight alive at
+    // the highest tier the Palace and the cabinet could ever carry.
+    const negotiable = Math.max(
+        1, Math.min(4, Math.round(Number(Q.reform_ceiling_negotiable) || 1))
+    );
+    Q.reform_pressure_target_stage = Math.max(previous, Math.min(
+        proposed - 1, negotiable
+    ));
+    Q[issue + "_reform_proposal_stage"] = Q.reform_pressure_target_stage;
+    Q.reform_pressure_last_result =
+        "The bill is cut back to " +
+        (Q[issue + "_reform_label_" + Q.reform_pressure_target_stage] ||
+            ("tier " + Q.reform_pressure_target_stage)) +
+        " and the negotiation continues";
 } else if (resolution == "narrow" || resolution == "withdraw") {
+    // "Find the common line" now lands on the tier the veto players will
+    // actually carry, in one move. Walking down one blind rung at a time was
+    // the reason this option read as a no-op.
+    const reachable = Math.max(
+        0, Math.min(4, Math.round(Number(Q.reform_ceiling_tier) || 0))
+    );
     Q.reform_pressure_target_stage = resolution == "withdraw"
         ? previous
-        : Math.max(previous, proposed - 1);
+        : Math.max(previous, Math.min(proposed - 1, reachable));
     if (Q.reform_pressure_target_stage <= previous) {
         Q.reform_pressure_abandoned = 1;
         const progressKey = issue + "_reform_progress";
@@ -285,17 +416,42 @@ if (resolution == "bargain") {
         Q[issue + "_reform_proposal_stage"] =
             Number(Q[issue + "_reform_goal_stage"]) || 4;
         Q.public_trust -= 1;
-        Q.feminist_trust -= issue == "abortion" ? 4 : 0;
-        Q.progressive_credibility -= issue == "marriage" ? 4 : 1;
-        Q.labor_credibility -= issue == "labor" ? 3 : 0;
+        // The constituency that was promised this bill takes the hit.
+        const withdrawalCost = {
+            abortion: { feminist_trust: 4, progressive_credibility: 1 },
+            marriage: { progressive_credibility: 4, minority_safety: 3 },
+            church: { progressive_credibility: 3, urban_progressive_support: 3 },
+            asylum: { progressive_credibility: 3, minority_safety: 4 },
+            border: { government_delivery: 2 },
+            defence: { government_delivery: 2 },
+            labor: { labor_credibility: 3, workers_support: 3 },
+            health: { labor_credibility: 2, public_sector_support: 3 },
+            courts: { judicial_legitimacy: 2, public_trust: 1 }
+        };
+        const costs = withdrawalCost[issue] || { progressive_credibility: 1 };
+        for (const key of Object.keys(costs)) {
+            Q[key] = (Number(Q[key]) || 0) - costs[key];
+        }
+        // A field the party publicly retreated from cools and hardens against
+        // the next attempt.
+        const retreatField = Q.reform_ceiling_field;
+        if (retreatField) {
+            Q[retreatField + "_left_ownership"] = Math.max(
+                0, (Number(Q[retreatField + "_left_ownership"]) || 0) - 4
+            );
+            Q[retreatField + "_backlash"] = Math.min(
+                100, (Number(Q[retreatField + "_backlash"]) || 0) + 3
+            );
+        }
         Q.reform_pressure_last_result =
             "The bill is withdrawn for a five-month regroup, not abandoned permanently";
     } else {
         Q[issue + "_reform_proposal_stage"] =
             Q.reform_pressure_target_stage;
         Q.reform_pressure_last_result =
-            "The bill is forced down to fallback level " +
-            Q.reform_pressure_target_stage;
+            "The common line settles at " +
+            (Q[issue + "_reform_label_" + Q.reform_pressure_target_stage] ||
+                ("tier " + Q.reform_pressure_target_stage));
     }
 }
 if (actor != "president") {

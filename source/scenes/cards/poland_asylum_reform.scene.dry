@@ -1,0 +1,305 @@
+title: Asylum and Refugee Reception
+subtitle: Begin with a European solidarity settlement and an end to pushbacks; humanitarian access is a fallback, not a first rung.
+new-page: true
+is-card: true
+tags: poland_major_reform_card
+frequency: 130
+view-if: month_actions < max_month_actions and poland_asylum_reform_timer <= 0 and asylum_reform_settled = 0 and asylum_on_slate = 1 and reform_pressure_pending = 0
+on-arrival: {!
+Q.month_actions += 1;
+Q.poland_asylum_reform_timer = 3;
+Q.asylum_reform_next_stage = Number(Q.asylum_reform_proposal_stage) || 4;
+// The hardest ladder in the game: the field starts with a clear public
+// majority against us and an organised backlash on top of it.
+const thresholds = [0, 30, 46, 66, 88];
+Q.asylum_reform_threshold = thresholds[Q.asylum_reform_next_stage];
+const ministryBonus =
+    (Q.interior_minister_party == "Lewica" ? 11 : 0) +
+    (Q.foreign_minister_party == "Lewica" ? 7 : 0);
+const koCabinet = Q.government_party == "ko" || Q.ministry_ko_in_cabinet;
+const pslCabinet = Q.government_party == "psl" || Q.ministry_psl_in_cabinet;
+const p2050Cabinet =
+    Q.government_party == "p2050" || Q.ministry_p2050_in_cabinet;
+const thirdWayCabinet = pslCabinet || p2050Cabinet;
+let partnerBonus = 0;
+if (Q.government_party == "pis") {
+    partnerBonus = -35 + Number(Q.asylum_pis_commitment) * 6;
+} else {
+    partnerBonus =
+        (koCabinet
+            ? Number(Q.ko_relation) * 0.08 +
+                Number(Q.ko_accept_rights) * 0.08 +
+                Number(Q.asylum_ko_commitment) * 6 - 8
+            : 0) +
+        (thirdWayCabinet
+            ? Number(Q.asylum_third_way_commitment) * 5 - 6
+            : 0);
+}
+const palaceBonus =
+    Number(Q.president_relation) * 0.06 +
+    (Q.asylum_palace_president == Q.president_name
+        ? Number(Q.asylum_palace_commitment) * 6
+        : 0);
+const publicBonus =
+    (Number(Q.refugee_solidarity_support) - 40) * 0.40 +
+    Number(Q.migration_empathy) * 0.14 +
+    Math.max(0, Number(Q.left_poll) - 5) * 0.45 -
+    Math.max(0, Number(Q.refugee_solidarity_backlash) - 50) * 0.18 -
+    Math.max(0, Number(Q.migration_disinformation) - 40) * 0.14;
+Q.asylum_reform_power = Math.round(Math.max(
+    0,
+    Math.min(
+        140,
+        Number(Q.asylum_reform_progress) * 0.62 +
+        partnerBonus + palaceBonus + publicBonus + ministryBonus +
+        (Q.asylum_referendum_mandate ? 18 : 0) -
+        Number(Q.eu_progressive_headwind)
+    )
+));
+Q.reform_ceiling_issue = "asylum";
+Q.reform_ceiling_target = Q.asylum_reform_next_stage;
+!}
+call: poland_reform_ceiling
+card-image: img/poland/cards/crisis-compact.webp
+
+= Asylum as a whole-game project
+
+**Campaign goal:** [? if asylum_reform_defined: [+ asylum_reform_goal_label
++].?][? if not asylum_reform_defined: Not yet defined.?]
+[? if asylum_reform_defined: **Bill currently on the table:** [+
+asylum_reform_next_label +].
+**Passage power:** **[+ asylum_reform_power +]**; tabling this bill needs **[+
+asylum_reform_threshold +]**.
+**Settlement ceiling:** [+ reform_ceiling_tier_label +] — [+
+reform_ceiling_reachable_label +].
+[? if reform_ceiling_blocker_kind != "none": Binding veto player: **[+
+reform_ceiling_blocker_name +]** — scores the bill [+
+reform_ceiling_blocker_score +] against the [+ reform_ceiling_need +] a tier-[+
+reform_ceiling_target_resolved +] settlement needs.?]
+[+ reform_ceiling_breakdown +].?][? if not asylum_reform_defined: The first
+project action must define the ambitious bill before preparation or bargaining
+can begin.?]
+
+This is the field where the Left is furthest from the country. Nobody in the
+cabinet gains votes from it, the border is a security argument before it is a
+humanitarian one, and every partner reads the polling before the file.
+
+[? if refugee_solidarity_support < 45: A minority position cannot be legislated
+by insisting. Either the public argument moves first, or the settlement stops at
+procedure and legal aid.?][? if refugee_solidarity_support >= 50: The field has
+turned. A lawful procedure is now defensible in public, which is what changes a
+partner's arithmetic.?]
+
+[? if migration_disinformation > 45: An organised disinformation campaign is
+running on this field. Every point of public support costs more than it should.?]
+
+- @define_goal
+- @draft
+- @coalition_round
+- @cash_relation
+- @ministry
+- @palace
+- @referendum
+- @advance
+
+@define_goal
+title: Define the goal as a European solidarity settlement
+subtitle: An end to pushbacks, a lawful procedure and reception capacity enter as one opening demand.
+view-if: asylum_reform_defined = 0
+on-arrival: asylum_reform_defined = 1; asylum_on_slate = 1; asylum_reform_goal_stage = 4; asylum_reform_proposal_stage = 4; asylum_reform_next_stage = 4; asylum_reform_progress += 12; progressive_credibility += 3; refugee_solidarity_salience += 4; news_headline = "Lewica defines an end to pushbacks as its asylum bill"
+
+Naming the endpoint costs us in the polling and buys the one thing this field
+never has: a position that does not move every time a convoy reaches the wire.
+
+- #poland_card_finish
+
+@draft
+title: Keep the lawyers, medics and municipal officers drafting
+subtitle: Free. Preparation +10.
+view-if: asylum_reform_defined = 1
+on-arrival: asylum_reform_progress += 10; migration_empathy += 1; news_headline = "Lewica keeps a lawful asylum procedure ready for the next opening"
+
+Border lawyers, emergency medics and the mayors who actually house people turn
+a moral position into a procedure with staffing numbers.
+
+- #poland_card_finish
+
+@coalition_round
+title: Put the asylum file on a partner's table
+subtitle: Cost: 1 resource. Choose KO, [+ third_way_display_name +] or PiS and record one commitment.
+choose-if: resources >= 1
+unavailable-subtitle: A serious negotiating round needs one resource.
+view-if: asylum_reform_defined = 1
+new-page: true
+
+- @round_ko
+- @round_third_way
+- @round_pis
+
+@round_ko
+title: Ask KO to record a legal-access floor at the border
+on-arrival: resources -= 1; asylum_reform_progress += 8; asylum_ko_commitment += 1; ko_relation += 3; news_headline = "KO records a border legal-access floor"
+
+- #poland_card_finish
+
+@round_third_way
+title: Make [+ third_way_display_name +] name the reception it would fund
+view-if: p2050_emerged = 1 or third_way_active = 1
+on-arrival: {! Q.resources -= 1; Q.asylum_reform_progress += 8; Q.asylum_third_way_commitment += 1; Q.psl_relation += 2; Q.p2050_relation += 3; Q.news_headline = Q.third_way_display_name + " records a limited asylum-procedure compromise"; !}
+
+- #poland_card_finish
+
+@round_pis
+title: Open a humanitarian-access channel with PiS
+choose-if: (left_in_government = 1 and government_party = "pis") or pis_relation >= 25 or national_crisis_pressure >= 30
+unavailable-subtitle: PiS will not record an asylum commitment without coalition ties or acute national pressure.
+on-arrival: resources -= 1; asylum_reform_progress += 5; asylum_pis_commitment += 1; pis_relation += 2; news_headline = "PiS concedes a narrow humanitarian-access channel"
+
+- #poland_card_finish
+
+@cash_relation
+title: Cash in a party relationship instead of spending a resource
+subtitle: Choose a 58+ relationship; it falls by 12 and becomes one recorded commitment.
+choose-if: ko_relation >= 58 or pis_relation >= 58 or ((p2050_emerged = 1 or third_way_active = 1) and (psl_relation >= 58 or p2050_relation >= 58))
+unavailable-subtitle: No potential governing partner trusts us enough yet.
+view-if: asylum_reform_defined = 1
+new-page: true
+
+- @cash_ko
+- @cash_third_way
+- @cash_pis
+
+@cash_ko
+title: Spend KO goodwill on a lawful asylum procedure
+choose-if: ko_relation >= 58
+on-arrival: ko_relation -= 12; asylum_ko_commitment += 1; asylum_reform_progress += 10; news_headline = "Lewica converts KO goodwill into an asylum-procedure commitment"
+
+- #poland_card_finish
+
+@cash_third_way
+title: Spend [+ third_way_display_name +] goodwill on reception capacity
+view-if: p2050_emerged = 1 or third_way_active = 1
+choose-if: psl_relation >= 58 or p2050_relation >= 58
+on-arrival: {!
+if (Number(Q.psl_relation) >= Number(Q.p2050_relation)) {
+    Q.psl_relation -= 12;
+} else {
+    Q.p2050_relation -= 12;
+}
+Q.asylum_third_way_commitment += 1;
+Q.asylum_reform_progress += 10;
+Q.news_headline = "Lewica converts " + Q.third_way_display_name + " goodwill into reception capacity";
+!}
+
+- #poland_card_finish
+
+@cash_pis
+title: Spend PiS goodwill on humanitarian access
+choose-if: pis_relation >= 58
+on-arrival: pis_relation -= 12; asylum_pis_commitment += 1; asylum_reform_progress += 8; news_headline = "Lewica converts PiS goodwill into humanitarian border access"
+
+- #poland_card_finish
+
+@ministry
+title: Make the Interior Ministry produce the procedure and staffing file
+subtitle: Cost: 1 budget capacity. Preparation +14.
+choose-if: left_in_government = 1 and budget >= 1 and (interior_minister_party = "Lewica" or foreign_minister_party = "Lewica")
+unavailable-subtitle: Requires the Interior or Foreign portfolio and one budget point.
+view-if: asylum_reform_defined = 1
+on-arrival: budget -= 1; asylum_reform_progress += 14; administrative_capacity += 2; migration_local_service_capacity += 4; news_headline = "The Interior Ministry maps asylum casework, legal aid and reception places"
+
+Casework deadlines, interpreter hours and reception places acquire numbers.
+The border stops being a symbol and becomes an administration with a budget.
+
+- #poland_card_finish
+
+@palace
+title: Put the border-law file before the President
+subtitle: Cost: 1 resource. Presidential commitment +1; preparation +6.
+choose-if: resources >= 1
+unavailable-subtitle: The Palace delegation needs one resource.
+view-if: asylum_reform_defined = 1
+on-arrival: {!
+Q.resources -= 1;
+if (Q.asylum_palace_president != Q.president_name) {
+    Q.asylum_palace_commitment = 0;
+    Q.asylum_palace_president = Q.president_name;
+}
+Q.asylum_palace_commitment += 1;
+Q.asylum_reform_progress += 6;
+Q.president_relation += 2;
+Q.news_headline = "The Palace receives the asylum-procedure and legal-aid file";
+!}
+
+The Palace now owns a written account of what the current practice does at the
+wire. On this field almost every President has a ceiling well below our goal,
+and the file's job is to move the ceiling that exists rather than invent one.
+
+- #poland_card_finish
+
+@referendum
+title: Ask the country for a lawful-procedure mandate
+subtitle: Cost: 1 resource. A very hard referendum on the Left's weakest field.
+choose-if: left_in_government = 1 and government_has_confidence = 1 and caretaker_government = 0 and resources >= 1 and asylum_reform_progress >= 35 and refugee_solidarity_support >= 48 and asylum_referendum_mandate = 0
+unavailable-subtitle: Requires governing authority, one resource, 35 preparation and near-majority public support.
+view-if: asylum_reform_defined = 1
+on-arrival: {!
+Q.resources -= 1;
+const variation =
+    Math.floor((this.random.uint32() / 4294967296) * 11) - 5;
+Q.asylum_referendum_score = Math.round(
+    14 + Number(Q.refugee_solidarity_support) * 0.45 +
+    Number(Q.left_poll) * 0.45 +
+    Number(Q.asylum_reform_progress) * 0.15 -
+    Number(Q.refugee_solidarity_backlash) * 0.20 -
+    Number(Q.migration_disinformation) * 0.12 +
+    (Number(Q.asylum_ko_commitment) +
+        Number(Q.asylum_third_way_commitment)) * 2 +
+    variation
+);
+if (Q.asylum_referendum_score >= 50) {
+    Q.asylum_referendum_mandate = 1;
+    Q.asylum_reform_progress += 12;
+    Q.progressive_credibility += 6;
+    Q.public_trust += 2;
+    Q.refugee_solidarity_left_ownership += 10;
+    Q.asylum_referendum_result = "A majority endorsed a lawful asylum procedure";
+    Q.news_headline = "A national vote backs a lawful asylum procedure";
+} else {
+    Q.asylum_reform_progress = Math.max(
+        Number(Q.asylum_reform_stage) * 20,
+        Number(Q.asylum_reform_progress) - 8
+    );
+    Q.asylum_reform_proposal_stage =
+        Number(Q.asylum_reform_goal_stage) || 4;
+    Q.poland_asylum_reform_timer = 6;
+    Q.public_trust -= 3;
+    Q.refugee_solidarity_backlash += 8;
+    Q.asylum_referendum_result = "The reform mandate fell short";
+    Q.news_headline = "The asylum referendum campaign falls short";
+}
+!}
+go-to: referendum_result
+
+@referendum_result
+title: The referendum count
+new-page: true
+
+**Campaign score: [+ asylum_referendum_score +].** [+
+asylum_referendum_result +].
+
+[? if asylum_referendum_mandate: The hardest mandate in the campaign is now on
+the record. Partners can still resist, but not by claiming the country forbids
+it.?][? if not asylum_referendum_mandate: The defeat is expensive on a field
+that was already hostile. The backlash hardens and the project needs six months.?]
+
+- #poland_card_finish
+
+@advance
+title: Table the bill: [+ asylum_reform_next_label +]
+subtitle: Requires government and passage power at or above the displayed threshold; veto players may force a narrower final settlement.
+view-if: asylum_reform_defined = 1
+choose-if: left_in_government = 1 and government_has_confidence = 1 and caretaker_government = 0 and asylum_reform_power >= asylum_reform_threshold
+unavailable-subtitle: We either lack executive access or have not assembled enough coalition, public and presidential power.
+on-arrival: reform_pressure_issue = "asylum"; reform_pressure_target_stage = asylum_reform_proposal_stage; reform_pressure_previous_stage = 0; reform_pressure_return_mode = "card"; reform_pressure_palace_override = 0; reform_pressure_referendum_used = 0
+go-to: poland_major_reforms.resolve

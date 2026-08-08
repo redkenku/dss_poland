@@ -234,9 +234,16 @@ const monthlyTimers = [
     "poland_labor_inspection_timer",
     "poland_housing_fund_timer",
     "poland_equality_bill_timer",
+    "poland_reform_slate_timer",
     "poland_abortion_reform_timer",
     "poland_marriage_reform_timer",
     "poland_labor_reform_timer",
+    "poland_church_reform_timer",
+    "poland_asylum_reform_timer",
+    "poland_border_reform_timer",
+    "poland_defence_reform_timer",
+    "poland_health_reform_timer",
+    "poland_courts_reform_timer",
     "reform_pressure_cooldown",
     "poland_health_compact_timer",
     "poland_digital_state_timer",
@@ -1234,7 +1241,14 @@ for (const story of queuedStories) {
             Q.migration_local_service_capacity + Q.issue_ownership
         ) / 4;
     }
-    const reach = clampMood(derivedReach, 0, 100);
+    // A country already moving our way carries our stories further, and a
+    // hostile climate hands the reach to the counter-campaign instead. This is
+    // last month's climate, which is the weather this story actually lands in.
+    const reach = clampMood(
+        derivedReach + (Number(Q.public_climate_media_bonus) || 0),
+        0,
+        100
+    );
     const audienceTrust = clampMood(derivedAudienceTrust, 0, 100);
     const frame = clampMood(derivedFrame, -100, 100);
     const messengerCredibility = clampMood(
@@ -1985,6 +1999,59 @@ Q.public_consensus_index = Math.round(
 Q.public_opinion_hottest_issue =
     publicIssueLabels[hottestPublicIssue] || hottestPublicIssue;
 Q.public_opinion_last_updated = Q.date_label + " monthly model";
+
+// The mood model used to update silently: nothing in the game read the trend,
+// so a decade of movement was invisible. These two indices are the trend, and
+// the monthly briefing, the ledger and the reform cards all speak from them.
+const progressiveFields = [
+    "abortion_rights", "lgbt_equality", "secular_state", "refugee_solidarity"
+];
+let progressiveTotal = 0;
+let ownershipTotal = 0;
+for (const field of progressiveFields) {
+    progressiveTotal += Math.max(
+        0, Math.min(100, Number(Q[field + "_support"]) || 0)
+    );
+    ownershipTotal += Math.max(
+        0, Math.min(100, Number(Q[field + "_left_ownership"]) || 0)
+    );
+}
+const progressiveIndex = progressiveTotal / progressiveFields.length;
+const ownershipIndex = ownershipTotal / progressiveFields.length;
+const previousProgressive = Number.isFinite(
+    Number(Q.public_climate_progressive_index)
+)
+    ? Number(Q.public_climate_progressive_index)
+    : progressiveIndex;
+// Twelve-month memory, so the reported direction is a trend rather than noise.
+Q.public_climate_progressive_trend =
+    (Number(Q.public_climate_progressive_trend) || 0) * 0.88 +
+    (progressiveIndex - previousProgressive);
+Q.public_climate_progressive_index = progressiveIndex;
+Q.public_climate_left_ownership_index = ownershipIndex;
+const trend = Number(Q.public_climate_progressive_trend);
+Q.public_climate_direction = trend >= 1.6
+    ? "progressive wave"
+    : (trend >= 0.5
+        ? "slow liberalisation"
+        : (trend <= -1.6
+            ? "reactionary surge"
+            : (trend <= -0.5 ? "conservative drift" : "settled trench")));
+Q.public_climate_band = progressiveIndex >= 58
+    ? "permissive"
+    : (progressiveIndex >= 50
+        ? "balanced"
+        : (progressiveIndex >= 43 ? "resistant" : "hostile"));
+Q.public_climate_report =
+    "National climate: " + Q.public_climate_band + " terrain, " +
+    Q.public_climate_direction + ". Hottest field: " +
+    Q.public_opinion_hottest_issue + ".";
+// A moving climate is felt as media weather, not only as a number: an
+// enthusiastic country amplifies the Left's own coverage and a hostile one
+// gives the counter-campaign the reach instead.
+Q.public_climate_media_bonus = Math.round(
+    Math.max(-6, Math.min(6, trend * 2.2))
+);
 
 // Women's Strike participation cools faster than movement reputation. Broad
 // sympathy, conservative backlash and party-conversion memory move on separate

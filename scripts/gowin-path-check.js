@@ -885,6 +885,93 @@ console.log('gowin-path-check: Koalicja Polska / Trzecia Droga committee OK');
   assert.strictEqual(group(Q, 'konf_committee').active, 1);
 }
 
+{
+  // Far-right fragmentation pressure is not a split. Independence March
+  // choices raise far_right_fragmentation; only the Braun event sets
+  // far_right_split, so Korona stays on the Konfederacja committee here.
+  const { engine, Q } = newEngine();
+  normalize(engine);
+  Q.far_right_fragmentation = 12;
+  normalize(engine);
+  const kkp = group(Q, 'kkp');
+  assert.strictEqual(Q.far_right_split, 0);
+  assert.strictEqual(kkp.list_committee, 'konf');
+  assert(String(Q.konf_list_members).includes(kkp.name));
+}
+
+{
+  // September 2020: the Fiore/Braun meeting is a routed legacy file, so the
+  // router, the congestion count and the desk all have to know about it.
+  const { engine, choose, Q } = newEngine();
+  Q.year = 2020;
+  Q.month = 9;
+  Q.trz_repeat_election_pending = 0;
+  Q.merger_event_done = 1;
+  Q.animals_2020_done = 1;
+  Q.emilewicz_left_porozumienie = 1;
+  Q.caucus_crisis_pending = 0;
+  engine.goToScene('poland_polling');
+  assert.strictEqual(Q.legacy_congestion_pending, 0);
+  assert.strictEqual(engine.state.sceneId, 'poland_events.fiore_braun_2020');
+  Q.resources = 5;
+  choose('poland_events.fiore_prosecutors');
+  assert.strictEqual(Q.fiore_braun_2020_done, 1);
+  assert.strictEqual(Q.fiore_2020_response, 'Referral and procedure');
+  // Fragmentation pressure, not a Konfederacja split.
+  assert.strictEqual(Q.far_right_fragmentation, 3);
+  assert.strictEqual(Q.far_right_split, 0);
+}
+
+{
+  // Who holds the Palace in September 2020 selects the prose branch, so every
+  // reachable presidency has to resolve to a key the event actually writes.
+  const palaces = [
+    ['duda', { president_name: 'Andrzej Duda' }],
+    ['trzaskowski', { president_name: 'Rafał Trzaskowski' }],
+    ['left', { president_name: 'Robert Biedroń', left_president: 1 }],
+    ['bosak', {
+      president_name: 'Krzysztof Bosak', pres_runoff_winner_key: 'bosak',
+    }],
+    ['centrist', {
+      president_name: 'Szymon Hołownia', pres_runoff_winner_key: 'holownia',
+    }],
+    ['interregnum', {
+      president_name: 'Elżbieta Witek (acting)', trz_repeat_election_pending: 1,
+    }],
+  ];
+  const rendered = {};
+  for (const [expected, state] of palaces) {
+    const { engine, Q } = newEngine();
+    Object.assign(Q, state);
+    engine.goToScene('poland_events.fiore_braun_2020');
+    assert.strictEqual(Q.fiore_palace, expected,
+      expected + ' presidency resolved as ' + Q.fiore_palace);
+    rendered[expected] = JSON.stringify(engine.state.currentContent);
+  }
+  // A branch whose condition never matches would silently drop its paragraph,
+  // so the two furthest-apart presidencies must not render the same page.
+  assert.notStrictEqual(rendered.duda, rendered.bosak);
+  assert(rendered.duda.includes('another five years'));
+  assert(rendered.bosak.includes('President-elect'));
+}
+
+{
+  // With a second file open the month is congested and the desk serialises it.
+  const { engine, Q } = newEngine();
+  Q.year = 2020;
+  Q.month = 9;
+  Q.trz_repeat_election_pending = 0;
+  Q.merger_event_done = 1;
+  Q.animals_2020_done = 0;
+  Q.emilewicz_left_porozumienie = 1;
+  Q.caucus_crisis_pending = 0;
+  engine.goToScene('poland_polling');
+  assert.strictEqual(Q.legacy_congestion_pending, 1);
+  assert.strictEqual(Q.poland_legacy_event_queue_count, 2);
+  assert(String(Q.poland_legacy_event_queue_titles)
+    .includes('A guest from Forza Nuova'));
+}
+
 console.log('gowin-path-check: Konfederacja family OK');
 
 // --- 13. alliances carry their full names, and isolation stays visible ---
@@ -907,11 +994,13 @@ console.log('gowin-path-check: Konfederacja family OK');
   normalize(engine);
   assert.strictEqual(Q.kp_committee_class, 'party-third-way');
 
-  // Nothing has isolated itself at the start.
+  // The German Minority won the one Sejm seat outside the five national
+  // electoral lists at the opening election.
   const fresh = newEngine();
   normalize(fresh.engine);
-  assert.strictEqual(fresh.Q.independent_bucket_count, 0,
-    'Everything starts on a shared committee');
+  assert.strictEqual(fresh.Q.independent_bucket_count, 1);
+  assert.strictEqual(fresh.Q.independent_bucket_seats, 1);
+  assert(String(fresh.Q.independent_bucket_members).includes('German Minority'));
 
   // A party that leaves every committee stays visible in the bucket.
   fresh.Q.porozumienie_exit_done = 1;
@@ -926,8 +1015,8 @@ console.log('gowin-path-check: Konfederacja family OK');
   group(fresh.Q, 'kukiz15').list_committee = 'kukiz';
   group(fresh.Q, 'kukiz15').exclusive_seats = 6;
   normalize(fresh.engine);
-  assert.strictEqual(fresh.Q.independent_bucket_count, 2);
-  assert.strictEqual(fresh.Q.independent_bucket_seats, 11);
+  assert.strictEqual(fresh.Q.independent_bucket_count, 3);
+  assert.strictEqual(fresh.Q.independent_bucket_seats, 12);
   assert(String(fresh.Q.independent_bucket_members).includes('Porozumienie'));
   assert(String(fresh.Q.independent_bucket_members).includes("Kukiz'15"));
   assertAffiliationConsistency(fresh.Q, 'independent bucket');
@@ -963,3 +1052,237 @@ console.log('gowin-path-check: alliance names and independent bucket OK');
 }
 
 console.log('gowin-path-check: alliance split invariant OK');
+
+// --- 15. the prime minister's own family is not the cabinet's owner -----
+{
+  const { engine, Q } = newEngine();
+  Q.prime_minister = 'Krzysztof Gawkowski';
+  Q.government_party = 'ko';
+  normalize(engine);
+  assert.strictEqual(Q.pm_political_family, 'left',
+    'A Lewica compromise premier is a Lewica politician');
+  assert.strictEqual(Q.pm_party_class, 'party-lewica');
+  assert.strictEqual(Q.pm_is_left, 1);
+  assert.strictEqual(Q.pm_leads_own_party_government, 0,
+    'He is not leading a government his own party owns');
+
+  // The KO migration pivot must not put its words in a Lewica PM's mouth.
+  Q.continuous_campaign = 1;
+  Q.year = 2024; Q.month = 10; Q.caretaker_government = 0;
+  const pending = (engine._compileChoices(
+    game.scenes['poland_event_queue.all_events']
+  ) || []).map(function (c) { return c.id; });
+  assert(!pending.includes('poland_events_2023_2024.migration_pivot_2024'),
+    'A Lewica prime minister must not propose the KO asylum suspension');
+
+  // A KO prime minister still gets it.
+  Q.prime_minister = 'Donald Tusk';
+  normalize(engine);
+  assert.strictEqual(Q.pm_political_family, 'ko');
+  const koPending = (engine._compileChoices(
+    game.scenes['poland_event_queue.all_events']
+  ) || []).map(function (c) { return c.id; });
+  assert(koPending.includes('poland_events_2023_2024.migration_pivot_2024'),
+    'A KO prime minister should still reach it');
+}
+
+{
+  // Morawiecki heads a PiS cabinet even when a nominee party was recorded.
+  const { engine, Q } = newEngine();
+  Q.prime_minister = 'Mateusz Morawiecki';
+  Q.government_party = 'other';
+  normalize(engine);
+  assert.strictEqual(Q.pm_political_family, 'pis');
+  assert.strictEqual(Q.pm_party_class, 'party-pis');
+}
+
+{
+  // A borrowed premiership buys less, not more.
+  const { engine, Q } = newEngine();
+  Q.prime_minister = 'Krzysztof Gawkowski';
+  Q.left_seats = 26;
+  Q.ko_seats = 157;
+  Q.ministry_ko_in_cabinet = 1;
+  normalize(engine);
+  assert.strictEqual(Q.left_is_strongest_coalition_partner, 0);
+  assert.strictEqual(Q.left_pm_is_borrowed, 1,
+    'A Left premier under a larger KO is holding a borrowed mandate');
+
+  // Lewica as the largest cabinet party is not borrowing anything.
+  Q.left_seats = 190;
+  normalize(engine);
+  assert.strictEqual(Q.left_is_strongest_coalition_partner, 1);
+  assert.strictEqual(Q.left_pm_is_borrowed, 0);
+}
+
+console.log('gowin-path-check: prime-ministerial family OK');
+
+// --- 16. electoral-family display follows live party affiliation --------
+{
+  const { engine, Q } = newEngine();
+  normalize(engine);
+  assert.strictEqual(Q.independent_bucket_count, 1);
+  assert.strictEqual(Q.independent_bucket_seats, 1);
+  assert(String(Q.independent_bucket_members).includes('German Minority'));
+  assert.strictEqual(Q.independent_bucket_senators, 4,
+    'Independent senators remain visible without an independent Sejm party');
+  const party = function(id) {
+    return Q.parliamentary_party_records.find(function(record) {
+      return record.id === id;
+    });
+  };
+  const family = function(id) {
+    return Q.parliamentary_family_records.find(function(record) {
+      return record.id === id;
+    });
+  };
+  assert.deepStrictEqual(
+    ['zp', 'ko', 'kp', 'konf', 'left', 'independent'].map(function(id) {
+      const record = family(id);
+      return [record.sejm_seats, record.senate_seats];
+    }),
+    [[235, 48], [134, 43], [30, 3], [11, 0], [49, 2], [1, 4]]
+  );
+  assert.deepStrictEqual(
+    ['pis_party', 'porozumienie', 'solidarna'].map(function(id) {
+      const record = party(id);
+      return [record.sejm_mps, record.senators];
+    }),
+    [[199, 44], [18, 2], [18, 2]]
+  );
+  assert.deepStrictEqual(
+    ['po', 'nowoczesna', 'ipl', 'greens'].map(function(id) {
+      const record = party(id);
+      return [record.sejm_mps, record.senators];
+    }),
+    [[106, 43], [10, 0], [2, 0], [3, 0]]
+  );
+  assert.deepStrictEqual(
+    [party('ko_independent_parliamentarians').sejm_mps,
+      party('ko_independent_parliamentarians').senators],
+    [13, 0]
+  );
+  assert.deepStrictEqual(
+    ['psl_party', 'kukiz15', 'kp_partners'].map(function(id) {
+      const record = party(id);
+      return [record.sejm_mps, record.senators];
+    }),
+    [[20, 2], [6, 0], [1, 1]]
+  );
+  assert.deepStrictEqual(
+    [party('kp_independent_parliamentarians').sejm_mps,
+      party('kp_independent_parliamentarians').senators],
+    [3, 0]
+  );
+  assert.deepStrictEqual(
+    ['nowa_nadzieja', 'ruch_narodowy', 'kkp'].map(function(id) {
+      const record = party(id);
+      return [record.sejm_mps, record.senators];
+    }),
+    [[5, 0], [5, 0], [1, 0]]
+  );
+  assert.deepStrictEqual(
+    Q.parliamentary_family_records.reduce(function(totals, record) {
+      return [totals[0] + record.sejm_seats, totals[1] + record.senate_seats];
+    }, [0, 0]),
+    [460, 100],
+    'Opening family totals must reconcile the full Sejm and Senate'
+  );
+  assert.deepStrictEqual(
+    Q.parliamentary_party_records.reduce(function(totals, record) {
+      return [totals[0] + record.sejm_mps, totals[1] + record.senators];
+    }, [0, 0]),
+    [460, 100],
+    'Opening party/member records must reconcile the family totals'
+  );
+  engine.goToScene('status.relations');
+  assert.strictEqual(Q.status_rival_pis_party_sejm, 199);
+  assert.strictEqual(Q.status_rival_po_sejm, 106);
+  assert.strictEqual(Q.status_rival_psl_party_sejm, 20);
+  assert.strictEqual(Q.status_rival_kp_partners_sejm, 1);
+  assert.strictEqual(Q.status_rival_kp_partners_senate, 1);
+  assert.strictEqual(Q.status_kp_independent_sejm, 3);
+  assert.strictEqual(Q.status_ko_independent_sejm, 13);
+  assert.strictEqual(Q.status_other_name, 'German Minority');
+  assert.strictEqual(Q.status_ko_convention_visible, 0,
+    'The 2025 convention must not appear in the 2019 opening state');
+  assert.strictEqual(Q.status_rival_po_in_ko, 1);
+
+  Q.ko_consolidated = 1;
+  normalize(engine);
+  assert.strictEqual(group(Q, 'ko_party').active, 1);
+  for (const id of ['po', 'nowoczesna', 'ipl']) {
+    assert.strictEqual(group(Q, id).kind, 'current',
+      id + ' should become an internal KO current after consolidation');
+  }
+  assert.strictEqual(group(Q, 'greens').kind, 'party',
+    'Zieloni remain a separate allied party');
+  engine.goToScene('status.relations');
+  assert.strictEqual(Q.status_rival_po_in_ko, 0);
+  assert.strictEqual(Q.status_rival_ko_party_in_ko, 1);
+  assert.strictEqual(Q.status_rival_greens_in_ko, 1);
+  assert.strictEqual(Q.status_ko_convention_visible, 1);
+}
+
+{
+  const { engine, Q } = newEngine();
+  Q.ko_splinter_active = 1;
+  Q.ko_splinter_type = 'Progressive';
+  Q.ko_splinter_seats = 7;
+  normalize(engine);
+  assert.strictEqual(group(Q, 'ko_splinter').list_committee, 'ko_splinter');
+  assert(String(Q.independent_bucket_members).includes('Progressive'));
+  assert.strictEqual(Q.independent_bucket_seats, 8);
+  engine.goToScene('status.relations');
+  assert.strictEqual(Q.status_rival_ko_splinter_in_ko, 0);
+}
+
+{
+  const { engine, Q } = newEngine();
+  Q.razem_party_formed = 1;
+  Q.razem_party_seats = 4;
+  Q.pps_party_formed = 1;
+  Q.pps_party_seats = 2;
+  Q.unia_centrum_formed = 1;
+  Q.centrum_seats = 3;
+  Q.p0_formed = 1;
+  Q.p0_seats = 2;
+  normalize(engine);
+  assert(String(Q.independent_bucket_members).includes('Razem'));
+  assert(String(Q.independent_bucket_members).includes('PPS'));
+  assert(String(Q.independent_bucket_members).includes('Unia Centrum'));
+  assert(String(Q.independent_bucket_members).includes('Partia Zero'));
+  assert.strictEqual(Q.independent_bucket_count, 5);
+  assert.strictEqual(Q.independent_bucket_seats, 12);
+}
+
+{
+  const { engine, Q } = newEngine();
+  Q.rozwoj_association_active = 1;
+  Q.rozwoj_party_formed = 1;
+  Q.rozwoj_seats = 5;
+  normalize(engine);
+  assert.strictEqual(group(Q, 'rozwoj_plus').list_committee, 'rozwoj');
+  assert(String(Q.independent_bucket_members).includes('Rozwój+'));
+}
+
+{
+  const statusSource = fs.readFileSync(
+    path.join(projectRoot, 'source/scenes/status.scene.dry'), 'utf8'
+  );
+  const relationsPanel = statusSource.split('@relations')[1].split('@institutions')[0];
+  const familyOrder = [
+    '[+ zp_committee_name +] component parties',
+    'Koalicja Obywatelska component organisations',
+    '[+ kp_committee_name +] component organisations',
+    '[+ konf_committee_name +] component organisations',
+    'Independent parties'
+  ].map(function(label) { return relationsPanel.indexOf(label); });
+  assert(familyOrder.every(function(index) { return index >= 0; }));
+  assert.deepStrictEqual(familyOrder.slice().sort(function(a, b) { return a - b; }),
+    familyOrder, 'Electoral families should render in the requested order');
+  assert(!relationsPanel.includes('status_rival_kp_committee_name +]</b>'));
+  assert(!relationsPanel.includes('status_rival_konf_committee_name +]</b>'));
+}
+
+console.log('gowin-path-check: electoral-family display OK');

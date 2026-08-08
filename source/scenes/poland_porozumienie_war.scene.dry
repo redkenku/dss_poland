@@ -24,6 +24,21 @@ const porozumienie = (Q.rival_group_records || []).find(function(record) {
     return record.id == "porozumienie";
 });
 if (porozumienie) {
+    // The 2019 list opened with eighteen Porozumienie MPs. By this dispute
+    // only the twelve-person parliamentary core used by the subsequent split
+    // remains; the other mandates have stayed inside the PiS family.
+    const openingCount = Math.max(0, Number(porozumienie.mp_count) || 0);
+    const currentCount = Math.min(openingCount, 12);
+    porozumienie.mp_count = currentCount;
+    porozumienie.sejm_mps = currentCount;
+    const pisParty = (Q.rival_group_records || []).find(function(record) {
+        return record.id == "pis_party";
+    });
+    if (pisParty && openingCount > currentCount) {
+        pisParty.mp_count = Math.max(0, Number(pisParty.mp_count) || 0) +
+            openingCount - currentCount;
+        pisParty.sejm_mps = pisParty.mp_count;
+    }
     porozumienie.cohesion = Math.max(
         0,
         Math.round(cohesion - Q.bielan_claim_strength / 6)

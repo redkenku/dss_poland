@@ -668,10 +668,19 @@ Q.status_rozwoj_seats = statusWhole(Q.rozwoj_seats, 0);
 Q.status_korona_seats = statusWhole(Q.korona_seats, 0);
 Q.status_ko_splinter_seats = statusWhole(Q.ko_splinter_seats, 0);
 Q.status_porozumienie_seats = statusWhole(Q.porozumienie_seats, 0);
-Q.status_pis_seats = statusWhole(Q.pis_seats, 235);
-Q.status_ko_seats = statusWhole(Q.ko_seats, 134);
-Q.status_psl_seats = statusWhole(Q.psl_seats, 30);
-Q.status_konf_seats = statusWhole(Q.konf_seats, 11);
+const statusParliamentaryFamilies = Array.isArray(Q.parliamentary_family_records)
+    ? Q.parliamentary_family_records
+    : [];
+const statusFamilySejm = function(id, fallback) {
+    const family = statusParliamentaryFamilies.find(function(record) {
+        return record && record.id == id;
+    });
+    return statusWhole(family ? family.sejm_seats : fallback, fallback);
+};
+Q.status_pis_seats = statusFamilySejm("zp", Q.pis_seats || 235);
+Q.status_ko_seats = statusFamilySejm("ko", Q.ko_seats || 134);
+Q.status_psl_seats = statusFamilySejm("kp", Q.psl_seats || 30);
+Q.status_konf_seats = statusFamilySejm("konf", Q.konf_seats || 11);
 Q.status_p2050_seats = statusWhole(Q.p2050_seats, 0);
 Q.status_other_seats = statusWhole(Q.other_seats, 1);
 Q.status_left_intent = statusOneDecimal(Q.left_vote_intent, 12.6);
@@ -772,8 +781,7 @@ Q.status_ko_merger_result = statusText(
 Q.status_ko_convention_visible =
     Q.ko_consolidated ||
     Q.ko_convention_done ||
-    Q.ko_merger_done ||
-    (typeof Q.ko_merger_result === "string" && Q.ko_merger_result.trim())
+    Q.ko_convention_failed
         ? 1
         : 0;
 Q.status_psl_ideology = statusText(
@@ -898,7 +906,7 @@ Q.status_rival_group_month_action = statusText(
     "No component organisation has acted yet"
 );
 const statusRivalGroupIds = [
-    "pis_apparatus", "porozumienie", "solidarna", "morawiecki",
+    "pis_party", "pis_apparatus", "porozumienie", "solidarna", "morawiecki",
     "pis_welfare", "pis_security", "pis_culture", "rozwoj_plus",
     "po", "nowoczesna", "ipl", "greens", "ko_party", "ko_splinter",
     "republikanie", "odnowa", "psl_party", "kukiz15", "kp_partners",
@@ -909,6 +917,40 @@ const statusRivalGroupIds = [
 const statusRivalGroupRecords = Array.isArray(Q.rival_group_records)
     ? Q.rival_group_records
     : [];
+const statusParliamentaryPartyRecords = Array.isArray(
+    Q.parliamentary_party_records
+) ? Q.parliamentary_party_records : [];
+const statusParliamentaryParty = function(id) {
+    return statusParliamentaryPartyRecords.find(function(record) {
+        return record && record.id == id;
+    }) || {};
+};
+const statusKoIndependentParliamentarians = statusParliamentaryParty(
+    "ko_independent_parliamentarians"
+);
+Q.status_ko_independent_sejm = statusWhole(
+    statusKoIndependentParliamentarians.sejm_mps,
+    0
+);
+Q.status_ko_independent_senate = statusWhole(
+    statusKoIndependentParliamentarians.senators,
+    0
+);
+const statusKpIndependentParliamentarians = statusParliamentaryParty(
+    "kp_independent_parliamentarians"
+);
+Q.status_kp_independent_sejm = statusWhole(
+    statusKpIndependentParliamentarians.sejm_mps,
+    0
+);
+Q.status_kp_independent_senate = statusWhole(
+    statusKpIndependentParliamentarians.senators,
+    0
+);
+Q.status_other_name = statusText(
+    statusParliamentaryParty("other_independent").name,
+    "Other independent lists"
+);
 for (const id of statusRivalGroupIds) {
     const record = statusRivalGroupRecords.find(function(candidate) {
         return candidate && candidate.id == id;
@@ -919,6 +961,17 @@ for (const id of statusRivalGroupIds) {
         "unrecorded"
     );
     Q["status_rival_" + id + "_active"] = record.active ? 1 : 0;
+    const rivalIsExternalParty = record.active && record.kind == "party";
+    const rivalListCommittee = String(record.list_committee || "");
+    Q["status_rival_" + id + "_in_zp"] =
+        rivalIsExternalParty && rivalListCommittee == "pis" ? 1 : 0;
+    Q["status_rival_" + id + "_in_ko"] =
+        rivalIsExternalParty && rivalListCommittee == "ko" ? 1 : 0;
+    Q["status_rival_" + id + "_in_kp"] =
+        rivalIsExternalParty &&
+        ["psl", "third_way"].includes(rivalListCommittee) ? 1 : 0;
+    Q["status_rival_" + id + "_in_konf"] =
+        rivalIsExternalParty && rivalListCommittee == "konf" ? 1 : 0;
     Q["status_rival_" + id + "_org"] = statusNumber(
         record.organisation,
         0
@@ -933,6 +986,17 @@ for (const id of statusRivalGroupIds) {
     );
     Q["status_rival_" + id + "_mps"] = statusNumber(
         record.mp_count,
+        0
+    );
+    const parliamentaryRecord = statusParliamentaryPartyRecords.find(
+        function(candidate) { return candidate && candidate.id == id; }
+    ) || {};
+    Q["status_rival_" + id + "_sejm"] = statusWhole(
+        parliamentaryRecord.sejm_mps,
+        0
+    );
+    Q["status_rival_" + id + "_senate"] = statusWhole(
+        parliamentaryRecord.senators,
         0
     );
     Q["status_rival_" + id + "_seats"] = statusNumber(
@@ -1521,6 +1585,37 @@ Q.status_public_panic_band = publicSalienceBand(
 Q.status_public_hottest = statusText(
     Q.public_opinion_hottest_issue,
     "Social spending and public services"
+);
+// The ledger used to show levels with no direction, so a decade of movement
+// looked identical to a decade of stasis.
+Q.status_public_climate_direction = statusText(
+    Q.public_climate_direction,
+    "settled trench"
+);
+Q.status_public_climate_band = statusText(
+    Q.public_climate_band,
+    "resistant"
+);
+Q.status_public_progressive_index = Math.round(
+    statusNumber(Q.public_climate_progressive_index, 47)
+);
+Q.status_public_field_ownership = Math.round(
+    statusNumber(Q.public_climate_left_ownership_index, 30)
+);
+Q.status_public_climate_media = Math.round(
+    statusNumber(Q.public_climate_media_bonus, 0)
+);
+Q.status_reform_slate_count = Math.round(
+    statusNumber(Q.reform_slate_count, 0)
+);
+Q.status_reform_slate_max = Math.round(
+    statusNumber(Q.reform_slate_max, 3)
+);
+Q.status_reform_slate_settled = Math.round(
+    statusNumber(Q.reform_slate_settled, 0)
+);
+Q.status_reform_slate_left = Math.round(
+    statusNumber(Q.reform_slate_slots_left, 3)
 );
 Q.status_public_last_issue = statusText(
     Q.public_opinion_last_issue,
@@ -2118,63 +2213,59 @@ call: status
 [? if status_korona_visible: <div class="faction-row"><span class="party party-korona"><b>Korona</b></span><span>[+ status_korona_poll +]% · resources [+ status_korona_org_resources +] · [+ status_korona_ideology_drift +]</span></div><div class="ledger-subrow">[+ status_korona_ai_headline +]</div>?]
 [? if status_nowa_solidarnosc_visible or status_p0_visible or status_centrum_visible or status_rozwoj_visible or status_tak_rozwoj_visible or status_korona_visible: </div>?]
 
+<div class="ledger-section"><div class="faction-row"><span>Prime minister</span><span class="party [+ pm_party_class +]"><b>[+ prime_minister +]</b></span></div>
+<div class="ledger-subrow">[+ pm_party_name +][? if pm_leads_own_party_government = 0:, heading a cabinet owned by [+ government_owner +]?].</div></div>
+
 <details class="ledger-disclosure"><summary>[+ zp_committee_name +] component organisations</summary>
-<div class="ledger-section"><div class="faction-row"><span class="party party-pis"><b>PiS</b></span><span>[+ status_rival_pis_apparatus_org_band +] organisation · [+ status_rival_pis_apparatus_cohesion_band +]</span></div>
-[? if status_rival_porozumienie_active and not porozumienie_exit_done: <div class="faction-row"><span class="party party-pis"><b>[+ status_rival_porozumienie_name +]</b></span><span>[+ status_rival_porozumienie_legal +] · [+ status_rival_porozumienie_seats +] exclusive seats</span></div>?]
-[? if status_rival_solidarna_active and not suwerenna_walkout and suwerenna_merger_result != "Merger refused" and not suwerenna_merged: <div class="faction-row"><span class="party party-pis"><b>[+ status_rival_solidarna_name +]</b></span><span>[+ status_rival_solidarna_legal +] · [+ status_rival_solidarna_org_band +] organisation · [+ status_rival_solidarna_cohesion_band +]</span></div>?]
-[? if suwerenna_walkout or suwerenna_merger_result = "Merger refused": <div class="faction-row"><span class="party party-sovereign-poland"><b>Suwerenna Polska</b></span><span>independent party · [+ status_suwerenna_poll +]%</span></div>?]
-[? if porozumienie_exit_done and status_rival_porozumienie_active: <div class="faction-row"><span class="party party-agreement"><b>Porozumienie</b></span><span>independent party · [+ status_porozumienie_poll +]%</span></div>?]
-[? if suwerenna_merged: <div class="faction-row"><span class="party party-sovereign-poland"><b>Suwerenna Polska current</b></span><span>Merged into PiS as an internal current</span></div>?]
-[? if status_rival_rozwoj_plus_active and rozwoj_party_formed and not rozwoj_joined_left: <div class="faction-row"><span class="party party-rozwoj"><b>[+ status_rival_rozwoj_plus_name +]</b></span><span>[+ status_rival_rozwoj_plus_legal +] · [+ status_rival_rozwoj_plus_seats +] seats</span></div>?]
-[? if status_rival_republikanie_active: <div class="faction-row"><span class="party party-pis"><b>[+ status_rival_republikanie_name +]</b></span><span>[+ status_rival_republikanie_legal +] · [+ status_rival_republikanie_mps +] deputies on PiS mandates</span></div>?]
-[? if status_rival_odnowa_active: <div class="faction-row"><span class="party party-pis"><b>[+ status_rival_odnowa_name +]</b></span><span>[+ status_rival_odnowa_legal +] · [+ status_rival_odnowa_mps +] deputies on PiS mandates</span></div>?]
-[? if kukiz_list_committee = "pis" and kukiz_active: <div class="faction-row"><span class="party party-kukiz"><b>Kukiz\'15</b></span><span>independent party on the PiS list · [+ kukiz_seats +] seats</span></div>?]
+<div class="ledger-section"><div class="faction-row"><span class="party party-pis"><b>PiS</b></span><span>[+ status_rival_pis_party_org_band +] organisation · [+ status_rival_pis_party_cohesion_band +] · [+ status_rival_pis_party_sejm +] Sejm · [+ status_rival_pis_party_senate +] Senate</span></div>
+[? if status_rival_porozumienie_in_zp: <div class="faction-row"><span class="party party-pis"><b>[+ status_rival_porozumienie_name +]</b></span><span>[+ status_rival_porozumienie_legal +] · [+ status_rival_porozumienie_sejm +] Sejm · [+ status_rival_porozumienie_senate +] Senate</span></div>?]
+[? if status_rival_solidarna_in_zp: <div class="faction-row"><span class="party party-pis"><b>[+ status_rival_solidarna_name +]</b></span><span>[+ status_rival_solidarna_legal +] · [+ status_rival_solidarna_org_band +] organisation · [+ status_rival_solidarna_cohesion_band +] · [+ status_rival_solidarna_sejm +] Sejm · [+ status_rival_solidarna_senate +] Senate</span></div>?]
+[? if status_rival_republikanie_in_zp: <div class="faction-row"><span class="party party-pis"><b>[+ status_rival_republikanie_name +]</b></span><span>[+ status_rival_republikanie_legal +] · [+ status_rival_republikanie_sejm +] Sejm · [+ status_rival_republikanie_senate +] Senate</span></div>?]
+[? if status_rival_odnowa_in_zp: <div class="faction-row"><span class="party party-pis"><b>[+ status_rival_odnowa_name +]</b></span><span>[+ status_rival_odnowa_legal +] · [+ status_rival_odnowa_sejm +] Sejm · [+ status_rival_odnowa_senate +] Senate</span></div>?]
+[? if status_rival_kukiz15_in_zp: <div class="faction-row"><span class="party party-kukiz"><b>Kukiz\'15</b></span><span>independent party on the PiS list · [+ status_rival_kukiz15_sejm +] Sejm · [+ status_rival_kukiz15_senate +] Senate</span></div>?]
 <div class="ledger-subrow">PiS electoral committee: [+ pis_list_members +].</div>
+</div></details>
+
+<details class="ledger-disclosure"><summary>Koalicja Obywatelska component organisations</summary>
+<div class="ledger-section">
+[? if status_rival_po_in_ko: <div class="faction-row"><span class="party party-ko"><b>[+ status_rival_po_name +]</b></span><span>[+ status_rival_po_org_band +] organisation · [+ status_rival_po_cohesion_band +] · [+ status_rival_po_sejm +] Sejm · [+ status_rival_po_senate +] Senate</span></div>?]
+[? if status_rival_nowoczesna_in_ko: <div class="faction-row"><span class="party party-ko"><b>[+ status_rival_nowoczesna_name +]</b></span><span>[+ status_rival_nowoczesna_org_band +] organisation · [+ status_rival_nowoczesna_cohesion_band +] · [+ status_rival_nowoczesna_sejm +] Sejm · [+ status_rival_nowoczesna_senate +] Senate</span></div>?]
+[? if status_rival_ipl_in_ko: <div class="faction-row"><span class="party party-ko"><b>[+ status_rival_ipl_name +]</b></span><span>[+ status_rival_ipl_org_band +] organisation · [+ status_rival_ipl_cohesion_band +] · [+ status_rival_ipl_sejm +] Sejm · [+ status_rival_ipl_senate +] Senate</span></div>?]
+[? if status_rival_ko_party_in_ko: <div class="faction-row"><span class="party party-ko"><b>[+ status_rival_ko_party_name +]</b></span><span>[+ status_rival_ko_party_org_band +] organisation · [+ status_rival_ko_party_sejm +] Sejm · [+ status_rival_ko_party_senate +] Senate</span></div>?]
+[? if status_rival_greens_in_ko: <div class="faction-row"><span class="party party-ko"><b>[+ status_rival_greens_name +]</b></span><span>[+ status_rival_greens_org_band +] organisation · relation [+ status_rival_greens_relation : relationships +] · [+ status_rival_greens_sejm +] Sejm · [+ status_rival_greens_senate +] Senate</span></div>?]
+[? if status_ko_independent_sejm > 0 or status_ko_independent_senate > 0: <div class="faction-row"><span>KO-affiliated independents</span><span>[+ status_ko_independent_sejm +] Sejm · [+ status_ko_independent_senate +] Senate</span></div>?]
+[? if ko_consolidated: <div class="ledger-subrow">PO, Nowoczesna and IPL now operate as internal KO currents instead of separate party slots.</div>?]
+[? if status_ko_convention_visible: <div class="ledger-subrow">2025 convention: [+ status_ko_merger_result +]. Greens remain a separate record in every outcome.</div>?]
+[? if ko_collapsed: <div class="ledger-subrow">Split: [+ ko_collapse_result +]. [+ ko_break_leader +] leads the breakaway; [+ ko_leader +] leads the rump.</div>?]
+[? if not ko_collapsed: <div class="ledger-subrow">KO's condition: [+ ko_condition_label +].</div>?]
 </div></details>
 
 <details class="ledger-disclosure"><summary>[+ kp_committee_name +] component organisations</summary>
 <div class="ledger-section">
-[? if status_rival_kp_committee_active: <div class="faction-row"><span class="party [+ kp_committee_class +]"><b>[+ status_rival_kp_committee_name +]</b></span><span>electoral alliance · [+ status_rival_kp_committee_mps +] deputies</span></div>?]
-[? if status_rival_psl_party_active: <div class="faction-row"><span class="party party-psl"><b>[+ status_rival_psl_party_name +]</b></span><span>[+ status_rival_psl_party_legal +] · [+ status_rival_psl_party_org_band +] organisation</span></div>?]
-[? if status_rival_p2050_party_active: <div class="faction-row"><span class="party party-p2050"><b>[+ status_rival_p2050_party_name +]</b></span><span>[+ status_rival_p2050_party_legal +] · [+ status_rival_p2050_party_org_band +] organisation</span></div>?]
-[? if status_rival_kukiz15_active and kukiz_left_kp = 0: <div class="faction-row"><span class="party party-kukiz"><b>[+ status_rival_kukiz15_name +]</b></span><span>[+ status_rival_kukiz15_legal +] · [+ status_rival_kukiz15_mps +] deputies</span></div>?]
-[? if status_rival_kukiz15_active and kukiz_left_kp = 1: <div class="faction-row"><span class="party party-kukiz"><b>[+ status_rival_kukiz15_name +]</b></span><span>left the committee · [+ kukiz_seats +] seats · [? if kukiz_alignment = "pis_current": sustains the government?][? if kukiz_alignment = "toleration": tolerates the government?][? if kukiz_alignment = "refused": outside every camp?][? if kukiz_alignment = "unaligned": undecided?]</span></div>?]
-[? if status_rival_kp_partners_active: <div class="faction-row"><span class="party party-ued"><b>[+ status_rival_kp_partners_name +]</b></span><span>[+ status_rival_kp_partners_legal +]</span></div>?]
-<div class="ledger-subrow">Shared committee: [+ kp_list_members +].</div>
+[? if status_rival_psl_party_in_kp: <div class="faction-row"><span class="party party-psl"><b>[+ status_rival_psl_party_name +]</b></span><span>[+ status_rival_psl_party_legal +] · [+ status_rival_psl_party_org_band +] organisation · [+ status_rival_psl_party_sejm +] Sejm · [+ status_rival_psl_party_senate +] Senate</span></div>?]
+[? if status_rival_p2050_party_in_kp: <div class="faction-row"><span class="party party-p2050"><b>[+ status_rival_p2050_party_name +]</b></span><span>[+ status_rival_p2050_party_legal +] · [+ status_rival_p2050_party_org_band +] organisation · [+ status_rival_p2050_party_sejm +] Sejm · [+ status_rival_p2050_party_senate +] Senate</span></div>?]
+[? if status_rival_kukiz15_in_kp: <div class="faction-row"><span class="party party-kukiz"><b>[+ status_rival_kukiz15_name +]</b></span><span>[+ status_rival_kukiz15_legal +] · [+ status_rival_kukiz15_sejm +] Sejm · [+ status_rival_kukiz15_senate +] Senate</span></div>?]
+[? if status_rival_kp_partners_in_kp: <div class="faction-row"><span class="party party-ued"><b>[+ status_rival_kp_partners_name +]</b></span><span>[+ status_rival_kp_partners_legal +] · [+ status_rival_kp_partners_sejm +] Sejm · [+ status_rival_kp_partners_senate +] Senate</span></div>?]
+[? if status_kp_independent_sejm > 0 or status_kp_independent_senate > 0: <div class="faction-row"><span>KP-affiliated independents</span><span>[+ status_kp_independent_sejm +] Sejm · [+ status_kp_independent_senate +] Senate</span></div><div class="ledger-subrow">Marek Biernacki, Jacek Tomczak and Radosław Lubczyk.</div>?]
+[? if status_rival_kp_committee_active: <div class="ledger-subrow">Shared committee: [+ kp_list_members +].</div>?]
 [? if status_rival_kp_committee_active = 0: <div class="ledger-subrow">No shared committee: the components are filing separately.</div>?]
-[? if kukiz_left_kp = 1: <div class="ledger-subrow">Kukiz\'15 is still a separate party after leaving the committee; PSL keeps the name, the structures and [+ psl_seats +] deputies.</div>?]
 </div></details>
 
 <details class="ledger-disclosure"><summary>[+ konf_committee_name +] component organisations</summary>
 <div class="ledger-section">
-[? if status_rival_konf_committee_active: <div class="faction-row"><span class="party party-konf"><b>[+ status_rival_konf_committee_name +]</b></span><span>electoral alliance · [+ status_rival_konf_committee_mps +] deputies</span></div>?]
-[? if status_rival_nowa_nadzieja_active: <div class="faction-row"><span class="party party-new-hope"><b>[+ status_rival_nowa_nadzieja_name +]</b></span><span>[+ status_rival_nowa_nadzieja_legal +] · [+ status_rival_nowa_nadzieja_mps +] deputies</span></div>?]
-[? if status_rival_ruch_narodowy_active: <div class="faction-row"><span class="party party-national-movement"><b>[+ status_rival_ruch_narodowy_name +]</b></span><span>[+ status_rival_ruch_narodowy_legal +] · [+ status_rival_ruch_narodowy_mps +] deputies</span></div>?]
-[? if status_rival_kkp_active and not far_right_split: <div class="faction-row"><span class="party party-kkp"><b>[+ status_rival_kkp_name +]</b></span><span>[+ status_rival_kkp_legal +] · [+ status_rival_kkp_mps +] deputies</span></div>?]
-[? if status_rival_kkp_active and far_right_split: <div class="faction-row"><span class="party party-korona"><b>[+ status_rival_kkp_name +]</b></span><span>left the committee · [+ korona_seats +] seats</span></div>?]
+[? if status_rival_nowa_nadzieja_in_konf: <div class="faction-row"><span class="party party-new-hope"><b>[+ status_rival_nowa_nadzieja_name +]</b></span><span>[+ status_rival_nowa_nadzieja_legal +] · [+ status_rival_nowa_nadzieja_sejm +] Sejm · [+ status_rival_nowa_nadzieja_senate +] Senate</span></div>?]
+[? if status_rival_ruch_narodowy_in_konf: <div class="faction-row"><span class="party party-national-movement"><b>[+ status_rival_ruch_narodowy_name +]</b></span><span>[+ status_rival_ruch_narodowy_legal +] · [+ status_rival_ruch_narodowy_sejm +] Sejm · [+ status_rival_ruch_narodowy_senate +] Senate</span></div>?]
+[? if status_rival_kkp_in_konf: <div class="faction-row"><span class="party party-kkp"><b>[+ status_rival_kkp_name +]</b></span><span>[+ status_rival_kkp_legal +] · [+ status_rival_kkp_sejm +] Sejm · [+ status_rival_kkp_senate +] Senate</span></div>?]
 <div class="ledger-subrow">Konfederacja committee: [+ konf_list_members +].</div>
 [? if konf_succession_2022_done = 0: <div class="ledger-subrow">The libertarian component currently trades as [+ konf_libertarian_party_name +] under [+ konf_libertarian_leader +].</div>?]
 [? if konf_succession_2022_done = 1: <div class="ledger-subrow">After the congress the libertarian component trades as [+ konf_libertarian_party_name +] under [+ konf_libertarian_leader +].</div>?]
 </div></details>
 
-<details class="ledger-disclosure"><summary>Parties on their own committee</summary>
+<details class="ledger-disclosure"><summary>Independent parties</summary>
 <div class="ledger-section">
-[? if independent_bucket_count = 0: <div class="ledger-subrow">Every surviving organisation is currently attached to a shared electoral committee.</div>?]
-[? if independent_bucket_count > 0: <div class="faction-row"><span class="party party-independent"><b>Filing alone</b></span><span>[+ independent_bucket_count +] organisations · [+ independent_bucket_seats +] seats</span></div><div class="ledger-subrow">[+ independent_bucket_members +].</div>?]
-</div></details>
-
-<details class="ledger-disclosure"><summary>Koalicja Obywatelska component organisations</summary>
-<div class="ledger-section">
-[? if status_rival_po_active: <div class="faction-row"><span class="party party-ko"><b>[+ status_rival_po_name +]</b></span><span>[+ status_rival_po_org_band +] organisation · [+ status_rival_po_cohesion_band +]</span></div>?]
-[? if status_rival_nowoczesna_active: <div class="faction-row"><span class="party party-ko"><b>[+ status_rival_nowoczesna_name +]</b></span><span>[+ status_rival_nowoczesna_org_band +] organisation · [+ status_rival_nowoczesna_cohesion_band +]</span></div>?]
-[? if status_rival_ipl_active: <div class="faction-row"><span class="party party-ko"><b>[+ status_rival_ipl_name +]</b></span><span>[+ status_rival_ipl_org_band +] organisation · [+ status_rival_ipl_cohesion_band +]</span></div>?]
-[? if status_rival_greens_active and not greens_joined_left: <div class="faction-row"><span class="party party-ko"><b>[+ status_rival_greens_name +]</b></span><span>[+ status_rival_greens_org_band +] organisation · relation [+ status_rival_greens_relation : relationships +]</span></div>?]
-[? if status_rival_ko_party_active: <div class="faction-row"><span class="party party-ko"><b>[+ status_rival_ko_party_name +]</b></span><span>[+ status_rival_ko_party_org_band +] organisation</span></div>?]
-[? if status_rival_ko_splinter_active: <div class="faction-row"><span class="party party-ko"><b>[+ status_rival_ko_splinter_name +]</b></span><span>[+ status_rival_ko_splinter_legal +]</span></div>?]
-[? if ko_consolidated: <div class="ledger-subrow">PO, Nowoczesna and IPL now operate as internal KO currents instead of separate party slots.</div>?]
-[? if status_ko_convention_visible: <div class="ledger-subrow">2025 convention: [+ status_ko_merger_result +]. Greens remain a separate record in every outcome.</div>?]
-[? if ko_collapsed: <div class="ledger-subrow">Split: [+ ko_collapse_result +]. [+ ko_break_leader +] leads the breakaway; [+ ko_leader +] leads the rump.</div>?]
-[? if not ko_collapsed: <div class="ledger-subrow">KO's condition: [+ ko_condition_label +].</div>?]
+[? if independent_bucket_count = 0: <div class="ledger-subrow">No independent party currently holds a Sejm seat.</div>?]
+[? if independent_bucket_count > 0: <div class="faction-row"><span class="party party-independent"><b>Independent</b></span><span>[+ independent_bucket_count +] parties</span></div><div class="ledger-subrow">[+ independent_bucket_members +].</div>?]
+[? if independent_bucket_seats > 0 or independent_bucket_senators > 0: <div class="ledger-row"><span>Parliamentarians</span><b>[+ independent_bucket_seats +] independent Sejm · [+ independent_bucket_senators +] independent Senate</b></div>?]
 </div></details>
 
 <div class="ledger-note">Internal Left control, adviser representation and faction pressure are tracked in Leadership and factions. Bilateral relations and monthly rival actions are tracked in Party relations.</div>
@@ -2189,9 +2280,16 @@ call: status
 
 <div class="ledger-section ledger-section-first"><div class="ledger-title">Working relationships</div>
 <div class="ledger-row"><span class="party party-ko"><b>KO</b></span><b>[+ status_ko_relation : relationships +]</b></div>
+[? if status_rival_greens_active and not greens_joined_left: <div class="ledger-row"><span class="party party-ko"><b>[+ status_rival_greens_name +]</b></span><b>[+ status_rival_greens_relation : relationships +]</b></div>?]
+[? if status_rival_ko_splinter_active: <div class="ledger-row"><span class="party party-ko"><b>[+ status_rival_ko_splinter_name +]</b></span><b>[+ status_rival_ko_splinter_relation : relationships +]</b></div>?]
 <div class="ledger-row"><span class="party party-psl"><b>PSL</b></span><b>[+ status_psl_relation : relationships +]</b></div>
+[? if status_rival_kukiz15_active and kukiz_left_kp = 1: <div class="ledger-row"><span class="party party-kukiz"><b>[+ status_rival_kukiz15_name +]</b></span><b>[+ status_rival_kukiz15_relation : relationships +]</b></div>?]
 [? if status_p2050_visible: <div class="ledger-row"><span class="party party-p2050"><b>Poland 2050</b></span><b>[+ status_p2050_relation : relationships +]</b></div>?]
 <div class="ledger-row"><span class="party party-pis"><b>PiS</b></span><b>[+ status_pis_relation : relationships +]</b></div>
+[? if suwerenna_walkout or suwerenna_merger_result = "Merger refused": <div class="ledger-row"><span class="party party-sovereign-poland"><b>Suwerenna Polska</b></span><b>[+ status_rival_solidarna_relation : relationships +]</b></div>?]
+[? if porozumienie_exit_done and status_rival_porozumienie_active: <div class="ledger-row"><span class="party party-agreement"><b>[+ status_rival_porozumienie_name +]</b></span><b>[+ status_rival_porozumienie_relation : relationships +]</b></div>?]
+[? if status_rival_republikanie_active: <div class="ledger-row"><span class="party party-pis"><b>[+ status_rival_republikanie_name +]</b></span><b>[+ status_rival_republikanie_relation : relationships +]</b></div>?]
+[? if status_rival_odnowa_active: <div class="ledger-row"><span class="party party-pis"><b>[+ status_rival_odnowa_name +]</b></span><b>[+ status_rival_odnowa_relation : relationships +]</b></div>?]
 [? if status_konf_visible: <div class="ledger-row"><span class="party party-konf"><b>Konfederacja</b></span><b>[+ status_konf_relation : relationships +]</b></div>?]
 [? if status_p0_visible: <div class="ledger-row"><span class="party"><b>[+ status_p0_short_name +]</b></span><b>[+ status_p0_relation : relationships +]</b></div>?]
 [? if status_korona_visible: <div class="ledger-row"><span class="party"><b>Korona</b></span><b>[+ status_korona_relation : relationships +]</b></div>?]
@@ -2226,59 +2324,54 @@ call: status
 </div>
 
 <details class="ledger-disclosure"><summary>[+ zp_committee_name +] component parties</summary>
-<div class="ledger-section"><div class="faction-row"><span class="party party-pis"><b>PiS</b></span><span>[+ status_rival_pis_apparatus_org_band +] organisation · [+ status_rival_pis_apparatus_cohesion_band +]</span></div>
-[? if status_rival_porozumienie_active and not porozumienie_exit_done: <div class="faction-row"><span class="party party-pis"><b>[+ status_rival_porozumienie_name +]</b></span><span>[+ status_rival_porozumienie_legal +] · [+ status_rival_porozumienie_relation : relationships +] relation</span></div>?]
-[? if status_rival_solidarna_active and not suwerenna_walkout and suwerenna_merger_result != "Merger refused" and not suwerenna_merged: <div class="faction-row"><span class="party party-pis"><b>[+ status_rival_solidarna_name +]</b></span><span>[+ status_rival_solidarna_legal +] · [+ status_rival_solidarna_org_band +] organisation · [+ status_rival_solidarna_cohesion_band +]</span></div>?]
-[? if suwerenna_walkout or suwerenna_merger_result = "Merger refused": <div class="faction-row"><span class="party party-sovereign-poland"><b>Suwerenna Polska</b></span><span>independent party · relation [+ status_rival_solidarna_relation : relationships +]</span></div>?]
-[? if porozumienie_exit_done and status_rival_porozumienie_active: <div class="faction-row"><span class="party party-agreement"><b>Porozumienie</b></span><span>independent party · relation [+ status_rival_porozumienie_relation : relationships +]</span></div>?]
-[? if suwerenna_merged: <div class="faction-row"><span class="party party-sovereign-poland"><b>Suwerenna Polska current</b></span><span>Merged into the PiS caucus as an internal current</span></div>?]
-[? if status_rival_republikanie_active: <div class="faction-row"><span class="party party-pis"><b>[+ status_rival_republikanie_name +]</b></span><span>[+ status_rival_republikanie_legal +] · relation [+ status_rival_republikanie_relation : relationships +]</span></div>?]
-[? if status_rival_odnowa_active: <div class="faction-row"><span class="party party-pis"><b>[+ status_rival_odnowa_name +]</b></span><span>[+ status_rival_odnowa_legal +] · relation [+ status_rival_odnowa_relation : relationships +]</span></div>?]
-[? if status_rival_rozwoj_plus_active and rozwoj_party_formed and not rozwoj_joined_left: <div class="faction-row"><span class="party party-pis"><b>[+ status_rival_rozwoj_plus_name +]</b></span><span>[+ status_rival_rozwoj_plus_legal +]</span></div>?]</div>
+<div class="ledger-section"><div class="faction-row"><span class="party party-pis"><b>PiS</b></span><span>[+ status_rival_pis_party_org_band +] organisation · [+ status_rival_pis_party_cohesion_band +] · [+ status_rival_pis_party_sejm +] Sejm · [+ status_rival_pis_party_senate +] Senate</span></div>
+[? if status_rival_porozumienie_in_zp: <div class="faction-row"><span class="party party-pis"><b>[+ status_rival_porozumienie_name +]</b></span><span>[+ status_rival_porozumienie_legal +] · [+ status_rival_porozumienie_relation : relationships +] relation · [+ status_rival_porozumienie_sejm +] Sejm · [+ status_rival_porozumienie_senate +] Senate</span></div>?]
+[? if status_rival_solidarna_in_zp: <div class="faction-row"><span class="party party-pis"><b>[+ status_rival_solidarna_name +]</b></span><span>[+ status_rival_solidarna_legal +] · [+ status_rival_solidarna_org_band +] organisation · [+ status_rival_solidarna_cohesion_band +] · [+ status_rival_solidarna_sejm +] Sejm · [+ status_rival_solidarna_senate +] Senate</span></div>?]
+[? if status_rival_republikanie_in_zp: <div class="faction-row"><span class="party party-pis"><b>[+ status_rival_republikanie_name +]</b></span><span>[+ status_rival_republikanie_legal +] · relation [+ status_rival_republikanie_relation : relationships +] · [+ status_rival_republikanie_sejm +] Sejm · [+ status_rival_republikanie_senate +] Senate</span></div>?]
+[? if status_rival_odnowa_in_zp: <div class="faction-row"><span class="party party-pis"><b>[+ status_rival_odnowa_name +]</b></span><span>[+ status_rival_odnowa_legal +] · relation [+ status_rival_odnowa_relation : relationships +] · [+ status_rival_odnowa_sejm +] Sejm · [+ status_rival_odnowa_senate +] Senate</span></div>?]
+[? if status_rival_kukiz15_in_zp: <div class="faction-row"><span class="party party-kukiz"><b>[+ status_rival_kukiz15_name +]</b></span><span>[+ status_rival_kukiz15_legal +] · [+ status_rival_kukiz15_sejm +] Sejm · [+ status_rival_kukiz15_senate +] Senate</span></div>?]
+</div>
 </details>
+
+<details class="ledger-disclosure"><summary>Koalicja Obywatelska component organisations</summary>
+<div class="ledger-section">
+[? if status_rival_po_in_ko: <div class="faction-row"><span class="party party-ko"><b>[+ status_rival_po_name +]</b></span><span>[+ status_rival_po_org_band +] organisation · [+ status_rival_po_cohesion_band +] · [+ status_rival_po_sejm +] Sejm · [+ status_rival_po_senate +] Senate</span></div>?]
+[? if status_rival_nowoczesna_in_ko: <div class="faction-row"><span class="party party-ko"><b>[+ status_rival_nowoczesna_name +]</b></span><span>[+ status_rival_nowoczesna_org_band +] organisation · [+ status_rival_nowoczesna_cohesion_band +] · [+ status_rival_nowoczesna_sejm +] Sejm · [+ status_rival_nowoczesna_senate +] Senate</span></div>?]
+[? if status_rival_ipl_in_ko: <div class="faction-row"><span class="party party-ko"><b>[+ status_rival_ipl_name +]</b></span><span>[+ status_rival_ipl_org_band +] organisation · [+ status_rival_ipl_cohesion_band +] · [+ status_rival_ipl_sejm +] Sejm · [+ status_rival_ipl_senate +] Senate</span></div>?]
+[? if status_rival_ko_party_in_ko: <div class="faction-row"><span class="party party-ko"><b>[+ status_rival_ko_party_name +]</b></span><span>[+ status_rival_ko_party_org_band +] organisation · [+ status_rival_ko_party_sejm +] Sejm · [+ status_rival_ko_party_senate +] Senate</span></div>?]
+[? if status_rival_greens_in_ko: <div class="faction-row"><span class="party party-ko"><b>[+ status_rival_greens_name +]</b></span><span>[+ status_rival_greens_org_band +] organisation · [+ status_rival_greens_relation : relationships +] relation · [+ status_rival_greens_sejm +] Sejm · [+ status_rival_greens_senate +] Senate</span></div>?]
+[? if status_ko_independent_sejm > 0 or status_ko_independent_senate > 0: <div class="faction-row"><span>KO-affiliated independents</span><span>[+ status_ko_independent_sejm +] Sejm · [+ status_ko_independent_senate +] Senate</span></div>?]
+[? if ko_consolidated: <div class="ledger-subrow">PO, Nowoczesna and IPL now operate as internal KO currents instead of separate party slots.</div>?]
+[? if status_ko_convention_visible: <div class="ledger-subrow">2025 convention: [+ status_ko_merger_result +].</div>?]
+</div></details>
 
 <details class="ledger-disclosure"><summary>[+ kp_committee_name +] component organisations</summary>
 <div class="ledger-section">
-[? if status_rival_kp_committee_active: <div class="faction-row"><span class="party [+ kp_committee_class +]"><b>[+ status_rival_kp_committee_name +]</b></span><span>electoral alliance · [+ status_rival_kp_committee_mps +] deputies</span></div>?]
-[? if status_rival_psl_party_active: <div class="faction-row"><span class="party party-psl"><b>[+ status_rival_psl_party_name +]</b></span><span>[+ status_rival_psl_party_legal +] · [+ status_rival_psl_party_org_band +] organisation</span></div>?]
-[? if status_rival_p2050_party_active: <div class="faction-row"><span class="party party-p2050"><b>[+ status_rival_p2050_party_name +]</b></span><span>[+ status_rival_p2050_party_legal +] · [+ status_rival_p2050_party_org_band +] organisation</span></div>?]
-[? if status_rival_kukiz15_active and kukiz_left_kp = 0: <div class="faction-row"><span class="party party-kukiz"><b>[+ status_rival_kukiz15_name +]</b></span><span>[+ status_rival_kukiz15_legal +] · [+ status_rival_kukiz15_mps +] deputies</span></div>?]
-[? if status_rival_kukiz15_active and kukiz_left_kp = 1: <div class="faction-row"><span class="party party-kukiz"><b>[+ status_rival_kukiz15_name +]</b></span><span>left the committee · [+ kukiz_seats +] seats · [? if kukiz_alignment = "pis_current": sustains the government?][? if kukiz_alignment = "toleration": tolerates the government?][? if kukiz_alignment = "refused": outside every camp?][? if kukiz_alignment = "unaligned": undecided?]</span></div>?]
-[? if status_rival_kp_partners_active: <div class="faction-row"><span class="party party-ued"><b>[+ status_rival_kp_partners_name +]</b></span><span>[+ status_rival_kp_partners_legal +]</span></div>?]
-<div class="ledger-subrow">Shared committee: [+ kp_list_members +].</div>
+[? if status_rival_psl_party_in_kp: <div class="faction-row"><span class="party party-psl"><b>[+ status_rival_psl_party_name +]</b></span><span>[+ status_rival_psl_party_legal +] · [+ status_rival_psl_party_org_band +] organisation · [+ status_rival_psl_party_sejm +] Sejm · [+ status_rival_psl_party_senate +] Senate</span></div>?]
+[? if status_rival_p2050_party_in_kp: <div class="faction-row"><span class="party party-p2050"><b>[+ status_rival_p2050_party_name +]</b></span><span>[+ status_rival_p2050_party_legal +] · [+ status_rival_p2050_party_org_band +] organisation · [+ status_rival_p2050_party_sejm +] Sejm · [+ status_rival_p2050_party_senate +] Senate</span></div>?]
+[? if status_rival_kukiz15_in_kp: <div class="faction-row"><span class="party party-kukiz"><b>[+ status_rival_kukiz15_name +]</b></span><span>[+ status_rival_kukiz15_legal +] · [+ status_rival_kukiz15_sejm +] Sejm · [+ status_rival_kukiz15_senate +] Senate</span></div>?]
+[? if status_rival_kp_partners_in_kp: <div class="faction-row"><span class="party party-ued"><b>[+ status_rival_kp_partners_name +]</b></span><span>[+ status_rival_kp_partners_legal +] · [+ status_rival_kp_partners_sejm +] Sejm · [+ status_rival_kp_partners_senate +] Senate</span></div>?]
+[? if status_kp_independent_sejm > 0 or status_kp_independent_senate > 0: <div class="faction-row"><span>KP-affiliated independents</span><span>[+ status_kp_independent_sejm +] Sejm · [+ status_kp_independent_senate +] Senate</span></div><div class="ledger-subrow">Marek Biernacki, Jacek Tomczak and Radosław Lubczyk.</div>?]
+[? if status_rival_kp_committee_active: <div class="ledger-subrow">Shared committee: [+ kp_list_members +].</div>?]
 [? if status_rival_kp_committee_active = 0: <div class="ledger-subrow">No shared committee: the components are filing separately.</div>?]
-[? if kukiz_left_kp = 1: <div class="ledger-subrow">Kukiz\'15 is still a separate party after leaving the committee; PSL keeps the name, the structures and [+ psl_seats +] deputies.</div>?]
 </div></details>
 
 <details class="ledger-disclosure"><summary>[+ konf_committee_name +] component organisations</summary>
 <div class="ledger-section">
-[? if status_rival_konf_committee_active: <div class="faction-row"><span class="party party-konf"><b>[+ status_rival_konf_committee_name +]</b></span><span>electoral alliance · [+ status_rival_konf_committee_mps +] deputies</span></div>?]
-[? if status_rival_nowa_nadzieja_active: <div class="faction-row"><span class="party party-new-hope"><b>[+ status_rival_nowa_nadzieja_name +]</b></span><span>[+ status_rival_nowa_nadzieja_legal +] · [+ status_rival_nowa_nadzieja_mps +] deputies</span></div>?]
-[? if status_rival_ruch_narodowy_active: <div class="faction-row"><span class="party party-national-movement"><b>[+ status_rival_ruch_narodowy_name +]</b></span><span>[+ status_rival_ruch_narodowy_legal +] · [+ status_rival_ruch_narodowy_mps +] deputies</span></div>?]
-[? if status_rival_kkp_active and not far_right_split: <div class="faction-row"><span class="party party-kkp"><b>[+ status_rival_kkp_name +]</b></span><span>[+ status_rival_kkp_legal +] · [+ status_rival_kkp_mps +] deputies</span></div>?]
-[? if status_rival_kkp_active and far_right_split: <div class="faction-row"><span class="party party-korona"><b>[+ status_rival_kkp_name +]</b></span><span>left the committee · [+ korona_seats +] seats</span></div>?]
+[? if status_rival_nowa_nadzieja_in_konf: <div class="faction-row"><span class="party party-new-hope"><b>[+ status_rival_nowa_nadzieja_name +]</b></span><span>[+ status_rival_nowa_nadzieja_legal +] · [+ status_rival_nowa_nadzieja_sejm +] Sejm · [+ status_rival_nowa_nadzieja_senate +] Senate</span></div>?]
+[? if status_rival_ruch_narodowy_in_konf: <div class="faction-row"><span class="party party-national-movement"><b>[+ status_rival_ruch_narodowy_name +]</b></span><span>[+ status_rival_ruch_narodowy_legal +] · [+ status_rival_ruch_narodowy_sejm +] Sejm · [+ status_rival_ruch_narodowy_senate +] Senate</span></div>?]
+[? if status_rival_kkp_in_konf: <div class="faction-row"><span class="party party-kkp"><b>[+ status_rival_kkp_name +]</b></span><span>[+ status_rival_kkp_legal +] · [+ status_rival_kkp_sejm +] Sejm · [+ status_rival_kkp_senate +] Senate</span></div>?]
 <div class="ledger-subrow">Konfederacja committee: [+ konf_list_members +].</div>
 [? if konf_succession_2022_done = 0: <div class="ledger-subrow">The libertarian component currently trades as [+ konf_libertarian_party_name +] under [+ konf_libertarian_leader +].</div>?]
 [? if konf_succession_2022_done = 1: <div class="ledger-subrow">After the congress the libertarian component trades as [+ konf_libertarian_party_name +] under [+ konf_libertarian_leader +].</div>?]
 </div></details>
 
-<details class="ledger-disclosure"><summary>Parties on their own committee</summary>
+<details class="ledger-disclosure"><summary>Independent parties</summary>
 <div class="ledger-section">
-[? if independent_bucket_count = 0: <div class="ledger-subrow">Every surviving organisation is currently attached to a shared electoral committee.</div>?]
-[? if independent_bucket_count > 0: <div class="faction-row"><span class="party party-independent"><b>Filing alone</b></span><span>[+ independent_bucket_count +] organisations · [+ independent_bucket_seats +] seats</span></div><div class="ledger-subrow">[+ independent_bucket_members +].</div>?]
+[? if independent_bucket_count = 0: <div class="ledger-subrow">No independent party currently holds a Sejm seat.</div>?]
+[? if independent_bucket_count > 0: <div class="faction-row"><span class="party party-independent"><b>Independent</b></span><span>[+ independent_bucket_count +] parties</span></div><div class="ledger-subrow">[+ independent_bucket_members +].</div>?]
+[? if independent_bucket_seats > 0 or independent_bucket_senators > 0: <div class="ledger-row"><span>Parliamentarians</span><b>[+ independent_bucket_seats +] independent Sejm · [+ independent_bucket_senators +] independent Senate</b></div>?]
 </div></details>
-
-<details class="ledger-disclosure"><summary>Koalicja Obywatelska component organisations</summary>
-<div class="ledger-section">
-[? if status_rival_po_active: <div class="faction-row"><span class="party party-ko"><b>[+ status_rival_po_name +]</b></span><span>[+ status_rival_po_org_band +] organisation · [+ status_rival_po_cohesion_band +]</span></div>?]
-[? if status_rival_nowoczesna_active: <div class="faction-row"><span class="party party-ko"><b>[+ status_rival_nowoczesna_name +]</b></span><span>[+ status_rival_nowoczesna_org_band +] organisation · [+ status_rival_nowoczesna_cohesion_band +]</span></div>?]
-[? if status_rival_ipl_active: <div class="faction-row"><span class="party party-ko"><b>[+ status_rival_ipl_name +]</b></span><span>[+ status_rival_ipl_org_band +] organisation · [+ status_rival_ipl_cohesion_band +]</span></div>?]
-[? if status_rival_greens_active and not greens_joined_left: <div class="faction-row"><span class="party party-ko"><b>[+ status_rival_greens_name +]</b></span><span>[+ status_rival_greens_org_band +] organisation · [+ status_rival_greens_relation : relationships +] relation</span></div>?]
-[? if status_rival_ko_party_active: <div class="faction-row"><span class="party party-ko"><b>[+ status_rival_ko_party_name +]</b></span><span>[+ status_rival_ko_party_org_band +] organisation</span></div>?]
-[? if status_rival_ko_splinter_active: <div class="faction-row"><span class="party party-ko"><b>[+ status_rival_ko_splinter_name +]</b></span><span>[+ status_rival_ko_splinter_legal +]</span></div>?]
-[? if ko_consolidated: <div class="ledger-subrow">PO, Nowoczesna and IPL now operate as internal KO currents instead of separate party slots.</div>?]
-[? if status_ko_convention_visible: <div class="ledger-subrow">2025 convention: [+ status_ko_merger_result +].</div>?]</div>
-</details>
 
 
 @institutions
@@ -2420,7 +2513,7 @@ call: status
 [? if unia_centrum_formed or status_centrum_seats > 0: <div class="poll-row"><span class="party party-centrum"><b>Unia Centrum</b></span><span></span><span>[+ status_centrum_seats +] seats</span></div>?]
 [? if rozwoj_party_formed and not rozwoj_joined_left: <div class="poll-row"><span class="party party-rozwoj"><b>Rozwój Plus</b></span><span></span><span>[+ status_rozwoj_seats +] seats</span></div>?]
 [? if far_right_split > 0: <div class="poll-row"><span class="party party-korona"><b>Korona</b></span><span></span><span>[+ status_korona_seats +] seats</span></div>?]
-[? if status_other_seats > 0: <div class="poll-row"><span>Others</span><span></span><span>[+ status_other_seats +] seats</span></div>?]
+[? if status_other_seats > 0: <div class="poll-row"><span class="party party-independent"><b>[+ status_other_name +]</b></span><span></span><span>[+ status_other_seats +] seats</span></div>?]
 </div>
 
 <details class="ledger-disclosure"><summary>Voter blocs</summary>
@@ -2505,7 +2598,7 @@ call: status
 [? if unia_centrum_formed or status_centrum_seats > 0: <div class="poll-row"><span class="party party-centrum"><b>Unia Centrum</b></span><span></span><span>[+ status_centrum_seats +] seats</span></div>?]
 [? if rozwoj_party_formed and not rozwoj_joined_left: <div class="poll-row"><span class="party party-rozwoj"><b>Rozwój Plus</b></span><span></span><span>[+ status_rozwoj_seats +] seats</span></div>?]
 [? if far_right_split > 0: <div class="poll-row"><span class="party party-korona"><b>Korona</b></span><span></span><span>[+ status_korona_seats +] seats</span></div>?]
-<div class="poll-row"><span>Others</span><span></span><span>[+ status_other_seats +] seat[? if status_other_seats != 1: s?]</span></div>
+<div class="poll-row"><span class="party party-independent"><b>[+ status_other_name +]</b></span><span></span><span>[+ status_other_seats +] seat[? if status_other_seats != 1: s?]</span></div>
 </div>
 
 <div class="ledger-section"><div class="ledger-title">Projected governing arithmetic</div>
@@ -2548,11 +2641,20 @@ call: status
 = Public mood
 
 <div class="ledger-section ledger-section-first"><div class="ledger-title">National climate</div>
+<div class="ledger-row"><span>Direction of travel</span><b>[+ status_public_climate_direction +]</b></div>
+<div class="ledger-subrow">Terrain [+ status_public_climate_band +] · rights and solidarity support [+ status_public_progressive_index +]/100 · Left owns the field [+ status_public_field_ownership +]/100</div>
+[? if status_public_climate_media != 0: <div class="ledger-subrow">Media weather: [+ status_public_climate_media +] to the reach of every story we tell.</div>?]
 <div class="ledger-row"><span>Issue pressure</span><b>[+ status_public_panic_band +]</b></div>
 <div class="ledger-subrow">Hottest field: [+ status_public_hottest +]</div>
 <div class="ledger-row"><span>Cross-issue consensus</span><b>[+ status_public_consensus_band +]</b></div>
 [? if status_public_bridge_pressure > 0: <div class="ledger-row"><span>Legacy-event pressure</span><b>[+ status_public_bridge_band +]</b></div>?]
 <div class="ledger-subrow">Updated [+ status_public_updated +]</div>
+</div>
+
+<div class="ledger-section"><div class="ledger-title">Reform slate</div>
+<div class="ledger-row"><span>Fields chosen</span><b>[+ status_reform_slate_count +] of [+ status_reform_slate_max +]</b></div>
+<div class="ledger-row"><span>Settled</span><b>[+ status_reform_slate_settled +]</b></div>
+<div class="ledger-subrow">[? if status_reform_slate_left > 0: [+ status_reform_slate_left +] slot(s) still open. A pick is permanent and a settlement — even a bad one — closes that field.?][? if status_reform_slate_left <= 0: The slate is closed for the rest of the campaign.?]</div>
 </div>
 
 [? if status_public_last_issue != "None": <div class="ledger-section"><div class="ledger-title">Latest public test</div><div class="ledger-row"><span>[+ status_public_last_action +]</span><b>[+ status_public_last_reception +]</b></div><div class="ledger-row"><span>Public movement</span><b>[+ status_public_last_movement +]</b></div><div class="ledger-subrow">Issue field: [+ status_public_last_issue +]</div></div>?]
