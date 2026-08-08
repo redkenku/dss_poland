@@ -358,6 +358,10 @@ if (
 if (abortionText.includes("compromise")) {
     leftCulturalPosition += 22;
 }
+if (Q.sld_populist_route_active) {
+    leftEconomicPosition -= 8;
+    leftCulturalPosition += 24;
+}
 Q.left_economic_position = clampAI(leftEconomicPosition, 5, 90);
 Q.left_cultural_position = clampAI(leftCulturalPosition, 5, 95);
 
@@ -695,6 +699,12 @@ const previousRightScores = {};
 for (const id of ["left", "pis", "ko", "psl", "konf", "p2050"]) {
     previousRightScores[id] = Q[id + "_right_score"];
 }
+const sldDoctrineRightShift =
+    !Q.sld_populist_route_active && Q.sld_partocracy_stage >= 3
+    ? (Q.sld_partocracy_doctrine == "orthodox"
+        ? -4
+        : (Q.sld_partocracy_doctrine == "market_apparatus" ? 7 : 2))
+    : 0;
 const leftRightTarget = clampAI(
     rightScoreDefaults.left +
         (finiteAI(Q.barons_strength, 28) - 28) * 0.22 -
@@ -702,7 +712,9 @@ const leftRightTarget = clampAI(
         (finiteAI(Q.progressives_strength, 18) - 18) * 0.18 -
         (finiteAI(Q.labor_credibility, 46) - 46) * 0.20 +
         finiteAI(Q.budget_breaches, 0) * 1.1 +
-        (abortionText.includes("compromise") ? 7 : 0),
+        (abortionText.includes("compromise") ? 7 : 0) +
+        (Q.sld_populist_route_active ? 24 : 0) +
+        sldDoctrineRightShift,
     8,
     70
 );
@@ -1311,8 +1323,8 @@ if (randomAI() <= actChance("ko")) {
             "KO answers the radical-right surge from a stricter centre",
             function() {
                 addMomentumAI("ko", 0.25);
-                shiftWingAI("ko_social_liberal_share", 0.7);
-                shiftWingAI("ko_classical_liberal_share", -0.3);
+                shiftWingAI("ko_social_liberal_share", -0.3);
+                shiftWingAI("ko_classical_liberal_share", 0.7);
                 shiftBlocAI("liberal_professionals", "ko", 1);
                 shiftBlocAI("provincial_welfare", "ko", 0.7);
                 shiftBlocAI("rural_localists", "ko", 0.4);
@@ -1698,7 +1710,7 @@ const successorParties = [
         active: !!Q.tak_dla_rozwoju_party_formed,
         parent: Q.razem_party_formed ? "razem" : "left",
         seats: "tak_rozwoj_seats",
-        founding: "matysiak_development_pressure",
+        founding: "razem_future_activists",
         parentRelation: 30,
         label: Q.tak_rozwoj_party_name || "Tak! Dla Rozwoju"
     },
@@ -1751,7 +1763,7 @@ const successorParties = [
         list: "labor_list_committee",
         joinedRazem: "labor_joined_razem",
         razemRelation: 50,
-        label: Q.labor_party_name || "Labour Left"
+        label: Q.labor_party_name || "Independent Labour Left"
     },
     {
         id: "young_left",
@@ -1954,11 +1966,17 @@ for (const successor of successorParties) {
         if (!Number.isFinite(Number(Q[razemRelationKey]))) {
             Q[razemRelationKey] = successor.razemRelation;
         }
-        const viableRazemAlliance =
-            !!Q.razem_party_formed && successorVote < 5 &&
-            successorVote + razemVote >= 5 &&
-            finiteAI(Q[razemRelationKey], 0) >= 50 &&
-            finiteAI(Q.razem_cooperation, 0) >= 50;
+        const spsExileAlliance =
+            !!Q.sld_populist_route_active && !!Q.razem_party_formed &&
+            ["spring_breakaway", "young_left"].includes(id) &&
+            !!Q[successor.joinedRazem];
+        const viableRazemAlliance = spsExileAlliance ||
+            (
+                !!Q.razem_party_formed && successorVote < 5 &&
+                successorVote + razemVote >= 5 &&
+                finiteAI(Q[razemRelationKey], 0) >= 50 &&
+                finiteAI(Q.razem_cooperation, 0) >= 50
+            );
         const canReturnToLeft =
             successorVote < 5 && relation >= 55 && !viableRazemAlliance;
         Q[successor.list] = viableRazemAlliance
@@ -1966,7 +1984,9 @@ for (const successor of successorParties) {
             : (canReturnToLeft ? "left" : id);
         Q[successor.joinedRazem] = viableRazemAlliance ? 1 : 0;
         Q[id + "_electoral_strategy"] = viableRazemAlliance
-            ? "Join a viable independent Razem list"
+            ? (spsExileAlliance
+                ? "Join the democratic-left Razem list against SPS"
+                : "Join a viable independent Razem list")
             : (canReturnToLeft
                 ? "Negotiate protected places on the Lewica list"
                 : (successorVote >= 5
@@ -1980,11 +2000,20 @@ for (const successor of successorParties) {
             ? "Defend an independent five-percent campaign"
             : "Build an independent list toward five percent";
     }
+    if (
+        Q.sld_populist_route_active &&
+        ["spring_breakaway", "young_left", "razem"].includes(id)
+    ) {
+        Q[id + "_ai_headline"] = successor.label +
+            " campaigns from the democratic-left opposition to Miller's SPS";
+    }
     headlines.push(Q[id + "_ai_headline"]);
 }
 
 if (Q.social_patriot_party_formed) {
-    Q.social_patriot_party_name = "Lewica Patriotyczna";
+    Q.social_patriot_party_name = Q.sld_populist_route_active
+        ? "Sojusz Polski Społecznej"
+        : "Lewica Patriotyczna";
     Q.social_patriot_joined_razem = 0;
     const socialPatriotVote = finiteAI(
         Q.social_patriot_component_vote_intent,
@@ -1995,24 +2024,48 @@ if (Q.social_patriot_party_formed) {
     );
     const filed2023List =
         Q.year == 2023 && !!Q.sejm_list_negotiation_done &&
-        ["pis", "social_patriot"].includes(
+        ["pis", "konf", "social_patriot"].includes(
             String(Q.social_patriot_list_committee)
         );
-    if (!filed2023List) {
+    if (Q.sld_populist_route_active) {
+        Q.social_patriot_list_committee =
+            Q.sld_populist_planned_committee;
+    } else if (!filed2023List) {
         Q.social_patriot_list_committee = socialPatriotVote < 5
             ? "pis"
             : "social_patriot";
     }
     const joinsPis = Q.social_patriot_list_committee == "pis";
+    const joinsKonf = Q.social_patriot_list_committee == "konf";
+    const independentSps = Q.sld_populist_route_active &&
+        Q.social_patriot_list_committee == "left";
     Q.social_patriot_electoral_strategy = joinsPis
         ? "Protected places on the PiS party list"
-        : "Independent party list above 5%";
-    Q.social_patriot_ai_strategy = joinsPis
-        ? "Secure PiS list places before votes are wasted"
+        : (joinsKonf
+            ? "Protected places on the Konfederacja party list"
+            : (independentSps
+                ? "Independent SPS party list"
+                : "Independent party list above 5%"));
+    Q.social_patriot_ai_strategy = joinsPis || joinsKonf
+        ? "Defend conditional host-list places"
         : "Defend an independent five-percent campaign";
-    Q.social_patriot_ai_headline = joinsPis
-        ? "Lewica Patriotyczna chooses PiS list places over a sub-threshold run"
-        : "Lewica Patriotyczna campaigns to clear five percent alone";
+    Q.social_patriot_ai_headline = Q.sld_populist_route_active
+        ? "Miller's Sojusz Polski Społecznej defends its " +
+            Q.sld_populist_orientation + " orientation"
+        : (joinsPis
+            ? "Lewica Patriotyczna chooses PiS list places over a sub-threshold run"
+            : "Lewica Patriotyczna campaigns to clear five percent alone");
+    headlines.push(Q.social_patriot_ai_headline);
+}
+if (Q.sld_populist_route_active && !Q.social_patriot_party_formed) {
+    Q.social_patriot_ai_strategy =
+        Q.sld_populist_orientation == "independent"
+            ? "Build an independent rural welfare-populist campaign"
+            : "Protect a conditional " +
+                Q.sld_populist_alliance_partner + " pact";
+    Q.social_patriot_ai_headline =
+        "Miller's Sojusz Polski Społecznej defends its " +
+        Q.sld_populist_orientation + " orientation";
     headlines.push(Q.social_patriot_ai_headline);
 }
 
@@ -2272,7 +2325,8 @@ for (const id of rivalParties) {
 // scores as ordinary party action, then resolve in a shared coalition-pressure
 // scene after the month closes.
 const rightPresidentsAI = [
-    "Andrzej Duda", "Krzysztof Bosak", "Karol Nawrocki",
+    "Andrzej Duda", "Krzysztof Bosak",
+    String(Q.pres_2025_right_candidate || ""),
     "Sławomir Mentzen", "Grzegorz Braun"
 ];
 const hostileCohabitationAI =

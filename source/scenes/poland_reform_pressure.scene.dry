@@ -4,8 +4,13 @@ on-arrival: {!
 const actorNames = {
     pis: "PiS",
     ko: "KO",
-    psl: Q.third_way_display_name,
-    p2050: Q.third_way_display_name,
+    psl: Q.third_way_active
+        ? (Q.third_way_display_name || "Third Way") + " (PSL)"
+        : "PSL",
+    p2050: Q.third_way_active
+        ? (Q.third_way_display_name || "Third Way") + " (Poland 2050)"
+        : "Poland 2050",
+    konf: "Konfederacja",
     president: "President " + Q.president_name
 };
 const issueNames = {
@@ -49,7 +54,9 @@ Q.reform_pressure_actor_live =
     (actor == "psl" &&
         (Q.government_party == "psl" || Q.ministry_psl_in_cabinet)) ||
     (actor == "p2050" &&
-        (Q.government_party == "p2050" || Q.ministry_p2050_in_cabinet))
+        (Q.government_party == "p2050" || Q.ministry_p2050_in_cabinet)) ||
+    (actor == "konf" &&
+        (Q.government_party == "konf" || Q.ministry_konf_in_cabinet))
         ? 1 : 0;
 Q.reform_pressure_bargain_available = actor != "president" ? 1 : 0;
 // The Sejm freezer needs a Marshal who takes our calls. The chair belongs to a
@@ -194,12 +201,10 @@ on-arrival: resources -= 1; reform_pressure_resolution = "mandate"
 go-to: apply_objection
 
 @objection_force
-title: Force the full issue and put the coalition under threat
-subtitle: Cost: 2 resources. Carry the bill one tier above the coalition's ceiling and risk the government.
-view-if: reform_pressure_actor != "president"
-choose-if: resources >= 2 and reform_ceiling_target_resolved <= reform_ceiling_forceable
-unavailable-subtitle: [? if resources < 2: A survival confrontation requires two resources.?][? if resources >= 2: Forcing buys one tier above the coalition's ceiling, and this bill is further above it than that.?]
-on-arrival: resources -= 2; reform_pressure_resolution = "force"
+title: Ignore this veto and keep putting the bill to a vote
+subtitle: Raise coalition dissent and damage this relationship. The count moves to the next partner, then the President, before Parliament votes.
+view-if: reform_ceiling_blocker_kind = "partner"
+on-arrival: reform_pressure_resolution = "force"
 go-to: apply_objection
 
 @palace_reconsider
@@ -352,12 +357,13 @@ if (resolution == "bargain") {
 } else if (resolution == "force") {
     dissent = 12 + proposed * 3;
     Q[relationKey] -= 10;
-    Q[commitmentKey] = Math.max(Number(Q[commitmentKey]), proposed);
+    Q["reform_pressure_ignored_" + actor] = 1;
     Q.reform_pressure_forced = 1;
     Q.coalition_break_threat = 1;
     Q.early_election_risk += 10 + proposed * 2;
     Q.reform_pressure_last_result =
-        "Lewica forces the coalition partner's votes and risks the government";
+        "Lewica ignores " + Q.reform_pressure_actor_name +
+        " and continues the veto-player count";
 } else if (resolution == "palace_reconsider") {
     Q[palaceKey] = Math.min(4, Number(Q[palaceKey]) + 1);
     Q.president_relation += 4;
@@ -376,9 +382,8 @@ if (resolution == "bargain") {
 } else if (resolution == "palace_override") {
     Q.reform_pressure_palace_override = 1;
     Q.president_relation -= 12;
-    Q.constitutional_restraint += 2;
     Q.reform_pressure_last_result =
-        "Three-fifths of the Sejm overrides the presidential veto";
+        "Three-fifths of the Sejm is committed to an override vote";
 } else if (resolution == "narrow_to_cap") {
     // Not a settlement — a reduction in ambition that keeps the fight alive at
     // the highest tier the Palace and the cabinet could ever carry.
@@ -431,6 +436,11 @@ if (resolution == "bargain") {
         const costs = withdrawalCost[issue] || { progressive_credibility: 1 };
         for (const key of Object.keys(costs)) {
             Q[key] = (Number(Q[key]) || 0) - costs[key];
+        }
+        if (issue == "labor") {
+            Q.union_trust -= 3;
+            Q.opzz_cooperation -= 4;
+            Q.labor_dissent += 6;
         }
         // A field the party publicly retreated from cools and hardens against
         // the next attempt.
@@ -698,6 +708,8 @@ if (issue == "judicial_reset") {
         Q.metropolitan_liberals_left_affinity -= thirdWayMarketisation ? 5 : 3;
         Q.razem_dissent += thirdWayMarketisation ? 14 : 10;
         Q.labor_dissent += thirdWayMarketisation ? 10 : 8;
+        Q.union_trust -= thirdWayMarketisation ? 9 : 7;
+        Q.opzz_cooperation -= thirdWayMarketisation ? 8 : 6;
         Q.progressives_dissent += thirdWayMarketisation ? 9 : 6;
         Q.spring_dissent += thirdWayMarketisation ? 7 : 4;
         Q.government_burden_breached = 1;
@@ -713,10 +725,15 @@ if (issue == "judicial_reset") {
         Q.left_poll_momentum -= thirdWayMarketisation ? 0.25 : 0.12;
         Q.razem_dissent += thirdWayMarketisation ? 7 : 5;
         Q.labor_dissent += thirdWayMarketisation ? 5 : 3;
+        Q.union_trust -= thirdWayMarketisation ? 5 : 3;
+        Q.opzz_cooperation -= thirdWayMarketisation ? 4 : 2;
         Q.progressives_dissent += thirdWayMarketisation ? 4 : 2;
         Q.coalition_blur += 2;
     } else {
         Q.labor_credibility += 2;
+        Q.union_trust += 2;
+        Q.opzz_cooperation += 2;
+        Q.labor_dissent -= 2;
         Q.workers_support += 1;
         Q.public_trust += 1;
         Q.left_poll_momentum += 0.1;

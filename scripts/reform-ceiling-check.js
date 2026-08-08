@@ -65,6 +65,14 @@ function leftLedCabinet(Q) {
   Q.left_poll = 16;
   Q.coalition_blur = 0;
   Q.eu_progressive_headwind = 0;
+  Q.left_seats = 260;
+  Q.left_committed_seats = 260;
+  Q.ko_seats = 80;
+  Q.p2050_seats = 30;
+  Q.psl_seats = 30;
+  Q.pis_seats = 50;
+  Q.konf_seats = 10;
+  Q.sejm_total = 460;
 }
 
 function scoreCeiling(engine, Q, issue, target) {
@@ -78,6 +86,44 @@ function scoreCeiling(engine, Q, issue, target) {
     need: Q.reform_ceiling_need,
     locked: Q.reform_ceiling_palace_locked,
   };
+}
+
+function completeMajorReformVote(engine, choose, Q) {
+  if (engine.state.sceneId === 'poland_legislative_vote.forecast') {
+    choose('poland_legislative_vote.hold_vote');
+    if (!Q.legvote_sejm_passed) {
+      choose('poland_legislative_vote.finish_failed');
+    } else {
+      choose('poland_legislative_vote.senate_vote');
+      if (Q.legvote_senate_decision !== 'Accepted without amendment') {
+        choose('poland_legislative_vote.senate_return');
+      }
+      if (Q.legvote_survived_senate) {
+        choose('poland_legislative_vote.president');
+        choose(Q.legvote_president_veto
+          ? 'poland_legislative_vote.override_veto'
+          : 'poland_legislative_vote.finish_enacted');
+      } else {
+        choose('poland_legislative_vote.finish_failed');
+      }
+    }
+    choose('poland_legislative_vote.finish_callback');
+  }
+  assert.strictEqual(Q.legvote_profile, 'major_reform',
+    'The common-line settlement bypassed the legislative router');
+  assert.strictEqual(Q.legvote_enacted, 1,
+    'The common-line settlement failed in Parliament: ' + JSON.stringify({
+      scene: engine.state.sceneId,
+      outcome: Q.legvote_outcome,
+      yes: Q.legvote_sejm_yes,
+      no: Q.legvote_sejm_no,
+      senate: Q.legvote_senate_decision,
+      veto: Q.legvote_president_veto,
+      ready: Q.major_reform_vote_ready,
+      complete: Q.major_reform_vote_complete,
+      pending: Q.reform_pressure_pending,
+      returnMode: Q.reform_pressure_return_mode,
+    }));
 }
 
 // --- 1. every negotiating lever moves the blocking actor's score -----------
@@ -246,6 +292,9 @@ function scoreCeiling(engine, Q, issue, target) {
   Q.reform_pressure_target_stage = 4;
   Q.reform_pressure_previous_stage = 0;
   Q.reform_pressure_return_mode = 'card';
+  Q.major_reform_vote_ready = 0;
+  Q.major_reform_vote_complete = 0;
+  Q.legvote_enacted = 0;
   engine.goToScene('poland_major_reforms.resolve');
   assert.strictEqual(engine.state.sceneId,
     'poland_major_reforms.objection_queued',
@@ -260,8 +309,9 @@ function scoreCeiling(engine, Q, issue, target) {
   engine.goToScene('poland_reform_pressure');
   assert.strictEqual(engine.state.sceneId, 'poland_reform_pressure.objection');
   choose('poland_reform_pressure.objection_narrow');
+  completeMajorReformVote(engine, choose, Q);
 
-  // One press, and the bill is enacted at exactly the reachable tier.
+  // One negotiation choice tables the common line; Parliament then enacts it.
   assert.strictEqual(Q.marriage_reform_stage, reachable,
     'The common line did not settle at the reachable tier (' +
     Q.marriage_reform_stage + ' vs ' + reachable + ')');
@@ -310,6 +360,108 @@ function scoreCeiling(engine, Q, issue, target) {
     'Bargaining must be capped at three rounds per bill, got ' + bargains);
   assert.strictEqual(Q.reform_pressure_rounds_left, 0,
     'The round counter must be exhausted after three paid rounds');
+}
+
+// --- 6. the slate is three of nine, and it is permanent -------------------
+{
+  const { engine, choose, Q } = newEngine('reform-slate-cap');
+  engine.goToScene('poland_normalize');
+  assert.strictEqual(Q.reform_slate_max, 3);
+  assert.strictEqual(Q.reform_slate_count, 0);
+  assert.strictEqual(Q.reform_slate_slots_left, 3);
+
+  const picks = ['pick_courts', 'pick_health', 'pick_asylum'];
+  picks.forEach(function(pick, index) {
+    Q.month_actions = 0;
+    Q.poland_reform_slate_timer = 0;
+    Q.reform_pressure_pending = 0;
+    engine.goToScene('poland_reform_slate');
+    assert.strictEqual(engine.state.sceneId, 'poland_reform_slate',
+      'The slate card must be reachable while slots remain');
+    choose('poland_reform_slate.' + pick);
+    engine.goToScene('poland_normalize');
+    assert.strictEqual(Q.reform_slate_count, index + 1);
+    assert.strictEqual(Q.reform_slate_slots_left, 3 - (index + 1));
+  });
+  assert.strictEqual(Q.reform_slate_closed, 1,
+    'A full slate must close');
+  assert.strictEqual(Q.courts_on_slate, 1);
+  assert.strictEqual(Q.health_on_slate, 1);
+  assert.strictEqual(Q.asylum_on_slate, 1);
+  assert.strictEqual(Q.abortion_on_slate, 0,
+    'An unpicked field must stay off the slate');
+
+  // A field that was never chosen has no project card.
+  Q.month_actions = 0;
+  Q.poland_abortion_reform_timer = 0;
+  assert.strictEqual(
+    game.scenes.poland_abortion_reform.viewIf(engine, Q),
+    false,
+    'An unpicked reform must not offer a project card'
+  );
+  Q.poland_courts_reform_timer = 0;
+  assert.strictEqual(
+    game.scenes.poland_courts_reform.viewIf(engine, Q),
+    true,
+    'A picked reform must offer its project card'
+  );
+  const visibleProjects = [
+    'abortion', 'marriage', 'church', 'asylum', 'border',
+    'defence', 'labor', 'health', 'courts',
+  ].filter(function(issue) {
+    Q['poland_' + issue + '_reform_timer'] = 0;
+    return game.scenes['poland_' + issue + '_reform'].viewIf(engine, Q);
+  }).sort();
+  assert.deepStrictEqual(
+    visibleProjects,
+    ['asylum', 'courts', 'health'],
+    'Major Reforms must contain the player picks, not the old default trio'
+  );
+  // And the slate card itself is gone for good.
+  Q.poland_reform_slate_timer = 0;
+  assert.strictEqual(
+    game.scenes.poland_reform_slate.viewIf(engine, Q),
+    false,
+    'The slate must not reopen once it is full'
+  );
+}
+
+// --- 7. Trzaskowski's explicit signature pledge binds the Palace ----------
+{
+  const { engine, Q } = newEngine('reform-trzaskowski-signature-pledge');
+  leftLedCabinet(Q);
+  Q.ministry_ko_in_cabinet = 0;
+  Q.ministry_psl_in_cabinet = 0;
+  Q.president_name = 'Rafał Trzaskowski';
+  Q.left_president = 0;
+  Q.president_relation = 30;
+  Q.trz_marriage_signature = 1;
+  Q.trz_abortion_signature = 1;
+  scoreCeiling(engine, Q, 'marriage', 4);
+  assert.strictEqual(Q.reform_ceiling_palace_cap, 4);
+  assert.strictEqual(Q.reform_ceiling_palace_tier, 4,
+    'Trzaskowski reneged on his explicit marriage-equality signature pledge');
+  scoreCeiling(engine, Q, 'abortion', 3);
+  assert(Q.reform_ceiling_palace_tier >= 3,
+    'Trzaskowski reneged on his abortion-restoration signature pledge');
+}
+
+// --- 8. enacted marriage equality supersedes the EU-recognition event -----
+{
+  const { engine, Q } = newEngine('marriage-equality-supersedes-eu-event');
+  Object.assign(Q, {
+    continuous_campaign: 1,
+    year: 2025,
+    month: 11,
+    marriage_reform_settled: 1,
+    marriage_reform_stage: 2,
+  });
+  const event = game.scenes['poland_events_2025.marriage_eu_2025'];
+  assert(event.viewIf(engine, Q),
+    'Registered partnerships should not suppress the EU marriage ruling');
+  Q.marriage_reform_stage = 3;
+  assert(!event.viewIf(engine, Q),
+    'Signed marriage equality must suppress the obsolete EU ruling event');
 }
 
 console.log('reform-ceiling-check: all checks passed');

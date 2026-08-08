@@ -1,0 +1,731 @@
+title: Razem futures
+
+# The post-2025 Razem fork uses the existing Razem component and the generic
+# tak_rozwoj successor slot. The latter can legally represent either Akcja
+# Socjalistyczna or Tak! Dla Rozwoju; polling and election code still see one
+# additional Left-family committee rather than a bespoke election system.
+
+@matysiak_control_result
+# prose-audit: Grade A — The congress result names both statutory chairs, quantifies the internal parliamentary and activist division, and gives every neighbouring Left current a reaction without creating a reaction-event queue.
+title: Matysiak wins control of Razem
+new-page: true
+on-arrival: {!
+const clampFuture = function(value, low, high) {
+    return Math.max(low, Math.min(high, Number(value) || 0));
+};
+const razemSeats = Math.max(
+    0,
+    Math.round(Number(Q.razem_party_formed
+        ? Q.razem_party_seats
+        : Q.razem_seats) || 0)
+);
+const razemActivists = Math.max(
+    1,
+    Number(Q.razem_party_formed
+        ? Q.razem_exit_strength
+        : Q.razem_strength) || 1
+);
+const matysiakShare = clampFuture(
+    0.48 + (Number(Q.matysiak_development_score) || 0) * 0.003 +
+        (Number(Q.matysiak_caucus_actions) || 0) * 0.025 +
+        (Number(Q.matysiak_development_pressure) || 0) * 0.0015,
+    0.54,
+    0.78
+);
+Q.razem_future_route = "matysiak_razem";
+Q.razem_future_start_time = Number(Q.time) || 0;
+Q.razem_future_outcome = "Matysiak controls Razem without a legal split";
+Q.matysiak_project_active = 1;
+Q.zandberg_project_active = 0;
+Q.matysiak_project_party = "Razem";
+Q.zandberg_project_party = "Razem internal minority";
+Q.matysiak_developmentalist_strength = Math.round(
+    razemActivists * matysiakShare
+);
+Q.zandberg_socialist_strength = Math.max(
+    0,
+    Math.round(razemActivists - Q.matysiak_developmentalist_strength)
+);
+Q.matysiak_project_parliamentary_support = Math.round(
+    razemSeats * matysiakShare
+);
+Q.zandberg_project_parliamentary_support = Math.max(
+    0,
+    razemSeats - Q.matysiak_project_parliamentary_support
+);
+Q.razem_future_retained_seats = razemSeats;
+Q.razem_future_departing_seats = 0;
+Q.razem_leader = "Paulina Matysiak";
+Q.razem_co_leader =
+    Q.razem_co_leader != "Vacant" &&
+    Q.razem_co_leader != "Paulina Matysiak" &&
+    !(Q.razem_co_leader == "Magdalena Biejat" && Q.biejat_party != "Razem")
+        ? Q.razem_co_leader
+        : "Marcelina Zawisza";
+Q.razem_leadership_result =
+    "Paulina Matysiak and " + Q.razem_co_leader +
+    " co-chair a developmentalist Razem";
+Q.razem_ideology =
+    "State-led development, labour economics and social conservatism";
+Q.razem_right_score = 62;
+Q.razem_legal_status = "registered political party";
+Q.razem_party_name = "Razem";
+Q.matysiak_status = "Co-chair of Razem";
+Q.matysiak_party = "Razem";
+Q.zandberg_party = "Razem";
+Q.zandberg_status = "Razem socialist minority organiser";
+Q.matysiak_resolution_done = 1;
+Q.matysiak_project_ai_state = "Preparing a state-development convention";
+Q.left_right_score += 7;
+Q.labor_credibility += 4;
+Q.union_trust += 2;
+Q.progressive_credibility -= 5;
+Q.progressives_dissent += 7;
+Q.barons_dissent += 3;
+Q.pps_dissent += 2;
+Q.pis_relation += 2;
+Q.ko_relation -= 3;
+Q.razem_dissent = Math.max(0, (Number(Q.razem_dissent) || 0) - 4);
+Q.razem_cohesion = Math.min(100, (Number(Q.razem_cohesion) || 0) + 5);
+Q.razem_cooperation = Math.max(
+    0,
+    Math.min(100, (Number(Q.razem_cooperation) || 0) - 2)
+);
+Q.razem_poll_momentum = (Number(Q.razem_poll_momentum) || 0) + 0.7;
+Q.news_headline =
+    "Matysiak wins Razem's first chair while its second chair remains in office";
+!}
+
+= November 2025 — Matysiak wins the first chair
+
+The count gives **Paulina Matysiak** control of Razem's political line, not a
+single-leader presidency. **[+ razem_co_leader +]** retains the second chair
+under the party's statute. Of the party's current parliamentary support,
+**[+ matysiak_project_parliamentary_support +] MPs** backed the developmental
+mandate; **[+ zandberg_project_parliamentary_support +]** remain closer to
+Zandberg's socialist opposition. The membership division is recorded too:
+**[+ matysiak_developmentalist_strength +]** points of organisational strength
+follow the new line, while **[+ zandberg_socialist_strength +]** stay in its
+internal socialist minority.
+
+Matysiak keeps the labour-economics case and adds rail, nuclear power, regional
+investment and economic sovereignty. Wspólne Jutro and the progressive current
+fear the cultural retreat; Lewica Pracy and union organisers welcome the
+investment argument but ask for bargaining rights. SLD sees a competitor for
+regional authority, PPS demands a socialist floor, PiS praises the sovereignty
+language and the liberal opposition attacks its cost and conservative allies.
+
+- @poland_event_queue: Record the two-chair result
+
+@split_result
+title: Divide Razem's organisation and parliamentary support
+on-arrival: {!
+const clampFuture = function(value, low, high) {
+    return Math.max(low, Math.min(high, Number(value) || 0));
+};
+const akcja = Q.matysiak_exit_choice == "Akcja Socjalistyczna";
+const sourceIsParty = !!Q.razem_party_formed;
+const sourceSeats = Math.max(
+    0,
+    Math.round(Number(sourceIsParty ? Q.razem_party_seats : Q.razem_seats) || 0)
+);
+const sourceActivists = Math.max(
+    1,
+    Number(sourceIsParty ? Q.razem_exit_strength : Q.razem_strength) || 1
+);
+const matysiakEdge = clampFuture(
+    ((Number(Q.matysiak_development_score) || 0) - 28) / 54 +
+        (Number(Q.matysiak_caucus_actions) || 0) * 0.07 +
+        (Number(Q.matysiak_development_pressure) || 0) * 0.002,
+    0,
+    1
+);
+const departingShare = akcja
+    ? clampFuture(0.52 - matysiakEdge * 0.18, 0.30, 0.52)
+    : clampFuture(0.16 + matysiakEdge * 0.30, 0.18, 0.46);
+const maximumDeparture = akcja
+    ? Math.max(0, sourceSeats - 1)
+    : (sourceSeats > 1 ? sourceSeats - 1 : sourceSeats);
+const minimumDeparture = sourceSeats > (akcja ? 1 : 0) ? 1 : 0;
+const departingSeats = Math.min(
+    maximumDeparture,
+    Math.max(minimumDeparture, Math.round(sourceSeats * departingShare))
+);
+const departingActivists = Math.max(
+    1,
+    Math.round(sourceActivists * departingShare)
+);
+if (sourceIsParty) {
+    Q.razem_party_seats = Math.max(0, sourceSeats - departingSeats);
+    Q.razem_exit_strength = Math.max(
+        0,
+        sourceActivists - departingActivists
+    );
+} else {
+    Q.razem_seats = Math.max(0, sourceSeats - departingSeats);
+    Q.left_seats = Math.max(0, (Number(Q.left_seats) || 0) - departingSeats);
+    Q.razem_strength = Math.max(0, sourceActivists - departingActivists);
+}
+Q.tak_rozwoj_seats =
+    Math.max(0, Number(Q.tak_rozwoj_seats) || 0) + departingSeats;
+Q.razem_future_departing_seats = departingSeats;
+Q.razem_future_retained_seats = Math.max(0, sourceSeats - departingSeats);
+Q.razem_future_activists = departingActivists;
+Q.razem_future_faction_strength = departingActivists;
+Q.razem_future_parliamentary_support = departingSeats;
+Q.razem_retained_parliamentary_support = Math.max(
+    0,
+    sourceSeats - departingSeats
+);
+Q.razem_future_start_time = Number(Q.time) || 0;
+Q.matysiak_resolution_done = 1;
+Q.tak_dla_rozwoju_party_formed = 1;
+Q.razem_successor_party_formed = 1;
+Q.tak_rozwoj_legal_status = "registered political party";
+Q.tak_rozwoj_list_committee = "tak_rozwoj";
+Q.tak_rozwoj_ai_active = 1;
+Q.tak_rozwoj_ai_strategy = "Build an independent organisation";
+Q.tak_rozwoj_ai_acted = 0;
+Q.tak_rozwoj_parent_relation = 28;
+Q.tak_rozwoj_poll_momentum =
+    (Number(Q.tak_rozwoj_poll_momentum) || 0) +
+    (akcja ? 1.2 : 0.8 + matysiakEdge * 0.8);
+Q.poll_state_month_key = -1;
+Q.razem_dissent = Math.max(0, (Number(Q.razem_dissent) || 0) - 7);
+Q.razem_cohesion = Math.max(0, (Number(Q.razem_cohesion) || 0) - 3);
+Q.razem_cooperation = Math.max(0, (Number(Q.razem_cooperation) || 0) - 6);
+if (akcja) {
+    Q.razem_future_route = "akcja_socjalistyczna";
+    Q.razem_future_outcome =
+        "Matysiak keeps Razem; Zandberg creates Akcja Socjalistyczna";
+    Q.akcja_socjalistyczna_party_formed = 1;
+    Q.tak_dla_rozwoju_legal_party_formed = 0;
+    Q.tak_rozwoj_party_name = "Akcja Socjalistyczna";
+    Q.tak_rozwoj_leader = "Adrian Zandberg";
+    Q.akcja_socjalistyczna_activists = departingActivists;
+    Q.akcja_socjalistyczna_credibility = Math.round(
+        (Number(Q.labor_credibility) || 0) * 0.45 +
+        (Number(Q.progressive_credibility) || 0) * 0.25 +
+        departingActivists
+    );
+    Q.matysiak_project_active = 1;
+    Q.zandberg_project_active = 1;
+    Q.matysiak_project_party = "Razem";
+    Q.zandberg_project_party = "Akcja Socjalistyczna";
+    Q.matysiak_project_ai_state =
+        "Preparing Razem's state-development convention";
+    Q.zandberg_project_ai_state =
+        "Building Akcja Socjalistyczna's socialist organisation";
+    Q.matysiak_developmentalist_strength = Math.max(
+        0,
+        sourceActivists - departingActivists
+    );
+    Q.zandberg_socialist_strength = departingActivists;
+    Q.matysiak_project_parliamentary_support =
+        Q.razem_future_retained_seats;
+    Q.zandberg_project_parliamentary_support = departingSeats;
+    Q.razem_leader = "Paulina Matysiak";
+    Q.razem_co_leader =
+        Q.razem_co_leader != "Vacant" &&
+        Q.razem_co_leader != "Adrian Zandberg" &&
+        !(Q.razem_co_leader == "Magdalena Biejat" && Q.biejat_party != "Razem")
+            ? Q.razem_co_leader
+            : "Marcelina Zawisza";
+    Q.razem_leadership_result =
+        "Paulina Matysiak and " + Q.razem_co_leader +
+        " co-chair Razem after Zandberg founds Akcja Socjalistyczna";
+    Q.razem_ideology =
+        "State-led development, labour economics and social conservatism";
+    Q.razem_right_score = 62;
+    Q.matysiak_status = "Co-chair of Razem";
+    Q.matysiak_party = "Razem";
+    Q.matysiak_has_sejm_mandate = Math.max(
+        1,
+        Number(Q.matysiak_has_sejm_mandate) || 0
+    );
+    Q.zandberg_party = "Akcja Socjalistyczna";
+    Q.zandberg_status = "Leader of Akcja Socjalistyczna";
+    Q.zandberg_advisor = 0;
+    Q.advisor_reshuffle_removed_zandberg = 1;
+    Q.left_right_score += 7;
+    Q.labor_credibility += 3;
+    Q.union_trust += 2;
+    Q.progressive_credibility -= 3;
+    Q.progressives_dissent += 5;
+    Q.barons_dissent += 2;
+    Q.pps_dissent -= 2;
+    Q.pis_relation += 2;
+    Q.ko_relation -= 3;
+    Q.news_headline =
+        "Matysiak keeps Razem while Zandberg registers Akcja Socjalistyczna";
+} else {
+    Q.razem_future_route = "tak_dla_rozwoju";
+    Q.razem_future_outcome =
+        "Zandberg keeps Razem; Matysiak creates Tak! Dla Rozwoju";
+    Q.akcja_socjalistyczna_party_formed = 0;
+    Q.tak_dla_rozwoju_legal_party_formed = 1;
+    Q.tak_rozwoj_party_name = "Tak! Dla Rozwoju";
+    Q.tak_rozwoj_leader = "Paulina Matysiak";
+    Q.tak_rozwoj_activists = departingActivists;
+    Q.tak_rozwoj_development_credibility = Math.round(
+        (Number(Q.matysiak_development_score) || 0) * 0.55 +
+        (Number(Q.labor_credibility) || 0) * 0.25 +
+        departingActivists
+    );
+    Q.matysiak_project_active = 1;
+    Q.zandberg_project_active = 1;
+    Q.matysiak_project_party = "Tak! Dla Rozwoju";
+    Q.zandberg_project_party = "Razem";
+    Q.matysiak_project_ai_state =
+        "Building Tak! Dla Rozwoju's regional organisation";
+    Q.zandberg_project_ai_state =
+        "Preparing Razem's democratic-socialist convention";
+    Q.matysiak_developmentalist_strength = departingActivists;
+    Q.zandberg_socialist_strength = Math.max(
+        0,
+        sourceActivists - departingActivists
+    );
+    Q.matysiak_project_parliamentary_support = departingSeats;
+    Q.zandberg_project_parliamentary_support =
+        Q.razem_future_retained_seats;
+    Q.razem_leader = "Adrian Zandberg";
+    Q.razem_co_leader =
+        Q.razem_co_leader != "Vacant" &&
+        Q.razem_co_leader != "Paulina Matysiak" &&
+        !(Q.razem_co_leader == "Magdalena Biejat" && Q.biejat_party != "Razem")
+            ? Q.razem_co_leader
+            : "Marcelina Zawisza";
+    Q.razem_leadership_result =
+        "Adrian Zandberg and " + Q.razem_co_leader +
+        " co-chair Razem after Matysiak founds Tak! Dla Rozwoju";
+    Q.razem_ideology =
+        "Democratic socialism, public ownership and movement organisation";
+    Q.razem_right_score = Math.min(30, Number(Q.razem_right_score) || 18);
+    Q.matysiak_advisor = 0;
+    Q.matysiak_has_sejm_mandate = departingSeats > 0 ? 1 : 0;
+    Q.matysiak_status = "Leader of Tak! Dla Rozwoju";
+    Q.matysiak_party = "tak_rozwoj";
+    Q.zandberg_party = "Razem";
+    Q.zandberg_status = "Co-chair of Razem";
+    Q.matysiak_development_pressure += 8;
+    Q.labor_credibility += 2;
+    Q.union_trust += 1;
+    Q.progressive_credibility += 2;
+    Q.progressives_dissent -= 2;
+    Q.barons_dissent += 3;
+    Q.pps_dissent += 1;
+    Q.pis_relation += 3;
+    Q.ko_relation -= 2;
+    Q.news_headline =
+        "Zandberg keeps Razem while Matysiak registers Tak! Dla Rozwoju";
+}
+!}
+go-to: akcja_foundation_result if matysiak_exit_choice = "Akcja Socjalistyczna"; tak_foundation_result if matysiak_exit_choice = "Tak! Dla Rozwoju"
+
+@akcja_foundation_result
+# prose-audit: Grade A — Zandberg is correctly the departing leader, Akcja receives a legal identity and proportional organisation, and the surrounding Left and opposition actors react from their own interests.
+title: Zandberg leaves Razem and creates Akcja Socjalistyczna
+new-page: true
+
+= November 2025 — Two socialist claims, two legal parties
+
+**Paulina Matysiak** and **[+ razem_co_leader +]** retain Razem's two chairs.
+**Adrian Zandberg** registers **Akcja Socjalistyczna** as a separate political
+party. **[+ razem_future_departing_seats +] MPs** and **[+
+akcja_socjalistyczna_activists +] points** of organisational strength follow
+him; **[+ razem_future_retained_seats +] MPs** and **[+
+matysiak_developmentalist_strength +] points** remain with developmentalist
+Razem. The generic successor-party polling and election ledger will count
+Akcja under its own legal name and five-percent threshold.
+
+Akcja takes the housing organisers, public-ownership campaigners and much of
+the movement socialist network. Matysiak keeps more of the regional investment
+operation. Wspólne Jutro and the progressives will cooperate with Akcja on
+rights but distrust another male-led rival; Lewica Pracy, PPS and unions welcome
+its labour programme while refusing automatic allegiance. SLD welcomes a
+divided challenger. PiS courts Matysiak on sovereignty and attacks Akcja's
+ownership plans; KO warns that two Left committees can both miss the threshold.
+
+Akcja's advantage is a credible movement and labour organisation. Its cost is
+electoral isolation and weaker access to the wider Left's lists.
+
+- @poland_event_queue: Put both membership rolls on the desk
+
+@tak_foundation_result
+# prose-audit: Grade A — Matysiak's departure creates a legally and organisationally distinct developmental party, while Razem's two-chair leadership and socialist remainder stay explicit.
+title: Matysiak leaves Razem and creates Tak! Dla Rozwoju
+new-page: true
+
+= November 2025 — Development becomes a legal party
+
+**Adrian Zandberg** and **[+ razem_co_leader +]** retain Razem's two chairs.
+**Paulina Matysiak** registers **Tak! Dla Rozwoju** as a separate political
+party. Her network takes **[+ razem_future_departing_seats +] MPs** and **[+
+tak_rozwoj_activists +] points** of organisational strength; socialist Razem
+keeps **[+ razem_future_retained_seats +] MPs** and **[+
+zandberg_socialist_strength +] points**. Prior development organising, caucus
+work and the congress score determined the division.
+
+Tak! begins with rail, nuclear power, public investment, regional development
+and economic sovereignty. Wspólne Jutro and the progressive current oppose its
+social-conservative edge; Lewica Pracy and unions insist that state investment
+must create bargaining power, while PPS demands public ownership rather than
+subsidies. SLD sees a regional rival. PiS offers votes for selected projects
+and KO's liberals attack the expense and cross-party ambiguity.
+
+Tak!'s advantage is ownership of state capacity and regional investment. Its
+cost is progressive distrust and a permanently uncertain relationship with the
+broader Left.
+
+- @poland_event_queue: Register the developmental party
+
+@zandberg_strategy
+# prose-audit: Grade A — Housing, ownership, labour and green industry are staged as an argument between movement durability and list survival, with an authored advantage and cost on both choices.
+title: Zandberg decides whether a socialist movement can survive an election
+subtitle: Housing, public ownership, labour power and green industry compete with the need for a viable list.
+new-page: true
+tags: poland_event
+priority: 27
+order: 8
+max-visits: 1
+view-if: continuous_campaign = 1 and zandberg_project_active = 1 and zandberg_future_decision_done = 0 and time >= razem_future_start_time + 3 and year <= 2027
+
+= [+ date_label +] — A movement with a ballot deadline
+
+**Adrian Zandberg** has built a programme around municipal housing, public
+ownership, stronger unions and a green industrial transition. In **[+
+zandberg_project_party +]**, organisers now disagree about sequence. Movement
+councils can make the party durable and distinct, but an independent committee
+can waste that strength below five percent. A common-list compact protects the
+mandates and asks activists to trust the organisations they left or criticised.
+
+- @zandberg_movement
+- @zandberg_electoral
+
+@zandberg_movement
+title: Build housing and workplace councils before bargaining over lists
+subtitle: Advantage: movement organisation and labour credibility. Cost: a separate five-percent campaign remains possible.
+on-arrival: {!
+Q.zandberg_future_decision_done = 1;
+Q.zandberg_future_strategy = "Movement socialist councils";
+Q.zandberg_housing_program += 6;
+Q.zandberg_public_ownership_program += 6;
+Q.zandberg_green_industry_program += 5;
+Q.movement_autonomy += 6;
+Q.organiser_energy += 4;
+Q.labor_credibility += 5;
+Q.union_trust += 4;
+Q.workers_support += 3;
+Q.public_sector_support += 2;
+Q.ko_relation -= 4;
+Q.barons_dissent += 3;
+Q.progressives_dissent -= 1;
+if (Q.zandberg_project_party == "Akcja Socjalistyczna") {
+    Q.tak_rozwoj_list_committee = "tak_rozwoj";
+    Q.tak_rozwoj_parent_relation -= 5;
+    Q.tak_rozwoj_organisation =
+        (Number(Q.tak_rozwoj_organisation) || 20) + 8;
+    Q.tak_rozwoj_poll_momentum += 0.8;
+    Q.tak_rozwoj_ai_strategy = "Build a movement before list bargaining";
+} else {
+    Q.razem_list_committee = Q.razem_party_formed ? "razem" : "left";
+    Q.razem_party_relation -= Q.razem_party_formed ? 4 : 0;
+    Q.razem_poll_momentum = (Number(Q.razem_poll_momentum) || 0) + 0.8;
+}
+Q.zandberg_project_ai_state = "Housing and workplace council campaign";
+Q.news_headline =
+    "Zandberg puts housing and workplace councils before list arithmetic";
+!}
+
+The councils recruit tenants, shop stewards and public-service workers around
+projects they can audit. Akcja or Razem gains a social base that survives a bad
+poll. SLD and KO immediately print the five-percent line; unions answer that a
+party without organised workers can survive a ballot and still disappear.
+
+- @poland_event_queue: Open the socialist councils
+
+@zandberg_electoral
+title: Negotiate a common-list compact around housing and green industry
+subtitle: Advantage: electoral survival and wider reach. Cost: movement autonomy and a sharper public-ownership line are traded for list guarantees.
+on-arrival: {!
+Q.zandberg_future_decision_done = 1;
+Q.zandberg_future_strategy = "Socialist electoral compact";
+Q.zandberg_housing_program += 5;
+Q.zandberg_public_ownership_program += 2;
+Q.zandberg_green_industry_program += 6;
+Q.movement_autonomy -= 5;
+Q.organiser_energy -= 2;
+Q.labor_credibility += 2;
+Q.union_trust -= 2;
+Q.ko_relation += 2;
+Q.razem_cooperation += 5;
+Q.party_unity += 3;
+Q.barons_dissent += 2;
+Q.pps_dissent += 2;
+if (Q.zandberg_project_party == "Akcja Socjalistyczna") {
+    Q.tak_rozwoj_list_committee = "left";
+    Q.tak_rozwoj_parent_relation += 18;
+    Q.tak_rozwoj_poll_momentum += 0.3;
+    Q.tak_rozwoj_ai_strategy = "Seek protected places on the common Left list";
+} else if (Q.razem_party_formed) {
+    Q.razem_list_committee = "left_coalition";
+    Q.razem_party_relation += 12;
+    Q.razem_poll_momentum = (Number(Q.razem_poll_momentum) || 0) + 0.3;
+} else {
+    Q.left_poll_momentum = (Number(Q.left_poll_momentum) || 0) + 0.4;
+}
+Q.zandberg_project_ai_state = "Common-list socialist compact";
+Q.news_headline =
+    "Zandberg trades list guarantees for a common housing and industry plank";
+!}
+
+The broader Left accepts housing construction, sectoral bargaining and a green
+industrial bank as the protected plank. It does not accept a veto over every
+future coalition budget. The project is harder to erase at the election and
+less able to claim that electoral survival changed nothing.
+
+- @poland_event_queue: Sign the socialist list compact
+
+@matysiak_strategy
+# prose-audit: Grade A — Rails, nuclear power and regional investment become a choice between a union-backed Left compact and a sovereignty campaign whose progressive cost is explicit.
+title: Matysiak decides what a developmentalist Left is for
+subtitle: A labour-development compact competes with a sovereign infrastructure bloc.
+new-page: true
+tags: poland_event
+priority: 27
+order: 9
+max-visits: 1
+view-if: continuous_campaign = 1 and matysiak_project_active = 1 and matysiak_future_decision_done = 0 and time >= razem_future_start_time + 3 and year <= 2027
+
+= [+ date_label +] — Rails, reactors and the social question
+
+**Paulina Matysiak** can now name the developmental project, **[+
+matysiak_project_party +]**, but not yet its coalition. A national investment
+bank, rail and nuclear programme can be bound to collective bargaining and the
+broader Left. Or the party can make sovereignty, regional grievance and freedom
+from liberal climate timetables its organising line, gaining voters PiS thought
+it owned and deepening the cultural break with progressives.
+
+- @matysiak_labor_compact
+- @matysiak_sovereignty
+
+@matysiak_labor_compact
+title: Bind nuclear, rail and regional investment to labour power
+subtitle: Advantage: state capacity plus unions and wider-Left cooperation. Cost: fiscal obligations and less cultural differentiation.
+on-arrival: {!
+Q.matysiak_future_decision_done = 1;
+Q.matysiak_future_strategy = "Labour-development compact";
+Q.matysiak_infrastructure_program += 6;
+Q.matysiak_nuclear_program += 5;
+Q.matysiak_regional_program += 5;
+Q.administrative_capacity += 4;
+Q.climate_state_capacity += 3;
+Q.labor_credibility += 5;
+Q.union_trust += 6;
+Q.opzz_cooperation += 4;
+Q.workers_support += 4;
+Q.rural_support += 2;
+Q.budget_promises += 3;
+Q.progressives_dissent -= 2;
+Q.pps_dissent -= 3;
+Q.barons_dissent += 3;
+Q.pis_relation -= 2;
+Q.ko_relation -= 2;
+Q.razem_cooperation += 5;
+if (Q.matysiak_project_party == "Tak! Dla Rozwoju") {
+    Q.tak_rozwoj_list_committee = "left";
+    Q.tak_rozwoj_parent_relation += 18;
+    Q.tak_rozwoj_poll_momentum += 0.5;
+    Q.tak_rozwoj_ai_strategy = "Seek a labour-development compact with the Left";
+} else {
+    Q.razem_poll_momentum = (Number(Q.razem_poll_momentum) || 0) + 0.5;
+}
+Q.matysiak_project_ai_state = "Union-backed national investment programme";
+Q.news_headline =
+    "Matysiak binds rail, nuclear power and regional investment to bargaining rights";
+!}
+
+Lewica Pracy, PPS and the unions sign because procurement and state aid now
+carry bargaining clauses. Wspólne Jutro accepts the green-industry timetable
+without endorsing Matysiak's cultural instincts. The programme gains governing
+weight and an expensive implementation ledger.
+
+- @poland_event_queue: Publish the labour-development compact
+
+@matysiak_sovereignty
+title: Build a sovereign infrastructure bloc outside liberal timetables
+subtitle: Advantage: regional reach and a cross-pressure on PiS. Cost: progressive credibility and cooperation with the broader Left.
+on-arrival: {!
+Q.matysiak_future_decision_done = 1;
+Q.matysiak_future_strategy = "Sovereign infrastructure bloc";
+Q.matysiak_infrastructure_program += 7;
+Q.matysiak_nuclear_program += 7;
+Q.matysiak_regional_program += 6;
+Q.administrative_capacity += 3;
+Q.energy_security += 4;
+Q.rural_support += 5;
+Q.workers_support += 2;
+Q.social_patriot_support += 6;
+Q.progressive_credibility -= 6;
+Q.feminist_trust -= 4;
+Q.progressives_dissent += 8;
+Q.pps_dissent += 4;
+Q.union_trust -= 2;
+Q.pis_relation += 6;
+Q.ko_relation -= 6;
+Q.razem_cooperation -= 7;
+if (Q.matysiak_project_party == "Tak! Dla Rozwoju") {
+    Q.tak_rozwoj_list_committee = "tak_rozwoj";
+    Q.tak_rozwoj_parent_relation -= 8;
+    Q.tak_rozwoj_organisation =
+        (Number(Q.tak_rozwoj_organisation) || 20) + 6;
+    Q.tak_rozwoj_poll_momentum += 1.0;
+    Q.tak_rozwoj_ai_strategy = "Contest a sovereign development campaign";
+} else {
+    Q.razem_poll_momentum = (Number(Q.razem_poll_momentum) || 0) + 0.9;
+}
+Q.matysiak_project_ai_state = "Sovereign regional infrastructure campaign";
+Q.news_headline =
+    "Matysiak builds a sovereign infrastructure bloc against liberal timetables";
+!}
+
+Regional investment committees and nuclear advocates give the project an
+electorate that neither PiS nor the liberal opposition can ignore. Labour stays
+for the jobs case but refuses to call procurement a substitute for bargaining.
+Progressives and Wspólne Jutro treat cooperation as exceptional rather than
+presumed.
+
+- @poland_event_queue: Open the sovereign infrastructure campaign
+
+@zandberg_election_payoff
+# prose-audit: Grade A — The earlier strategy returns as an authored election endpoint and hands only momentum, organisation and list form to the shared count.
+title: Zandberg takes the socialist project to its next election
+subtitle: Convert the movement-or-list choice into organisation, polling momentum and a final endpoint.
+new-page: true
+tags: poland_event
+priority: 62
+order: 2
+max-visits: 1
+view-if: continuous_campaign = 1 and zandberg_project_active = 1 and zandberg_future_decision_done = 1 and zandberg_election_payoff_done = 0 and ((snap_campaign_active = 1) or (year = 2027 and month = 9 and snap_election_cycle = 0))
+on-arrival: {!
+const movementRoute = Q.zandberg_future_strategy == "Movement socialist councils";
+const programme =
+    (Number(Q.zandberg_housing_program) || 0) +
+    (Number(Q.zandberg_public_ownership_program) || 0) +
+    (Number(Q.zandberg_green_industry_program) || 0);
+const payoff = Math.max(
+    0.4,
+    Math.min(
+        2.4,
+        0.35 + programme * 0.055 +
+            (Number(Q.labor_credibility) || 0) * 0.008 +
+            (movementRoute ? (Number(Q.organiser_energy) || 0) * 0.01 : 0.35)
+    )
+);
+Q.zandberg_election_payoff_done = 1;
+Q.zandberg_election_advantage = Math.round(payoff * 100) / 100;
+if (Q.zandberg_project_party == "Akcja Socjalistyczna") {
+    Q.tak_rozwoj_poll_momentum += payoff;
+    Q.tak_rozwoj_organisation =
+        (Number(Q.tak_rozwoj_organisation) || 20) +
+        (movementRoute ? 6 : 2);
+    Q.zandberg_election_endpoint = movementRoute
+        ? "Akcja enters the election as an organised movement on its own five-percent committee"
+        : "Akcja carries a protected socialist component on the common Left list";
+} else if (Q.razem_party_formed) {
+    Q.razem_poll_momentum =
+        (Number(Q.razem_poll_momentum) || 0) + payoff;
+    Q.zandberg_election_endpoint = movementRoute
+        ? "Zandberg's Razem contests as a movement-rooted independent socialist party"
+        : "Zandberg's Razem enters a protected Left coalition committee";
+} else {
+    Q.left_poll_momentum =
+        (Number(Q.left_poll_momentum) || 0) + payoff * 0.7;
+    Q.snap_campaign_left_bonus += payoff * 0.35;
+    Q.zandberg_election_endpoint =
+        "Zandberg's socialist Razem current strengthens the common Left campaign";
+}
+Q.poll_state_month_key = -1;
+Q.news_headline = Q.zandberg_election_endpoint;
+!}
+
+= The socialist ledger closes
+
+**[+ zandberg_election_endpoint +].** Housing, public ownership, labour power
+and green industry now produce a measurable election advantage of **[+
+zandberg_election_advantage +] points** in the project's own or host committee.
+[? if zandberg_future_strategy = "Movement socialist councils": The
+organisation is deeper and the threshold risk remains its political cost.?]
+[? if zandberg_future_strategy = "Socialist electoral compact": Protected
+list access answers the survival problem and leaves activists asking how much
+independence the answer consumed.?]
+
+- @poland_event_queue: Hand the socialist project to the election system
+
+@matysiak_election_payoff
+# prose-audit: Grade A — The development strategy closes in a named list endpoint with its coalition advantage and political cost intact, without bypassing the shared election system.
+title: Matysiak takes the developmental project to its next election
+subtitle: Convert the labour-or-sovereignty choice into organisation, polling momentum and a final endpoint.
+new-page: true
+tags: poland_event
+priority: 62
+order: 3
+max-visits: 1
+view-if: continuous_campaign = 1 and matysiak_project_active = 1 and matysiak_future_decision_done = 1 and matysiak_election_payoff_done = 0 and ((snap_campaign_active = 1) or (year = 2027 and month = 9 and snap_election_cycle = 0))
+on-arrival: {!
+const labourRoute = Q.matysiak_future_strategy == "Labour-development compact";
+const programme =
+    (Number(Q.matysiak_infrastructure_program) || 0) +
+    (Number(Q.matysiak_nuclear_program) || 0) +
+    (Number(Q.matysiak_regional_program) || 0);
+const payoff = Math.max(
+    0.4,
+    Math.min(
+        2.4,
+        0.35 + programme * 0.055 +
+            (Number(Q.administrative_capacity) || 0) * 0.012 +
+            (labourRoute
+                ? (Number(Q.union_trust) || 0) * 0.006
+                : (Number(Q.rural_support) || 0) * 0.006)
+    )
+);
+Q.matysiak_election_payoff_done = 1;
+Q.matysiak_election_advantage = Math.round(payoff * 100) / 100;
+if (Q.matysiak_project_party == "Tak! Dla Rozwoju") {
+    Q.tak_rozwoj_poll_momentum += payoff;
+    Q.tak_rozwoj_organisation =
+        (Number(Q.tak_rozwoj_organisation) || 20) +
+        (labourRoute ? 3 : 6);
+    Q.matysiak_election_endpoint = labourRoute
+        ? "Tak! carries a union-backed development component on the common Left list"
+        : "Tak! contests a sovereign development campaign on its own five-percent committee";
+} else if (Q.razem_party_formed) {
+    Q.razem_poll_momentum =
+        (Number(Q.razem_poll_momentum) || 0) + payoff;
+    Q.matysiak_election_endpoint = labourRoute
+        ? "Matysiak's Razem campaigns as a labour-development party"
+        : "Matysiak's Razem campaigns as a sovereign regional-development party";
+} else {
+    Q.left_poll_momentum =
+        (Number(Q.left_poll_momentum) || 0) + payoff * 0.7;
+    Q.snap_campaign_left_bonus += payoff * 0.35;
+    Q.matysiak_election_endpoint = labourRoute
+        ? "Developmentalist Razem adds a union-backed state-investment plank to the common Left list"
+        : "Developmentalist Razem differentiates the common list through sovereignty and regional investment";
+}
+Q.poll_state_month_key = -1;
+Q.news_headline = Q.matysiak_election_endpoint;
+!}
+
+= The developmental ledger closes
+
+**[+ matysiak_election_endpoint +].** Rail, nuclear power, regional investment
+and state capacity now produce a measurable election advantage of **[+
+matysiak_election_advantage +] points** in the project's own or host committee.
+[? if matysiak_future_strategy = "Labour-development compact": Unions and the
+broader Left widen its coalition; the funded promises are the cost.?]
+[? if matysiak_future_strategy = "Sovereign infrastructure bloc": Regional
+reach and pressure on PiS are the advantage; progressive estrangement and
+electoral isolation are the cost.?]
+
+- @poland_event_queue: Hand the developmental project to the election system

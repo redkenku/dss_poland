@@ -150,7 +150,8 @@ if (!Q.election_2023_certified) {
             ["left", "razem", "left_coalition"].includes(
                 breakawayCommittees[id]
             ) ||
-            (id == "social_patriot" && breakawayCommittees[id] == "pis")
+            (id == "social_patriot" &&
+                ["pis", "konf"].includes(breakawayCommittees[id]))
         ) {
             committeeForFormation[id] = breakawayCommittees[id];
         }
@@ -179,6 +180,8 @@ if (!Q.election_2023_certified) {
         committeeForFormation.p2050 = "p2050";
     } else if (listOutcome == "pis_5") {
         committeeForFormation.left = "pis";
+    } else if (listOutcome == "konf_5") {
+        committeeForFormation.left = "konf";
     }
     const componentBaseVotes = {};
     const committeeBaseVotes = {};
@@ -347,7 +350,8 @@ const certifiedMainCommittee = {
     ko_5: "ko",
     third_way_8: "third_way",
     third_host_5: String(Q.sejm_list_host || "psl"),
-    pis_5: "pis"
+    pis_5: "pis",
+    konf_5: "konf"
 }[String(Q.sejm_list_outcome || "left_5")] || "left";
 const certifiedLeftCommitteeFor = {
     left: certifiedMainCommittee,
@@ -511,7 +515,7 @@ Q.left_family_seats = finiteFormation(Q.left_seats, 0) + Q.left_splinter_seats;
 Q.left_splinter_support_votes =
     (Q.barons_party_relation >= 45
         ? finiteFormation(Q.sld_breakaway_seats, 0) : 0) +
-    (Q.social_patriot_list_committee != "pis" &&
+    (!["pis", "konf"].includes(Q.social_patriot_list_committee) &&
         Q.social_patriot_party_relation >= 45
         ? finiteFormation(Q.social_patriot_seats, 0) : 0) +
     (Q.spring_party_relation >= 45
@@ -528,14 +532,19 @@ Q.left_splinter_support_votes =
         ? finiteFormation(Q.tak_rozwoj_seats, 0) : 0);
 Q.left_committed_seats =
     Q.left_seats + Q.left_splinter_support_votes;
+const formationLeftOnRightList = ["pis_5", "konf_5"].includes(
+    String(Q.sejm_list_outcome || "left_5")
+);
 Q.coalition_democratic_seats =
     Q.ko_seats + Q.p2050_seats + Q.psl_seats +
-    Q.centrum_seats + Q.left_committed_seats;
+    Q.centrum_seats +
+    (formationLeftOnRightList ? 0 : Q.left_committed_seats);
 Q.coalition_center_seats =
     Q.ko_seats + Q.p2050_seats + Q.psl_seats + Q.centrum_seats;
 Q.coalition_right_seats =
     Q.pis_seats + Q.konf_seats + Q.rozwoj_seats + Q.korona_seats +
-    (Q.social_patriot_list_committee == "pis"
+    (formationLeftOnRightList ? Q.left_seats : 0) +
+    (["pis", "konf"].includes(Q.social_patriot_list_committee)
         ? Q.social_patriot_seats : 0);
 Q.coalition_pis_psl_seats = Q.pis_seats + Q.psl_seats +
     (Q.social_patriot_list_committee == "pis"
@@ -1012,7 +1021,7 @@ Q.pps_active = 1;
 Q.pps_in_left = 1;
 Q.pps_strength = 3;
 Q.barons_name = "Nowa Lewica establishment";
-Q.labor_name = "Social-democratic labour";
+Q.labor_name = "Lewica Pracy parliamentary network";
 Q.progressives_name = "New Left progressives";
 Q.left_party_name = "Nowa Lewica";
 Q.psl_core_seats = 19;
@@ -1282,7 +1291,7 @@ Q.p2050_accept_order = 53;
 Q.p2050_accept_market = 48;
 Q.p2050_coalition_openness = 61;
 
-Q.factions = ["barons", "labor", "progressives", "razem", "pps"];
+Q.factions = ["barons", "progressives", "razem", "pps"];
 Q.barons_strength = 40;
 Q.spring_strength = 30;
 Q.labor_strength = 5;
@@ -2421,18 +2430,18 @@ go-to: formation_marshal_ballot
 
 @formation_pick_ko_psl_left
 title: Split the Third Way: KO + PSL + Lewica
-subtitle: PSL enters government; Poland 2050 keeps its own caucus and decides whether to tolerate the cabinet.
+subtitle: PSL enters government; Poland 2050 remains outside and supplies only the votes needed for a majority, if any.
 choose-if: formation_option_ko_psl_left >= formation_majority_needed and coalition_viable_left_ko = 1 and coalition_viable_left_psl = 1 and coalition_viable_ko_psl = 1
 unavailable-subtitle: [? if formation_option_ko_psl_left < formation_majority_needed: KO, PSL and Lewica reach only [+ formation_option_ko_psl_left +] seats even with Poland 2050 tolerating from outside. ?][? if coalition_viable_left_ko = 0 or coalition_viable_left_psl = 0 or coalition_viable_ko_psl = 0: Distrust and programme distance between KO, PSL and Lewica rule out a joint cabinet contract. ?]
-on-arrival: {! Q.formation_coalition_selected = 1; Q.formation_coalition_code = "ko_psl_left"; Q.formation_coalition_label = "KO + PSL + Lewica"; Q.formation_coalition_seats = (Number(Q.ko_seats) || 0) + (Number(Q.psl_seats) || 0) + (Number(Q.left_committed_seats) || 0); Q.formation_coalition_support_seats = Q.formation_coalition_seats + Math.min(6, Number(Q.p2050_seats) || 0); Q.formation_government_party = "psl"; Q.formation_pm_default = Q.psl_leader || "PSL nominee"; Q.coalition_status = "PSL-led Third Way wing signs the coalition contract"; Q.candidate_ko_votes = Q.ko_seats; Q.candidate_p2050_votes = 0; Q.candidate_psl_cap = Q.psl_seats; Q.candidate_psl_votes = Q.candidate_psl_cap; Q.candidate_left_votes = Q.left_committed_seats; Q.news_headline = "PSL breaks from Poland 2050 and signs a separate coalition contract"; !}
+on-arrival: {! Q.formation_coalition_selected = 1; Q.formation_coalition_code = "ko_psl_left"; Q.formation_coalition_label = "KO + PSL + Lewica"; Q.formation_coalition_seats = (Number(Q.ko_seats) || 0) + (Number(Q.psl_seats) || 0) + (Number(Q.left_committed_seats) || 0); Q.formation_coalition_support_seats = Q.formation_coalition_seats + Math.min(6, Number(Q.p2050_seats) || 0, Math.max(0, (Number(Q.sejm_statutory_majority) || 231) - Q.formation_coalition_seats)); Q.formation_government_party = "psl"; Q.formation_pm_default = Q.psl_leader || "PSL nominee"; Q.coalition_status = "PSL-led Third Way wing signs the coalition contract"; Q.third_way_split = 1; Q.third_way_active = 0; Q.third_way_joint_list = 0; Q.third_way_display_name = "PSL and Poland 2050"; Q.third_way_future = "Split after PSL signed a separate coalition contract"; Q.candidate_ko_votes = Q.ko_seats; Q.candidate_p2050_votes = 0; Q.candidate_psl_cap = Q.psl_seats; Q.candidate_psl_votes = Q.candidate_psl_cap; Q.candidate_left_votes = Q.left_committed_seats; Q.news_headline = "PSL breaks from Poland 2050 and signs a separate coalition contract"; !}
 go-to: formation_marshal_ballot
 
 @formation_pick_ko_p2050_left
 title: Split the Third Way: KO + Poland 2050 + Lewica
-subtitle: Hołownia's caucus enters; PSL withholds ministers and becomes the hinge in every confidence vote.
+subtitle: Hołownia's caucus enters; PSL remains outside and supplies only the votes needed for a majority, if any.
 choose-if: formation_option_ko_p2050_left >= formation_majority_needed and coalition_viable_left_ko = 1 and coalition_viable_left_p2050 = 1 and coalition_viable_ko_p2050 = 1
 unavailable-subtitle: [? if formation_option_ko_p2050_left < formation_majority_needed: KO, Poland 2050 and Lewica reach only [+ formation_option_ko_p2050_left +] seats even with PSL tolerating from outside. ?][? if coalition_viable_left_ko = 0 or coalition_viable_left_p2050 = 0 or coalition_viable_ko_p2050 = 0: Distrust and programme distance between KO, Poland 2050 and Lewica rule out a joint cabinet contract. ?]
-on-arrival: {! Q.formation_coalition_selected = 1; Q.formation_coalition_code = "ko_p2050_left"; Q.formation_coalition_label = "KO + Poland 2050 + Lewica"; Q.formation_coalition_seats = (Number(Q.ko_seats) || 0) + (Number(Q.p2050_seats) || 0) + (Number(Q.left_committed_seats) || 0); Q.formation_coalition_support_seats = Q.formation_coalition_seats + Math.min(6, Number(Q.psl_seats) || 0); Q.formation_government_party = "ko"; Q.formation_pm_default = Q.ko_leader || "KO nominee"; Q.coalition_status = "Poland 2050 signs while PSL remains outside"; Q.candidate_ko_votes = Q.ko_seats; Q.candidate_p2050_votes = Q.p2050_seats; Q.candidate_psl_cap = 0; Q.candidate_psl_votes = Q.candidate_psl_cap; Q.candidate_left_votes = Q.left_committed_seats; Q.news_headline = "Poland 2050 separates from PSL and signs the coalition contract"; !}
+on-arrival: {! Q.formation_coalition_selected = 1; Q.formation_coalition_code = "ko_p2050_left"; Q.formation_coalition_label = "KO + Poland 2050 + Lewica"; Q.formation_coalition_seats = (Number(Q.ko_seats) || 0) + (Number(Q.p2050_seats) || 0) + (Number(Q.left_committed_seats) || 0); Q.formation_coalition_support_seats = Q.formation_coalition_seats + Math.min(6, Number(Q.psl_seats) || 0, Math.max(0, (Number(Q.sejm_statutory_majority) || 231) - Q.formation_coalition_seats)); Q.formation_government_party = "ko"; Q.formation_pm_default = Q.ko_leader || "KO nominee"; Q.coalition_status = "Poland 2050 signs while PSL remains outside"; Q.third_way_split = 1; Q.third_way_active = 0; Q.third_way_joint_list = 0; Q.third_way_display_name = "PSL and Poland 2050"; Q.third_way_future = "Split after Poland 2050 signed a separate coalition contract"; Q.candidate_ko_votes = Q.ko_seats; Q.candidate_p2050_votes = Q.p2050_seats; Q.candidate_psl_cap = 0; Q.candidate_psl_votes = Q.candidate_psl_cap; Q.candidate_left_votes = Q.left_committed_seats; Q.news_headline = "Poland 2050 separates from PSL and signs the coalition contract"; !}
 go-to: formation_marshal_ballot
 
 @formation_pick_third_left_pis
@@ -3368,11 +3377,25 @@ if (baseCoalitionCode == "democratic_2023") {
 } else if (baseCoalitionCode == "ko_psl_left") {
     koVotes = koSeats;
     pslVotes = pslSeats;
-    p2050Votes = Math.min(6, p2050Seats);
+    p2050Votes = Math.min(
+        p2050Seats,
+        Math.max(
+            0,
+            (Number(Q.formation_coalition_support_seats) || 0) -
+                (Number(Q.formation_coalition_seats) || 0)
+        )
+    );
 } else if (baseCoalitionCode == "ko_p2050_left") {
     koVotes = koSeats;
     p2050Votes = p2050Seats;
-    pslVotes = Math.min(6, pslSeats);
+    pslVotes = Math.min(
+        pslSeats,
+        Math.max(
+            0,
+            (Number(Q.formation_coalition_support_seats) || 0) -
+                (Number(Q.formation_coalition_seats) || 0)
+        )
+    );
 } else if (baseCoalitionCode == "third_left_pis") {
     p2050Votes = p2050Seats;
     pslVotes = pslSeats;
@@ -4173,6 +4196,11 @@ Q.third_abstain = Math.max(
 Q.third_left_cabinet = 1;
 Q.left_cabinet_committed = 1;
 Q.left_cabinet_model = "Whole Left coalition delegation";
+Q.candidate_ko_votes = Q.ko_seats;
+Q.candidate_p2050_votes = Q.p2050_seats;
+Q.candidate_psl_votes = Q.psl_seats;
+Q.candidate_left_votes = Q.left_committed_seats;
+Q.formation_psl_cabinet_committed = 1;
 Q.ministries_finalized = 0;
 Q.ministry_return_mode = "governing_agreement";
 Q.news_headline =
@@ -4218,6 +4246,11 @@ Q.third_abstain = Math.max(
 Q.third_left_cabinet = 1;
 Q.left_cabinet_committed = 1;
 Q.left_cabinet_model = "New Left ministers · Razem external support";
+Q.candidate_ko_votes = Q.ko_seats;
+Q.candidate_p2050_votes = Q.p2050_seats;
+Q.candidate_psl_votes = Q.psl_seats;
+Q.candidate_left_votes = Q.left_committed_seats;
+Q.formation_psl_cabinet_committed = 1;
 Q.ministries_finalized = 0;
 Q.ministry_return_mode = "governing_agreement";
 Q.president_relation += 10;
@@ -5808,7 +5841,16 @@ if (Q.constructive_passed) {
             )
         )
     );
-    Q.government_support_seats = Q.confidence_yes;
+    const constructiveLeftSeats = Q.constructive_democratic && Q.left_in_government
+        ? Math.min(
+            Q.confidence_yes,
+            Math.max(0, Math.round(Number(Q.left_committed_seats) || 0))
+        )
+        : 0;
+    Q.government_support_seats = Math.max(
+        0,
+        Q.confidence_yes - constructiveLeftSeats
+    );
     Q.news_headline =
         Q.constructive_candidate + " replaces the prime minister immediately";
 } else {

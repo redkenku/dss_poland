@@ -173,17 +173,17 @@ const dossierSeatEntry = function(id, legend, name, value) {
     return {id: id, legend: legend, name: name, seats: dossierSeat(value)};
 };
 const sejmEntries = [
-    dossierSeatEntry("left", "Lewica", Q.left_party_name || "Lewica", Q.left_seats),
+    dossierSeatEntry("left", Q.left_party_short_name || "Lewica", Q.left_party_long_name || Q.left_party_name || "Lewica", Q.left_seats),
     dossierSeatEntry("sld_breakaway", "SLD", Q.barons_party_name || "SLD breakaway", Q.sld_breakaway_seats),
     dossierSeatEntry("social_patriot", "LP", Q.social_patriot_party_name || "Lewica Patriotyczna", Q.social_patriot_seats),
     dossierSeatEntry("spring_breakaway", "Wiosna", Q.spring_party_name || "Wiosna breakaway", Q.spring_breakaway_seats),
-    dossierSeatEntry("labor_left", "Labour", Q.labor_party_name || "Labour Left", Q.labor_left_seats),
+    dossierSeatEntry("labor_left", "Labour", Q.labor_party_name || "Independent Labour Left", Q.labor_left_seats),
     dossierSeatEntry("young_left", "Young Left", Q.progressives_party_name || "Young Left", Q.young_left_seats),
     dossierSeatEntry("razem", "Razem", "Razem", Q.razem_party_seats),
     dossierSeatEntry("pps", "PPS", "PPS", Q.pps_party_seats),
     dossierSeatEntry("tak_rozwoj", "Tak!", Q.tak_rozwoj_party_name || "Tak! Dla Rozwoju", Q.tak_rozwoj_seats),
     dossierSeatEntry("ko", "KO", "Koalicja Obywatelska", Q.ko_seats),
-    dossierSeatEntry("ko_splinter", "KO split", "KO breakaway", Q.ko_splinter_seats),
+    dossierSeatEntry("ko_splinter", "KO split", Q.ko_splinter_name || "KO breakaway", Q.ko_splinter_seats),
     dossierSeatEntry("p2050", "PL2050", "Polska 2050", Q.p2050_joined_left ? 0 : Q.p2050_seats),
     dossierSeatEntry("centrum", "Centrum", "Unia Centrum", Q.centrum_seats),
     dossierSeatEntry("psl", "PSL", "Polskie Stronnictwo Ludowe", Q.psl_seats),
@@ -206,7 +206,7 @@ Q.dossier_sejm_recorded_total = Q.dossier_sejm_chart_data.reduce(
 Q.dossier_sejm_delta = Q.dossier_sejm_total - Q.dossier_sejm_recorded_total;
 
 const senateEntries = [
-    dossierSeatEntry("left", "Left", Q.left_party_name || "Left", Q.senate_left_seats),
+    dossierSeatEntry("left", Q.left_party_short_name || "Lewica", Q.left_party_long_name || Q.left_party_name || "Lewica", Q.senate_left_seats),
     dossierSeatEntry("ko", "KO", "Koalicja Obywatelska", Q.senate_ko_seats),
     dossierSeatEntry("p2050", "PL2050", "Polska 2050", Q.p2050_joined_left ? 0 : Q.senate_p2050_seats),
     dossierSeatEntry("psl", "PSL", "Polskie Stronnictwo Ludowe", Q.senate_psl_seats),
@@ -280,10 +280,11 @@ drawDossierParliament("#dossier-senate", Q.dossier_senate_chart_data || []);
 [? if pps_party_seats > 0: <div class="poll-row"><span class="party party-pps"><b>PPS</b></span><span></span><span>[+ pps_party_seats +] seats</span></div>?]
 [? if tak_rozwoj_seats > 0: <div class="poll-row"><span class="party party-razem"><b>[+ tak_rozwoj_party_name +]</b></span><span></span><span>[+ tak_rozwoj_seats +] seats</span></div>?]
 <div class="poll-row"><span class="party party-ko"><b>KO</b></span><span></span><span>[+ ko_seats +] seats</span></div>
-[? if ko_splinter_seats > 0: <div class="poll-row"><span class="party party-ko"><b>KO breakaway</b></span><span></span><span>[+ ko_splinter_seats +] seats</span></div>?]
+[? if ko_splinter_seats > 0: <div class="poll-row"><span class="party party-ko"><b>[+ ko_splinter_name +]</b></span><span></span><span>[+ ko_splinter_seats +] seats</span></div>?]
 [? if p2050_seats > 0 and not p2050_joined_left: <div class="poll-row"><span class="party party-p2050"><b>Polska 2050</b></span><span></span><span>[+ p2050_seats +] seats</span></div>?]
 [? if centrum_seats > 0: <div class="poll-row"><span class="party party-centrum"><b>Unia Centrum</b></span><span></span><span>[+ centrum_seats +] seats</span></div>?]
-<div class="poll-row"><span class="party party-psl"><b>PSL[? if kp_coalition_active = 1: — Koalicja Polska?]</b></span><span></span><span>[+ psl_seats +] seats</span></div>
+[? if kp_coalition_active = 1: <div class="poll-row"><span class="party party-polish-coalition"><b>KP</b></span><span></span><span>[+ psl_seats +] seats</span></div>?]
+[? if kp_coalition_active = 0: <div class="poll-row"><span class="party party-psl"><b>PSL</b></span><span></span><span>[+ psl_seats +] seats</span></div>?]
 [? if kukiz_seats > 0: <div class="poll-row"><span class="party party-kukiz"><b>Kukiz'15</b></span><span></span><span>[+ kukiz_seats +] seats</span></div>?]
 [? if porozumienie_seats > 0: <div class="poll-row"><span class="party party-agreement"><b>Porozumienie</b></span><span></span><span>[+ porozumienie_seats +] seats</span></div>?]
 <div class="poll-row"><span class="party party-pis"><b>PiS</b></span><span></span><span>[+ pis_seats +] seats</span></div>
@@ -476,10 +477,9 @@ go-to: menu
 </div>
 
 <div class="ledger-section">
-<div class="ledger-title">Active Left caucuses</div>
+<div class="ledger-title">Active Left party currents</div>
 [? if barons_active: <div class="faction-row"><span class="party party-sld"><b>[+ barons_name +]</b></span><span>strength [+ barons_strength +] · dissent [+ barons_dissent +]</span></div>?]
 [? if spring_active: <div class="faction-row"><span class="party party-wiosna"><b>[+ spring_name +]</b></span><span>strength [+ spring_strength +] · dissent [+ spring_dissent +]</span></div>?]
-[? if labor_active: <div class="faction-row"><span class="party party-left-labor"><b>[+ labor_name +]</b></span><span>strength [+ labor_strength +] · dissent [+ labor_dissent +]</span></div>?]
 [? if progressives_active: <div class="faction-row"><span class="party party-progressive"><b>[+ progressives_name +]</b></span><span>strength [+ progressives_strength +] · dissent [+ progressives_dissent +]</span></div>?]
 [? if razem_active: <div class="faction-row"><span class="party party-razem"><b>Razem</b></span><span>strength [+ razem_strength +] · dissent [+ razem_dissent +]</span></div>?]
 [? if pps_active: <div class="faction-row"><span class="party party-pps"><b>PPS</b></span><span>strength [+ pps_strength +] · dissent [+ pps_dissent +]</span></div>?]
@@ -489,8 +489,12 @@ go-to: menu
 [? if rozwoj_joined_left and left_rozwoj_current_seats > 0: <div class="faction-row"><span class="party party-rozwoj"><b>Rozwój+ current</b></span><span>[+ left_rozwoj_current_seats +] seats integrated into the Left caucus</span></div>?]
 </div>
 
+[? if labor_active: <div class="ledger-section"><div class="ledger-title">Lewica Pracy and organised labour</div>
+<div class="faction-row"><span class="party party-left-labor"><b>[+ labor_name +]</b></span><span>parliamentary influence [+ labor_parliamentary_influence +] · credibility [+ labor_credibility +]</span></div>
+<div class="ledger-subrow">Wider-union trust [+ union_trust +] · OPZZ cooperation [+ opzz_cooperation +] · mobilisation [+ labor_mobilization +] · reform conflict [+ labor_conflict +].</div></div>?]
+
 Organisational ancestry and political tendency are separate. SLD/Nowa Lewica,
-Wiosna, Razem and PPS are organisations; labour, feminist, progressive,
+Wiosna, Razem and PPS are organisations; the labour tendency, feminist, progressive,
 social-patriot and market currents can cross those formal lines. An affinity
 estimate is not a seat transfer: only completed defections alter the chamber
 charts.
@@ -606,8 +610,7 @@ polls are sampled; the underlying intent and projected seats are shown
 separately in the poll tracker.
 
 The campaign begins after the 2019 election, can pass through the 2023 transfer
-of power, and runs through the scenario horizon to the autumn 2027 Sejm and
-Senate elections. A standalone 2023 formation start is also available from the
-title screen.
+of power, and runs to the autumn 2027 Sejm and Senate elections. A standalone
+2023 formation start is also available from the title screen.
 
 - @menu: Back to index

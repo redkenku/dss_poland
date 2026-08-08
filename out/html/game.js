@@ -360,9 +360,16 @@ window.disableGrayMode = function() {
       aliases: [
         ['Zjednoczona Lewica', 'Zjednoczona Lewica'],
         ['Lewica w Rozsypce', 'Lewica w Rozsypce'],
+        ['Porozumienie Lewicy', 'Porozumienie Lewicy'],
+        ['Federacja Lewicy', 'Federacja Lewicy'],
         ['Wiosna-SLD', 'Wiosna-SLD'],
         ['Lewica Razem', 'Lewica Razem'],
         ['Wspólne Jutro', 'Wspólne Jutro'],
+        ['Lewica Patriotyczna', 'Lewica Patriotyczna'],
+        ['Sojusz Polski Społecznej', 'Sojusz Polski Społecznej'],
+        ['Solidarność Społeczna', 'Solidarność Społeczna'],
+        ['Lewica Rozwoju', 'Lewica Rozwoju'],
+        ['Wspólna Polska', 'Wspólna Polska'],
         ['Partia Pracy', 'Partia Pracy'],
         ['Lewica Lewic', 'Lewica Lewic'],
         ['The Left', 'Lewica'],
@@ -387,6 +394,7 @@ window.disableGrayMode = function() {
       explanation: 'Spring — the progressive party founded by Robert Biedroń.',
       aliases: [
         ['Wiosna / Spring', 'Wiosna'],
+        ['Ruch Postępu', 'Ruch Postępu'],
         ['Spring', 'Wiosna'],
         ['Wiosna', 'Wiosna']
       ]
@@ -424,7 +432,7 @@ window.disableGrayMode = function() {
     {
       id: 'left-labor',
       className: 'party-left-labor',
-      explanation: 'Lewica Pracy (Labour Left) — a possible labour-led splinter in the scenario.',
+      explanation: 'Lewica Pracy (Labour Left) — a possible labour-led breakaway from Lewica.',
       aliases: [
         ['Labour Left', 'Lewica Pracy'],
         ['Lewica Pracy', 'Lewica Pracy']
@@ -433,7 +441,7 @@ window.disableGrayMode = function() {
     {
       id: 'young-left',
       className: 'party-progressive',
-      explanation: 'Młoda Lewica (Young Left) — a possible progressive splinter in the scenario.',
+      explanation: 'Młoda Lewica (Young Left) — a possible progressive breakaway from Lewica.',
       aliases: [
         ['Young Left', 'Młoda Lewica'],
         ['Młoda Lewica', 'Młoda Lewica'],
@@ -513,6 +521,15 @@ window.disableGrayMode = function() {
       ]
     },
     {
+      id: 'polish-coalition',
+      className: 'party-polish-coalition',
+      explanation: 'Polish Coalition (KP) — the PSL-led electoral alliance formed with Kukiz’15 and smaller centrist partners.',
+      aliases: [
+        ['Polish Coalition', 'Koalicja Polska'],
+        ['Koalicja Polska', 'Koalicja Polska']
+      ]
+    },
+    {
       id: 'p2050',
       className: 'party-p2050',
       explanation: 'Poland 2050 — the centrist party founded by Szymon Hołownia.',
@@ -589,6 +606,16 @@ window.disableGrayMode = function() {
       ]
     },
     {
+      id: 'odnowa',
+      className: 'party-odnowa',
+      explanation: 'OdNowa RP — the centre-right party formed by former Agreement politicians who remained allied with Law and Justice.',
+      aliases: [
+        ['OdNowa Rzeczypospolitej Polskiej', 'OdNowa Rzeczypospolitej Polskiej'],
+        ['OdNowa RP', 'OdNowa RP'],
+        ['OdNowa', 'OdNowa']
+      ]
+    },
+    {
       id: 'national-movement',
       className: 'party-national-movement',
       explanation: 'National Movement — the nationalist component of Confederation.',
@@ -603,7 +630,9 @@ window.disableGrayMode = function() {
       explanation: 'New Hope — the libertarian-right component of Confederation.',
       aliases: [
         ['New Hope', 'Nowa Nadzieja'],
-        ['Nowa Nadzieja', 'Nowa Nadzieja']
+        ['Nowa Nadzieja', 'Nowa Nadzieja'],
+        ['KORWiN', 'KORWiN'],
+        ['Wolność', 'Wolność']
       ]
     },
     {
@@ -637,16 +666,25 @@ window.disableGrayMode = function() {
       ]
     },
     {
+      id: 'ued',
+      className: 'party-ued',
+      explanation: 'Union of European Democrats (UED) — a small social-liberal party allied with PSL in the Polish Coalition.',
+      aliases: [
+        ['Union of European Democrats', 'Unia Europejskich Demokratów'],
+        ['Unia Europejskich Demokratów', 'Unia Europejskich Demokratów']
+      ]
+    },
+    {
       id: 'unia-centrum',
       className: 'party-unia-centrum',
       classAliases: ['party-centrum'],
-      explanation: 'Centre Union — a fictional centrist party in the scenario horizon.',
+      explanation: 'Centre Union — a centrist formation assembled from the surviving centre.',
       aliases: [['Unia Centrum', 'Unia Centrum']]
     },
     {
       id: 'rozwoj-plus',
       className: 'party-rozwoj',
-      explanation: 'Rozwój Plus — a possible developmentalist split from PiS in the scenario.',
+      explanation: 'Rozwój Plus — a possible developmentalist split from PiS.',
       aliases: [['Rozwój Plus', 'Rozwój Plus']]
     },
     {
@@ -661,7 +699,7 @@ window.disableGrayMode = function() {
     {
       id: 'akcja-socjalistyczna',
       className: 'party-akcja-socjalistyczna',
-      explanation: 'Akcja Socjalistyczna — the original-left split that can emerge from the Razem-Matysiak conflict in the scenario.',
+      explanation: 'Akcja Socjalistyczna — the original-left split that can emerge from the Razem-Matysiak conflict.',
       aliases: [['Akcja Socjalistyczna', 'Akcja Socjalistyczna']]
     },
     {
@@ -693,6 +731,55 @@ window.disableGrayMode = function() {
     }
   ];
 
+  // Every recognised party has one compact ledger label and one canonical
+  // public name. Additional aliases above remain valid historical, English or
+  // typographical forms of the same organisation.
+  var partyCanonicalNames = {
+    'us-dem': ['Democrats', 'Democratic Party'],
+    'us-gop': ['GOP', 'Republican Party'],
+    'knp': ['KNP', 'Kongres Nowej Prawicy'],
+    'nowa-solidarnosc': ['NS', 'Nowa Solidarność'],
+    'nowa-lewica': ['NL', 'Nowa Lewica'],
+    'lewica': ['Lewica', 'Lewica'],
+    'sld': ['SLD', 'Sojusz Lewicy Demokratycznej'],
+    'wiosna': ['Wiosna', 'Wiosna'],
+    'razem': ['Razem', 'Partia Razem'],
+    'pps': ['PPS', 'Polska Partia Socjalistyczna'],
+    'unia-pracy': ['UP', 'Unia Pracy'],
+    'left-labor': ['LP', 'Lewica Pracy'],
+    'young-left': ['Młoda Lewica', 'Młoda Lewica'],
+    'ko': ['KO', 'Koalicja Obywatelska'],
+    'po': ['PO', 'Platforma Obywatelska'],
+    'nowoczesna': ['.N', 'Nowoczesna'],
+    'inicjatywa-polska': ['iPL', 'Inicjatywa Polska'],
+    'zieloni': ['Zieloni', 'Partia Zieloni'],
+    'pis': ['PiS', 'Prawo i Sprawiedliwość'],
+    'psl': ['PSL', 'Polskie Stronnictwo Ludowe'],
+    'polish-coalition': ['KP', 'Koalicja Polska'],
+    'p2050': ['PL2050', 'Polska 2050'],
+    'third-way': ['TD', 'Trzecia Droga'],
+    'konf': ['Konf.', 'Konfederacja Wolność i Niepodległość'],
+    'united-right': ['ZP', 'Zjednoczona Prawica'],
+    'sovereign-poland': ['SP', 'Suwerenna Polska'],
+    'solidary-poland': ['SP', 'Solidarna Polska'],
+    'agreement': ['Porozumienie', 'Porozumienie'],
+    'republicans': ['PR', 'Partia Republikańska'],
+    'odnowa': ['OdNowa RP', 'OdNowa Rzeczypospolitej Polskiej'],
+    'national-movement': ['RN', 'Ruch Narodowy'],
+    'new-hope': ['NN', 'Nowa Nadzieja'],
+    'kkp': ['KKP', 'Konfederacja Korony Polskiej'],
+    'freedomites': ['Wolnościowcy', 'Wolnościowcy'],
+    'kukiz': ['Kukiz’15', 'Kukiz’15'],
+    'ued': ['UED', 'Unia Europejskich Demokratów'],
+    'unia-centrum': ['UC', 'Unia Centrum'],
+    'rozwoj-plus': ['Rozwój+', 'Rozwój Plus'],
+    'tak-dla-rozwoju': ['T!DR', 'Tak! Dla Rozwoju'],
+    'akcja-socjalistyczna': ['AS', 'Akcja Socjalistyczna'],
+    'partia-zero': ['P0', 'Partia Zero'],
+    'german-minority': ['MN', 'Mniejszość Niemiecka'],
+    'nonpartisan': ['BS', 'Bezpartyjni Samorządowcy']
+  };
+
   var partyAliases = {};
   var partyDefinitionsByClass = {};
   var partyAliasPattern = [];
@@ -713,6 +800,17 @@ window.disableGrayMode = function() {
   };
 
   partyDefinitions.forEach(function(definition) {
+    var canonicalNames = partyCanonicalNames[definition.id] || [
+      definition.id,
+      definition.id
+    ];
+    definition.shortName = canonicalNames[0];
+    definition.longName = canonicalNames[1];
+    [definition.longName, definition.shortName].forEach(function(name) {
+      if (!definition.aliases.some(function(alias) { return alias[0] === name; })) {
+        definition.aliases.push([name, name]);
+      }
+    });
     partyDefinitionsByClass[definition.className] = definition;
     (definition.classAliases || []).forEach(function(className) {
       partyDefinitionsByClass[className] = definition;
@@ -972,6 +1070,18 @@ window.disableGrayMode = function() {
       aliases: ['Donald Tusk', 'Tusk']
     },
     {
+      id: 'nowacka',
+      className: 'party-ko',
+      explanation: 'Barbara Nowacka leads Inicjatywa Polska within Civic Coalition and represents KO’s social-liberal wing.',
+      aliases: ['Barbara Nowacka', 'Nowacka']
+    },
+    {
+      id: 'rosa',
+      className: 'party-ko',
+      explanation: 'Monika Rosa is a KO politician associated with its progressive, equality and civil-rights wing.',
+      aliases: ['Monika Rosa']
+    },
+    {
       id: 'miller',
       className: 'party-sld',
       explanation: 'Leszek Miller is a former Polish prime minister and a defining figure of the post-communist SLD establishment.',
@@ -1075,7 +1185,7 @@ window.disableGrayMode = function() {
     {
       id: 'matysiak',
       className: 'party-razem',
-      explanation: 'Paulina Matysiak is a left-wing MP identified with rail and infrastructure policy and later split currents in this scenario.',
+      explanation: 'Paulina Matysiak is a left-wing MP identified with rail, infrastructure policy and later split currents.',
       aliases: [
         'Paulina Matysiak',
         'Pola Matysiak',
@@ -1193,31 +1303,31 @@ window.disableGrayMode = function() {
     {
       id: 'stanowski',
       className: 'party-p0',
-      explanation: 'Krzysztof Stanowski is a sports journalist and media entrepreneur represented in this scenario as the Partia Zero figure.',
+      explanation: 'Krzysztof Stanowski is a sports journalist, media entrepreneur and the public face of Partia Zero.',
       aliases: ['Krzysztof Stanowski', 'Stanowski']
     },
     {
       id: 'szpilski',
       className: 'party-nowa-solidarnosc',
-      explanation: 'Chrystian Szpilski is a founder character of the in-game Nowa Solidarność formation in the 2023 split event.',
+      explanation: 'Chrystian Szpilski is a founder of Nowa Solidarność.',
       aliases: ['Chrystian Szpilski', 'Szpilski']
     },
     {
       id: 'spalinski',
       className: 'party-nowa-solidarnosc',
-      explanation: 'Patryk Spaliński is a founder character of the in-game Nowa Solidarność formation in the 2023 split event.',
+      explanation: 'Patryk Spaliński is a founder of Nowa Solidarność.',
       aliases: ['Patryk Spalinski', 'Patryk Spaliński', 'Spalinski', 'Spaliński']
     },
     {
       id: 'kozlowski',
       className: 'party-nowa-solidarnosc',
-      explanation: 'Maciej Kozłowski is a founder character of the in-game Nowa Solidarność formation in the 2023 split event.',
+      explanation: 'Maciej Kozłowski is a founder of Nowa Solidarność.',
       aliases: ['Maciej Kozlowski', 'Maciej Kozłowski', 'Kozlowski', 'Kozłowski']
     },
     {
       id: 'rozenek',
       className: 'party-pps',
-      explanation: 'Andrzej Rozenek is a left-wing parliamentarian tied in this scenario to the PPS parliamentary breakaway move.',
+      explanation: 'Andrzej Rozenek is a left-wing parliamentarian tied to the PPS parliamentary breakaway.',
       aliases: ['Andrzej Rozenek', 'Rozenek']
     },
     {
@@ -1408,6 +1518,24 @@ window.disableGrayMode = function() {
       ? name
       : 'Zjednoczona Lewica';
   };
+  var partyNamesForDefinition = function(definition) {
+    if (definition.id !== 'lewica') {
+      return {
+        shortName: definition.shortName,
+        longName: definition.longName
+      };
+    }
+    var engine = window.dendryUI && window.dendryUI.dendryEngine;
+    var qualities = engine && engine.state && engine.state.qualities;
+    return {
+      shortName: String(
+        qualities && qualities.left_party_short_name || currentLeftName()
+      ),
+      longName: String(
+        qualities && qualities.left_party_long_name || currentLeftName()
+      )
+    };
+  };
   var partyLabel = function(alias) {
     var match = partyAliases[alias];
     return match && match.definition.id === 'lewica' &&
@@ -1445,14 +1573,22 @@ window.disableGrayMode = function() {
     'zieloni': true,
     'pis': true,
     'psl': true,
+    'polish-coalition': true,
     'p2050': true,
     'third-way': true,
     'konf': true,
+    'united-right': true,
     'kkp': true,
     'national-movement': true,
+    'new-hope': true,
     'agreement': true,
+    'republicans': true,
+    'odnowa': true,
     'sovereign-poland': true,
     'solidary-poland': true,
+    'kukiz': true,
+    'ued': true,
+    'german-minority': true,
     'rozwoj-plus': true,
     'partia-zero': true,
     'us-dem': true,
@@ -1466,13 +1602,18 @@ window.disableGrayMode = function() {
       return alias;
     }
     var logoId = partyLogoIdForAlias(match, alias);
+    var canonicalNames = partyNamesForDefinition(match.definition);
     var logoMarkup = partyLogoIds[logoId]
       ? '<span class="party-name-logo" aria-hidden="true"></span>'
       : '';
     return '<span class="party party-name ' + match.definition.className +
       '" title="' + escapeAttribute(match.definition.explanation) +
       '" data-party="' + match.definition.id +
-      '" data-party-logo="' + logoId + '">' +
+      '" data-party-logo="' + logoId +
+      '" data-party-short-name="' +
+        escapeAttribute(canonicalNames.shortName) +
+      '" data-party-long-name="' +
+        escapeAttribute(canonicalNames.longName) + '">' +
       logoMarkup +
       '<span class="party-name-label">' + partyLabel(alias) + '</span>' +
       '</span>';
@@ -1611,6 +1752,26 @@ window.disableGrayMode = function() {
         explanation: 'Zbigniew Ziobro leads Solidarna Polska/Suwerenna Polska and is rendered with that distinct current rather than default PiS styling.',
         aliases: definition.aliases
       };
+    }
+
+    if (definition.id === 'nowacka') {
+      var nowackaLeadsIpl =
+        Number(qualities && qualities.ipl_joined_left) > 0 ||
+        (
+          Number(qualities && qualities.ko_splinter_active) > 0 &&
+          String(qualities && qualities.ko_splinter_type) === 'Progressive' &&
+          String(qualities && qualities.ko_break_leader) === 'Barbara Nowacka'
+        );
+      if (nowackaLeadsIpl) {
+        return {
+          id: definition.id,
+          className: 'party-inicjatywa-polska',
+          explanation: Number(qualities && qualities.ipl_joined_left) > 0
+            ? 'Barbara Nowacka leads Inicjatywa Polska as an internal progressive current in ' + currentLeftName() + '.'
+            : 'Barbara Nowacka leads an independent Inicjatywa Polska after its progressive break with KO.',
+          aliases: definition.aliases
+        };
+      }
     }
 
     if (
@@ -1878,11 +2039,14 @@ window.disableGrayMode = function() {
         element.classList.add('person-name');
       }
       if (definition) {
+        var canonicalNames = partyNamesForDefinition(definition);
         element.classList.add('party');
         if (!personDefinition) {
           element.title = definition.explanation;
         }
         element.setAttribute('data-party', definition.id);
+        element.setAttribute('data-party-short-name', canonicalNames.shortName);
+        element.setAttribute('data-party-long-name', canonicalNames.longName);
         if (exactAlias) {
           var logoOverride = partyLogoIdForAlias(exactAlias, text);
           if (logoOverride) {
@@ -2231,6 +2395,51 @@ window.disableGrayMode = function() {
   // This function allows you to do something in response to signals.
   window.handleSignal = function(signal, event, scene_id) {
   };
+
+  var moodBackgroundStops = [
+    [20, [113, 118, 124]], // Dark gray at the most hostile extreme.
+    [35, [211, 220, 232]], // Konfederacja blue, softened for a large surface.
+    [50, [243, 243, 227]], // The original beige-yellow neutral.
+    [65, [239, 211, 215]], // The Left's red, kept pastel.
+    [80, [228, 204, 224]]  // Razem purple at the most favourable end.
+  ];
+
+  window.moodBackgroundColor = function(value) {
+    var score = Number(value);
+    if (!Number.isFinite(score)) {
+      score = 50;
+    }
+    score = Math.max(
+      moodBackgroundStops[0][0],
+      Math.min(moodBackgroundStops[moodBackgroundStops.length - 1][0], score)
+    );
+    var lower = moodBackgroundStops[0];
+    var upper = moodBackgroundStops[moodBackgroundStops.length - 1];
+    for (var i = 1; i < moodBackgroundStops.length; i++) {
+      if (score <= moodBackgroundStops[i][0]) {
+        lower = moodBackgroundStops[i - 1];
+        upper = moodBackgroundStops[i];
+        break;
+      }
+    }
+    var progress = (score - lower[0]) / (upper[0] - lower[0]);
+    var color = lower[1].map(function(channel, channelIndex) {
+      return Math.round(
+        channel + (upper[1][channelIndex] - channel) * progress
+      );
+    });
+    return 'rgb(' + color.join(', ') + ')';
+  };
+
+  window.updateMoodBackground = function() {
+    var engine = window.dendryUI && window.dendryUI.dendryEngine;
+    var qualities = engine && engine.state && engine.state.qualities;
+    var score = qualities && qualities.public_climate_progressive_index;
+    document.body.style.setProperty(
+      '--mood-bg-color',
+      window.moodBackgroundColor(score)
+    );
+  };
   
   // This function runs on a new page. Right now, this auto-saves.
   window.onNewPage = function() {
@@ -2450,8 +2659,10 @@ window.disableGrayMode = function() {
         'The oath confirms the next presidency and leaves Lewica searching for influence through protests and parliamentary bargains.'
       ),
       tvp: pressStory(
-        'The President takes the oath. Poland chooses continuity over opposition chaos',
-        'The head of state begins the new term with a democratic mandate and a promise to protect family and national development.'
+        'Lewandowski completes the treble with Bayern and becomes the FIFA award favourite',
+        'Bayern’s Champions League victory completed a historic treble, with Robert Lewandowski’s goals making him the leading candidate for The Best FIFA Men’s Player.',
+        'https://sport.tvp.pl/49538775/fifa-the-best-dla-roberta-lewandowskiego-przegrywal-bo-nie-bylo-go-na-chipsach',
+        '24 AUG 2020'
       )
     },
     202009: {
@@ -2562,8 +2773,10 @@ window.disableGrayMode = function() {
         'PiS secures Europe’s reconstruction funds while Lewica decides whether national investment matters more than opposition discipline.'
       ),
       tvn: pressStory(
-        'Lewica can rescue PiS—or force one opposition standard for European money',
-        'KO warns that private negotiations will divide democratic oversight and hand the government a free political victory.'
+        'Lewandowski scores 41 and breaks Gerd Müller’s Bundesliga record',
+        'The Polish striker scored in Bayern’s final league match to finish the season with 41 goals, one more than Müller’s 49-year-old mark.',
+        'https://eurosport.tvn24.pl/pilka-nozna/robert-lewandowski-pobil-rekord-gerda-muellera-wszystkie-jego-gole-w-sezonie-20202021_sto9459646/story.shtml',
+        '22 MAY 2021'
       )
     },
     202106: {
@@ -2713,6 +2926,12 @@ window.disableGrayMode = function() {
       )
     },
     202206: {
+      onet: pressStory(
+        'Świątek wins Roland Garros after a commanding final against Gauff',
+        'Iga Świątek defeated Coco Gauff 6–1, 6–3 in Paris to claim her second Grand Slam singles title.',
+        'https://przegladsportowy.onet.pl/tenis/iga-swiatek-cori-gauff-na-zywo-relacja-i-wynik-meczu-final-roland-garros/dhe2bt6',
+        '4 JUN 2022'
+      ),
       tvn: pressStory(
         'Brussels approves the KPO plan. The money still depends on restoring the rule of law',
         'KO warns that milestones are not payment; Lewica can help enforce the conditions instead of giving PiS another shortcut.'
@@ -2748,8 +2967,10 @@ window.disableGrayMode = function() {
     },
     202209: {
       tvn: pressStory(
-        'Energy prices explode. The government’s lost years are arriving in household bills',
-        'KO presents a European alternative; Lewica can support protection if it does not turn emergency relief into another coalition ultimatum.'
+        'Poland takes silver at the volleyball World Championship',
+        'The defending champions lost the Katowice final 1–3 to Italy and completed the tournament with the silver medal.',
+        'https://eurosport.tvn24.pl/siatkowka/siatkowka-polska-wlochy-wynik-meczu-i-relacja-final-ms-siatkarzy-2022_sto9492496/story.shtml',
+        '11 SEP 2022'
       ),
       republika: pressStory(
         'Putin weaponises energy and Brussels sends the invoice. PiS shields Polish families',
@@ -2869,6 +3090,12 @@ window.disableGrayMode = function() {
       )
     },
     202307: {
+      tvp: pressStory(
+        'Poland wins the Volleyball Nations League for the first time',
+        'The national team defeated the United States in the final in Gdańsk, giving captain Bartosz Kurek another landmark trophy.',
+        'https://sport.tvp.pl/71514009/bartosz-kurek-przeszedl-do-historii-polskiej-siatkowki-dokonal-tego-jako-pierwszy/amp',
+        '24 JUL 2023'
+      ),
       onet: pressStory(
         'Konfederacja’s summer surge is no longer an internet curiosity',
         'KO needs a competent democratic offer; Lewica must challenge the anger underneath the polling rise without copying its language.'
@@ -2894,8 +3121,10 @@ window.disableGrayMode = function() {
     },
     202309: {
       tvn: pressStory(
-        'A sealed frontier, a growing queue and questions the government will not answer',
-        'KO demands facts about the visa system; Lewica can defend humane law without excusing administrative failure.'
+        'Poland sweeps Italy to become European volleyball champion',
+        'The men’s national team won the Rome final 3–0, securing Poland’s second European title.',
+        'https://eurosport.tvn24.pl/siatkowka/mistrzostwa-europy/2023/me-siatkarzy-2023-terminarz-wyniki-i-tabela-mistrzostw-europy-w-siatkowce-mezczyzn_sto9763987/story.shtml',
+        '16 SEP 2023'
       ),
       republika: pressStory(
         'The opposition discovers the border weeks before polling day. Poles remember who defended it',
@@ -2964,6 +3193,10 @@ window.disableGrayMode = function() {
       onet: pressStory(
         'Farmers bring their anger to Warsaw. The coalition needs answers, not inherited slogans',
         'KO can negotiate in Europe; Lewica should make the case for protection without letting the radical right own every rural grievance.'
+      ),
+      wp: pressStory(
+        'Roads close, grain waits and the farmers’ demands no longer fit one slogan',
+        'Ukrainian imports, European climate rules and supermarket bargaining power have converged in one protest whose organisers do not agree on the remedy.'
       )
     },
     202403: {
@@ -2988,6 +3221,10 @@ window.disableGrayMode = function() {
       tvp: pressStory(
         'The coalition faces its first local verdict—and asks voters to protect the work already begun',
         'Government parties present institutional repair and European funds; Lewica’s local result will decide how loudly it can negotiate inside that project.'
+      ),
+      onet: pressStory(
+        'The local count redraws the map beneath the national coalition',
+        'Mayors and regional assemblies expose where government recognition became organisation—and where Lewica still depends on partners to reach the ballot.'
       )
     },
     202405: {
@@ -3014,6 +3251,10 @@ window.disableGrayMode = function() {
       wp: pressStory(
         'European votes, a railway promise and one question: what will actually be built?',
         'The campaign ends, but the CPK and rail review still has to distinguish sunk costs, useful routes and partisan branding.'
+      ),
+      tvn: pressStory(
+        'The European result strengthens the centre—and leaves Lewica searching for its voters',
+        'KO can claim a national victory, but governing partners must explain why office did not give each of them an equally visible European record.'
       )
     },
     202407: {
@@ -3036,8 +3277,14 @@ window.disableGrayMode = function() {
         'The cabinet presents indexed security and a credible budget path while Lewica presses for a larger permanent floor.'
       ),
       tvn: pressStory(
-        'A ZUS letter becomes the coalition’s test of social credibility',
-        'KO needs predictable finances; Lewica can win the argument for protection if it shows who pays and how delivery works.'
+        'Poland finishes the Paris Olympics with ten medals',
+        'Aleksandra Mirosław supplied Poland’s gold in speed climbing as the team closed the Games with ten medals overall.',
+        'https://eurosport.tvn24.pl/igrzyska-olimpijskie/igrzyska-olimpijskie-paryz-2024/2024/medale-polakow-kto-zdobyl-ile-medali-ma-polska_sto20022245/story.shtml',
+        '11 AUG 2024'
+      ),
+      wp: pressStory(
+        'The pension promise reaches households—and the next budget spreadsheet',
+        'Recipients can count the payment now; coalition parties still have to say whether the guarantee survives slower growth and competing public-service bills.'
       )
     },
     202409: {
@@ -3062,6 +3309,10 @@ window.disableGrayMode = function() {
       rzeczpospolita: pressStory(
         'Tusk borrows the right’s border policy. Lewica threatens revolt after years of denial',
         'The turn proves PiS and Konfederacja framed the real question; the government now wants their answer without admitting the source.'
+      ),
+      tvn: pressStory(
+        'Suspending asylum tests both the border and the coalition’s legal promises',
+        'KO calls the restriction necessary; Lewica must decide whether safeguards can repair a policy it believes crosses the government’s democratic line.'
       )
     },
     202411: {
@@ -3079,6 +3330,12 @@ window.disableGrayMode = function() {
       )
     },
     202412: {
+      tvp: pressStory(
+        'Polish women learn their opponents for a first European Championship',
+        'Poland will face Germany, Denmark and Sweden at Euro 2025 after qualifying for the tournament for the first time.',
+        'https://sport.tvp.pl/84053146/rozlosowano-grupy-euro-2025-wiadomo-z-kim-reprezentacja-polski-kobiet-zagra-na-przyszlorocznym-turnieju',
+        '16 DEC 2024'
+      ),
       tvn: pressStory(
         'The budget reaches the chamber with KPO projects—and coalition promises—on the clock',
         'KO offers stability before the presidential race; Lewica must decide which deliverables justify pressure and which risk the entire majority.'
@@ -3086,6 +3343,10 @@ window.disableGrayMode = function() {
       republika: pressStory(
         'A record budget, European strings and the Left’s invoice: Poles will pay for coalition survival',
         'PiS warns that borrowed celebration conceals higher costs while Lewica treats every fiscal ceiling as an ideological provocation.'
+      ),
+      wp: pressStory(
+        'One budget carries reconstruction, wages and the coalition’s unfinished first year',
+        'The roll call will settle the legal appropriation; ministries will still have to prove that the money reaches schools, counties and projects on schedule.'
       )
     },
     202501: {
@@ -3110,12 +3371,18 @@ window.disableGrayMode = function() {
       'kanal-zero': pressStory(
         'The ministry promises equal access. Parents hear another order from Warsaw',
         'PiS can oppose the rule without defending local failure; the real test is whether government policy works beyond its own press conference.'
+      ),
+      onet: pressStory(
+        'A new classroom rule opens an old coalition argument about equality and control',
+        'Lewica wants one enforceable national floor while ministers and municipalities dispute staffing, parental consent and what schools can actually deliver.'
       )
     },
     202503: {
       tvp: pressStory(
-        'Government suspends asylum access at the pressured border and promises legal safeguards',
-        'The cabinet calls the measure temporary and necessary; Lewica is asked to shape oversight without weakening the state’s response.'
+        'Bogdanka LUK Lublin wins the Challenge Cup',
+        'The Lublin club completed a historic European triumph, beating Cucine Lube Civitanova in the two-leg final.',
+        'https://sport.tvp.pl/85687847/historyczny-sukces-bogdanki-luk-lublin-wilfredo-leon-i-spolka-triumfowali-w-pucharze-challenge',
+        '19 MAR 2025'
       ),
       tvn: pressStory(
         'Border pressure drives the coalition toward emergency law',
@@ -3134,6 +3401,10 @@ window.disableGrayMode = function() {
       onet: pressStory(
         'Braun brings campaign spectacle into a hospital. Silence is no longer neutrality',
         'KO expects a democratic cordon; Lewica can defend patients and staff without allowing the provocateur to dictate the entire election.'
+      ),
+      tvn: pressStory(
+        'The hospital incident forces every presidential campaign to name its limits',
+        'Condemnation is easy; parties must now decide whether democratic isolation, prosecution or another televised confrontation best protects patients without feeding the spectacle.'
       )
     },
     202505: {
@@ -3160,6 +3431,10 @@ window.disableGrayMode = function() {
         'Sławosz Uznański-Wiśniewski launched aboard Axiom-4 for the International Space Station, becoming the second Pole in space.',
         'https://tvpworld.com/87476742/poland-back-in-space-after-nearly-50-years-with-iss-bound-astronaut-video',
         '25 JUN 2025'
+      ),
+      wp: pressStory(
+        'The Palace result becomes a confidence count inside the Sejm',
+        'The presidential ballot changed political authority, not parliamentary seats; coalition leaders must now show whether their majority still exists on a named programme.'
       )
     },
     202507: {
@@ -3184,6 +3459,10 @@ window.disableGrayMode = function() {
       wp: pressStory(
         'A new presidency begins with old disputes already waiting on the desk',
         'Appointments, social bills and judicial repair will show whether cohabitation becomes negotiation, paralysis or a permanent campaign.'
+      ),
+      rzeczpospolita: pressStory(
+        'A new President inherits every limit the campaign pretended the Palace could remove',
+        'Vetoes and appointments matter, but neither writes a budget nor supplies a Sejm majority; the first hundred days will expose which promises require cooperation.'
       )
     },
     202509: {
@@ -3202,12 +3481,18 @@ window.disableGrayMode = function() {
     },
     202510: {
       tvp: pressStory(
-        'The governing centre consolidates before the next delivery test',
-        'One political organisation can reduce coalition noise; Lewica remains a partner where its demands fit a stable programme and funded timetable.'
+        'Polish women beat Wales 5–2 after their European Championship debut',
+        'The national team won the friendly in Newport, continuing its first season after appearing at a major tournament.',
+        'https://sport.tvp.pl/89719960/reprezentacja-polski-kobiet-pokonala-walie-w-meczu-towarzyskim',
+        '28 OCT 2025'
       ),
       tvn: pressStory(
         'KO becomes one larger party. Consolidation will not replace coalition management',
         'The prime minister strengthens the centre, but still needs a Left that can be tolerated as a negotiating partner rather than a permanent rebellion.'
+      ),
+      'kanal-zero': pressStory(
+        'The centre merges its logos and calls the organisation new',
+        'A larger KO can discipline candidates and money, but it cannot make coalition partners disappear or turn internal agreement into public enthusiasm.'
       )
     },
     202511: {
@@ -3232,6 +3517,10 @@ window.disableGrayMode = function() {
       rzeczpospolita: pressStory(
         'Lewica wants inspectors in every workplace. The bill for coalition survival grows again',
         'Employers receive new commands while the government races a European deadline and pretends administration has no economic cost.'
+      ),
+      tvn: pressStory(
+        'The labour promise reaches its decisive line: staff, powers and money',
+        'Lewica can claim a law only if the inspectorate can enforce it; KO must decide whether European milestones and domestic delivery share the same budget priority.'
       )
     },
     202601: {
@@ -3250,12 +3539,18 @@ window.disableGrayMode = function() {
     },
     202602: {
       tvn: pressStory(
-        'The ambassador dispute becomes another Palace veto on ordinary government',
-        'KO wants one foreign policy abroad; Lewica should defend constitutional roles without turning a serious alliance into domestic performance.'
+        'Poland ends the Winter Olympics with four medals',
+        'Three silver medals and one bronze placed Poland 21st in the final table, led by Kacper Tomasiak’s two ski-jumping medals.',
+        'https://eurosport.tvn24.pl/igrzyska-olimpijskie/mediolan-cortina-2026/2026/klasyfikacja-medalowa-zimowych-igrzysk-olimpijskich-2026.-ktore-miejsce-zajeli-polacy_sto23264771/story.shtml',
+        '22 FEB 2026'
       ),
       republika: pressStory(
         'The government cannot command the Palace, so it calls resistance a crisis',
         'PiS defends presidential authority while Lewica joins KO’s attempt to subordinate every independent office to the cabinet.'
+      ),
+      wp: pressStory(
+        'Two signatures, one embassy and a dispute allies can no longer ignore',
+        'The cabinet directs foreign policy while the President participates in appointments; neither side has explained how an ambassador serves through an indefinite institutional standoff.'
       )
     },
     202603: {
@@ -3280,6 +3575,10 @@ window.disableGrayMode = function() {
       'kanal-zero': pressStory(
         'Association or ultimatum? The former prime minister tests how much dissent PiS can contain',
         'The right needs renewal without handing government another term; personal ambition matters less than whether a real organisation follows.'
+      ),
+      onet: pressStory(
+        'Morawiecki builds outside the party room. PiS must decide whether this is leverage or departure',
+        'An association can collect experts and local allies without moving a single MP; the test begins when loyalty, candidates and money can no longer belong to both organisations.'
       )
     },
     202605: {
@@ -3294,9 +3593,19 @@ window.disableGrayMode = function() {
       republika: pressStory(
         'Kanał Zero goes to television. The old gatekeepers just lost another wall',
         'Konfederacja gains a route around liberal newsrooms while PiS must learn that conservative viewers no longer belong to one party.'
+      ),
+      rownosc: pressStory(
+        'Partnership is not a photograph. Families need the registry, inheritance and hospital rules',
+        'The compromise matters because people can use it, but only a funded implementation timetable will turn the chamber’s recognition into equal treatment at the counter.'
       )
     },
     202606: {
+      tvp: pressStory(
+        'Poland comes back from two sets down to beat Ukraine',
+        'The men’s national team recovered from 0–2 to win its Nations League match 3–2 in Ottawa.',
+        'https://sport.tvp.pl/93800463/polscy-siatkarze-wygrali-z-ukraina-w-lidze-narodow-znakomity-powrot/amp',
+        '14 JUN 2026'
+      ),
       republika: pressStory(
         'The Tribunal answers the majority—and ministers suggest the ruling need not count',
         'PiS warns that KO and Lewica accept constitutional review only when it produces the result already agreed in cabinet.'
@@ -3304,6 +3613,14 @@ window.disableGrayMode = function() {
       onet: pressStory(
         'One ruling, two legal realities and no citizen who can wait for politicians to agree',
         'KO must finish institutional repair; Lewica should prioritise enforceable remedies over another declaration that its preferred authority is the only one.'
+      ),
+      wp: pressStory(
+        'The judgment lands. Offices still need one rule for Monday morning',
+        'Ministers and the Palace can dispute the panel’s authority for years; registries, courts and families need to know which decision governs the next application.'
+      ),
+      rownosc: pressStory(
+        'Rights cannot depend on which half of the state answers the telephone',
+        'The constitutional conflict is already material: partners, patients and applicants face delay while institutions argue over whose seal makes their lives valid.'
       )
     },
     202607: {
@@ -3318,167 +3635,613 @@ window.disableGrayMode = function() {
       'kanal-zero': pressStory(
         'A veto, a signature and the trap behind both choices',
         'Konfederacja demands a clear refusal; PiS weighs principle against a campaign that the Left is ready to stage around the pen.'
+      ),
+      rownosc: pressStory(
+        'The President now decides whether thousands of families can use the law they were promised',
+        'Signature opens the implementation fight and veto opens the mobilisation fight; neither outcome makes the people waiting for legal security disappear.'
       )
     },
     202608: {
       'kanal-zero': pressStory(
         'PiS departures reach the point where “internal debate” stops convincing anyone',
-        'Scenario horizon: the right must choose between a real split and another bargain that protects the same leadership circle.'
+        'The right must choose between a real split and another bargain that protects the same leadership circle.'
       ),
       tvp: pressStory(
         'Government asks the Palace to end the appointments blockade',
-        'Scenario horizon: the cabinet defends continuity and lawful staffing while Lewica presses for deadlines that do not reopen the constitutional war.'
+        'The cabinet defends continuity and lawful staffing while Lewica presses for deadlines that do not reopen the constitutional war.'
+      ),
+      tvn: pressStory(
+        'Vacant offices turn presidential resistance into a state-capacity test',
+        'KO wants appointments completed; Lewica must show which deadline protects public service and which shortcut would deepen the next legal dispute.'
+      ),
+      rownosc: pressStory(
+        'An appointments blockade is paid for in queues, missing staff and delayed rights',
+        'Institutional cohabitation sounds remote until an office cannot decide a benefit, inspection or protection claim because nobody may lawfully sign it.'
       )
     },
     202609: {
       tvn: pressStory(
         'A new conservative club redraws the opposition benches',
-        'Scenario horizon: KO sees a divided right; Lewica can use the opening if it offers delivery instead of celebrating somebody else’s fracture.'
+        'KO sees a divided right; Lewica can use the opening if it offers delivery instead of celebrating somebody else’s fracture.'
       ),
       republika: pressStory(
         'The right breaks its own monopoly. A new club says PiS forgot development',
-        'Scenario horizon: Konfederacja welcomes competition that exposes career loyalty, but voters will demand more than recycled government biographies.'
+        'Konfederacja welcomes competition that exposes career loyalty, but voters will demand more than recycled government biographies.'
       ),
       onet: pressStory(
         'The 2027 budget begins as the party system moves underneath it',
-        'Scenario horizon: KO must fund governing priorities while Lewica decides whether leverage is worth risking the stability voters still expect.'
+        'KO must fund governing priorities while Lewica decides whether leverage is worth risking the stability voters still expect.'
+      ),
+      rownosc: pressStory(
+        'A new club changes the seating plan. The budget still decides who gets security',
+        'Party defections dominate the cameras, but workers, tenants and public services will judge the new alignment by the appropriations it supports.'
       )
     },
     202610: {
       onet: pressStory(
         'The judicial-status bill reaches the Palace. Poland cannot survive another improvised repair',
-        'Scenario horizon: KO needs a defensible statute; Lewica should make individual rights the test rather than demand victory in every institutional claim.'
+        'KO needs a defensible statute; Lewica should make individual rights the test rather than demand victory in every institutional claim.'
       ),
       wp: pressStory(
         'Sign, veto or refer: the courts wait behind three presidential doors',
-        'Scenario horizon: each route changes the timetable, but none immediately resolves the status of every appointment and judgment.'
+        'Each route changes the timetable, but none immediately resolves the status of every appointment and judgment.'
+      ),
+      rzeczpospolita: pressStory(
+        'The majority calls its judicial settlement final. The Palace still has three ways to refuse',
+        'A statute cannot erase contested appointments by declaration; conservatives expect the President to test both the text and the authority claimed behind it.'
+      ),
+      rownosc: pressStory(
+        'Judicial repair has one measure: whether ordinary people keep their judgments and rights',
+        'The parties are counting offices while families and workers need a settlement that protects decided cases, timely hearings and access to an independent court.'
       )
     },
     202611: {
       rzeczpospolita: pressStory(
         'Lewica invites the centre into one party. The ideological bill comes after the merger',
-        'Scenario horizon: a broad formation may win offices, but voters should ask which programme survives when every faction is promised a home.'
+        'A broad formation may win offices, but voters should ask which programme survives when every faction is promised a home.'
       ),
       'kanal-zero': pressStory(
         'Three right-wing columns fight for one Independence March',
-        'Scenario horizon: Konfederacja refuses to surrender the street to PiS nostalgia or a new conservative project assembled from defectors.'
+        'Konfederacja refuses to surrender the street to PiS nostalgia or a new conservative project assembled from defectors.'
       ),
       tvp: pressStory(
         'A named replacement faces the Sejm. Government calls every partner to the roll',
-        'Scenario horizon: the cabinet defends its mandate against a constructive motion while Lewica must choose whether coalition repair is still credible.'
+        'The cabinet defends its mandate against a constructive motion while Lewica must choose whether coalition repair is still credible.'
+      ),
+      rownosc: pressStory(
+        'A larger Left must protect the movements and workers it is asking to come inside',
+        'Realignment can widen power only if representation, internal democracy and the social programme survive the merger rather than becoming campaign decoration.'
       )
     },
     202612: {
       tvp: pressStory(
-        'The final budget closes the playable years with government continuity on the line',
-        'Scenario horizon: ministers defend funded delivery and constitutional deadlines as parties turn toward the election year.'
+        'The final pre-election budget puts government continuity on the line',
+        'Ministers defend funded delivery and constitutional deadlines as parties turn toward the election year.'
       ),
       tvn: pressStory(
         'The budget folders close. The election-year record remains open',
-        'Scenario horizon: KO’s governing case and Lewica’s leverage are measured in the institutions, laws and alliances carried into 2027.'
+        'KO’s governing case and Lewica’s leverage are measured in the institutions, laws and alliances carried into 2027.'
+      ),
+      wp: pressStory(
+        'The pre-election budget passes from coalition promise to household timetable',
+        'Schools, hospitals, inspectors and local projects now have appropriations; delivery before the campaign will decide whether voters recognise them.'
+      ),
+      rownosc: pressStory(
+        'The budget is a rights document written in numbers',
+        'Every equality promise depends on staffed offices, accessible services and workers paid to deliver them; the election-year audit starts with those lines.'
       )
     },
     202701: {
       onet: pressStory(
         'Eight years of Left strategy enter one election year',
-        'Scenario horizon: Lewica must decide whether voters should judge a governing record, an independent programme or the organisation built beneath both.'
+        'Lewica must decide whether voters should judge a governing record, an independent programme or the organisation built beneath both.'
       ),
       republika: pressStory(
         'The coalition enters 2027 asking voters to forget its internal bill',
-        'Scenario horizon: the right will make every delayed reform and cabinet bargain part of the coming parliamentary campaign.'
+        'The right will make every delayed reform and cabinet bargain part of the coming parliamentary campaign.'
+      ),
+      tvn: pressStory(
+        'The election year begins with a record no coalition partner can edit alone',
+        'KO wants continuity, Lewica wants distinct ownership and the centre wants survival; voters will compare all three claims with the same years in office.'
+      ),
+      rownosc: pressStory(
+        'Election year starts where the governing record meets everyday life',
+        'Partnership, wages, housing and public services will matter only where people can point to a right gained, a queue shortened or power organised beyond a slogan.'
       )
     },
     202702: {
       wp: pressStory(
         'Household security returns to the centre of the campaign',
-        'Scenario horizon: wages, housing, prices and public services give smaller parties a route around another purely institutional contest.'
+        'Wages, housing, prices and public services give smaller parties a route around another purely institutional contest.'
       ),
       'kanal-zero': pressStory(
         'A campaign about delivery meets voters who remember the promises',
-        'Scenario horizon: government and opposition can no longer separate their programmes from the record accumulated since the last Sejm election.'
+        'Government and opposition can no longer separate their programmes from the record accumulated since the last Sejm election.'
+      ),
+      onet: pressStory(
+        'Rents, wages and waiting lists interrupt the campaign leaders planned to run',
+        'Lewica sees an opening in material security, but it must connect every promise to delivery rather than ask voters to reward pressure alone.'
+      ),
+      rownosc: pressStory(
+        'Household security is political power measured at the end of the month',
+        'Tenants, carers and low-paid workers are setting the campaign test: stable homes, enforceable wages and services available before a crisis.'
       )
     },
     202703: {
       tvn: pressStory(
         'The democratic majority rehearses unity before it negotiates the lists',
-        'Scenario horizon: KO wants a clear governing alternative while Lewica and the centre calculate how much identity tactical coordination costs.'
+        'KO wants a clear governing alternative while Lewica and the centre calculate how much identity tactical coordination costs.'
       ),
       rzeczpospolita: pressStory(
         'Electoral arithmetic begins to discipline the coalition’s ambitions',
-        'Scenario horizon: thresholds and Senate districts reward cooperation, but every shared banner creates a new argument over nominations and money.'
+        'Thresholds and Senate districts reward cooperation, but every shared banner creates a new argument over nominations and money.'
+      ),
+      onet: pressStory(
+        'The unity photograph is easy. The candidate spreadsheet begins underneath it',
+        'Democratic parties agree on the threat of a divided vote while disputing thresholds, safe places and which promises a common campaign must carry.'
+      ),
+      rownosc: pressStory(
+        'No democratic list is complete without guarantees for the people asked to defend it',
+        'Equality groups, unions and local organisers want programme commitments and winnable representation before their work becomes somebody else’s unity photograph.'
       )
     },
     202704: {
       onet: pressStory(
         'Local structures become the hidden primary before candidate lists close',
-        'Scenario horizon: national leaders need councillors, organisers and volunteers who can convert recognition into an actual election operation.'
+        'National leaders need councillors, organisers and volunteers who can convert recognition into an actual election operation.'
       ),
       republika: pressStory(
         'The right’s rival organisations discover that a logo is not a field campaign',
-        'Scenario horizon: PiS, Konfederacja and their splinters compete for candidates, local money and the authority to define the opposition.'
+        'PiS, Konfederacja and their splinters compete for candidates, local money and the authority to define the opposition.'
+      ),
+      wp: pressStory(
+        'Candidate lists are being written in county offices, not television studios',
+        'Safe places, local records and volunteer networks now decide which national promise reaches a doorstep with a recognisable name beside it.'
+      ),
+      rownosc: pressStory(
+        'Winnable places are the campaign’s first equality vote',
+        'Parties praising women, workers and minority organisers must now decide whether those people receive resources and positions capable of winning seats.'
       )
     },
     202705: {
       tvp: pressStory(
         'The cabinet turns implementation dates into campaign dates',
-        'Scenario horizon: every ministry presents delivery as proof of competence while partners dispute who supplied the votes and who owns the result.'
+        'Every ministry presents delivery as proof of competence while partners dispute who supplied the votes and who owns the result.'
       ),
       wp: pressStory(
         'A future election is already testing the state’s unfinished work',
-        'Scenario horizon: judicial repair, equality, labour enforcement and public investment remain records to defend rather than boxes a slogan can close.'
+        'Judicial repair, equality, labour enforcement and public investment remain records to defend rather than boxes a slogan can close.'
+      ),
+      republika: pressStory(
+        'Ministers convert every administrative deadline into a campaign launch',
+        'The coalition calls implementation proof of competence; the right will ask why rights and projects promised years ago arrive only when ballots approach.'
+      ),
+      rownosc: pressStory(
+        'Implementation is the difference between a manifesto and a usable right',
+        'Registries, inspectors and local services need staff, rules and dates that survive the campaign tour and remain after ministers stop cutting ribbons.'
       )
     },
     202706: {
       'kanal-zero': pressStory(
         'Candidate season arrives and every faction calls itself indispensable',
-        'Scenario horizon: party leaders must decide which internal currents receive safe places and which are expected to campaign without leverage.'
+        'Party leaders must decide which internal currents receive safe places and which are expected to campaign without leverage.'
       ),
       tvn: pressStory(
         'The opposition asks for one democratic story. Smaller parties ask for guarantees',
-        'Scenario horizon: unity photographs cannot settle thresholds, subsidies, candidate order or the programme a future coalition would enact.'
+        'Unity photographs cannot settle thresholds, subsidies, candidate order or the programme a future coalition would enact.'
+      ),
+      onet: pressStory(
+        'The list talks reach the names—and every abstract alliance becomes personal',
+        'Leaders can trade committee formulas in private; candidates and local organisations will decide whether the settlement survives its first publication.'
+      ),
+      rownosc: pressStory(
+        'Candidate negotiations reveal whose work the alliance considers expendable',
+        'Movement organisers and workplace voices need more than symbolic last places if the campaign expects them to mobilise people whom party brands do not reach.'
       )
     },
     202707: {
       rzeczpospolita: pressStory(
         'The constitutional election window approaches with the party system unsettled',
-        'Scenario horizon: the President must order a vote within the end-of-term rules while every camp still argues over the coalition it will present.'
+        'The President must order a vote within the end-of-term rules while every camp still argues over the coalition it will present.'
       ),
       onet: pressStory(
         'The summer campaign begins before the formal posters appear',
-        'Scenario horizon: polling, local nominations and tactical desertion are already moving voters among lists whose final shape is not yet secure.'
+        'Polling, local nominations and tactical desertion are already moving voters among lists whose final shape is not yet secure.'
+      ),
+      tvn: pressStory(
+        'The election date approaches while the democratic lists remain unfinished',
+        'KO wants clarity before voters tune out for summer; Lewica must balance tactical coordination against the distinct mandate it says the next coalition needs.'
+      ),
+      rownosc: pressStory(
+        'The election calendar is fixed. The social deadline was already here',
+        'People facing eviction, discrimination or unsafe work cannot wait for campaign season, so organisers are judging parties by what they deliver before asking for another mandate.'
       )
     },
     202708: {
       tvp: pressStory(
         'The election order turns governing claims into ballot tests',
-        'Scenario horizon: ministers defend continuity, opposition parties demand a verdict and Lewica tries to convert leverage into a distinct mandate.'
+        'Ministers defend continuity, opposition parties demand a verdict and Lewica tries to convert leverage into a distinct mandate.'
       ),
       republika: pressStory(
         'The campaign begins with three rights and no uncontested leader',
-        'Scenario horizon: conservative voters choose among institutional restoration, developmental competence and anti-system confrontation.'
+        'Conservative voters choose among institutional restoration, developmental competence and anti-system confrontation.'
+      ),
+      wp: pressStory(
+        'The election is ordered. Committees now face dates no negotiation can move',
+        'Registrations, signatures, broadcasts and candidate filings turn months of strategic ambiguity into one enforceable campaign calendar.'
+      ),
+      rownosc: pressStory(
+        'The campaign opens with a simple demand: put material equality on the ballot',
+        'Candidates will be asked for enforceable commitments on work, housing, care and family security—not another promise to settle them after coalition talks.'
       )
     },
     202709: {
       wp: pressStory(
         'One last argument: social security, democratic continuity or party independence',
-        'Scenario horizon: Lewica’s closing choice will affect turnout and tactical voting, but the count will still enforce every committee threshold.'
+        'Lewica’s closing choice will affect turnout and tactical voting, but the count will still enforce every committee threshold.'
       ),
       'kanal-zero': pressStory(
         'The debates end. The thresholds do not negotiate',
-        'Scenario horizon: parties that spent years multiplying organisations now face the arithmetic that converts votes into seats—or waste.'
+        'Parties that spent years multiplying organisations now face the arithmetic that converts votes into seats—or waste.'
+      ),
+      tvp: pressStory(
+        'The closing campaign asks voters to connect four years of delivery with one ballot',
+        'Government parties defend continuity while rivals promise correction; each list now has days, not months, to prove its vote will count.'
+      ),
+      rownosc: pressStory(
+        'The final mobilisation belongs to people politics usually treats as an audience',
+        'Workers, tenants, carers and equality organisers are turning promises into turnout—and recording which candidates stood beside them before the cameras arrived.'
       )
     },
     202710: {
       onet: pressStory(
         'Poland votes. The next Sejm will reveal which alliances survived the campaign',
-        'Scenario horizon: the simulated count applies the live electorate, party splits and committee thresholds before the political record becomes an epilogue.'
+        'Votes are counted across a fragmented party field, with every committee threshold enforced before seats are apportioned.'
       ),
       tvn: pressStory(
         'Election night closes the campaign and opens the verdict on eight years',
-        'Scenario horizon: Sejm proportional seats and one hundred Senate districts now decide which organisations retain parliamentary power.'
+        'Sejm proportional seats and one hundred Senate districts now decide which organisations retain parliamentary power.'
+      ),
+      rzeczpospolita: pressStory(
+        'The ballots are cast. Coalition promises now meet constitutional arithmetic',
+        'No television declaration can change a missed threshold or manufacture 231 seats; the next government begins with the count parties actually earned.'
+      ),
+      rownosc: pressStory(
+        'Election night counts seats—and the movements that made those votes possible',
+        'Whatever coalition follows, organisers will measure the result by representation, usable rights and whether the people mobilised today retain power tomorrow.'
       )
     }
   };
+
+  // One contemporaneous outlet report for every historical/current month.
+  // These are stored locally so the game never depends on a live news request.
+  [
+    [201911, 'tvp',
+      'Polish sprint cyclists set a national record at the World Cup',
+      'The women’s team sprint squad lowered the Polish record during the opening round of the track-cycling World Cup.',
+      'https://sport.tvp.pl/45134102/puchar-swiata-w-kolarstwie-torowym-rekord-polski-druzyny-sprinterek',
+      '1 NOV 2019'],
+    [201912, 'tvp',
+      'Lewandowski closes 2019 as the world’s leading goalscorer',
+      'Robert Lewandowski finished the calendar year with more goals than any other player in world football.',
+      'https://sport.tvp.pl/45935597/najlepszy-pilkarzy-2019-roku-na-swiecie-wedlug-dziennikarzy-tvp-sport',
+      '27 DEC 2019'],
+    [202001, 'tvp',
+      'Bundesliga recognises another record-breaking month for Lewandowski',
+      'The German league honoured Robert Lewandowski after another prolific run for Bayern Munich.',
+      'https://sport.tvp.pl/46006939/robert-lewandowski-wyrozniony-przez-lige-niemiecka',
+      '1 JAN 2020'],
+    [202002, 'tvp',
+      'Kubacki reaches a tenth consecutive World Cup podium',
+      'Dawid Kubacki extended his remarkable ski-jumping streak with a tenth straight podium finish in Sapporo.',
+      'https://sport.tvp.pl/46456750/puchar-swiata-w-skokach-sapporo-piekna-seria-kubackiego-trwa-10-podium-z-rzedu',
+      '1 FEB 2020'],
+    [202003, 'tvp',
+      'Milik and Zieliński help Napoli continue its climb',
+      'The Polish internationals earned praise as Napoli continued its recovery in the Serie A table.',
+      'https://sport.tvp.pl/46910745/arkadiusz-milik-i-piotr-zielinski-pochwaleni-napoli-pnie-sie-w-tabeli-serie-a',
+      '1 MAR 2020'],
+    [202004, 'tvp',
+      'Table-tennis season ends early with champions declared',
+      'Enea Siarka Tarnobrzeg and Kolping Frac Jarosław were named Polish champions after the pandemic stopped the season.',
+      'https://sport.tvp.pl/47370707/koronawirus-enea-siarka-tarnobrzeg-i-kolping-frac-jaroslaw-mistrzami-polski-rozgrywki-tenisa-stolowego-zaknczone',
+      '1 APR 2020'],
+    [202005, 'tvp',
+      'Vital Heynen will lead Poland’s volleyball team through 2021',
+      'The Polish federation extended the national-team coach’s contract through the rescheduled Olympic season.',
+      'https://sport.tvp.pl/47840906/vital-heynen-selekcjonerem-polski-do-2021-roku-pzps-przedluzyl-umowe',
+      '1 MAY 2020'],
+    [202006, 'tvp',
+      'Polish volleyball selects its team of the league’s first twenty years',
+      'A retrospective vote assembled the standout players from two decades of Poland’s professional volleyball league.',
+      'https://sport.tvp.pl/48324328/druzyna-20-lecia-polskiej-ligi-siatkowki',
+      '1 JUN 2020'],
+    [202007, 'tvp',
+      'Lewandowski revisits the transfer that never happened at Legia',
+      'The Bayern striker recalled why an early-career move to Legia Warsaw did not materialise.',
+      'https://sport.tvp.pl/48767909/robert-lewandowski-legia-nie-do-konca-chcialem-tam-isc-wideo',
+      '1 JUL 2020'],
+    [202009, 'tvp',
+      'The Netherlands enters Poland’s Nations League match without Koeman',
+      'Poland prepared to face a Dutch side beginning a new chapter after Ronald Koeman’s departure.',
+      'https://sport.tvp.pl/49647029/liga-narodow-holandia-bez-ronalda-koemana-jaki-zespol-zagra-z-polska',
+      '1 SEP 2020'],
+    [202011, 'tvp',
+      'Poland wins ten medals at the junior fitness world championships',
+      'The Polish team collected ten medals, including four golds, at the junior bodybuilding and fitness championships.',
+      'https://sport.tvp.pl/50599357/mistrzostwa-swiata-juniorow-w-kulturystyce-i-fitness-dziesiec-medali-dla-polski-w-tym-cztery-zlote',
+      '1 NOV 2020'],
+    [202012, 'tvp',
+      'Lewandowski is nominated for UEFA’s Team of the Year',
+      'Robert Lewandowski joined the candidates for UEFA’s annual selection after Bayern’s trophy-winning season.',
+      'https://sport.tvp.pl/51118984/pilka-nozna-lewandowski-nominowany-do-druzyny-roku-uefa',
+      '1 DEC 2020'],
+    [202101, 'tvp',
+      'Kubacki wins in Garmisch-Partenkirchen as Żyła joins him on the podium',
+      'Dawid Kubacki won the New Year’s ski-jumping contest and Piotr Żyła completed a double Polish podium.',
+      'https://sport.tvp.pl/51605935/skoki-69-turniej-czterech-skoczni-dawid-kubacki-wygral-konkurs-w-ga-pa-piotr-zyla-na-podium',
+      '1 JAN 2021'],
+    [202102, 'tvp',
+      'Cycling legend Ryszard Szurkowski dies',
+      'Polish sport mourned one of its most decorated cyclists, an Olympic medallist and four-time Peace Race winner.',
+      'https://sport.tvp.pl/52073332/zmarl-ryszard-szurkowski-najbardziej-utytulowany-polski-kolarz',
+      '1 FEB 2021'],
+    [202103, 'tvp',
+      'England beats Poland 2–1 at Wembley',
+      'Poland pushed the hosts after Jakub Moder’s equaliser, but Harry Maguire settled the World Cup qualifier late.',
+      'https://sport.tvp.pl/53074694/anglia-polska-21-kamil-jozwiak-naprawde-nacisnelismy-anglikow',
+      '31 MAR 2021'],
+    [202104, 'tvp',
+      'Volleyball Nations League schedules are finally confirmed',
+      'Poland’s women’s and men’s national teams learned their full programmes for the returning international competition.',
+      'https://sport.tvp.pl/53586886/siatkowka-trzeba-bylo-dlugo-czekac-ale-znamy-terminarz-ligi-narodow-reprezentacji-polski-siatkarzy-i-siatkarek',
+      '30 APR 2021'],
+    [202106, 'tvp',
+      'Świątek opens Wimbledon with victory over Zvonareva',
+      'Iga Świątek made a winning start on the grass at Wimbledon against former finalist Vera Zvonareva.',
+      'https://sport.tvp.pl/54617502/iga-swiatek-wiera-zwonariowa-wypowiedzi-po-meczu',
+      '30 JUN 2021'],
+    [202107, 'tvp',
+      'Zmarzlik wins the Polish Grand Prix again in Wrocław',
+      'Bartosz Zmarzlik repeated his Speedway Grand Prix victory at the Wrocław round.',
+      'https://sport.tvp.pl/55147355/grand-prix-polski-bartosz-zmarzlik-ponownie-najlepszy-we-wroclawiu',
+      '31 JUL 2021'],
+    [202109, 'tvp',
+      'Legia opens the Europa League group with two victories',
+      'The Warsaw club won its first two group matches, a feat rarely achieved by a Polish side in European competition.',
+      'https://sport.tvp.pl/56137864/liga-europy-legia-warszawa-wygrala-dwa-pierwsze-mecze-fazy-grupowej-drugi-przypadek-w-historii-polskiej-pilki',
+      '30 SEP 2021'],
+    [202110, 'tvp',
+      'Zieliński passes Boniek among Polish Serie A goalscorers',
+      'Piotr Zieliński moved ahead of Zbigniew Boniek in the historical ranking of Polish scorers in Italy’s top flight.',
+      'https://sport.tvp.pl/56687844/serie-a-piotr-zielinski-wyprzedzil-zbigniewa-bonka-w-klasyfikacji-polskich-strzelcow-w-serie-a',
+      '31 OCT 2021'],
+    [202111, 'tvp',
+      'Hurkacz remains tenth in the ATP ranking',
+      'Hubert Hurkacz held a career-best place inside the world top ten as the season approached its finale.',
+      'https://sport.tvp.pl/56694554/atp-hubert-hurkacz-pozostal-na-10-miejscu-stan-na-1112021',
+      '1 NOV 2021'],
+    [202112, 'tvp',
+      'Brighton signs Kacper Kozłowski in an £8 million deal',
+      'The teenage Poland international joined Brighton and was set to continue his development on loan in Belgium.',
+      'https://sport.tvp.pl/57731643/premier-league-brighton-zaplaci-8-milionow-funtow-za-kacpra-kozlowskiego-reprezentant-polski-zostanie-wypozyczony-do-belgii',
+      '31 DEC 2021'],
+    [202201, 'tvp',
+      'Czesław Michniewicz becomes Poland’s national-team coach',
+      'The new manager took charge with Poland’s World Cup play-off campaign immediately ahead.',
+      'https://sport.tvp.pl/58250240/czeslaw-michniewicz-selekcjoner-reprezentacji-polski-czeslaw-michniewicz-wszystko-zalezy-od-jednego-meczu',
+      '31 JAN 2022'],
+    [202202, 'tvp',
+      'FIFA and UEFA suspend Russia as Poland awaits a play-off decision',
+      'Football’s governing bodies removed Russian teams from competition after Poland refused to play its scheduled World Cup qualifier.',
+      'https://sport.tvp.pl/58782807/cezary-kulesza-po-zawieszeniu-reprezentacji-rosji-przez-fifa-i-uefa-co-z-barazami-kadry-polski',
+      '28 FEB 2022'],
+    [202203, 'tvp',
+      'Lewandowski receives Poland’s Wiktory sportsman award',
+      'Robert Lewandowski was named sportsman of the year at the revived Wiktory awards ceremony.',
+      'https://sport.tvp.pl/59372171/wiktory-robert-lewandowski-sportowcem-roku-w-polsce-dariusz-szpakowski-wreczyl-statuetke-na-kolanach-wideo',
+      '31 MAR 2022'],
+    [202204, 'tvp',
+      'Zmarzlik wins the Gorican Grand Prix with Janowski second',
+      'Bartosz Zmarzlik led a Polish one-two at the opening Speedway Grand Prix round in Croatia.',
+      'https://sport.tvp.pl/59931842/grand-prix-na-zuzlu-bartosz-zmarzlik-najlepszy-w-gorican-maciej-janowski-drugi',
+      '30 APR 2022'],
+    [202205, 'tvp',
+      'Pia Skrzyszowska runs the fourth-fastest hurdles time in Polish history',
+      'The young hurdler set a personal best that placed her fourth on Poland’s all-time list.',
+      'https://sport.tvp.pl/60499054/lekkoatletyka-pia-skrzyszowska-z-nowym-rekordem-zyciowym-4-wynik-w-historii-polski',
+      '31 MAY 2022'],
+    [202207, 'tvp',
+      'Polish teams start the Chess Olympiad with three perfect rounds',
+      'Both national squads remained unbeaten through the first three rounds of the Olympiad in Chennai.',
+      'https://sport.tvp.pl/61586619/olimpiada-szachowa-polskie-druzyny-z-kompletem-zwyciestw-po-trzech-rundach',
+      '31 JUL 2022'],
+    [202208, 'tvp',
+      'Milik scores for Juventus as Szczęsny leaves injured',
+      'Arkadiusz Milik found the net in a win over Spezia, while goalkeeper Wojciech Szczęsny was forced off.',
+      'https://sport.tvp.pl/62143686/serie-a-juventus-wygral-ze-spezia-kontuzja-szczesnego-i-bramka-milika',
+      '31 AUG 2022'],
+    [202210, 'tvp',
+      'Świątek arrives at the WTA Finals as the player to beat',
+      'The world number one entered the season finale with a commanding record against the rest of her group.',
+      'https://sport.tvp.pl/64251745/iga-swiatek-na-wta-finals-2022-bilans-spotkan-z-rywalkami-z-grupy-lista-szanse-igi-swiatek-na-wta-finals-2022',
+      '31 OCT 2022'],
+    [202211, 'tvp',
+      'Poland advances to the World Cup round of sixteen',
+      'Despite defeat by Argentina, the national team progressed from its group and returned to the knockout stage.',
+      'https://sport.tvp.pl/64836124/mundial-2022-podsumowanie-11-dnia-mundialu-polska-awansowala-do-18-po-46-latach',
+      '30 NOV 2022'],
+    [202301, 'tvp',
+      'Polish mountaineer Anna Czerwińska dies at 73',
+      'One of Poland’s most accomplished Himalayan climbers died aged 73 after a lifetime in the world’s highest mountains.',
+      'https://sport.tvp.pl/65963261/nie-zyje-anna-czerwinska-polska-himalaistka-miala-73-lata',
+      '31 JAN 2023'],
+    [202302, 'tvp',
+      'Hurkacz wins his opening match in Dubai',
+      'Hubert Hurkacz defeated Alexander Shevchenko to advance from the first round of the ATP tournament.',
+      'https://sport.tvp.pl/66908854/hubert-hurkacz-wygral-z-aleksandrem-szewcznko-w-1-rundzie-turnieju-w-dubaju',
+      '28 FEB 2023'],
+    [202303, 'tvp',
+      'Świątek tops the entry list for the Madrid Open',
+      'The world number one headed the field announced for the season’s major clay-court tournament in Madrid.',
+      'https://sport.tvp.pl/68887720/iga-swiatek-pierwsza-na-liscie-zgloszen-turnieju-w-wta-w-madrycie',
+      '31 MAR 2023'],
+    [202304, 'tvp',
+      'Poland takes Britain to overtime at the ice-hockey world championship',
+      'The national team recovered from two goals down before losing a dramatic Division IA match 5–4 in overtime.',
+      'https://sport.tvp.pl/69554002/wielka-brytania-polska-hokej-na-lodzie-mistrzostwa-swiata-dywizji-1a-skrot',
+      '30 APR 2023'],
+    [202305, 'tvp',
+      'Świątek adds a grass-court tournament before Wimbledon',
+      'Iga Świątek entered the Bad Homburg event as part of her preparation for the grass-court Grand Slam.',
+      'https://sport.tvp.pl/70244319/iga-swiatek-zgloszona-do-turnieju-na-trawie-w-bad-homburg',
+      '31 MAY 2023'],
+    [202306, 'tvp',
+      'Polish volleyball women finish the Nations League round among the leaders',
+      'The national team completed an outstanding preliminary phase and secured its place in the finals.',
+      'https://sport.tvp.pl/70956773/to-juz-pewne-znakomity-wynik-polskich-siatkarek-po-fazie-zasadniczej-ligi-narodow',
+      '30 JUN 2023'],
+    [202308, 'tvp',
+      'Poland opens the European volleyball championship by beating Czechia',
+      'The men’s national team began the tournament with a straight-sets victory in its opening group match.',
+      'https://sport.tvp.pl/72404975/mistrzostwa-europy-siatkarzy-2023-polska-czechy-skrot',
+      '31 AUG 2023'],
+    [202310, 'tvp',
+      'Polish women beat Serbia in the Nations League',
+      'Natalia Padilla-Bidas headed the only goal as Poland earned a 1–0 away victory.',
+      'https://sport.tvp.pl/73809736/liga-narodow-kobiet-serbia-polska-01-gol-glowa-natalii-padilli-bidas',
+      '31 OCT 2023'],
+    [202312, 'tvp',
+      'Inside the working lives of Poland’s women ice-hockey players',
+      'A TVP report followed national-team players balancing elite hockey with ordinary jobs away from the rink.',
+      'https://sport.tvp.pl/75103225/z-biura-prosto-na-lod-czyli-codziennosc-reprezentantek-polski-w-hokeju',
+      '31 DEC 2023'],
+    [202401, 'tvp',
+      'Natalia Kaczmarek breaks a 49-year Polish mark over 300 metres',
+      'Kaczmarek ran 35.52 in Potchefstroom, improving the unofficial national best set by Irena Szewińska in 1975.',
+      'https://sport.tvp.pl/75691204/kaczmarek-pobila-rekord-szewinskiej-licze-na-poprawke-w-paryzu',
+      '31 JAN 2024'],
+    [202402, 'tvp',
+      'Iwan Rakitski becomes junior European shooting champion',
+      'The 17-year-old Pole won air-pistol gold at the European championships in Győr.',
+      'https://sport.tvp.pl/76155206/wielki-sukces-17-letni-polak-mistrzem-europy',
+      '27 FEB 2024'],
+    [202403, 'tvp',
+      'Zniszczoł earns his first ski-jumping World Cup podium',
+      'Aleksander Zniszczoł finished third in Lahti to end Poland’s long wait for a podium that season.',
+      'https://sport.tvp.pl/76244563/zniszczol-z-zyciowym-wynikiem-pierwsze-polskie-podium',
+      '3 MAR 2024'],
+    [202404, 'tvp',
+      'Polish track sprinters secure their Paris Olympic place',
+      'Marlena Karwacka, Urszula Łoś and Nikola Sibiak clinched qualification in the women’s team sprint.',
+      'https://sport.tvp.pl/76966786/polskie-kolarki-torowe-wywalczyly-kwalifikacje-na-igrzyska-olimpijskie-w-paryzu',
+      '13 APR 2024'],
+    [202405, 'tvp',
+      'Poland’s volleyball women beat Germany and remain unbeaten',
+      'The national team extended its perfect start to the Nations League with another victory.',
+      'https://sport.tvp.pl/77840539/reprezentacja-polski-siatkarek-pokonala-niemki-jest-wciaz-niepokonana',
+      '31 MAY 2024'],
+    [202407, 'tvp',
+      'Świątek reaches the Olympic singles semi-final',
+      'Iga Świątek defeated Danielle Collins in Paris to move within one win of the gold-medal match.',
+      'https://sport.tvp.pl/79571679/iga-swiatek-pokonala-danielle-collins-i-awansowala-do-polfinalu-igrzysk-olimpijskich-w-paryzu',
+      '31 JUL 2024'],
+    [202409, 'tvp',
+      'Bartosz Kapustka returns to the Poland squad after eight years',
+      'The Legia midfielder earned a national-team recall eight years after his previous appearance.',
+      'https://sport.tvp.pl/82589797/bartosz-kapustka-w-reprezentacji-polski-po-8-latach-przerwy-pilkarz-legii-spelnil-marzenie-i-trafil-na-podium',
+      '30 SEP 2024'],
+    [202410, 'tvp',
+      'Majchrzak wins the ATP Challenger in Villena',
+      'Kamil Majchrzak defeated Nicolas Moreno de Alboran 6–4, 6–2 to claim the tournament in Spain.',
+      'https://sport.tvp.pl/82704492/kamil-majchrzak-wygral-turniej-w-hiszpanii-to-dla-mnie-wielka-sprawa',
+      '7 OCT 2024'],
+    [202411, 'tvp',
+      'Polish mixed relay finishes ninth at the Biathlon World Cup',
+      'The national quartet opened the World Cup season with a top-ten result in Kontiolahti.',
+      'https://sport.tvp.pl/83760593/ps-w-biathlonie-dziewiate-miejsce-polskiej-sztafety-mieszanej-w-kontiolahti',
+      '30 NOV 2024'],
+    [202501, 'tvp',
+      'Szymon Palka lowers his 1500-metre personal best in Calgary',
+      'The Polish speed skater recorded 1:45.68 and finished fourteenth in the World Cup B group.',
+      'https://sport.tvp.pl/84681516/szymon-palka-pobil-rekord-zyciowy-na-1500-metrow-zajal-14-miejsce-w-grupie-b-pucharu-swiata-w-calgary',
+      '25 JAN 2025'],
+    [202502, 'tvp',
+      'Bogdanka LUK Lublin reaches the Challenge Cup final',
+      'The volleyball club secured its place in the European final during a breakthrough season.',
+      'https://sport.tvp.pl/85333768/bogdanka-luk-lublin-awansowala-do-finalu-pucharu-challenge-krzysztof-skubiszewski-o-przedluzeniu-kontraktu-z-wilfredo-leonem',
+      '28 FEB 2025'],
+    [202504, 'tvp',
+      'Świątek beats Madison Keys to reach the Madrid semi-final',
+      'The Polish number one won their quarter-final and advanced to the last four of the WTA 1000 tournament.',
+      'https://sport.tvp.pl/86460849/wta-madryt-iga-swiatek-pokonala-madison-keys-podsumowanie-meczu-cwiercfinalowego-wideo',
+      '30 APR 2025'],
+    [202505, 'tvp',
+      'Mateusz Cierniak advances to the European speedway final',
+      'The Polish rider qualified from the meeting in Stralsund to continue his challenge for the continental title.',
+      'https://sport.tvp.pl/87025596/mateusz-cierniak-pojedzie-o-tytul-mistrza-europy-awans-polskiego-zuzlowca-w-stralsund',
+      '31 MAY 2025'],
+    [202507, 'tvp',
+      'Polish volleyball women take Nations League bronze at home',
+      'Victory over Japan ended a sixteen-year wait for a senior women’s national-team medal on home soil.',
+      'https://sport.tvp.pl/88049182/stefano-lavarini-przerwal-16-letnie-oczekiwanie-naprawde-nie-wiedzialem-tego',
+      '28 JUL 2025'],
+    [202508, 'tvn',
+      'Poland beats Iceland 84–75 at EuroBasket',
+      'A third consecutive group victory left the hosts leading their section in Katowice.',
+      'https://eurosport.tvn24.pl/koszykowka/eurobasket/2025/polska-islandia_mtc1602848/live.shtml',
+      '31 AUG 2025'],
+    [202509, 'tvp',
+      'Kamil Herzyk breaks Poland’s 51-year-old 3000-metre record',
+      'The 21-year-old ran 7:40.22 in Trier to improve the national mark held by Bronisław Malinowski since 1974.',
+      'https://sport.tvp.pl/88691462/lekkoatletyka-kamil-herzyk-pobil-rekord-polski-w-biegu-na-3000-metrow-poprawil-rezultat-legendy',
+      '2 SEP 2025'],
+    [202511, 'tvp',
+      'Poland overwhelms Latvia in its socca World Cup opener',
+      'The six-a-side national team began its tournament with a convincing victory.',
+      'https://sport.tvp.pl/90302295/ms-w-socca-reprezentacja-polski-zdemolowala-lotwe-w-pierwszym-meczu',
+      '30 NOV 2025'],
+    [202512, 'tvp',
+      'Dominika Sztandera breaks the Polish 100-metre breaststroke record',
+      'She clocked 1:03.97 at the European short-course championships in Lublin and placed fifth in the final.',
+      'https://sport.tvp.pl/90360217/dominika-sztandera-pobila-rekord-polski-podczas-mistrzostw-europy-na-krotkim-basenie-rozgrywanych-w-lublinie-wideo',
+      '3 DEC 2025'],
+    [202601, 'tvp',
+      'Kaja Ziomek-Nogal becomes European speed-skating champion',
+      'Her 500-metre gold led a strong Polish medal haul at the championships in Tomaszów Mazowiecki.',
+      'https://sport.tvp.pl/90983315/kaja-ziomek-nogal-mistrzynia-europy-worek-medali-dla-polski/amp',
+      '10 JAN 2026'],
+    [202603, 'tvp',
+      'Sweden edges Poland 3–2 in a five-goal contest',
+      'Karol Świderski drew Poland level before Viktor Gyökeres scored the decisive goal.',
+      'https://sport.tvp.pl/92397345/szwecja-polska-32-viktor-gyokeres-zlamal-polskie-serca-gol',
+      '31 MAR 2026'],
+    [202604, 'tvp',
+      'Jan Zieliński reaches the Madrid doubles semi-final',
+      'The Polish doubles specialist advanced to the last four of the ATP Masters tournament.',
+      'https://sport.tvp.pl/93009833/turniej-atp-w-madrycie-jan-zielinski-wywalczyl-awans-do-polfinalu-w-rywalizacji-deblistow',
+      '30 APR 2026'],
+    [202605, 'tvp',
+      'Mateusz Żukowski makes his Poland debut',
+      'The defender dedicated his first national-team appearance to coach Jacek Magiera.',
+      'https://sport.tvp.pl/93572123/mateusz-zukowski-wzruszony-po-debiucie-w-reprezentacji-polski-ten-wystep-dedykuje-trenerowi-magierze',
+      '31 MAY 2026'],
+    [202607, 'tvp',
+      'Poland reaches the Volleyball Nations League semi-final',
+      'The national team broke its recent run against Slovenia to move into the last four.',
+      'https://sport.tvp.pl/94629847/reprezentacja-polski-siatkarzy-zagra-ze-slowenia-w-polfinale-ligi-narodow-klatwa-zostala-przelamana',
+      '31 JUL 2026'],
+    [202608, 'tvp',
+      'Świątek advances to the fourth round in Toronto',
+      'Iga Świątek set up a meeting with Marta Kostyuk at the WTA 1000 tournament.',
+      'https://sport.tvp.pl/94737544/kiedy-iga-swiatek-zagra-w-4-rundzie-turnieju-w-toronto-o-ktorej-mecz-z-marta-kostiuk',
+      '8 AUG 2026']
+  ].forEach(function(report) {
+    pressReviewStories[report[0]] = pressReviewStories[report[0]] || {};
+    pressReviewStories[report[0]][report[1]] = pressStory(
+      report[2], report[3], report[4], report[5]
+    );
+  });
 
   // Authored reactions to player-made outcomes. These take precedence over the
   // monthly desk; the generic live story is only the final fallback.
@@ -4563,6 +5326,39 @@ window.disableGrayMode = function() {
       eventStories[outlet.id] : story;
   };
 
+  var pressRotateOutlets = function(outlets, turn) {
+    if (!outlets.length) {
+      return [];
+    }
+    var start = Math.abs((Number(turn) || 0) * 2) % outlets.length;
+    return outlets.slice(start).concat(outlets.slice(0, start));
+  };
+
+  // Reserve one real sourced report when the month has one, then keep authored
+  // outcome reactions ahead of monthly copy. Live copy is the final fallback.
+  var pressEditionOutlets = function(available, qualities, dateKey, turn) {
+    var eventStories = pressEventStories[String(qualities.news_headline || '')] || {};
+    var monthlyStories = pressReviewStories[dateKey] || {};
+    var sourcedStories = {};
+    Object.keys(monthlyStories).forEach(function(outletId) {
+      if (monthlyStories[outletId].sourceUrl) {
+        sourcedStories[outletId] = monthlyStories[outletId];
+      }
+    });
+    var used = {};
+    var ordered = [];
+    [sourcedStories, eventStories, monthlyStories, null].forEach(function(stories) {
+      var group = available.filter(function(outlet) {
+        return !used[outlet.id] && (!stories || stories[outlet.id]);
+      });
+      pressRotateOutlets(group, turn).forEach(function(outlet) {
+        used[outlet.id] = true;
+        ordered.push(outlet);
+      });
+    });
+    return ordered;
+  };
+
   var pressMoodSentence = function(outlet, qualities, issue) {
     if (!issue) {
       return '';
@@ -4635,7 +5431,7 @@ window.disableGrayMode = function() {
         (!outlet.requires || qualities[outlet.requires]);
     });
     var count = Math.min(available.length, 2 + Math.abs(turn % 2));
-    var start = Math.abs(turn * 2) % available.length;
+    available = pressEditionOutlets(available, qualities, dateKey, turn);
 
     var heading = document.createElement('header');
     heading.className = 'press-review-heading';
@@ -4652,7 +5448,7 @@ window.disableGrayMode = function() {
     panel.appendChild(heading);
 
     for (var i = 0; i < count; i++) {
-      var outlet = available[(start + i) % available.length];
+      var outlet = available[i];
       var stories = pressReviewStories[dateKey] || {};
       var story = stories[outlet.id];
       if (!story) {
@@ -4669,7 +5465,7 @@ window.disableGrayMode = function() {
       article.setAttribute('data-outlet', outlet.id);
       article.setAttribute('data-mood-issue', pressPublicMood(qualities).issue);
       article.setAttribute('aria-label', outlet.name +
-        (story.sourceUrl ? ' sourced report: ' : ' simulated article: ') +
+        (story.sourceUrl ? ' sourced report: ' : ' press analysis: ') +
         story.headline);
 
       var masthead = document.createElement('div');
@@ -4715,7 +5511,7 @@ window.disableGrayMode = function() {
         sourceLink.textContent = 'SOURCED · ' + story.sourceDate;
         footer.appendChild(sourceLink);
       } else {
-        footer.textContent = 'SIMULATED REPORT';
+        footer.textContent = 'PRESS REVIEW';
       }
       article.appendChild(footer);
       panel.appendChild(article);
@@ -4779,11 +5575,15 @@ window.disableGrayMode = function() {
   window.onDisplayContent = function() {
       window.updateSidebar();
       window.updateSidebarRight();
+      window.updateMoodBackground();
       var content = document.getElementById('content');
       window.enhancePartyElements(content);
       if (content) {
         var engine = window.dendryUI && window.dendryUI.dendryEngine;
         var state = engine && engine.state;
+        // The Left's nominee is chosen at runtime, so both presidential
+        // chapters leave an empty portrait slot in their own prose and this
+        // fills it in place. Nothing is inserted into the surrounding text.
         var candidateImages = {
           'Robert Biedroń': 'img/poland/cards/advisor-biedron.webp',
           'Adrian Zandberg': 'img/poland/cards/advisor-zandberg.webp',
@@ -4793,103 +5593,21 @@ window.disableGrayMode = function() {
           'Magdalena Biejat': 'img/poland/cards/advisor-biejat.webp'
         };
         var currentSceneId = state && state.sceneId;
-        var isLeftCandidatePage = currentSceneId &&
-          currentSceneId.indexOf('poland_presidential_election.candidate_left') !== -1;
-        if (isLeftCandidatePage) {
-          var candidateName = state.qualities &&
-            state.qualities.presidential_candidate;
-          if (!candidateName) {
-            var knownCandidates = Object.keys(candidateImages);
-            var pageText = content.textContent;
-            for (var nameIndex = 0; nameIndex < knownCandidates.length;
-              nameIndex++) {
-              if (pageText.indexOf(knownCandidates[nameIndex]) !== -1) {
-                candidateName = knownCandidates[nameIndex];
-                break;
-              }
-            }
+        var qualities = (state && state.qualities) || {};
+        var portraitSlots = content.querySelectorAll(
+          '.left-candidate-portrait[data-candidate-quality]'
+        );
+        for (var slotIndex = 0; slotIndex < portraitSlots.length; slotIndex++) {
+          var slot = portraitSlots[slotIndex];
+          var slotImage = slot.querySelector('img');
+          if (!slotImage || slotImage.getAttribute('src')) {
+            continue;
           }
-          var candidateImage = candidateImages[candidateName];
-          if (candidateImage) {
-            var candidateFigure = content.querySelector(
-              '[data-candidate-figure="left"]'
-            );
-            var candidateFace;
-            if (!candidateFigure) {
-              candidateFigure = document.createElement('div');
-              candidateFigure.className = 'face-figure';
-              candidateFigure.setAttribute('data-candidate-figure', 'left');
-              candidateFace = document.createElement('img');
-              candidateFace.className = 'face-img';
-              candidateFigure.appendChild(candidateFace);
-              var candidateHeading = null;
-              var candidateParagraphs = content.querySelectorAll('p');
-              for (var paragraphIndex = candidateParagraphs.length - 1;
-                paragraphIndex >= 0; paragraphIndex--) {
-                var paragraphText = candidateParagraphs[paragraphIndex]
-                  .textContent.trim();
-                if (/lewica.?s nominee/i.test(paragraphText)) {
-                  candidateHeading = candidateParagraphs[paragraphIndex];
-                  break;
-                }
-              }
-              if (candidateHeading && candidateHeading.parentNode) {
-                candidateHeading.parentNode.insertBefore(
-                  candidateFigure,
-                  candidateHeading
-                );
-              } else {
-                content.appendChild(candidateFigure);
-              }
-            } else {
-              candidateFace = candidateFigure.querySelector('.face-img');
-            }
-            if (candidateFace) {
-              candidateFace.src = candidateImage;
-              candidateFace.setAttribute('data-candidate-image', 'true');
-            }
-            var candidateStrong = null;
-            var candidateStrongElements = content.querySelectorAll('b, strong');
-            for (var strongIndex = candidateStrongElements.length - 1;
-              strongIndex >= 0; strongIndex--) {
-              if (/lewica.?s nominee/i.test(
-                candidateStrongElements[strongIndex].textContent.trim()
-              )) {
-                candidateStrong = candidateStrongElements[strongIndex];
-                break;
-              }
-            }
-            if (candidateStrong && candidateStrong.nextSibling &&
-              candidateStrong.nextSibling.nodeType === 1 &&
-              candidateStrong.nextSibling.classList.contains('candidate-break')) {
-              candidateStrong.nextSibling.setAttribute(
-                'data-candidate-break', 'true'
-              );
-            } else if (candidateStrong) {
-              var candidateBreak = document.createElement('div');
-              candidateBreak.className = 'candidate-break';
-              candidateBreak.setAttribute('data-candidate-break', 'true');
-              candidateStrong.parentNode.insertBefore(
-                candidateBreak,
-                candidateStrong.nextSibling
-              );
-            } else {
-              var candidateHeadings = content.querySelectorAll('h1, h2, p');
-              for (var headingIndex = candidateHeadings.length - 1;
-                headingIndex >= 0; headingIndex--) {
-                if (/lewica.?s nominee/i.test(
-                  candidateHeadings[headingIndex].textContent.trim()
-                )) {
-                  var headingBreak = document.createElement('div');
-                  headingBreak.className = 'candidate-break';
-                  headingBreak.setAttribute(
-                    'data-candidate-break', 'true'
-                  );
-                  candidateHeadings[headingIndex].appendChild(headingBreak);
-                  break;
-                }
-              }
-            }
+          var slotSource = candidateImages[
+            qualities[slot.getAttribute('data-candidate-quality')]
+          ];
+          if (slotSource) {
+            slotImage.setAttribute('src', slotSource);
           }
         }
         var candidatePageNames = [
@@ -5130,6 +5848,7 @@ window.disableGrayMode = function() {
     window.statusTab = "status";
     window.initializeStatusTabs();
     window.initializeCardEnhancements();
+    window.updateMoodBackground();
     window.updateSidebar();
     window.statusTabRight = "press_review";
     window.updateSidebarRight();

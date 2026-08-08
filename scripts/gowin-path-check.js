@@ -322,6 +322,35 @@ assert.strictEqual(
   'forced',
   'A collapsed count should let PiS force the postal election through'
 );
+
+// If Gowin loses, the May ballot elects Duda. The scheduler must not launch a
+// contradictory KO replacement, June election or July runoff afterward.
+{
+  const { engine, Q } = newEngine();
+  Q.postal_election_stance = 'Boycott';
+  Q.postal_resistance = 22;
+  Q.gowin_standing = 40;
+  engine.goToScene('poland_gowin_crisis.postal_resolution');
+  const resolutionText = JSON.stringify(engine.state.currentContent || '');
+  assert.strictEqual(Q.postal_outcome, 'forced');
+  assert.strictEqual(Q.pres_runoff_winner_key, 'duda');
+  assert.strictEqual(Q.pres_first_round_majority, 1);
+  assert.strictEqual(Q.ko_candidate_replacement_2020_done, 1);
+  assert.strictEqual(Q.election_event_done, 1);
+  assert.strictEqual(Q.reckoning_event_done, 1);
+  assert(resolutionText.includes('There is no June presidential election'));
+
+  Q.year = 2020;
+  Q.month = 6;
+  Q.last_pride_year = 2020;
+  engine.goToScene('poland_polling');
+  assert.notStrictEqual(
+    engine.state.sceneId,
+    'poland_presidential_election.setup',
+    'The forced May result still launched the June presidential election'
+  );
+}
+
 assert.strictEqual(
   resolveMay(function (Q) {
     Q.constitutional_bargain_2020 = 1;
@@ -541,6 +570,23 @@ function runAugust2021(kukizAlignment, lexChoice) {
   choose('poland_minority_sejm.' + lexChoice);
   choose('poland_minority_sejm.gowin_dismissed');
   return { engine: engine, choose: choose, Q: Q };
+}
+
+// Gowin's dismissal changes the parliamentary count; it is not an entry
+// point for an old-SLD leadership restoration.
+{
+  const { engine } = newEngine();
+  engine.goToScene('poland_events_2021_2023.august_2021');
+  const choiceIds = engine.getCurrentChoices().map(function(choice) {
+    return choice.id;
+  });
+  assert(!choiceIds.some(function(id) { return id.includes('miller'); }),
+    'The Gowin/minority-government event still offers Miller restoration');
+  assert.strictEqual(
+    game.scenes['poland_events_2021_2023.aug21_restore_miller'],
+    undefined,
+    'The deleted direct Miller restoration scene was rebuilt'
+  );
 }
 
 // Historical route: PiS no longer needs Gowin, so it refuses the amendment.
@@ -835,6 +881,7 @@ console.log('gowin-path-check: Koalicja Polska / Trzecia Droga committee OK');
   // The libertarian component is one organisation with three names.
   assert.strictEqual(group(Q, 'nowa_nadzieja').name, 'Wolność',
     'It is Wolność at the 2019 start');
+  assert.strictEqual(group(Q, 'nowa_nadzieja').short_name, 'Wolność');
   Q.year = 2021; Q.month = 11;
   normalize(engine);
   assert.strictEqual(group(Q, 'nowa_nadzieja').name, 'Wolność');
@@ -842,6 +889,7 @@ console.log('gowin-path-check: Koalicja Polska / Trzecia Droga committee OK');
   normalize(engine);
   assert.strictEqual(group(Q, 'nowa_nadzieja').name, 'KORWiN',
     'It becomes KORWiN in December 2021');
+  assert.strictEqual(group(Q, 'nowa_nadzieja').short_name, 'KORWiN');
   Q.year = 2022; Q.month = 10;
   normalize(engine);
   assert.strictEqual(group(Q, 'nowa_nadzieja').name, 'KORWiN');
@@ -857,6 +905,7 @@ console.log('gowin-path-check: Koalicja Polska / Trzecia Droga committee OK');
   Q.konf_libertarian_leader = 'Sławomir Mentzen';
   normalize(engine);
   assert.strictEqual(group(Q, 'nowa_nadzieja').name, 'Nowa Nadzieja');
+  assert.strictEqual(group(Q, 'nowa_nadzieja').short_name, 'NN');
   assert.strictEqual(group(Q, 'nowa_nadzieja').leader, 'Sławomir Mentzen');
 
   // Korwin survives the challenge: it stays KORWiN.
@@ -979,14 +1028,46 @@ console.log('gowin-path-check: Konfederacja family OK');
   const { engine, Q } = newEngine();
   normalize(engine);
   assert.strictEqual(group(Q, 'zp_committee').name, 'Zjednoczona Prawica');
+  assert.strictEqual(group(Q, 'zp_committee').short_name, 'ZP');
+  assert.strictEqual(group(Q, 'zp_committee').long_name, 'Zjednoczona Prawica');
   assert.strictEqual(group(Q, 'zp_committee').active, 1);
   assert.strictEqual(Q.zp_committee_name, 'Zjednoczona Prawica');
+  assert.strictEqual(Q.zp_committee_short_name, 'ZP');
   assert.strictEqual(group(Q, 'ko_party').name, 'Koalicja Obywatelska');
   assert.strictEqual(group(Q, 'kp_committee').name, 'Koalicja Polska');
+  assert.strictEqual(group(Q, 'kp_committee').short_name, 'KP');
+  assert.strictEqual(Q.kp_committee_short_name, 'KP');
   assert.strictEqual(Q.kp_committee_class, 'party-psl',
     'Koalicja Polska is green');
   assert.strictEqual(group(Q, 'konf_committee').name,
     'Konfederacja Wolność i Niepodległość');
+  assert.strictEqual(group(Q, 'konf_committee').short_name, 'Konf.');
+  assert.strictEqual(group(Q, 'pis_party').short_name, 'PiS');
+  assert.strictEqual(group(Q, 'pis_party').long_name,
+    'Prawo i Sprawiedliwość');
+  assert.strictEqual(group(Q, 'republikanie').short_name, 'PR');
+  assert.strictEqual(group(Q, 'odnowa').short_name, 'OdNowa RP');
+  assert.strictEqual(group(Q, 'kp_partners').short_name, 'UED');
+  assert.strictEqual(Q.left_party_short_name, 'ZL');
+  assert.strictEqual(Q.left_party_long_name, 'Zjednoczona Lewica');
+  const playerVariants = new Map(Q.player_party_name_variants.map(function(record) {
+    return [record.name, record];
+  }));
+  [
+    ['Zjednoczona Lewica', 'ZL'], ['Lewica', 'Lewica'],
+    ['Nowa Lewica', 'NL'], ['Lewica Razem', 'LR'],
+    ['Lewica w Rozsypce', 'LwR'], ['Porozumienie Lewicy', 'PL'],
+    ['Federacja Lewicy', 'FL'], ['Wspólne Jutro', 'WJ'],
+    ['Nowa Lewica – Odnowa', 'NL–O'], ['Ruch Postępu', 'RP'],
+    ['Sojusz Polski Społecznej', 'SPS'], ['Nowa Solidarność', 'NS'],
+    ['Solidarność Społeczna', 'SS'], ['Lewica Rozwoju', 'LRz'],
+    ['Wspólna Polska', 'WP'], ['Partia Pracy', 'PP'],
+    ['Lewica Lewic', 'LL'],
+  ].forEach(function(expected) {
+    assert(playerVariants.has(expected[0]), 'Missing player party variant ' + expected[0]);
+    assert.strictEqual(playerVariants.get(expected[0]).short_name, expected[1]);
+    assert(playerVariants.get(expected[0]).long_name);
+  });
 
   // Trzecia Droga keeps its own colour.
   Q.p2050_emerged = 1;
@@ -1075,8 +1156,17 @@ console.log('gowin-path-check: alliance split invariant OK');
   assert(!pending.includes('poland_events_2023_2024.migration_pivot_2024'),
     'A Lewica prime minister must not propose the KO asylum suspension');
 
+  Q.year = 2025; Q.month = 3;
+  const leftMarchPending = (engine._compileChoices(
+    game.scenes['poland_event_queue.all_events']
+  ) || []).map(function (c) { return c.id; });
+  assert(!leftMarchPending.includes(
+    'poland_events_2025.asylum_suspension_2025'
+  ), 'A Lewica prime minister must not enact the asylum suspension');
+
   // A KO prime minister still gets it.
   Q.prime_minister = 'Donald Tusk';
+  Q.year = 2024; Q.month = 10;
   normalize(engine);
   assert.strictEqual(Q.pm_political_family, 'ko');
   const koPending = (engine._compileChoices(
@@ -1084,6 +1174,14 @@ console.log('gowin-path-check: alliance split invariant OK');
   ) || []).map(function (c) { return c.id; });
   assert(koPending.includes('poland_events_2023_2024.migration_pivot_2024'),
     'A KO prime minister should still reach it');
+
+  Q.year = 2025; Q.month = 3;
+  const koMarchPending = (engine._compileChoices(
+    game.scenes['poland_event_queue.all_events']
+  ) || []).map(function (c) { return c.id; });
+  assert(koMarchPending.includes(
+    'poland_events_2025.asylum_suspension_2025'
+  ), 'A KO prime minister should still reach the asylum roll call');
 }
 
 {
@@ -1195,6 +1293,11 @@ console.log('gowin-path-check: prime-ministerial family OK');
     [460, 100],
     'Opening party/member records must reconcile the family totals'
   );
+  Q.parliamentary_party_records.concat(Q.parliamentary_family_records)
+    .forEach(function(record) {
+      assert(record.short_name, record.id + ' has no ledger short name');
+      assert(record.long_name, record.id + ' has no canonical long name');
+    });
   engine.goToScene('status.relations');
   assert.strictEqual(Q.status_rival_pis_party_sejm, 199);
   assert.strictEqual(Q.status_rival_po_sejm, 106);

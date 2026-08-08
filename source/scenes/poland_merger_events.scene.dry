@@ -41,7 +41,6 @@ Q.left_surviving_current_count =
     Q.merger_barons_present +
     Q.merger_spring_present +
     Q.merger_razem_present +
-    Q.merger_labor_present +
     Q.merger_progressives_present +
     Q.merger_pps_present;
 
@@ -61,9 +60,6 @@ if (springPresent) {
 if (razemPresent) {
     scores.push({ name: "razem", score: n(Q.razem_strength) });
 }
-if (laborPresent) {
-    scores.push({ name: "labor", score: n(Q.labor_strength) });
-}
 if (progressivesPresent) {
     scores.push({ name: "progressives", score: n(Q.progressives_strength) });
 }
@@ -73,9 +69,21 @@ if (ppsPresent) {
 const strongestScore = scores.length
     ? Math.max.apply(null, scores.map(function(entry) { return entry.score; }))
     : 0;
+const razemPresidentialMandate =
+    Q.pres_first_round_complete &&
+    (
+        Q.presidential_candidate == "Adrian Zandberg" ||
+        Q.presidential_candidate == "Magdalena Biejat"
+    ) &&
+    n(Q.pres_performance_level) >= 1;
 
 Q.razem_can_lead_merger =
-    razemPresent && n(Q.razem_strength) >= strongestScore ? 1 : 0;
+    razemPresent &&
+    (
+        n(Q.razem_strength) >= strongestScore ||
+        razemPresidentialMandate
+    ) ? 1 : 0;
+Q.razem_presidential_merger_mandate = razemPresidentialMandate ? 1 : 0;
 Q.spring_can_lead_merger =
     springPresent && n(Q.spring_strength) >= strongestScore ? 1 : 0;
 Q.barons_can_lead_merger =
@@ -125,8 +133,12 @@ have agreed on a name.
 The choice is larger than a merger between SLD and Wiosna. We must decide who
 enters one political party, who remains a federal partner, who controls the
 inherited machinery and what authority can remove the first leadership. [? if
-razem_can_lead_merger: Razem is now at least as strong as every other current
-and can demand leadership of a genuinely unified party.?] [? if
+razem_can_lead_merger and not razem_presidential_merger_mandate: Razem is now
+at least as strong as every other current and can demand leadership of a
+genuinely unified party.?] [? if
+razem_presidential_merger_mandate: Razem's presidential candidate has held or
+expanded the Left's national base, giving the party a mandate that its smaller
+organisation could not claim on membership numbers alone.?] [? if
 spring_can_lead_merger: Wiosna can plausibly claim that the successor should be
 a break with the old SLD brand rather than its continuation.?]
 
@@ -204,7 +216,7 @@ title: Merge every surviving current into a single Razem-led party
 subtitle: Maximum integration; Razem receives political command while inherited machinery remains a separate problem.
 view-if: merger_razem_present = 1
 choose-if: razem_can_lead_merger = 1
-unavailable-subtitle: Razem accepts dissolution only when it is at least as strong as every other surviving current.
+unavailable-subtitle: Razem must be the strongest current or carry a successful presidential mandate before it will dissolve into the common party.
 on-arrival: {!
 function add(name, amount) {
     Q[name] = (Number(Q[name]) || 0) + amount;
@@ -216,7 +228,7 @@ Q.left_merger_scope = "all_surviving_currents";
 Q.left_legal_vehicle = Q.merger_barons_present
     ? "sld"
     : (Q.merger_spring_present ? "spring" : "new_party");
-Q.left_constitution = "single_leadership";
+Q.left_constitution = "razem_dual_chairs";
 Q.left_machine_controller = Q.merger_barons_present
     ? "barons"
     : (Q.merger_spring_present ? "spring" : "razem");
@@ -225,6 +237,11 @@ Q.left_dominant_current = "razem";
 Q.merger_leader = "Razem";
 Q.left_project = "Unified Razem-led Left";
 Q.left_party_name = "Lewica Razem";
+Q.left_leader = Q.razem_co_leader == "Vacant"
+    ? Q.razem_leader
+    : Q.razem_leader + " and " + Q.razem_co_leader;
+Q.left_leadership_result =
+    "Razem's two chairs jointly lead the unified Left";
 Q.razem_merged = 1;
 Q.barons_merged = Q.merger_barons_present;
 Q.spring_merged = Q.merger_spring_present;
@@ -254,7 +271,7 @@ Q.news_headline = "Razem leads every surviving Left current into one party";
 !}
 
 Every surviving organisation signs one statute and accepts Razem's programme
-and leadership. [? if merger_barons_present: SLD contributes the legal vehicle
+and its two chairs as the common leadership. [? if merger_barons_present: SLD contributes the legal vehicle
 and regional offices, but it enters them into a party it no longer commands.?]
 [? if merger_spring_present: Wiosna becomes a protected internal current rather
 than a second founder with a permanent veto.?] Razem is not an affiliate of
@@ -318,8 +335,8 @@ entry, but it does not by itself decide who governs.
 
 
 @merger_dual
-title: Merge SLD and Wiosna under protected dual leadership
-subtitle: Historical architecture; Razem remains an autonomous federal partner.
+title: Complete the historical peaceful New Left unification
+subtitle: SLD and Wiosna merge under protected dual leadership; Razem remains an autonomous federal partner.
 view-if: merger_barons_present = 1 and merger_spring_present = 1
 on-arrival: {!
 function add(name, amount) {
@@ -337,6 +354,9 @@ Q.left_dominant_current = "none";
 Q.merger_leader = "Dual chairs";
 Q.left_project = "Nowa Lewica with SLD–Wiosna parity";
 Q.left_party_name = "Nowa Lewica";
+Q.historical_peaceful_unification = 1;
+Q.left_pluralism_protected = 1;
+Q.left_structural_endpoint = "Historical peaceful Nowa Lewica unification";
 Q.barons_merged = 1;
 Q.spring_merged = 1;
 Q.razem_merged = 0;
@@ -526,6 +546,19 @@ Q.left_dominant_current = "members";
 Q.merger_leader = "Constituent convention";
 Q.left_project = "Federated Left convention";
 Q.left_party_name = "Lewica";
+Q.federation_sequence_stage = 1;
+Q.federation_route_score = 0;
+Q.federation_leadership_model = "Unsettled";
+Q.federation_finance_model = "Unsettled";
+Q.federation_candidate_rule = "Unsettled";
+Q.federation_membership_model = "Unsettled";
+Q.federation_veto_pressure = 0;
+Q.federation_decision_delay = 0;
+Q.federation_brand_dilution = 0;
+Q.federation_coalition_reach = 0;
+Q.federation_successful = 0;
+Q.federation_peaceful_unification = 0;
+Q.left_structural_endpoint = "Binding federation of Left parties";
 Q.razem_merged = 0;
 Q.barons_merged = 0;
 Q.spring_merged = 0;
@@ -547,7 +580,100 @@ pretending that separate legal parties have vanished. Razem, SLD and Wiosna
 retain their own memberships wherever they still exist. None is an outsider to
 the federation, and none can call its private machinery the whole Left.
 
-- @poland_hub: Open the new chapter
+- @federation_joint_convention: Allocate the federation's first leadership
+
+
+@federation_joint_convention
+# prose-audit: Grade A — The convention turns a generic federation into a concrete choice among rotating legitimacy, membership-weighted command and portfolio autonomy, with a distinct cost attached to each.
+title: The joint convention allocates federal leadership
+subtitle: A common chair can act quickly; a plural presidium can recruit and specialise without erasing its parties.
+new-page: true
+
+= September 2020 — Who may speak for a federation?
+
+The compact created a federal council, not a single party executive. SLD,
+Wiosna, Razem and the smaller organisations now have to decide who chairs the
+joint campaign, who speaks between council meetings and which decisions still
+require a member-party mandate.
+
+- @federation_rotating_presidium
+- @federation_weighted_council
+- @federation_portfolio_council
+
+
+@federation_rotating_presidium
+title: Rotate the joint chair between member parties
+subtitle: Protected identity and broad legitimacy; handovers slow decisions and blur the national face.
+on-arrival: federation_sequence_stage = 2; federation_leadership_model = "Rotating member-party presidium"; federation_route_score += 2; federation_decision_delay += 2; federation_brand_dilution += 2; party_unity += 2; public_trust += 1; media_capacity -= 2; news_headline = "The Left federation gives every member party a turn in the chair"
+go-to: federation_finance_convention
+
+
+@federation_weighted_council
+title: Weight the council by each party's membership and seats
+subtitle: A clearer lead party and faster decisions; smaller partners gain a reason to use their vetoes.
+on-arrival: federation_sequence_stage = 2; federation_leadership_model = "Weighted federal council"; federation_route_score += 0; federation_veto_pressure += 2; federation_decision_delay += 1; media_capacity += 2; party_unity -= 2; pps_dissent += 4; progressives_dissent += 3; news_headline = "The largest Left party receives the strongest federal voice"
+go-to: federation_finance_convention
+
+
+@federation_portfolio_council
+title: Give each party a policy and regional portfolio
+subtitle: Local specialisation and coalition reach; no chair can promise across another party's brief.
+on-arrival: federation_sequence_stage = 2; federation_leadership_model = "Portfolio federal council"; federation_route_score += 3; federation_veto_pressure += 1; federation_decision_delay += 1; local_network += 3; organiser_energy += 2; labor_credibility += 2; movement_autonomy += 2; party_unity -= 1; news_headline = "Federal parties divide policy and regional portfolios"
+go-to: federation_finance_convention
+
+
+@federation_finance_convention
+title: One campaign, several balance sheets
+subtitle: The federation must share assets and campaign money without quietly transferring legal ownership.
+new-page: true
+
+SLD holds offices and leases, Wiosna has media and candidate networks, and
+Razem has dues-paying organisation. A common campaign needs money now. The
+formula will decide whether resources follow the federation or remain tools of
+the parties that brought them.
+
+- @federation_common_treasury
+- @federation_matching_grants
+- @federation_host_assets
+
+
+@federation_common_treasury
+title: Pay into an audited common campaign treasury
+subtitle: Cost: 1 resource. Strong common capacity; every contributor surrenders some private control.
+choose-if: resources >= 1
+unavailable-subtitle: An audited treasury needs one resource to establish.
+on-arrival: resources -= 1; federation_sequence_stage = 3; federation_finance_model = "Audited common treasury"; federation_route_score += 3; turnout_readiness += 4; public_trust += 2; barons_dissent += 3; razem_dissent += 2; news_headline = "The federal Left pools campaign money under an independent audit"
+
+The parties deposit a fixed share of dues and subvention into a joint account.
+The auditor publishes every transfer. The campaign can now buy nationally,
+but no treasurer can redirect the money to rescue a weak home organisation.
+
+- @poland_hub: Open the federal chapter
+
+
+@federation_matching_grants
+title: Match each party's local campaign spending
+subtitle: Strong local specialisation; duplicated approvals cost speed and a common brand.
+on-arrival: federation_sequence_stage = 3; federation_finance_model = "Matched member-party budgets"; federation_route_score += 1; federation_veto_pressure += 1; federation_decision_delay += 1; federation_brand_dilution += 1; local_network += 3; organiser_energy += 3; media_capacity -= 1; news_headline = "Federal matching grants keep campaign money close to local parties"
+
+The council matches verified local spending instead of owning every account.
+County organisers can specialise and recruit under the label people know. A
+poster, transfer or emergency hire now needs two approvals instead of one.
+
+- @poland_hub: Open the federal chapter
+
+
+@federation_host_assets
+title: Let the SLD successor host the common assets
+subtitle: +2 resources and immediate capacity; the neutral federation begins to look like one party's brand.
+view-if: merger_barons_present = 1
+on-arrival: resources += 2; federation_sequence_stage = 3; federation_finance_model = "SLD-hosted federal assets"; federation_route_score -= 2; federation_veto_pressure += 2; federation_brand_dilution += 3; local_network += 4; barons_dissent -= 4; spring_dissent += 6; razem_dissent += 6; party_unity -= 4; news_headline = "The SLD successor hosts the federation's campaign assets"
+
+The old legal vehicle signs leases and pays invoices, producing capacity the
+federation could not otherwise afford. Every partner keeps its legal identity,
+but the name on the account and the keys in the office belong to one of them.
+
+- @poland_hub: Open the federal chapter
 
 
 @merger_no_deal
@@ -673,7 +799,6 @@ if (typeof Q.left_surviving_current_count === "undefined") {
         Number(Q.merger_barons_present) +
         Number(Q.merger_spring_present) +
         Number(Q.merger_razem_present) +
-        Number(Q.merger_labor_present) +
         Number(Q.merger_progressives_present) +
         Number(Q.merger_pps_present);
 }
@@ -1028,14 +1153,14 @@ plural.
 
 @rename_federal_compact
 title: Register the legal vehicles and preserve the federal compact
-on-arrival: left_mandate = "registered_federal_compact"; left_constitution = "federal_council"; left_machine_controller = "separate"; left_project = "Registered federation of Left parties"; left_party_name = "Lewica"; party_unity += 3; razem_dissent -= 2; barons_dissent += 1; news_headline = "Separate Left parties register a binding federal compact"
+on-arrival: left_mandate = "registered_federal_compact"; left_constitution = "federal_council"; left_machine_controller = "separate"; left_project = "Registered federation of Left parties"; left_party_name = "Lewica"; federation_sequence_stage = 4; left_structural_endpoint = "Registered binding federation"; party_unity += 3; razem_dissent -= 2; barons_dissent += 1; news_headline = "Separate Left parties register a binding federal compact"
 
 Each party retains its officers, property and member roll. The federal council
 receives only the powers written into the common agreement: lists, programme,
 finance and arbitration. No partner is rhetorically inside while legally being
 treated as a guest.
 
-- @poland_hub: Continue
+- @federation_candidate_selection: Select a common candidate
 
 
 @rename_federal_members
@@ -1043,13 +1168,13 @@ title: Ratify the federal compact among every member party
 subtitle: Cost: 1 resource.
 choose-if: resources >= 1
 unavailable-subtitle: Requires one resource.
-on-arrival: resources -= 1; left_mandate = "member_ballot"; left_constitution = "member-ratified_federation"; party_unity += 5; public_trust += 2; barons_dissent += 3; spring_dissent -= 2; razem_dissent -= 3; progressives_dissent -= 3; labor_dissent -= 2; news_headline = "Members ratify the federal Left across party lines"
+on-arrival: resources -= 1; left_mandate = "member_ballot"; left_constitution = "member-ratified_federation"; federation_sequence_stage = 4; federation_route_score += 2; left_structural_endpoint = "Member-ratified binding federation"; party_unity += 5; public_trust += 2; barons_dissent += 3; spring_dissent -= 2; razem_dissent -= 3; progressives_dissent -= 3; labor_dissent -= 2; news_headline = "Members ratify the federal Left across party lines"
 
 Every participating organisation votes on the same compact. The result does
 not merge their memberships, but it gives the federal council authority that
 no single executive can dismiss as a private bargain.
 
-- @poland_hub: Continue
+- @federation_candidate_selection: Select a common candidate
 
 
 @rename_federal_unify
@@ -1075,6 +1200,11 @@ Q.left_dominant_current = "members";
 Q.merger_leader = "Membership convention";
 Q.left_project = "Federation unified by its members";
 Q.left_party_name = Q.merger_barons_present ? "Nowa Lewica" : "Lewica";
+Q.federation_sequence_stage = 6;
+Q.federation_successful = 1;
+Q.federation_peaceful_unification = 1;
+Q.left_pluralism_protected = 1;
+Q.left_structural_endpoint = "Peaceful member-led unification from federation";
 Q.barons_merged = Q.merger_barons_present;
 Q.spring_merged = Q.merger_spring_present;
 Q.razem_merged = Q.merger_razem_present;
@@ -1100,11 +1230,108 @@ that status is no longer inferred from cooperation alone.
 - @poland_hub: Continue
 
 
+@federation_candidate_selection
+# prose-audit: Grade A — The ballot makes the federation's prior leadership rule operational: each nomination route names who gains leverage, who pays the campaign cost and how the common candidacy survives separate party mandates.
+title: Member parties select the federation's common candidate
+subtitle: The leadership rule chosen in September now determines which bargains are credible.
+new-page: true
+
+= March 2021 — One name above several party logos
+
+The federation needs a lead campaign candidate without pretending that person
+has become leader of every member party. The September convention now matters:
+a rotating presidium can rotate the candidacy, while any compact can buy a
+joint primary or let party delegates settle the place privately.
+
+- @federation_joint_primary
+- @federation_rotate_candidate
+- @federation_delegate_candidate
+
+
+@federation_joint_primary
+title: Hold one primary across every member party
+subtitle: Cost: 1 resource. Broader recruitment and a common mandate; the campaign loses time.
+choose-if: resources >= 1
+unavailable-subtitle: A cross-party primary needs one resource.
+on-arrival: resources -= 1; federation_sequence_stage = 5; federation_candidate_rule = "Joint federal primary"; federation_route_score += 3; federation_decision_delay += 1; primary_active = 1; primary_rules_written = 1; primary_cross_faction_pact = 1; organiser_energy += 3; young_support += 2; public_trust += 2; turnout_readiness -= 1; news_headline = "Every federal party opens the same lead-candidate primary"
+go-to: federation_local_integration
+
+
+@federation_rotate_candidate
+title: Rotate the candidacy with the federal chair
+subtitle: Honour the early presidium bargain without another contest; repeated handovers dilute the campaign face.
+view-if: federation_leadership_model = "Rotating member-party presidium"
+on-arrival: federation_sequence_stage = 5; federation_candidate_rule = "Rotating member-party candidacy"; federation_route_score += 2; federation_brand_dilution += 2; turnout_readiness += 2; media_capacity -= 2; party_unity += 1; news_headline = "The rotating federal chair receives the common candidacy"
+go-to: federation_local_integration
+
+
+@federation_delegate_candidate
+title: Let party delegations bargain over the lead place
+subtitle: +1 resource and a quick decision; the losing parties reserve their local lists.
+on-arrival: resources += 1; federation_sequence_stage = 5; federation_candidate_rule = "Inter-party delegate bargain"; federation_route_score -= 1; federation_veto_pressure += 2; federation_brand_dilution += 1; barons_dissent -= 2; spring_dissent += 3; razem_dissent += 3; party_unity -= 3; news_headline = "Federal delegates trade the lead candidacy for regional list control"
+go-to: federation_local_integration
+
+
+@federation_local_integration
+title: Integrate organisers without abolishing memberships
+subtitle: Reciprocal organising can broaden recruitment; territorial specialisation can deepen it; parallel branches are cheaper and weaker.
+new-page: true
+
+Separate legal identities do not require separate street tables in every town.
+The parties can recognise one another's organisers, divide the map by local
+strength or keep parallel branches that compete for the same recruits.
+
+- @federation_membership_passport
+- @federation_local_specialists
+- @federation_parallel_branches
+
+
+@federation_membership_passport
+title: Create a reciprocal organising passport
+subtitle: Cost: 1 resource. Members keep their party card but may organise, recruit and vote in federal campaigns anywhere.
+choose-if: resources >= 1
+unavailable-subtitle: Shared enrolment and safeguarding need one resource.
+on-arrival: resources -= 1; federation_sequence_stage = 6; federation_membership_model = "Reciprocal organising passport"; federation_route_score += 3; organiser_energy += 5; member_dues += 1; young_support += 2; movement_autonomy += 2; federation_decision_delay += 1; news_headline = "Federal members gain reciprocal organising rights without losing party identity"
+
+The common register verifies membership without transferring it. A Razem
+member can staff an SLD-held county office and a Wiosna organiser can vote in a
+federal campaign meeting; each still answers to their own party on internal
+policy and leadership.
+
+- @poland_hub: Continue with the recruiting federation
+
+
+@federation_local_specialists
+title: Let each party specialise in the districts it knows
+subtitle: Strong local reach and distinct identities; voters hear different Left brands across the country.
+on-arrival: federation_sequence_stage = 6; federation_membership_model = "Territorial party specialisation"; federation_route_score += 2; federation_brand_dilution += 2; local_network += 6; rural_support += 2; young_support += 1; turnout_readiness += 3; media_capacity -= 1; news_headline = "Member parties divide the map by local organisational strength"
+
+Old SLD offices rebuild county slates, Wiosna concentrates on metropolitan and
+equality networks, and Razem takes organising-heavy districts. The federation
+reaches places no single apparatus covers, but its leaflet changes at every
+county line.
+
+- @poland_hub: Continue with the specialised federation
+
+
+@federation_parallel_branches
+title: Keep every branch, roll and recruitment drive separate
+subtitle: +1 resource. Maximum legal clarity, duplicated work and conflicting local lists.
+on-arrival: resources += 1; federation_sequence_stage = 6; federation_membership_model = "Parallel member-party branches"; federation_route_score -= 2; federation_veto_pressure += 2; federation_brand_dilution += 3; organiser_energy -= 2; turnout_readiness -= 2; party_unity -= 2; news_headline = "Federal parties preserve parallel branches and competing recruitment"
+
+No member can be moved or enrolled by another organisation. The arrangement is
+cheap to administer centrally because the parties pay for it themselves. It is
+expensive wherever two branches recruit the same street and draft different
+candidate lists.
+
+- @poland_hub: Continue with separate organisations
+
+
 @rename_federal_machine
 title: Let the SLD legal vehicle dominate the federation
 subtitle: The federation survives on paper, but lists, money and offices move under the old executive.
 view-if: merger_barons_present = 1
-on-arrival: left_merger_structure = "partial_party"; left_common_party_exists = 1; left_merger_scope = "sld_vehicle_with_external_partners"; left_legal_vehicle = "sld"; left_constitution = "temporary_executive"; left_machine_controller = "barons"; left_mandate = "administrative"; left_dominant_current = "barons"; merger_leader = "Włodzimierz Czarzasty"; left_project = "SLD-dominated federal successor"; left_party_name = "Nowa Lewica"; barons_merged = 1; barons_org_status = "merged_current"; spring_org_status = "federal_partner" if merger_spring_present = 1; razem_org_status = "federal_partner" if merger_razem_present = 1; party_unity -= 7; barons_strength += 5; barons_dissent -= 5; spring_dissent += 7; razem_dissent += 7; progressives_dissent += 5; news_headline = "The SLD vehicle turns federal coordination into administrative control"
+on-arrival: left_merger_structure = "partial_party"; left_common_party_exists = 1; left_merger_scope = "sld_vehicle_with_external_partners"; left_legal_vehicle = "sld"; left_constitution = "temporary_executive"; left_machine_controller = "barons"; left_mandate = "administrative"; left_dominant_current = "barons"; merger_leader = "Włodzimierz Czarzasty"; left_project = "SLD-dominated federal successor"; left_party_name = "Nowa Lewica"; federation_crisis_result = "Federation captured by its host vehicle"; left_structural_endpoint = "Partial party with external federal partners"; barons_merged = 1; barons_org_status = "merged_current"; spring_org_status = "federal_partner" if merger_spring_present = 1; razem_org_status = "federal_partner" if merger_razem_present = 1; party_unity -= 7; barons_strength += 5; barons_dissent -= 5; spring_dissent += 7; razem_dissent += 7; progressives_dissent += 5; news_headline = "The SLD vehicle turns federal coordination into administrative control"
 
 The federal council still exists, but candidate lists, staff contracts and
 campaign accounts now pass through the SLD successor. Wiosna and Razem remain
@@ -1117,7 +1344,7 @@ neutral federal organ.
 
 @rename_federal_separate
 title: Reduce the federation to an electoral agreement
-on-arrival: nowa_lewica_merger_agreed = 0; left_merger_structure = "separate_parties"; left_common_party_exists = 0; left_merger_scope = "none"; left_constitution = "none"; left_machine_controller = "separate"; left_mandate = "electoral_agreement"; left_dominant_current = "none"; merger_leader = "No merger"; left_project = "Electoral Left of separate parties"; left_party_name = "Lewica"; barons_org_status = "electoral_partner" if merger_barons_present = 1; spring_org_status = "electoral_partner" if merger_spring_present = 1; razem_org_status = "electoral_partner" if merger_razem_present = 1; party_unity -= 3; news_headline = "The federal constitution is reduced to a common-list agreement"
+on-arrival: nowa_lewica_merger_agreed = 0; left_merger_structure = "separate_parties"; left_common_party_exists = 0; left_merger_scope = "none"; left_constitution = "none"; left_machine_controller = "separate"; left_mandate = "electoral_agreement"; left_dominant_current = "none"; merger_leader = "No merger"; left_project = "Electoral Left of separate parties"; left_party_name = "Lewica"; federation_crisis_result = "Federal compact reduced to a loose alliance"; left_structural_endpoint = "Loose electoral alliance"; barons_org_status = "electoral_partner" if merger_barons_present = 1; spring_org_status = "electoral_partner" if merger_spring_present = 1; razem_org_status = "electoral_partner" if merger_razem_present = 1; party_unity -= 3; news_headline = "The federal constitution is reduced to a common-list agreement"
 
 The partners keep the electoral label and parliamentary coordination but give
 up common constitutional authority. Future disputes are openly disputes
@@ -1163,13 +1390,13 @@ title: Reopen talks for a binding federation
 subtitle: Cost: 1 resource.
 choose-if: resources >= 1 and left_surviving_current_count >= 2
 unavailable-subtitle: Requires one resource and at least two surviving currents.
-on-arrival: resources -= 1; nowa_lewica_merger_agreed = 1; left_merger_structure = "federation"; left_common_party_exists = 0; left_merger_scope = "all_surviving_currents"; left_legal_vehicle = "separate_parties"; left_constitution = "federal_council"; left_machine_controller = "separate"; left_mandate = "negotiated"; left_dominant_current = "members"; merger_leader = "Constituent convention"; left_project = "Late federal settlement"; left_party_name = "Lewica"; barons_org_status = "federal_partner" if merger_barons_present = 1; spring_org_status = "federal_partner" if merger_spring_present = 1; razem_org_status = "federal_partner" if merger_razem_present = 1; party_unity += 4; razem_cooperation += 5; news_headline = "The failed merger is rebuilt as a federation"
+on-arrival: resources -= 1; nowa_lewica_merger_agreed = 1; left_merger_structure = "federation"; left_common_party_exists = 0; left_merger_scope = "all_surviving_currents"; left_legal_vehicle = "separate_parties"; left_constitution = "federal_council"; left_machine_controller = "separate"; left_mandate = "negotiated"; left_dominant_current = "members"; merger_leader = "Constituent convention"; left_project = "Late federal settlement"; left_party_name = "Lewica"; federation_sequence_stage = 1; left_structural_endpoint = "Late binding federation"; barons_org_status = "federal_partner" if merger_barons_present = 1; spring_org_status = "federal_partner" if merger_spring_present = 1; razem_org_status = "federal_partner" if merger_razem_present = 1; party_unity += 4; razem_cooperation += 5; news_headline = "The failed merger is rebuilt as a federation"
 
 The parties do not dissolve, but they write enforceable rules for lists,
 finance and arbitration. The alliance gains a constitution without inventing a
 single owner.
 
-- @poland_hub: Continue
+- @federation_joint_convention: Allocate the late federation's leadership
 
 
 @rename_preserve_names
@@ -1262,7 +1489,6 @@ if (typeof Q.left_surviving_current_count === "undefined") {
         Number(Q.merger_barons_present) +
         Number(Q.merger_spring_present) +
         Number(Q.merger_razem_present) +
-        Number(Q.merger_labor_present) +
         Number(Q.merger_progressives_present) +
         Number(Q.merger_pps_present);
 }
@@ -1333,8 +1559,31 @@ if (typeof Q.barons_merged === "undefined") {
 if (typeof Q.spring_merged === "undefined") {
     Q.spring_merged = Q.left_common_party_exists && Q.merger_spring_present ? 1 : 0;
 }
+
+// Miller is available only when a severe common-party crisis joins PPS
+// dissent to an SLD apparatus capable of taking the organisation back.
+const ppsBacksOldLeftRevolt =
+    Number(Q.pps_dissent) >= 55 ||
+    Number(Q.pps_escalation_stage) >= 2;
+const sldApparatusCanTakePower =
+    Number(Q.barons_strength) >= 30 ||
+    Q.left_machine_controller === "barons";
+Q.pps_old_left_revolt_2021 =
+    Q.left_common_party_exists &&
+    Q.left_merger_structure !== "federation" &&
+    Number(Q.party_unity) <= 45 &&
+    Number(Q.merger_barons_present) === 1 &&
+    Q.barons_org_status === "merged_current" &&
+    Number(Q.pps_active) === 1 &&
+    Number(Q.pps_in_left) === 1 &&
+    Number(Q.pps_democratic_split_done) !== 1 &&
+    ppsBacksOldLeftRevolt &&
+    sldApparatusCanTakePower ? 1 : 0;
+Q.miller_restoration_available_2021 =
+    Q.pps_old_left_revolt_2021 &&
+    Number(Q.miller_restoration_done) !== 1 ? 1 : 0;
 !}
-go-to: left_revolt_skipped if left_merger_structure = "separate_parties"; left_federation_crisis if left_merger_structure = "federation"; pps_democratic_split if left_merger_structure != "separate_parties" and left_merger_structure != "federation" and left_common_party_exists = 1 and party_unity >= 65 and pps_active = 1 and pps_in_left = 1 and pps_democratic_split_done != 1 and (left_mandate = "constituent" or left_mandate = "member_ballot" or left_mandate = "registered_federal_compact"); left_revolt_stable if left_merger_structure != "separate_parties" and left_merger_structure != "federation" and left_common_party_exists = 1 and party_unity >= 65 and (pps_active != 1 or pps_in_left != 1 or pps_democratic_split_done = 1 or (left_mandate != "constituent" and left_mandate != "member_ballot" and left_mandate != "registered_federal_compact")); left_revolt_live if left_merger_structure != "separate_parties" and left_merger_structure != "federation" and left_common_party_exists = 1 and party_unity < 65; left_revolt_skipped if left_merger_structure != "separate_parties" and left_merger_structure != "federation" and left_common_party_exists = 0
+go-to: left_revolt_skipped if left_merger_structure = "separate_parties"; left_federation_crisis if left_merger_structure = "federation"; pps_democratic_split if pps_old_left_revolt_2021 = 1 and pps_democratic_split_done != 1; pps_democratic_split if left_merger_structure != "separate_parties" and left_merger_structure != "federation" and left_common_party_exists = 1 and party_unity >= 65 and pps_active = 1 and pps_in_left = 1 and pps_democratic_split_done != 1 and (left_mandate = "constituent" or left_mandate = "member_ballot" or left_mandate = "registered_federal_compact"); left_revolt_stable if left_merger_structure != "separate_parties" and left_merger_structure != "federation" and left_common_party_exists = 1 and party_unity >= 65 and (pps_active != 1 or pps_in_left != 1 or pps_democratic_split_done = 1 or (left_mandate != "constituent" and left_mandate != "member_ballot" and left_mandate != "registered_federal_compact")); left_revolt_live if left_merger_structure != "separate_parties" and left_merger_structure != "federation" and left_common_party_exists = 1 and party_unity < 65 and pps_old_left_revolt_2021 != 1; left_revolt_skipped if left_merger_structure != "separate_parties" and left_merger_structure != "federation" and left_common_party_exists = 0
 
 
 @left_revolt_skipped
@@ -1364,14 +1613,24 @@ other currents can count. Yet the settlement holds. [? if left_dominant_current 
 
 
 @left_federation_crisis
-# prose-audit: Grade B — The right insight — a federation cannot purge, so the fight moves to lists, subvention and arbitration — and three leader variants are handled cleanly. The aftermaths read as council minutes: "the council allocates lists and money under the written formula".
-title: The federal compact is tested
+# prose-audit: Grade A — Earlier leadership, finance, candidate and local-organisation bargains all reach the same crisis; enforcement, peaceful unity, a loose alliance and an orderly successor-party exit are distinct structural outcomes.
+title: An electoral and coalition crisis tests the federal compact
 new-page: true
 on-arrival: {!
 function n(value) {
     return Number(value) || 0;
 }
 Q.left_revolt_event_done = 1;
+Q.federation_sequence_stage = Math.max(7, n(Q.federation_sequence_stage));
+Q.federation_route_score = Math.max(
+    -5,
+    Math.min(
+        15,
+        n(Q.federation_route_score) -
+            n(Q.federation_veto_pressure) * 0.5 -
+            n(Q.federation_brand_dilution) * 0.35
+    )
+);
 const candidates = [];
 const razemHasBureauSeat =
     Number(Q.zandberg_advisor) === 1 ||
@@ -1389,18 +1648,24 @@ if (Number(Q.merger_razem_present) === 1 && razemHasBureauSeat) {
 }
 candidates.push({
     name: "Members",
-    score: Math.max(n(Q.progressives_strength), n(Q.labor_strength), n(Q.pps_strength))
+    score: Math.max(n(Q.progressives_strength), n(Q.pps_strength)) +
+        n(Q.labor_movement_leverage) * 0.10
 });
 candidates.sort(function(a, b) { return b.score - a.score; });
 Q.federation_revolt_leader = candidates.length ? candidates[0].name : "Members";
 Q.news_headline = "The Left federation fights over lists, money and the right to veto";
 !}
 
-= July 2021 — The compact is tested
+= July 2021 — One whip, several legal parties
 
 No party can purge another from its own membership, so the crisis moves to the
 institutions they actually share: candidate lists, parliamentary discipline,
-subvention money and arbitration. [? if federation_revolt_leader = "Razem":
+subvention money and arbitration. The opposition's coalition strategy now
+needs an answer while local organisers are already preparing future lists.
+[? if federation_route_score >= 4: The earlier federal bargains produced a
+usable common candidate rule, money channel and organising map.?][? if
+federation_route_score < 4: Delays, vetoes and competing brands have left the
+council without enough common authority for a clean response.?] [? if federation_revolt_leader = "Razem":
 Razem is the strongest federal partner and demands that the compact be obeyed
 without converting its leadership into legal absorption.?] [? if
 federation_revolt_leader = "Włodzimierz Czarzasty": The SLD successor controls
@@ -1416,7 +1681,33 @@ mandate to lead a federation whose old machinery still sits elsewhere.?]
 
 @federation_enforce
 title: Enforce the federal compact exactly as written
-on-arrival: merger_resolution = "Federal compact enforced"; left_constitution = "federal_council"; left_machine_controller = "separate"; left_mandate = "federal_arbitration"; party_unity += 5; barons_dissent -= 2; spring_dissent -= 2; razem_dissent -= 3; progressives_dissent -= 2; labor_dissent -= 2; news_headline = "Federal arbitration keeps the Left parties together"
+on-arrival: {!
+Q.merger_resolution = "Federal compact enforced";
+Q.left_constitution = "federal_council";
+Q.left_machine_controller = "separate";
+Q.left_mandate = "federal_arbitration";
+Q.federation_crisis_result = "Binding federation survived its first electoral crisis";
+Q.federation_successful = Number(Q.federation_route_score) >= 4 ? 1 : 0;
+Q.federation_coalition_reach = Q.federation_successful ? 1 : 0;
+Q.left_structural_endpoint = Q.federation_successful
+    ? "Successful binding federation"
+    : "Binding federation under continuing veto pressure";
+Q.party_unity += Q.federation_successful ? 5 : 1;
+Q.barons_dissent -= 2;
+Q.spring_dissent -= 2;
+Q.razem_dissent -= 3;
+Q.progressives_dissent -= 2;
+Q.labor_dissent -= 2;
+Q.local_network += Q.federation_successful ? 3 : 0;
+Q.turnout_readiness += Q.federation_successful ? 3 : -1;
+Q.negotiation_capital += Q.federation_successful ? 3 : 0;
+Q.ko_relation += Q.federation_successful ? 2 : 0;
+Q.psl_relation += Q.federation_successful ? 3 : 0;
+Q.p2050_relation += Q.federation_successful ? 3 : 0;
+Q.news_headline = Q.federation_successful
+    ? "Federal arbitration turns specialist parties into a wider coalition channel"
+    : "Federal arbitration preserves the parties but not a decisive common response";
+!}
 
 The council allocates lists and money under the written formula and sends each
 party back to its own internal organs. Nobody wins ownership of the whole Left,
@@ -1443,6 +1734,11 @@ Q.left_legal_vehicle = Q.merger_barons_present
     : (Q.merger_spring_present ? "spring" : "new_party");
 Q.left_constitution = "single_leadership_protected_currents";
 Q.left_mandate = "member_ballot";
+Q.federation_successful = 1;
+Q.federation_peaceful_unification = 1;
+Q.federation_crisis_result = "Federal members peacefully founded one plural party";
+Q.left_pluralism_protected = 1;
+Q.left_structural_endpoint = "Peaceful plural unification from federation";
 Q.barons_merged = Q.merger_barons_present;
 Q.spring_merged = Q.merger_spring_present;
 Q.razem_merged = Q.merger_razem_present;
@@ -1501,7 +1797,7 @@ legal autonomy has disappeared.
 
 @federation_loosen
 title: Reduce the compact to parliamentary and electoral coordination
-on-arrival: nowa_lewica_merger_agreed = 0; left_merger_structure = "separate_parties"; left_common_party_exists = 0; left_merger_scope = "none"; left_constitution = "none"; left_machine_controller = "separate"; left_mandate = "electoral_agreement"; left_dominant_current = "none"; merger_leader = "No merger"; merger_resolution = "Federation reduced to electoral alliance"; left_project = "Electoral Left of separate parties"; left_party_name = "Lewica"; barons_org_status = "electoral_partner" if merger_barons_present = 1; spring_org_status = "electoral_partner" if merger_spring_present = 1; razem_org_status = "electoral_partner" if merger_razem_present = 1; party_unity -= 4; news_headline = "The Left abandons federal discipline but preserves its common list"
+on-arrival: nowa_lewica_merger_agreed = 0; left_merger_structure = "separate_parties"; left_common_party_exists = 0; left_merger_scope = "none"; left_constitution = "none"; left_machine_controller = "separate"; left_mandate = "electoral_agreement"; left_dominant_current = "none"; merger_leader = "No merger"; merger_resolution = "Federation reduced to electoral alliance"; federation_crisis_result = "Federation reduced to a loose electoral alliance"; federation_successful = 0; federation_coalition_reach = 0; left_structural_endpoint = "Loose electoral alliance after federal crisis"; left_project = "Electoral Left of separate parties"; left_party_name = "Lewica"; barons_org_status = "electoral_partner" if merger_barons_present = 1; spring_org_status = "electoral_partner" if merger_spring_present = 1; razem_org_status = "electoral_partner" if merger_razem_present = 1; party_unity -= 4; news_headline = "The Left abandons federal discipline but preserves its common list"
 
 The parties stop pretending that the council can issue binding internal orders.
 They retain a common parliamentary name and negotiate each election anew.
@@ -1511,15 +1807,12 @@ They retain a common parliamentary name and negotiate each election anew.
 
 @federation_exit
 title: Let the most alienated partner leave the compact
-subtitle: The remaining parties preserve the federation at the cost of an organisational split.
+subtitle: The existing successor-party resolver transfers only that partner's seats, advisers and legal identity.
 choose-if: left_surviving_current_count >= 2
 unavailable-subtitle: There is no second organisation left to form a meaningful federation.
 on-arrival: {!
 function n(value) {
     return Number(value) || 0;
-}
-function add(name, amount) {
-    Q[name] = (Number(Q[name]) || 0) + amount;
 }
 const candidates = [];
 if (Number(Q.merger_barons_present) === 1 && Number(Q.barons_in_left) !== 0) {
@@ -1536,36 +1829,24 @@ if (Number(Q.merger_pps_present) === 1 && Number(Q.pps_in_left) !== 0) {
 }
 candidates.sort(function(a, b) { return b.score - a.score; });
 Q.federation_exit_current = candidates.length ? candidates[0].name : "none";
-if (Q.federation_exit_current === "barons") {
-    Q.barons_in_left = 0;
-    Q.barons_org_status = "departed";
-    Q.merger_barons_present = 0;
-    add("barons_dissent", -5);
-} else if (Q.federation_exit_current === "spring") {
-    Q.spring_in_left = 0;
-    Q.spring_org_status = "departed";
-    Q.merger_spring_present = 0;
-    add("spring_dissent", -5);
-} else if (Q.federation_exit_current === "razem") {
-    Q.razem_in_left = 0;
-    Q.razem_org_status = "departed";
-    Q.merger_razem_present = 0;
-    add("razem_cooperation", -15);
-    add("razem_dissent", -5);
-} else if (Q.federation_exit_current === "pps") {
-    Q.pps_in_left = 0;
-    Q.pps_org_status = "departed";
-    Q.merger_pps_present = 0;
-    Q.pps_party_formed = 1;
+if (Q.federation_exit_current !== "none") {
+    Q.caucus_exit_target = Q.federation_exit_current;
+    Q.caucus_exit_mode = "orderly";
+    Q[Q.federation_exit_current + "_org_status"] = "departed";
+    Q["merger_" + Q.federation_exit_current + "_present"] = 0;
+    if (Q.federation_exit_current === "razem") {
+        Q.razem_breakaway_protected = 0;
+    }
 }
 Q.left_surviving_current_count = Math.max(
     1,
     (Number(Q.left_surviving_current_count) || 1) - 1
 );
 Q.merger_resolution = "Most alienated federal partner departed";
-add("party_unity", -6);
-add("public_trust", -2);
-Q.news_headline = "The most alienated partner leaves the Left federation";
+Q.federation_crisis_result = "One federal partner took an orderly successor-party exit";
+Q.federation_successful = 0;
+Q.left_structural_endpoint = "Reduced federation after an orderly partner exit";
+Q.news_headline = "The most alienated partner invokes the federation's orderly exit clause";
 !}
 
 [? if federation_exit_current = "barons": The SLD successor leaves with its
@@ -1578,7 +1859,7 @@ expulsion of a current that had already dissolved.?] [? if
 federation_exit_current = "pps": PPS registers its own route outside the
 compact.?]
 
-- @poland_hub: Continue
+- @poland_caucus_dynamics.resolve_exit: Transfer the partner through the successor-party framework
 
 
 @left_revolt_live
@@ -1669,7 +1950,6 @@ many offices and nominations.?]
 - @revolt_suspend
 - @revolt_mediate
 - @revolt_ballot
-- @revolt_restore_miller
 - @revolt_dissolve
 - @revolt_razem_enforce
 - @revolt_razem_pact
@@ -1746,14 +2026,17 @@ go-to: revolt_ballot_count
 
 @revolt_restore_miller
 title: Back the anti-merger old-guard restoration
-subtitle: The old SLD establishment takes the party and locks Miller into slot 1.
-view-if: merger_barons_present = 1 and barons_org_status = "merged_current" and miller_restoration_done != 1
+subtitle: Severe crisis, PPS backing and a viable SLD apparatus restore Miller and lock him into slot 1.
+view-if: miller_restoration_available_2021 = 1
 on-arrival: {!
 function add(name, amount) {
     Q[name] = (Number(Q[name]) || 0) + amount;
 }
 Q.merger_resolution = "SLD restoration under Miller";
 Q.miller_restoration_done = 1;
+Q.old_left_route_state = "miller_restoration";
+Q.pps_democratic_split_done = 1;
+Q.left_revolt_event_done = 1;
 Q.miller_advisor = 1;
 Q.advisor_slot_1_locked = 1;
 Q.advisor_slot_1 = "miller";
@@ -1816,6 +2099,10 @@ Q.left_mandate = "executive_coup";
 Q.left_constitution = "single_leadership";
 Q.left_party_name = "Nowa Lewica";
 Q.barons_org_status = "merged_current";
+Q.pps_org_status = "merged_current";
+Q.pps_demand_answered = 1;
+Q.pps_escalation_stage = 0;
+Q.pps_last_crisis_time = Number(Q.time) || 0;
 if (Number(Q.razem_merged) === 1) {
     Q.razem_org_status = "merged_current";
 }
@@ -1828,6 +2115,7 @@ add("spring_dissent", 8);
 add("labor_dissent", 4);
 add("progressives_dissent", 8);
 add("razem_dissent", Number(Q.razem_merged) === 1 ? 15 : 10);
+add("pps_dissent", -15);
 add("party_unity", -12);
 add("public_trust", -5);
 Q.left_project = "Old SLD restoration in Nowa Lewica";
@@ -1836,13 +2124,14 @@ Q.left_leadership_result = "Merger revolt restored old-SLD command";
 Q.news_headline = "The anti-merger revolt restores Miller and old-SLD command";
 !}
 
-The old guard wins control of offices, committees and nominations in one night
-of procedural votes. [? if razem_merged: Razem loses the leadership but remains
-a merged current trapped inside the party it helped create. A later split may
-follow, but this event does not pretend that Razem was merely an outside
-affiliate all along.?] Wiosna and the younger currents receive the same blunt
-message: the merger has been captured by the organisation it was supposed to
-replace.
+PPS dissidents give the rebellion a socialist lineage; SLD regional officials
+supply the offices, membership records and nomination machinery. The old guard
+wins control in one night of procedural votes. [? if razem_merged: Razem loses
+the leadership but remains a merged current trapped inside the party it helped
+create. A later split may follow, but this event does not pretend that Razem
+was merely an outside affiliate all along.?] Wiosna and the younger currents
+receive the same blunt message: the merger has been captured by the
+organisation it was supposed to replace.
 
 - @poland_hub: Continue
 
@@ -1895,7 +2184,28 @@ later prose forgot which settlement was chosen.
 title: Enforce Razem's constituent mandate
 subtitle: Razem keeps command and takes direct control of the common machinery.
 view-if: merger_revolt_leader = "Razem"
-on-arrival: merger_resolution = "Razem discipline"; merger_leader = "Razem"; left_dominant_current = "razem"; left_machine_controller = "razem"; left_mandate = "constituent_enforced"; left_constitution = "single_leadership"; left_project = "Disciplined Razem-led Left"; left_party_name = "Lewica Razem"; razem_org_status = "merged_current"; razem_dissent -= 8; razem_strength += 3; party_unity -= 10; barons_dissent += 12; spring_dissent += 7; public_trust -= 3; news_headline = "Razem defeats the apparatus rebellion and takes control of the party machinery"
+on-arrival: {!
+Q.merger_resolution = "Razem discipline";
+Q.merger_leader = "Razem";
+Q.left_dominant_current = "razem";
+Q.left_machine_controller = "razem";
+Q.left_mandate = "constituent_enforced";
+Q.left_constitution = "razem_dual_chairs";
+Q.left_project = "Disciplined Razem-led Left";
+Q.left_party_name = "Lewica Razem";
+Q.left_leader = Q.razem_leader + " and " + Q.razem_co_leader;
+Q.left_leadership_result =
+    "Razem co-chairs enforce their constituent mandate";
+Q.razem_org_status = "merged_current";
+Q.razem_dissent -= 8;
+Q.razem_strength += 3;
+Q.party_unity -= 10;
+Q.barons_dissent += 12;
+Q.spring_dissent += 7;
+Q.public_trust -= 3;
+Q.news_headline =
+    "Razem defeats the apparatus rebellion and takes control of the party machinery";
+!}
 
 Razem answers with the statute under which every organisation merged. It
 replaces hostile signatories, appoints regional commissioners and makes the
@@ -1911,9 +2221,31 @@ subtitle: Cost: 1 resource. Razem leads, while appointments and appeals become p
 view-if: merger_revolt_leader = "Razem"
 choose-if: resources >= 1 and faction_vetoes <= 1
 unavailable-subtitle: Requires one resource and no multi-caucus veto.
-on-arrival: resources -= 1; merger_resolution = "Razem-led current pact"; merger_leader = "Razem"; left_dominant_current = "razem"; left_machine_controller = "shared"; left_mandate = "negotiated_truce"; left_constitution = "single_leadership_protected_currents"; left_project = "Razem-led Left with protected currents"; left_party_name = "Lewica Razem"; razem_org_status = "merged_current"; party_unity += 7; razem_dissent -= 4; barons_dissent -= 6; spring_dissent -= 5; labor_dissent -= 3; progressives_dissent -= 3; news_headline = "Razem secures its leadership by protecting every merged current"
+on-arrival: {!
+Q.resources -= 1;
+Q.merger_resolution = "Razem-led current pact";
+Q.merger_leader = "Razem";
+Q.left_dominant_current = "razem";
+Q.left_machine_controller = "shared";
+Q.left_mandate = "negotiated_truce";
+Q.left_constitution = "razem_dual_chairs";
+Q.left_project = "Razem-led Left with protected currents";
+Q.left_party_name = "Lewica Razem";
+Q.left_leader = Q.razem_leader + " and " + Q.razem_co_leader;
+Q.left_leadership_result =
+    "Razem co-chairs lead under a protected-current pact";
+Q.razem_org_status = "merged_current";
+Q.party_unity += 7;
+Q.razem_dissent -= 4;
+Q.barons_dissent -= 6;
+Q.spring_dissent -= 5;
+Q.labor_dissent -= 3;
+Q.progressives_dissent -= 3;
+Q.news_headline =
+    "Razem secures its leadership by protecting every merged current";
+!}
 
-Razem keeps the chair. SLD, Wiosna and the smaller currents receive guaranteed
+Razem's two chairs stay in office. SLD, Wiosna and the smaller currents receive guaranteed
 appointments, nomination shares and appeal panels inside the party. They stop
 boycotting a structure in which they can now see their own continued existence.
 
@@ -1981,13 +2313,14 @@ if (
 }
 const memberCurrents = [
     n(Q.progressives_strength),
-    n(Q.labor_strength),
-    n(Q.pps_strength)
+    n(Q.pps_strength),
+    n(Q.social_patriot_strength)
 ].sort(function(a, b) { return b - a; });
 const memberScore =
     memberCurrents[0] +
     memberCurrents[1] * 0.25 +
     memberCurrents[2] * 0.15 +
+    n(Q.labor_movement_leverage) * 0.10 +
     (Q.left_mandate === "member_ballot" ? 6 : 0) +
     (incumbent === "Members" ? 7.25 : 0);
 candidates.push({ name: "Members", score: memberScore });
@@ -2008,10 +2341,28 @@ go-to: revolt_ballot_razem if merger_ballot_winner = "Razem"; revolt_ballot_baro
 @revolt_ballot_razem
 title: Razem wins the membership ballot
 new-page: true
-on-arrival: merger_resolution = "Razem won membership ballot"; merger_leader = "Razem"; left_dominant_current = "razem"; left_machine_controller = "shared"; left_constitution = "single_leadership_protected_currents"; left_project = "Member-ratified Razem-led Left"; left_party_name = "Lewica Razem"; razem_org_status = "merged_current"; razem_dissent -= 8; razem_strength += 2; barons_dissent += 5; spring_dissent += 2; left_leadership_result = "Razem won the merged party membership"; news_headline = "Razem wins a full membership mandate over the merged Left"
+on-arrival: {!
+Q.merger_resolution = "Razem won membership ballot";
+Q.merger_leader = "Razem";
+Q.left_dominant_current = "razem";
+Q.left_machine_controller = "shared";
+Q.left_constitution = "razem_dual_chairs";
+Q.left_project = "Member-ratified Razem-led Left";
+Q.left_party_name = "Lewica Razem";
+Q.left_leader = Q.razem_leader + " and " + Q.razem_co_leader;
+Q.razem_org_status = "merged_current";
+Q.razem_dissent -= 8;
+Q.razem_strength += 2;
+Q.barons_dissent += 5;
+Q.spring_dissent += 2;
+Q.left_leadership_result =
+    "Razem co-chairs won the merged party membership";
+Q.news_headline =
+    "Razem wins a full membership mandate over the merged Left";
+!}
 
 Razem wins not merely among its original members but across the common party.
-The result settles the question the apparatus raised: Razem governs because
+The result settles the question the apparatus raised: its co-chairs govern because
 the merged membership chose it. SLD and Wiosna remain internal currents with
 protected rights, not co-owners entitled to treat the winner as a visitor.
 
@@ -2058,28 +2409,34 @@ actually merged.
 
 
 @pps_democratic_split
-# prose-audit: Grade C — The politics are right, but the scene talks about its own bookkeeping in front of the player: the subtitle promises that "only seats already tracked as PPS-aligned leave the player's party", and an outcome explains that the split "transfers organisers and legal identity rather than inventing MPs from the general Left total". That is a note to the auditor, printed as prose.
-title: PPS asks for an autonomous route
-subtitle: A stable democratic merger leaves one small socialist organisation unsure whether it still needs the common party.
+# prose-audit: Grade B — PPS remains a small hinge: autonomy, friendly exit, member rule, central discipline and an old-left restoration are distinct organisational settlements.
+title: PPS becomes the hinge of the merger revolt
+subtitle: One small socialist organisation can legitimate pluralism, separation or an old-left counter-coup.
 new-page: true
 
-= July 2021 — A separate PPS circle?
+= July 2021 — The old name at the hinge
 
-The merger has survived precisely because its larger currents accepted a
-democratic settlement. PPS now argues that this makes an autonomous socialist
-organisation possible without bringing the whole Left down with it. We can
-keep PPS as an associated current, accept a friendly organisational split or
-use party discipline to stop the departure.
+[? if pps_old_left_revolt_2021 = 1: The common party is in severe crisis. PPS
+dissidents can still bargain for autonomy or an orderly exit, but Miller's
+supporters now offer their historic label to an SLD apparatus strong enough to
+take the merger back. A membership settlement and central suppression remain
+possible alternatives to the restoration.?]
+[? if pps_old_left_revolt_2021 = 0: The merger has survived because its larger
+currents accepted a democratic mandate. PPS now argues that this makes an
+autonomous socialist organisation possible without bringing the whole Left
+down with it.?]
 
 - @pps_associate
 - @pps_accept_split
+- @pps_membership_settlement
+- @revolt_restore_miller
 - @pps_crush
 
 
 @pps_associate
 title: Keep PPS as an autonomous associated current
 subtitle: PPS retains its identity and parliamentary representation inside the common Left.
-on-arrival: pps_democratic_split_done = 1; left_revolt_event_done = 1; merger_resolution = "PPS associated current"; pps_active = 1; pps_in_left = 1; pps_org_status = "associated_current"; pps_party_formed = 0; party_unity += 3; pps_dissent -= 7; labor_dissent -= 2; news_headline = "PPS remains an autonomous current inside the common Left"
+on-arrival: pps_democratic_split_done = 1; left_revolt_event_done = 1; merger_resolution = "PPS associated current"; pps_active = 1; pps_in_left = 1; pps_org_status = "associated_current"; pps_party_formed = 0; pps_demand_answered = 1; pps_escalation_stage = 0; pps_last_crisis_time = time; party_unity += 3; pps_dissent -= 7; labor_dissent -= 2; news_headline = "PPS remains an autonomous current inside the common Left"
 
 PPS keeps its name, internal officers and historical rituals while accepting
 the common list and leadership rules. No seats move because no organisation
@@ -2095,10 +2452,13 @@ on-arrival: {!
 Q.pps_democratic_split_done = 1;
 Q.left_revolt_event_done = 1;
 Q.merger_resolution = "PPS autonomous party after democratic merger";
-Q.pps_active = 1;
+Q.pps_active = 0;
 Q.pps_in_left = 0;
 Q.pps_org_status = "departed";
 Q.pps_party_formed = 1;
+Q.pps_demand_answered = 1;
+Q.pps_escalation_stage = 0;
+Q.pps_last_crisis_time = Number(Q.time) || 0;
 Q.pps_party_name = "PPS";
 Q.pps_party_relation = 55;
 Q.pps_circle_relation = 55;
@@ -2149,9 +2509,22 @@ the departure was negotiated rather than disguised as a purge.
 - @poland_hub: Continue with the remaining Left
 
 
+@pps_membership_settlement
+title: Put PPS protections to the full merged membership
+subtitle: A democratic settlement binds the centre as well as the small current.
+on-arrival: pps_democratic_split_done = 1; left_revolt_event_done = 1; merger_resolution = "PPS protections ratified by members"; left_mandate = "member_ballot"; left_constitution = "protected_currents"; left_machine_controller = "shared"; pps_active = 1; pps_in_left = 1; pps_org_status = "associated_current"; pps_party_formed = 0; pps_demand_answered = 1; pps_escalation_stage = 0; pps_last_crisis_time = time; party_unity += 7; public_trust += 3; pps_dissent -= 15; labor_dissent -= 3; barons_dissent += 5; news_headline = "Members ratify PPS protections and bind the common executive"
+
+The whole merged membership votes on PPS's right to keep its name, programme
+seat and internal appeal. Ratification denies both the small current and the
+central executive a private veto: PPS stays, while the protection now rests on
+the same democratic mandate as the common party.
+
+- @poland_hub: Continue with the member-ratified Left
+
+
 @pps_crush
 title: Refuse autonomy and enforce common-party discipline
-on-arrival: pps_democratic_split_done = 1; left_revolt_event_done = 1; merger_resolution = "PPS autonomy suppressed"; pps_org_status = "merged_current"; pps_dissent += 12; labor_dissent += 4; party_unity -= 6; public_trust -= 2; news_headline = "The common executive blocks a separate PPS route"
+on-arrival: pps_democratic_split_done = 1; left_revolt_event_done = 1; merger_resolution = "PPS autonomy suppressed"; left_mandate = "disciplinary"; pps_org_status = "merged_current"; pps_demand_answered = 1; pps_escalation_stage = 3; pps_last_crisis_time = time; pps_dissent += 12; labor_dissent += 4; party_unity -= 6; public_trust -= 2; news_headline = "The common executive blocks a separate PPS route"
 
 The executive refuses separate registration, money and parliamentary branding.
 PPS remains inside, but its next dispute begins from the belief that democratic

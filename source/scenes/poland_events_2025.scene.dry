@@ -35,21 +35,123 @@ if (!Q.pres_2025_ko_candidate ||
     Q.pres_2025_ko_candidate == "Undecided") {
     Q.pres_2025_ko_candidate = "Rafał Trzaskowski";
 }
+Q.pres_2025_ko_surname =
+    Q.pres_2025_ko_candidate == "Radosław Sikorski" ? "Sikorski" :
+    (Q.pres_2025_ko_candidate == "Barbara Nowacka" ? "Nowacka" :
+        "Trzaskowski");
+// Konfederacja chooses between its libertarian chair and the national wing's
+// parliamentary face. The simulation key remains `mentzen` for save
+// compatibility; the name on the ballot is live.
+const mentzenNominationWeight = Math.max(
+    10,
+    Number(Q.konf_mentzenite_share) || 47
+);
+const bosakNominationWeight = Math.max(
+    10,
+    Number(Q.konf_nationalist_share) || 35
+);
+Q.pres_2025_konf_candidate =
+    (this.random.uint32() / 4294967296) *
+        (mentzenNominationWeight + bosakNominationWeight) <
+        mentzenNominationWeight
+        ? "Sławomir Mentzen"
+        : "Krzysztof Bosak";
+Q.pres_2025_konf_surname =
+    Q.pres_2025_konf_candidate == "Krzysztof Bosak" ? "Bosak" : "Mentzen";
+// PiS runs through a civic committee because its own brand is damaged, but the
+// name inside the committee is a live argument between its wings.
+const pisWeights = {
+    "Karol Nawrocki": 52,
+    "Mateusz Morawiecki":
+        Q.morawiecki_advisor || Q.morawiecki_left_defectors
+            ? 0
+            : 16 + Math.max(0, (Number(Q.pis_solidarist_share) || 55) - 55) * 0.9,
+    "Przemysław Czarnek":
+        14 + Math.max(0, (Number(Q.far_right_agenda) || 32) - 32) * 0.7,
+    "Tobiasz Bocheński":
+        12 + Math.max(0, (Number(Q.pis_market_hardliner_share) || 45) - 45) * 0.9
+};
+const pisNames = Object.keys(pisWeights);
+const pisTotal = pisNames.reduce(function(sum, name) {
+    return sum + pisWeights[name];
+}, 0);
+let pisDraw = (this.random.uint32() / 4294967296) * pisTotal;
+Q.pres_2025_right_candidate = "Karol Nawrocki";
+for (const name of pisNames) {
+    pisDraw -= pisWeights[name];
+    if (pisDraw <= 0) {
+        Q.pres_2025_right_candidate = name;
+        break;
+    }
+}
+Q.pres_2025_right_surname =
+    Q.pres_2025_right_candidate == "Mateusz Morawiecki" ? "Morawiecki" :
+    (Q.pres_2025_right_candidate == "Przemysław Czarnek" ? "Czarnek" :
+    (Q.pres_2025_right_candidate == "Tobiasz Bocheński" ? "Bocheński" :
+        "Nawrocki"));
+// Poland 2050 sends its founder unless its market-liberal wing has grown
+// strong enough to argue that a banker's campaign travels further than a
+// television moralist's.
+const petruWeight =
+    Math.max(0, ((Number(Q.p2050_right_score) || 52) - 52) * 3.2) +
+    (Q.p2050_leader && Q.p2050_leader != "Szymon Hołownia" ? 45 : 0) +
+    (Q.p2050_internal_split ? 12 : 0);
+Q.pres_2025_centre_candidate =
+    (this.random.uint32() / 4294967296) * (100 + petruWeight) > 100
+        ? "Ryszard Petru"
+        : "Szymon Hołownia";
+Q.pres_2025_centre_surname =
+    Q.pres_2025_centre_candidate == "Ryszard Petru" ? "Petru" : "Hołownia";
+// Kanał Zero's candidacy is normally a critique of campaigning rather than a
+// campaign. Occasionally the audience decides to vote.
+const stanowskiRoll = this.random.uint32() / 4294967296;
+const stanowskiScale = this.random.uint32() / 4294967296;
+Q.pres_2025_stanowski_breakout = stanowskiRoll < 0.07 ? 1 : 0;
+Q.pres_2025_stanowski_surge = Q.pres_2025_stanowski_breakout
+    ? 7 + stanowskiScale * 12
+    : 0;
+const razemFederated25 =
+    String(Q.left_merger_structure || "") == "federation" &&
+    Q.merger_razem_present &&
+    String(Q.razem_org_status || "") != "departed";
+const razemOutside25 =
+    Q.razem_split || Q.razem_party_formed || !Q.razem_in_left;
+const razemCampaignStrength25 = razemOutside25
+    ? Math.max(
+        Number(Q.razem_exit_strength) || 0,
+        Number(Q.razem_vote_intent) || 0
+    )
+    : Number(Q.razem_strength) || 0;
+const razemCohesive25 =
+    Q.razem_cooperation_protocol || Q.razem_breakaway_protected ||
+    (Number(Q.razem_cooperation) || 0) >= 55;
+const razemRupture25 = (Number(Q.razem_dissent) || 0) >= 45;
+Q.pres_2025_razem_separate_eligible =
+    !razemFederated25 && !razemCohesive25 && razemRupture25 &&
+    razemCampaignStrength25 >= 8 ? 1 : 0;
 if (Q.pres_2025_left_candidate == "Adrian Zandberg") {
     Q.pres_2025_united_left = 1;
     Q.pres_2025_razem_candidate = "None";
 }
-if (!Q.pres_2025_united_left) {
+if (!Q.pres_2025_united_left && Q.pres_2025_razem_separate_eligible) {
     Q.pres_2025_razem_candidate = "Adrian Zandberg";
     if (!Q.pres_2025_nomination_method ||
         Q.pres_2025_nomination_method == "Not chosen") {
         Q.pres_2025_nomination_method = "Separate candidacies";
         Q.pres_2025_unity_effect = 0;
     }
-} else if (!Q.pres_2025_nomination_method ||
-    Q.pres_2025_nomination_method == "Not chosen") {
-    Q.pres_2025_nomination_method = "Inherited common nomination";
-    Q.pres_2025_unity_effect = 0;
+} else {
+    Q.pres_2025_united_left = 1;
+    Q.pres_2025_razem_candidate = "None";
+    if (Q.pres_2025_nomination_method == "Separate candidacies") {
+        Q.pres_2025_nomination_method = "Common Left nomination";
+    } else if (Q.pres_2025_nomination_method == "New Left national council") {
+        Q.pres_2025_nomination_method = "Common Left national council";
+    } else if (!Q.pres_2025_nomination_method ||
+        Q.pres_2025_nomination_method == "Not chosen") {
+        Q.pres_2025_nomination_method = "Inherited common nomination";
+        Q.pres_2025_unity_effect = 0;
+    }
 }
 Q.pres_2025_campaign_actions_remaining = 2;
 Q.pres_2025_campaign_work = 0;
@@ -77,6 +179,13 @@ Q.pres_2025_runoff_campaign = "Not chosen";
 Q.pres_2025_runoff_final_push = "Not chosen";
 Q.pres_2025_runoff_calc_mode = "result";
 Q.pres_2025_runoff_support_name = "No candidate";
+Q.pres_2025_torun_route = "none";
+Q.pres_2025_torun_target_key = "none";
+Q.pres_2025_torun_target_name = "No candidate";
+Q.pres_2025_torun_red_line = "No written line";
+Q.pres_2025_torun_breach = "No breach";
+Q.pres_2025_runoff_breach_shift = 0;
+Q.pres_2025_morawiecki_push = "No personnel bargain";
 for (const id of [
     "ko", "right", "left", "razem", "mentzen",
     "braun", "holownia", "stanowski", "other"
@@ -233,7 +342,7 @@ separately. The aggregation is arithmetic, not a shared ideology.
 
 <div class="candidate-entry">
 <div class="candidate-copy">
-<span class="party party-pis"><b>Karol Nawrocki</b></span>
+<span class="party party-pis"><b>[+ pres_2025_right_candidate +]</b></span>
 <small>PiS-backed civic committee</small>
 </div>
 <span class="candidate-badge">national conservative</span>
@@ -243,7 +352,7 @@ separately. The aggregation is arithmetic, not a shared ideology.
 
 <div class="candidate-entry">
 <div class="candidate-copy">
-<span class="party party-konf"><b>Sławomir Mentzen</b></span>
+<span class="party party-konf"><b>[+ pres_2025_konf_candidate +]</b></span>
 <small>Konfederacja</small>
 </div>
 </div>
@@ -257,7 +366,7 @@ separately. The aggregation is arithmetic, not a shared ideology.
 
 <div class="candidate-entry">
 <div class="candidate-copy">
-<span class="party party-p2050"><b>Szymon Hołownia</b></span>
+<span class="party party-p2050"><b>[+ pres_2025_centre_candidate +]</b></span>
 <small>Poland 2050</small>
 </div>
 </div>
@@ -332,12 +441,15 @@ Before the campaign board opens, we should look at each field the campaign will
 be competing against.
 
 - @pres25_meet_trzaskowski: First, the democratic camp's candidate
+- @pres25_meet_sikorski: First, the democratic camp's candidate
+- @pres25_meet_nowacka: First, the democratic camp's candidate
 
 @pres25_meet_trzaskowski
-title: [+ pres_2025_ko_candidate +] — the democratic camp's candidate
+title: Rafał Trzaskowski — the democratic camp's candidate
+view-if: pres_2025_ko_candidate = "Rafał Trzaskowski"
 face-image: img/poland/events/pres-candidate-trzaskowski.webp
 
-**[+ pres_2025_ko_candidate +] — Civic Coalition**
+**Rafał Trzaskowski — Civic Coalition**
 
 He carries KO's liberal and local-government electorate, the mayors, the
 metropolitan professionals and the voters who treat any anti-PiS ballot as the
@@ -352,9 +464,58 @@ of government is also the camp that has been in office long enough to be asked
 what it finished.
 
 - @pres25_meet_nawrocki: The right has found a new face
+- @pres25_meet_morawiecki: The right has returned to its former prime minister
+- @pres25_meet_czarnek: The right has chosen the culture warrior
+- @pres25_meet_bochenski: The right has chosen the young manager
+
+@pres25_meet_sikorski
+title: Radosław Sikorski — security before the social agenda
+view-if: pres_2025_ko_candidate = "Radosław Sikorski"
+face-image: img/poland/events/pres-candidate-sikorski.webp
+
+**Radosław Sikorski — foreign minister and Civic Coalition Atlanticist**
+
+Sikorski holds the pro-European security constituency: voters who want NATO,
+Washington and a President able to speak the language of allied power without
+translation. His campaign is for a Palace that treats deterrence, diplomacy
+and the eastern border as the organising work of the office.
+
+He has little interest in making the social agenda part of that work. Labour,
+housing and reproductive rights return to Parliament as matters for somebody
+else, which gives Lewica a clear argument and leaves KO's progressive voters
+wondering what, beyond security, this presidency is for.
+
+- @pres25_meet_nawrocki: The right has found a new face
+- @pres25_meet_morawiecki: The right has returned to its former prime minister
+- @pres25_meet_czarnek: The right has chosen the culture warrior
+- @pres25_meet_bochenski: The right has chosen the young manager
+
+@pres25_meet_nowacka
+title: Barbara Nowacka — rights and the secular school
+view-if: pres_2025_ko_candidate = "Barbara Nowacka"
+face-image: img/poland/events/pres-candidate-nowacka.webp
+
+**Barbara Nowacka — education minister and Civic Coalition progressive**
+
+Nowacka holds the secular, feminist part of the democratic electorate. Her
+campaign is for schools free of clerical direction and a presidential pen
+committed to reproductive rights, equal citizenship and the legislation that
+the coalition has postponed.
+
+That programme competes directly for our voters, organisers and movement
+partners. Its vulnerability is ownership: every undelivered rights promise is
+also part of the government's record, and a KO candidacy can absorb Lewica's
+language while leaving Lewica to answer for the compromises.
+
+- @pres25_meet_nawrocki: The right has found a new face
+- @pres25_meet_morawiecki: The right has returned to its former prime minister
+- @pres25_meet_czarnek: The right has chosen the culture warrior
+- @pres25_meet_bochenski: The right has chosen the young manager
 
 @pres25_meet_nawrocki
 title: Karol Nawrocki — the borrowed civic committee
+view-if: pres_2025_right_candidate = "Karol Nawrocki"
+face-image: img/poland/events/pres-candidate-nawrocki.webp
 
 **Karol Nawrocki — historian, president of the Institute of National
 Remembrance, backed by PiS**
@@ -370,20 +531,104 @@ in the field and the least freedom to define himself against the people who
 built it.
 
 - @pres25_meet_mentzen: Konfederacja has a leader and a defector
+- @pres25_meet_bosak: Konfederacja has a candidate and a defector
+
+@pres25_meet_morawiecki
+title: Mateusz Morawiecki — the whole record returns to the ballot
+view-if: pres_2025_right_candidate = "Mateusz Morawiecki"
+face-image: img/poland/cards/advisor-morawiecki.webp
+
+**Mateusz Morawiecki — PiS's former prime minister**
+
+Morawiecki holds the part of the PiS electorate that wants an active state,
+family transfers and a right able to administer more than grievance. The
+party's own former prime minister runs for a Palace credible on state capacity,
+economic intervention and the social programmes his governments built.
+
+He also carries the whole record: judicial conflict, pandemic procurement,
+inflation, European isolation and every promise financed or deferred from the
+premiership. There is no civic costume between the candidate and eight years
+of government, and no failure he can assign to an unfamiliar predecessor.
+
+- @pres25_meet_mentzen: Konfederacja has a leader and a defector
+- @pres25_meet_bosak: Konfederacja has a candidate and a defector
+
+@pres25_meet_czarnek
+title: Przemysław Czarnek — the parish campaign
+view-if: pres_2025_right_candidate = "Przemysław Czarnek"
+face-image: img/poland/events/pres-candidate-czarnek.webp
+
+**Przemysław Czarnek — former education minister and PiS culture warrior**
+
+Czarnek holds the parish networks, the parents' committees organised against
+liberal schooling and the voters who want the presidency to defend a Catholic
+nation rather than arbitrate among citizens. His campaign is for permanent
+cultural mobilisation from the Palace.
+
+The same record that fills church halls empties almost every room beyond them.
+Teachers, younger women, cities and moderate conservatives know his education
+ministry already; he can mobilise the right at full volume and repel everyone
+else before a second-round appeal begins.
+
+- @pres25_meet_mentzen: Konfederacja has a leader and a defector
+- @pres25_meet_bosak: Konfederacja has a candidate and a defector
+
+@pres25_meet_bochenski
+title: Tobiasz Bocheński — PiS with the edges filed off
+view-if: pres_2025_right_candidate = "Tobiasz Bocheński"
+face-image: img/poland/events/pres-candidate-bochenski.webp
+
+**Tobiasz Bocheński — former voivode and Warsaw-facing PiS manager**
+
+Bocheński holds younger administrators, metropolitan conservatives and PiS
+voters who want the state run competently without another daily culture war.
+His campaign is for a managerial Palace: disciplined, technically fluent and
+able to meet Warsaw on its own ground.
+
+He is PiS with the edges filed off, which creates the vulnerability as well as
+the opening. The party machine, court record and veto programme remain behind
+him; loyalists may find the polish bloodless, while swing voters can still ask
+whether a smoother manager changes anything he would sign.
+
+- @pres25_meet_mentzen: Konfederacja has a leader and a defector
+- @pres25_meet_bosak: Konfederacja has a candidate and a defector
 
 @pres25_meet_mentzen
 title: Sławomir Mentzen — the cheap state on the ballot
+face-image: img/poland/events/pres-candidate-mentzen.webp
+view-if: pres_2025_konf_candidate = "Sławomir Mentzen"
 
 **Sławomir Mentzen — Konfederacja chair, tax adviser**
 
 Mentzen combines market radicalism with nationalist social politics and sells
-both as ordinary common sense to men under forty. He competes with Nawrocki for
+both as ordinary common sense to men under forty. He competes with **[+
+pres_2025_right_surname +]** for
 the young right and with everyone for the voters who believe the existing
 parties are a cost rather than a choice.
 
 He is also the candidate whose programme can be priced. Every promise he makes
 about taxes is a promise about a hospital, a school or a pension that somebody
 else will have to close.
+
+- @pres25_meet_braun: The Crown runs separately
+
+@pres25_meet_bosak
+title: Krzysztof Bosak — the national movement's disciplined face
+face-image: img/poland/events/pres-candidate-bosak.webp
+view-if: pres_2025_konf_candidate = "Krzysztof Bosak"
+
+**Krzysztof Bosak — Sejm deputy and National Movement leader**
+
+Bosak holds Konfederacja's national-conservative constituency: the organised
+national movement, younger Catholic conservatives and voters who want a harder
+state on borders, family and sovereignty without Braun's permanent spectacle.
+His campaign is for a disciplined nationalist Palace rather than Mentzen's
+cheap-state insurgency.
+
+That discipline also narrows him. PiS competes for the same patriotic voter,
+Braun can always accuse him of moderation, and the campaign lacks Mentzen's
+anti-tax digital audience. He can consolidate a movement more easily than he
+can explain what lies beyond it.
 
 - @pres25_meet_braun: The Crown runs separately
 
@@ -398,14 +643,16 @@ out of confrontation, antisemitic provocation and the certainty that no
 broadcaster can ignore him. His candidacy is a bid to prove that Konfederacja
 has become another managed party.
 
-Mentzen needs Braun's voters without becoming answerable for his conduct. That
+[+ pres_2025_konf_surname +] needs Braun's voters without becoming answerable for his conduct. That
 gap between the two campaigns is the only part of the radical-right vote any
 other candidate can work on.
 
 - @pres25_meet_holownia: Two campaigns claim the space outside the blocs
+- @pres25_meet_petru: Two campaigns claim the space outside the blocs
 
 @pres25_meet_holownia
 title: Szymon Hołownia — the outsider who governed
+view-if: pres_2025_centre_candidate = "Szymon Hołownia"
 face-image: img/poland/events/pres-candidate-holownia.webp
 
 **Szymon Hołownia — Marshal of the Sejm, founder of Poland 2050**
@@ -420,8 +667,28 @@ runoff they will be the most expensive to buy.
 
 - @pres25_meet_stanowski: And the campaign about campaigns
 
+@pres25_meet_petru
+title: Ryszard Petru — the centre prices the state
+view-if: pres_2025_centre_candidate = "Ryszard Petru"
+face-image: img/poland/events/pres-candidate-petru.webp
+
+**Ryszard Petru — Poland 2050's market-liberal economist**
+
+Petru holds the market-liberal wing of Poland 2050: entrepreneurs, urban
+professionals and centrist voters who want every promise accompanied by a
+cost. His campaign is for a presidency that audits legislation, restrains
+spending and treats economic credibility as the first institutional reform.
+
+He prices everything, including the public services and transfers his party's
+less liberal voters depend on. That makes him legible and vulnerable at once:
+Lewica can answer every veto threat with the ward, school or household that
+would pay for it, while Hołownia's personal electorate may simply stay home.
+
+- @pres25_meet_stanowski: And the campaign about campaigns
+
 @pres25_meet_stanowski
 title: Krzysztof Stanowski — the candidacy as commentary
+face-image: img/poland/events/pres-candidate-stanowski.webp
 
 **Krzysztof Stanowski — media entrepreneur, founder of Kanał Zero**
 
@@ -473,6 +740,8 @@ promised.?][? if pres_2025_left_candidate = "Adrian Zandberg": Zandberg joins
 wages, housing and public investment to a refusal of the liberal economic
 limits accepted by every leading camp.?]
 
+<div class="face-figure left-candidate-portrait" data-candidate-quality="pres_2025_left_candidate"><img class="face-img" alt="Portrait of the Left's presidential nominee"></div>
+
 [? if not pres_2025_united_left: <span class="party-razem"><b>Adrian Zandberg</b></span> also appears on the
 ballot for Razem. He is a rival candidate with an overlapping electorate—not a
 second version of our nominee.?][? if pres_2025_united_left: Razem has no
@@ -520,15 +789,18 @@ const rawPoll25 = {
         (finitePoll25(Q.far_right_agenda, 32) - 32) * 0.018,
     left: Math.max(0.4, leftBase25),
     razem: Math.max(0, razemBase25),
-    mentzen: 14.81 +
+    mentzen: (Q.pres_2025_konf_candidate == "Krzysztof Bosak" ? 13.9 : 14.81) +
         (finitePoll25(Q.konf_vote_intent, 7.16) - 7.16) * 0.35 +
-        (finitePoll25(Q.konf_mentzenite_share, 47) - 47) * 0.025,
+        (Q.pres_2025_konf_candidate == "Krzysztof Bosak"
+            ? (finitePoll25(Q.konf_nationalist_share, 35) - 35) * 0.03
+            : (finitePoll25(Q.konf_mentzenite_share, 47) - 47) * 0.025),
     braun: 6.34 + finitePoll25(Q.braun_martyrdom, 0) * 0.06 +
         (finitePoll25(Q.konf_braunist_share, 18) - 18) * 0.025,
     holownia: 4.99 +
         (finitePoll25(Q.p2050_vote_intent, 4) - 4) * 0.25,
     stanowski: 1.24 +
-        (finitePoll25(Q.kanal_zero_capacity, 12) - 12) * 0.025,
+        (finitePoll25(Q.kanal_zero_capacity, 12) - 12) * 0.025 +
+        finitePoll25(Q.pres_2025_stanowski_surge, 0),
     other: 2.63
 };
 if (Q.pres_2025_incumbent) {
@@ -602,10 +874,10 @@ their candidates remain separate on the real ballot.
 
 <div class="poll-table">
 <div class="poll-row"><span class="party party-ko"><b>[+ pres_2025_ko_candidate +]</b></span><span>[+ pres_2025_poll_ko +]%</span><span>KO</span></div>
-<div class="poll-row"><span class="party party-pis"><b>Nawrocki</b></span><span>[+ pres_2025_poll_right +]%</span><span>PiS-backed</span></div>
-<div class="poll-row"><span class="party party-konf"><b>Mentzen</b></span><span>[+ pres_2025_poll_mentzen +]%</span><span>Konf.</span></div>
+<div class="poll-row"><span class="party party-pis"><b>[+ pres_2025_right_surname +]</b></span><span>[+ pres_2025_poll_right +]%</span><span>PiS-backed</span></div>
+<div class="poll-row"><span class="party party-konf"><b>[+ pres_2025_konf_surname +]</b></span><span>[+ pres_2025_poll_mentzen +]%</span><span>Konf.</span></div>
 <div class="poll-row"><span class="party party-konf"><b>Braun</b></span><span>[+ pres_2025_poll_braun +]%</span><span>Korona</span></div>
-<div class="poll-row"><span class="party party-p2050"><b>Hołownia</b></span><span>[+ pres_2025_poll_holownia +]%</span><span>PL2050</span></div>
+<div class="poll-row"><span class="party party-p2050"><b>[+ pres_2025_centre_surname +]</b></span><span>[+ pres_2025_poll_holownia +]%</span><span>PL2050</span></div>
 <div class="poll-row"><span><b>Stanowski</b></span><span>[+ pres_2025_poll_stanowski +]%</span><span>independent</span></div>
 <div class="poll-row"><span class="party party-lewica"><b>[+ pres_2025_left_candidate +]</b></span><span>[+ pres_2025_poll_left +]%</span><span>Lewica</span></div>
 [? if not pres_2025_united_left: <div class="poll-row"><span class="party party-razem"><b>Zandberg</b></span><span>[+ pres_2025_poll_razem +]%</span><span>Razem</span></div>?]
@@ -641,7 +913,8 @@ material is already ours: every union branch and tenants' committee the party
 has ever worked with can host it without a fee.
 
 The cost is positional. KO's people complain that the Left is campaigning
-against the government rather than against Nawrocki, and the studios ask, more
+against the government rather than against **[+ pres_2025_right_surname +]**,
+and the studios ask, more
 than once, whether **[+ pres_2025_left_candidate +]** understands what this
 election is actually about.
 
@@ -1005,7 +1278,7 @@ priority: 24
 order: 10
 max-visits: 1
 face-image: img/poland/events/belarus-border-2021.webp
-view-if: continuous_campaign = 1 and year = 2025 and month = 3 and prime_minister_party != "lewica"
+view-if: continuous_campaign = 1 and year = 2025 and month = 3 and pm_political_family != "left"
 on-arrival: {!
 const carriedBorderPressure =
     (Number(Q.border_permission_pressure) || 0) +
@@ -1232,8 +1505,6 @@ go-to: movement_spring_roll_call
 @movement_spring_roll_call
 title: The promised roll call
 on-arrival: {!
-Q.abortion_spring_base = 215 +
-    (Q.abortion_rewrite_pending ? 4 : 0);
 if (Q.abortion_rewrite_pending) {
     Q.abortion_implementation_prepared = 1;
     Q.abortion_rewrite_pending = 0;
@@ -1256,103 +1527,85 @@ Q.abortion_spring_movement_bonus = Math.max(
         )
     )
 );
-Q.abortion_spring_psl_bonus =
-    Q.psl_relation >= 50 ? 4 :
-    Q.psl_relation >= 35 ? 1 : -2;
-Q.abortion_spring_variance = Math.floor(
-    (this.random.uint32() / 4294967296) * 5
-) - 2;
-Q.abortion_spring_yes = Math.max(
-    0,
-    Math.min(
-        440,
-        Q.abortion_spring_base +
-        Q.abortion_spring_local_bonus +
-        Q.abortion_spring_movement_bonus +
-        Q.abortion_spring_psl_bonus +
-        Q.abortion_spring_variance
-    )
-);
-Q.abortion_spring_absent =
-    16 + Math.floor((this.random.uint32() / 4294967296) * 10);
-Q.abortion_spring_present =
-    Math.max(230, (Number(Q.sejm_total) || 460) - Q.abortion_spring_absent);
-Q.abortion_spring_yes = Math.min(
-    Q.abortion_spring_present,
-    Q.abortion_spring_yes
-);
-Q.abortion_spring_abstain = Math.min(
-    Math.max(0, Q.abortion_spring_present - Q.abortion_spring_yes),
-    Math.max(
-        2,
-        Math.min(
-            12,
-            3 +
-                (Q.psl_relation >= 50 ? 4 :
-                    Q.psl_relation >= 35 ? 2 : 0) +
-                Math.round(
-                    Math.max(
-                        0,
-                        Number(Q.psl_coalition_dissent) || 0
-                    ) / 12
-                )
-        )
-    )
-);
-Q.abortion_spring_no = Math.max(
-    0,
-    Q.abortion_spring_present -
-        Q.abortion_spring_yes -
-        Q.abortion_spring_abstain
-);
-Q.abortion_spring_threshold = Q.abortion_spring_no + 1;
-Q.abortion_spring_passed =
-    Q.abortion_spring_present >=
-        (Number(Q.sejm_quorum_floor) || 230) &&
-    Q.abortion_spring_yes > Q.abortion_spring_no ? 1 : 0;
-if (Q.abortion_spring_passed) {
-    if (Q.left_in_government) Q.government_delivery += 7;
-    else Q.media_capacity += 3;
-    Q.feminist_trust += 8;
-    Q.progressive_credibility += 5;
-    Q.psl_coalition_dissent += 5;
-    Q.movement_followthrough_2025 =
-        "The promised spring bill passed the Sejm";
-    Q.news_headline =
-        "Constituency pressure moves the abortion bill through the Sejm";
-} else {
-    Q.feminist_trust -= 3;
-    Q.government_coalition_dissent += 4;
-    Q.progressives_dissent += 3;
-    Q.movement_followthrough_2025 =
-        "The promised spring vote failed in the Sejm";
-    Q.news_headline =
-        "The promised spring abortion vote falls short again";
-}
+Q.legvote_bill_name = "The spring abortion-decriminalisation bill";
+Q.legvote_profile = "abortion";
+Q.legvote_callback = "movement_spring";
+Q.legvote_president_commitment = 0;
+Q.legvote_campaign_bonus =
+    Q.abortion_spring_local_bonus + Q.abortion_spring_movement_bonus;
+Q.legvote_palace_bonus = 25 +
+    (Q.abortion_implementation_prepared ? 8 : 0) +
+    (Q.abortion_strategy == "Decriminalisation sequence" ? 5 : 0) +
+    (Q.abortion_strategy == "Material compromise" ? 4 : 0);
+Q.legvote_prepared = 0;
+Q.legvote_enacted = 0;
+Q.legvote_effects_applied = 0;
 !}
-
-= A date becomes a count
-
-**[+ abortion_spring_yes +] yes · [+ abortion_spring_no +] no · [+
-abortion_spring_abstain +] abstain · [+ abortion_spring_absent +] absent**
-
-An ordinary bill needs a quorum and more yes than no votes; today's live line
-was **[+ abortion_spring_threshold +] yes**.
-
-[? if abortion_spring_passed: District organisers and the legal-clinical
-network move enough wavering deputies to pass the bill. PSL's split is now a
-public fact, and Lewica has honoured the date it promised. The victory belongs
-to the Sejm only: President **[+ president_name +]** still owns the signature,
-veto or constitutional referral.?]
-[? if not abortion_spring_passed: The bill falls short in a named chamber on a
-named day. Organisers can distinguish deputies who voted no from those who
-stayed away, and Lewica can no longer extend the promise by changing the
-calendar. The defeat is political evidence, not an implementation result.?]
-
-- @movement_spring_return: Record the vote
+go-to: poland_legislative_vote
 
 @movement_spring_return
 go-to: poland_events_2023_2024.abortion_presidential_decision if abortion_spring_passed = 1; poland_event_queue if abortion_spring_passed = 0
+
+@movement_spring_vote_result
+title: The movement records the whole legislative route
+on-arrival: {!
+if (!Q.legvote_effects_applied) {
+    Q.abortion_spring_yes = Number(Q.legvote_sejm_yes) || 0;
+    Q.abortion_spring_no = Number(Q.legvote_sejm_no) || 0;
+    Q.abortion_spring_abstain = Number(Q.legvote_sejm_abstain) || 0;
+    Q.abortion_spring_absent = Math.max(
+        0,
+        (Number(Q.sejm_total) || 460) -
+            Q.abortion_spring_yes - Q.abortion_spring_no -
+            Q.abortion_spring_abstain
+    );
+    Q.abortion_spring_present =
+        Q.abortion_spring_yes + Q.abortion_spring_no +
+        Q.abortion_spring_abstain;
+    Q.abortion_spring_threshold = Q.abortion_spring_no + 1;
+    Q.abortion_spring_passed = Q.legvote_sejm_passed ? 1 : 0;
+    if (Q.abortion_spring_passed) {
+        if (Q.left_in_government) Q.government_delivery += 7;
+        else Q.media_capacity += 3;
+        Q.feminist_trust += 8;
+        Q.progressive_credibility += 5;
+        Q.psl_coalition_dissent += 5;
+    } else {
+        Q.feminist_trust -= 3;
+        Q.government_coalition_dissent += 4;
+        Q.progressives_dissent += 3;
+    }
+    Q.abortion_law_enacted = Q.legvote_enacted ? 1 : 0;
+    Q.abortion_presidential_action = Q.legvote_veto_overridden
+        ? "Veto overridden by the Sejm"
+        : (Q.legvote_president_veto
+            ? "Presidential veto"
+            : (Q.legvote_enacted ? "Signed into law" : "No presidential decision"));
+    Q.movement_followthrough_2025 = Q.legvote_enacted
+        ? "The promised spring abortion bill became law"
+        : Q.legvote_outcome;
+    Q.last_policy_stage = Q.legvote_enacted
+        ? "Enacted ordinary statute"
+        : "Failed ordinary statute";
+    Q.last_policy_authority = Q.legvote_veto_overridden
+        ? "Three-fifths Sejm veto override"
+        : (Q.legvote_enacted ? Q.president_name : "Sejm and Senate");
+    Q.last_policy_implementation = Q.legvote_enacted
+        ? "Enacted; clinical delivery remains to be funded"
+        : 0;
+    Q.news_headline = Q.legvote_outcome;
+    Q.legvote_effects_applied = 1;
+}
+!}
+
+The movement can now distinguish the forecast, the bargain, the Sejm division,
+the Senate response and the presidential decision. **[+ legvote_outcome +].**
+
+- @poland_events_2023_2024.abort_pass_implement
+- @poland_events_2023_2024.abort_signed_monitor
+- @poland_events_2023_2024.abort_veto_campaign
+- @poland_events_2023_2024.abort_veto_rewrite
+- @poland_event_queue: File the complete division record
 
 @movement_spring_access
 title: Publish the access report and fund another year of legal-clinical work
@@ -1457,7 +1710,7 @@ defending a later reform or become a slogan a later minister can bury.
 title: Give unions a formal role in every workplace trial
 subtitle: Make the pilot a school for bargaining; coalition liberals will call it union capture.
 view-if: shorter_time_pilot_active = 1
-on-arrival: labor_credibility += 6; workers_support += 4; ko_relation -= 2; psl_relation -= 1; government_delivery += 2; news_headline = "The shorter-week pilot becomes a collective-bargaining school"
+on-arrival: labor_credibility += 5; union_trust += 6; opzz_cooperation += 4; labor_mobilization += 6; labor_dissent -= 4; workers_support += 4; razem_cooperation += 2; progressives_dissent -= 1; spring_dissent -= 1; barons_dissent += 1; ko_relation -= 2; psl_relation -= 1; government_coalition_dissent += 1; government_delivery += 2; news_headline = "The shorter-week pilot becomes a collective-bargaining school"
 
 Every participating workplace must negotiate its trial with recognised worker
 representatives and publish the agreement. Unions gain members and experience
@@ -1472,7 +1725,7 @@ subtitle: Non-ministerial route. Cost: 1 resource. Build evidence and a bill, no
 view-if: shorter_time_pilot_active = 0
 choose-if: resources >= 1
 unavailable-subtitle: The caucus cannot staff the union audit.
-on-arrival: resources -= 1; labor_credibility += 5; workers_support += 3; media_capacity += 2; ko_relation -= 1; public_trust += 1; last_policy_stage = "Proposal"; last_policy_authority = "Party and trade-union campaign"; last_policy_implementation = 0; news_headline = "Unions write a pilot bill and publish voluntary workplace evidence"
+on-arrival: resources -= 1; labor_credibility += 4; union_trust += 5; opzz_cooperation += 3; labor_mobilization += 5; labor_dissent -= 3; workers_support += 3; razem_cooperation += 1; progressives_dissent -= 1; media_capacity += 2; ko_relation -= 1; public_trust += 1; last_policy_stage = "Proposal"; last_policy_authority = "Lewica Pracy MPs and trade-union campaign"; last_policy_implementation = 0; news_headline = "Unions write a pilot bill and publish voluntary workplace evidence"
 
 Union researchers recruit willing workplaces, audit hours and write the draft
 national scheme. The evidence gives Lewica a bill and workers a campaign, not
@@ -1490,6 +1743,8 @@ if (Q.shorter_time_pilot_active) Q.budget -= 1;
 else Q.resources -= 1;
 Q.public_trust += 3;
 Q.labor_credibility += 3;
+Q.union_trust += 1;
+Q.labor_mobilization += 1;
 if (Q.shorter_time_pilot_active) Q.government_delivery += 3;
 else Q.media_capacity += 2;
 Q.ko_relation += 1;
@@ -1510,7 +1765,7 @@ for a future bill while the absence of national authority remains plain.?]
 @time_headline
 title: Promise a universal four-day week before the trials begin
 subtitle: State the destination before the evidence and put Lewica's credibility on the line.
-on-arrival: young_support += 4; labor_credibility += 2; public_trust -= 3; ko_relation -= 5; far_right_agenda += 2; news_headline = "A universal promise outruns the pilot's evidence"
+on-arrival: young_support += 4; labor_credibility += 2; union_trust -= 2; opzz_cooperation -= 1; labor_dissent += 2; public_trust -= 3; ko_relation -= 5; far_right_agenda += 2; news_headline = "A universal promise outruns the pilot's evidence"
 
 Lewica announces a universal four-day week before the first workplace has
 reported. Younger workers finally hear the destination stated without apology;
@@ -1650,11 +1905,13 @@ const debateVoices25 = {
         security: [
             "Make security begin with a resilient civilian state",
             "Bind the commander-in-chief to law and allied commitments",
-            "Promise to outbid Nawrocki on every defence demand"
+            "Promise to outbid " + Q.pres_2025_right_surname +
+                " on every defence demand"
         ],
         economy: [
             "Make a home, care and time the measure of prosperity",
-            "Ask Mentzen which public service his tax plan closes first",
+            "Ask " + Q.pres_2025_konf_surname +
+                " what the programme costs a functioning state",
             "Offer a smaller social promise that the centre can copy"
         ],
         rights: [
@@ -1672,11 +1929,13 @@ const debateVoices25 = {
         security: [
             "Defend the people who keep the country working under pressure",
             "Bind the commander-in-chief to law and allied commitments",
-            "Promise to outbid Nawrocki on every defence demand"
+            "Promise to outbid " + Q.pres_2025_right_surname +
+                " on every defence demand"
         ],
         economy: [
             "Put safe work and capable public services before tax slogans",
-            "Ask Mentzen which public service his tax plan closes first",
+            "Ask " + Q.pres_2025_konf_surname +
+                " what the programme costs a functioning state",
             "Offer a smaller labour promise that the centre can copy"
         ],
         rights: [
@@ -1694,11 +1953,13 @@ const debateVoices25 = {
         security: [
             "Defence without blank cheques or a hollow civilian state",
             "Bind the commander-in-chief to law and allied commitments",
-            "Promise to outbid Nawrocki on every defence demand"
+            "Promise to outbid " + Q.pres_2025_right_surname +
+                " on every defence demand"
         ],
         economy: [
             "Name the oligarchy behind cheap-state economics",
-            "Ask Mentzen which public service his tax plan closes first",
+            "Ask " + Q.pres_2025_konf_surname +
+                " what the programme costs a functioning state",
             "Offer a smaller social promise that the centre can copy"
         ],
         rights: [
@@ -1752,10 +2013,12 @@ pres_2025_poll_left +]%**.
 title: Debate I — security and foreign policy
 new-page: true
 
-Nawrocki promises a stronger national command; Trzaskowski presents alliances
-and administrative competence; Mentzen says the existing parties spend before
-they define an interest. The President commands the armed forces but does not
-write the budget alone. Our first answer must show both resolve and restraint.
+**[+ pres_2025_right_surname +]** promises a stronger national command; **[+
+pres_2025_ko_surname +]** presents alliances and administrative competence;
+**[+ pres_2025_konf_surname +]** says the existing parties spend before they
+define a national interest. The
+President commands the armed forces but does not write the budget alone. Our
+first answer must show both resolve and restraint.
 
 - @pres25_security_signature
 - @pres25_security_law
@@ -1784,7 +2047,8 @@ a whole system — shelters, hospitals with power, a border service that is
 staffed, conscripts who are trained rather than photographed — and the
 brigades are placed inside it rather than opposite it.
 
-Nawrocki's reply is that this is a civilian's idea of defence. It lands with
+**[+ pres_2025_right_surname +]** replies that this is a civilian's idea of
+defence. It lands with
 the audience that has been asked to pay for the last three procurement
 announcements without ever being told what happens to their own town.
 
@@ -1817,7 +2081,8 @@ audience approve. So does the applause line.
 
 The trouble arrives four minutes later, when the economy block opens and the
 same nominee has to explain which budget the extra brigades came out of.
-Nawrocki has been outbid on a question he was never going to lose, and the Left
+**[+ pres_2025_right_surname +]** has been outbid on a question the PiS-backed
+candidate was never going to lose, and the Left
 has spent its fiscal argument to do it.
 
 - @pres25_debate_economy: The moderators turn to taxes and housing
@@ -1826,10 +2091,12 @@ has spent its fiscal argument to do it.
 title: Debate II — taxes, housing and public services
 new-page: true
 
-Mentzen calls taxes the proof that politics is stealing from productive people.
-Nawrocki promises protection without a bill; Trzaskowski lists investments and
-asks voters to trust the governing camp to finish them. The Left has one minute
-to make its economic conflict intelligible outside a party programme.
+**[+ pres_2025_konf_surname +]** says the established parties tax without a
+purpose and spend without a national plan.
+**[+ pres_2025_right_surname +]** promises protection without a bill; **[+
+pres_2025_ko_surname +]** lists investments and asks voters to trust the
+governing camp to finish them. The Left has one minute to make its economic
+conflict intelligible outside a party programme.
 
 - @pres25_economy_signature
 - @pres25_economy_mentzen
@@ -1858,7 +2125,7 @@ nurse works, what an hour of care costs a family that has no one at home, and
 what is left of a salary once both are paid. No tax rate is mentioned until the
 last ten seconds, when it arrives as an answer rather than a subject.
 
-Mentzen is left arguing against the price of housing as though it were a
+[+ pres_2025_konf_surname +] is left arguing against the price of housing as though it were a
 government policy he opposes, which for a moment it sounds like. The
 after-broadcast panels lead on the figures rather than on the exchange, and the
 figures are ours.
@@ -1881,15 +2148,17 @@ Q.media_capacity += 2;
 Q.konf_relation -= 2;
 Q.pres_2025_debate_round = 3;
 Q.news_headline = Q.pres_2025_left_candidate +
-    " makes Mentzen price the cheap-state promise";
+    " makes " + Q.pres_2025_konf_surname +
+    " price the state behind the programme";
 !}
 
-The question is put twice, because the first answer is a slogan about waste.
-Which hospital. Which school. Which pension. Mentzen does what a man with a
-spreadsheet does when the spreadsheet is not the point: he explains the
-methodology, and the studio hears an accountant declining to name a ward.
+The question is put twice, because the first answer is a slogan about waste
+and national purpose. Which hospital. Which school. Which pension. **[+
+pres_2025_konf_surname +]** explains the programme and still declines to name
+the institution expected to carry it.
 
-The exchange travels. It also makes the night about Mentzen, and there is a
+The exchange travels. It also makes the night about **[+
+pres_2025_konf_surname +]**, and there is a
 version of the evening in which our own programme is now the thing nobody was
 asked to describe.
 
@@ -1915,8 +2184,9 @@ title: Debate III — rights, the border and presidential power
 new-page: true
 
 The moderators join abortion law, legal recognition and asylum to the
-President's duty to sign or veto. Trzaskowski asks to be judged against the
-right; Nawrocki warns of institutional radicalism. [? if left_in_government:
+President's duty to sign or veto. **[+ pres_2025_ko_surname +]** asks to be
+judged against the right; **[+ pres_2025_right_surname +]** warns of
+institutional radicalism. [? if left_in_government:
 Our nominee must also answer for the distance between Lewica's programme and
 the governing coalition's record.?][? if not left_in_government: Our nominee
 must turn opposition commitments into a credible use of the presidential
@@ -1950,8 +2220,9 @@ signs a partnership act, this pen signs a legal-recognition procedure, this pen
 does not sign a border regime that suspends the right to ask for asylum. No
 conditional clauses, no timetable that outlives a presidency.
 
-The counter-mobilisation begins the same night — parish bulletins, a Nawrocki
-line about institutional radicalism, three days of comment sections. So does
+The counter-mobilisation begins the same night — parish bulletins, a **[+
+pres_2025_right_surname +]** line about institutional radicalism, three days
+of comment sections. So does
 the other kind of response: organisations that have been asked to wait since
 2023 now have a sentence they can hold somebody to.
 
@@ -1984,7 +2255,8 @@ from inside the coalition, and the nominee reads it anyway, which is the part
 that registers.?][? if not left_in_government: It is the list an opposition
 exists to read, and nobody on the platform can claim it is invented.?]
 
-Trzaskowski's answer is that these are parliamentary matters. That is precisely
+**[+ pres_2025_ko_surname +]** answers that these are parliamentary matters.
+That is precisely
 the sentence the list was constructed to draw out of him, and it will be
 replayed more often than anything either of them said about rights.
 
@@ -2000,7 +2272,8 @@ twenty-one days, a president may refer a statute to a court that must be
 repaired first. Every clause of it is true and none of it says what the pen
 would do.
 
-Nawrocki does not bother to attack it. The women's organisations that spent the
+**[+ pres_2025_right_surname +]** does not bother to attack it. The women's
+organisations that spent the
 spring supplying the campaign with volunteers hear the same deferral they have
 heard since the autumn of 2023, and some of them stop returning calls before
 the week is out.
@@ -2027,13 +2300,24 @@ an actual campaign boundary.?]
 - @pres25_question_zandberg
 
 @pres25_question_nawrocki
-title: Ask Nawrocki which PiS appointment he would ever refuse
+title: Ask [+ pres_2025_right_surname +] which PiS appointment would ever be refused
 subtitle: Makes the independence of the PiS-backed candidacy the test.
-on-arrival: pres_2025_debate_score += 2.5; pres_2025_debate_question_line = "Nawrocki must define independence from the party that built his campaign"; pres_2025_debate_target = "right"; judicial_repair_mandate += 2; pis_relation -= 2; media_capacity += 1; pres_2025_debate_round = 5; news_headline = "Nawrocki is asked to name the limit of his debt to PiS"
+on-arrival: {!
+Q.pres_2025_debate_score += 2.5;
+Q.pres_2025_debate_question_line = Q.pres_2025_right_surname +
+    " must define independence from the party that built the campaign";
+Q.pres_2025_debate_target = "right";
+Q.judicial_repair_mandate += 2;
+Q.pis_relation -= 2;
+Q.media_capacity += 1;
+Q.pres_2025_debate_round = 5;
+Q.news_headline = Q.pres_2025_right_surname +
+    " is asked to name the limit of the debt to PiS";
+!}
 
-One appointment. Any appointment. A name he would send back to Nowogrodzka
-with a refusal. Nawrocki answers that he will appoint the best people, and is
-asked again, and answers that he does not accept the premise.
+One appointment. Any appointment. A name the candidate would send back to
+Nowogrodzka with a refusal. **[+ pres_2025_right_surname +]** promises to
+appoint the best people, is asked again, and does not accept the premise.
 
 The civic committee spends the next two days explaining that a candidate is
 not obliged to invent a quarrel with his own supporters. That explanation is
@@ -2042,13 +2326,23 @@ the answer, and everyone watching now has it.
 - @pres25_debate_close: The closing statements
 
 @pres25_question_mentzen
-title: Ask Mentzen which hospital, school or pension his tax pledge will fund
+title: Ask [+ pres_2025_konf_surname +] what happens to the hospital, school and pension
 subtitle: Forces a material answer and competes directly for anti-establishment voters.
-on-arrival: pres_2025_debate_score += 3; pres_2025_debate_question_line = "Mentzen must put a service behind the cheap-state slogan"; pres_2025_debate_target = "mentzen"; labor_credibility += 2; konf_relation -= 2; pres_2025_debate_round = 5; news_headline = "Mentzen is made to choose between the tax line and a functioning service"
+on-arrival: {!
+Q.pres_2025_debate_score += 3;
+Q.pres_2025_debate_question_line = Q.pres_2025_konf_surname +
+    " must put a service behind the programme";
+Q.pres_2025_debate_target = "mentzen";
+Q.labor_credibility += 2;
+Q.konf_relation -= 2;
+Q.pres_2025_debate_round = 5;
+Q.news_headline = Q.pres_2025_konf_surname +
+    " is made to put a functioning service behind the programme";
+!}
 
 The question comes with a figure already attached, which is what makes it
 unanswerable in ninety seconds: the pledge costs this much, the health fund
-spends that much, name the difference. Mentzen reaches for efficiency, then
+spends that much, name the difference. **[+ pres_2025_konf_surname +]** reaches for efficiency, then
 for bureaucracy, then for the clock.
 
 His own voters are not scandalised — they came for the tax line, not for the
@@ -2059,14 +2353,24 @@ them are precisely the electorate we are trying to reach.
 - @pres25_debate_close: The closing statements
 
 @pres25_question_trzaskowski
-title: Ask Trzaskowski which social promise his camp will deliver first
-subtitle: Challenges KO without treating Nawrocki as an acceptable alternative.
-on-arrival: pres_2025_debate_score += 2.6; pres_2025_debate_question_line = "Trzaskowski must name the first promise that survives coalition government"; pres_2025_debate_target = "ko"; ko_relation -= 3; public_trust += 1; pres_2025_debate_round = 5; news_headline = "Trzaskowski is asked to convert democratic urgency into a delivery date"
+title: Ask [+ pres_2025_ko_surname +] which social promise the camp will deliver first
+subtitle: Challenges KO without treating [+ pres_2025_right_surname +] as an acceptable alternative.
+on-arrival: {!
+Q.pres_2025_debate_score += 2.6;
+Q.pres_2025_debate_question_line = Q.pres_2025_ko_surname +
+    " must name the first promise that survives coalition government";
+Q.pres_2025_debate_target = "ko";
+Q.ko_relation -= 3;
+Q.public_trust += 1;
+Q.pres_2025_debate_round = 5;
+Q.news_headline = Q.pres_2025_ko_surname +
+    " is asked to convert democratic urgency into a delivery date";
+!}
 
 The question is framed so that it cannot be heard as help for the other camp:
 not whether the democratic coalition deserves to win, but which of its promises
-has a date. Trzaskowski names three, without dates, and adds that governing is
-a matter of sequencing.
+has a date. **[+ pres_2025_ko_surname +]** names three, without dates, and adds
+that governing is a matter of sequencing.
 
 KO's campaign staff are furious in the corridor afterwards, and their fury is
 itself informative: the one thing the democratic camp cannot afford in this
@@ -2095,10 +2399,12 @@ as the opponent, and that is not a thing a press release takes back.
 title: Debate V — ninety seconds without a prompt
 new-page: true
 
-Nawrocki closes on national continuity. Trzaskowski asks the democratic camp to
-finish the change of government. Hołownia offers distance from both. Stanowski
-reminds viewers that the format itself is part of his case. The final ninety
-seconds can define our candidacy or borrow the conflict of a larger rival.
+**[+ pres_2025_right_surname +]** closes on national continuity. **[+
+pres_2025_ko_surname +]** asks the democratic camp to finish the change of
+government. **[+ pres_2025_centre_surname +]** offers distance from both.
+Stanowski reminds viewers that the format itself is part of his case. The final
+ninety seconds can define our candidacy or borrow the conflict of a larger
+rival.
 
 - @pres25_close_signature
 - @pres25_close_right
@@ -2128,7 +2434,7 @@ ends early, which almost nobody does.
 
 Whether it works is a question for the panels. What it certainly does is give
 every organiser in the country a paragraph they can repeat at a door without
-having to explain who Nawrocki is first.
+having to explain the PiS-backed candidate first.
 
 - @pres25_debate_verdict: The spin room
 
@@ -2137,12 +2443,14 @@ title: [+ pres_2025_close_right_title +]
 subtitle: Strong anti-PiS transfer appeal; less independent ownership of the final minute.
 on-arrival: pres_2025_debate_score += 2.5; pres_2025_debate_close_line = pres_2025_close_right_title; pres_2025_debate_strategy = "Indictment of the right"; pres_2025_debate_target = "right"; ko_relation += 2; pis_relation -= 2; news_headline = "The final minute becomes an indictment of the PiS-backed presidency"
 
-The last minute is spent on what a Nawrocki presidency would sign and what it
+The last minute is spent on what a **[+ pres_2025_right_surname +]** presidency
+would sign and what it
 would refuse to sign, item by item, in the present tense. It is the clearest
 warning anyone gives all evening, and half the democratic camp shares it before
 midnight.
 
-They share it, however, as a warning about Nawrocki. By the second day of
+They share it, however, as a warning about **[+ pres_2025_right_surname +]**.
+By the second day of
 coverage the clip is being used to argue that the serious anti-PiS ballot is
 the largest one, which was not the intention.
 
@@ -2239,11 +2547,13 @@ if (adverseNight25) {
     if (rivalIndex25 == 0) {
         rivalShift25("right", rivalGain25);
         Q.pres_2025_debate_upset =
-            "Nawrocki's calm becomes the clip the bulletins keep returning to";
+            Q.pres_2025_right_surname +
+            "'s calm becomes the clip the bulletins keep returning to";
     } else if (rivalIndex25 == 1) {
         rivalShift25("mentzen", rivalGain25);
         Q.pres_2025_debate_upset =
-            "Mentzen's counterattack travels furthest online";
+            Q.pres_2025_konf_surname +
+            "'s counterattack travels furthest online";
     } else {
         rivalShift25("stanowski", rivalGain25);
         Q.pres_2025_debate_upset =
@@ -2320,10 +2630,10 @@ Working margin: **±2.2 points**.
 
 <div class="poll-table">
 <div class="poll-row"><span class="party party-ko"><b>[+ pres_2025_ko_candidate +]</b></span><span>[+ pres_2025_poll_ko +]%</span><span>KO</span></div>
-<div class="poll-row"><span class="party party-pis"><b>Nawrocki</b></span><span>[+ pres_2025_poll_right +]%</span><span>PiS-backed</span></div>
-<div class="poll-row"><span class="party party-konf"><b>Mentzen</b></span><span>[+ pres_2025_poll_mentzen +]%</span><span>Konf.</span></div>
+<div class="poll-row"><span class="party party-pis"><b>[+ pres_2025_right_surname +]</b></span><span>[+ pres_2025_poll_right +]%</span><span>PiS-backed</span></div>
+<div class="poll-row"><span class="party party-konf"><b>[+ pres_2025_konf_surname +]</b></span><span>[+ pres_2025_poll_mentzen +]%</span><span>Konf.</span></div>
 <div class="poll-row"><span class="party party-konf"><b>Braun</b></span><span>[+ pres_2025_poll_braun +]%</span><span>Korona</span></div>
-<div class="poll-row"><span class="party party-p2050"><b>Hołownia</b></span><span>[+ pres_2025_poll_holownia +]%</span><span>PL2050</span></div>
+<div class="poll-row"><span class="party party-p2050"><b>[+ pres_2025_centre_surname +]</b></span><span>[+ pres_2025_poll_holownia +]%</span><span>PL2050</span></div>
 <div class="poll-row"><span><b>Stanowski</b></span><span>[+ pres_2025_poll_stanowski +]%</span><span>independent</span></div>
 <div class="poll-row"><span class="party party-lewica"><b>[+ pres_2025_left_candidate +]</b></span><span>[+ pres_2025_poll_left +]%</span><span>Lewica</span></div>
 [? if not pres_2025_united_left: <div class="poll-row"><span class="party party-razem"><b>Zandberg</b></span><span>[+ pres_2025_poll_razem +]%</span><span>Razem</span></div>?]
@@ -2453,9 +2763,11 @@ const rightBase =
     (finitePres25(Q.far_right_agenda, 32) - 32) * 0.018 +
     rivalShift25("right");
 const mentzenBase =
-    14.81 +
+    (Q.pres_2025_konf_candidate == "Krzysztof Bosak" ? 13.9 : 14.81) +
     (konfIntent - 7.16) * 0.35 +
-    (finitePres25(Q.konf_mentzenite_share, 47) - 47) * 0.025 +
+    (Q.pres_2025_konf_candidate == "Krzysztof Bosak"
+        ? (finitePres25(Q.konf_nationalist_share, 35) - 35) * 0.03
+        : (finitePres25(Q.konf_mentzenite_share, 47) - 47) * 0.025) +
     rivalShift25("mentzen");
 const braunBase =
     6.34 +
@@ -2469,6 +2781,7 @@ const holowniaBase =
 const stanowskiBase =
     1.24 +
     (finitePres25(Q.kanal_zero_capacity, 12) - 12) * 0.025 +
+    finitePres25(Q.pres_2025_stanowski_surge, 0) +
     rivalShift25("stanowski");
 const right = rightBase + noise(1.4);
 const mentzen = mentzenBase + noise(1.2);
@@ -2517,14 +2830,21 @@ for (const key of Object.keys(raw)) {
     Q["pres_2025_r1_display_" + key] =
         Math.round(raw[key] * 10) / 10;
 }
+const stanowskiSignal25 = Q.pres_2025_stanowski_breakout
+    ? Math.max(7, finitePres25(Q.pres_2025_r1_stanowski, 0))
+    : finitePres25(Q.pres_2025_r1_stanowski, 0);
 Q.stanowski_best_poll = Math.max(
     finitePres25(Q.stanowski_best_poll, 1.24),
-    finitePres25(Q.pres_2025_r1_stanowski, 0)
+    stanowskiSignal25
 );
 Q.stanowski_trigger_score = Math.max(
     finitePres25(Q.stanowski_trigger_score, 0),
-    finitePres25(Q.pres_2025_r1_stanowski, 0)
+    stanowskiSignal25
 );
+if (Q.pres_2025_stanowski_breakout) {
+    Q.kanal_zero_capacity += 4;
+    Q.p2050_coalition_dissent += 2;
+}
 const displayTotal = Object.keys(raw).reduce(function(sum, key) {
     return sum + (Number(Q["pres_2025_r1_display_" + key]) || 0);
 }, 0);
@@ -2533,12 +2853,12 @@ Q.pres_2025_r1_display_other = Math.round(
 ) / 10;
 const candidateNames = {
     ko: Q.pres_2025_ko_candidate || "Rafał Trzaskowski",
-    right: "Karol Nawrocki",
+    right: Q.pres_2025_right_candidate || "Karol Nawrocki",
     left: Q.pres_2025_left_candidate,
     razem: Q.pres_2025_razem_candidate || "Adrian Zandberg",
-    mentzen: "Sławomir Mentzen",
+    mentzen: Q.pres_2025_konf_candidate,
     braun: "Grzegorz Braun",
-    holownia: "Szymon Hołownia",
+    holownia: Q.pres_2025_centre_candidate || "Szymon Hołownia",
     stanowski: "Krzysztof Stanowski",
     other: "Other candidates"
 };
@@ -2894,12 +3214,12 @@ Valid votes: **[+ pres_2025_r1_valid_votes_display +]**
 <div class="election-table">
 <div class="election-table-head"><span>Candidate</span><span>Camp</span><span>Vote</span><span>Votes</span><span>Status</span></div>
 <div class="election-table-row"><span>[+ pres_2025_ko_candidate +]</span><span class="party party-ko">KO</span><b>[+ pres_2025_r1_display_ko +]%</b><span>[+ pres_2025_r1_votes_ko_display +]</span><span>[+ pres_2025_status_ko +]</span></div>
-<div class="election-table-row"><span>Karol Nawrocki</span><span class="party party-pis">PiS-backed</span><b>[+ pres_2025_r1_display_right +]%</b><span>[+ pres_2025_r1_votes_right_display +]</span><span>[+ pres_2025_status_right +]</span></div>
+<div class="election-table-row"><span>[+ pres_2025_right_candidate +]</span><span class="party party-pis">PiS-backed</span><b>[+ pres_2025_r1_display_right +]%</b><span>[+ pres_2025_r1_votes_right_display +]</span><span>[+ pres_2025_status_right +]</span></div>
 <div class="election-table-row"><span>[+ pres_2025_left_candidate +]</span><span class="party party-lewica">Lewica</span><b>[+ pres_2025_r1_display_left +]%</b><span>[+ pres_2025_r1_votes_left_display +]</span><span>[+ pres_2025_status_left +]</span></div>
 [? if not pres_2025_united_left: <div class="election-table-row"><span>[+ pres_2025_razem_candidate +]</span><span class="party party-razem">Razem</span><b>[+ pres_2025_r1_display_razem +]%</b><span>[+ pres_2025_r1_votes_razem_display +]</span><span>[+ pres_2025_status_razem +]</span></div>?]
-<div class="election-table-row"><span>Sławomir Mentzen</span><span class="party party-konf">Konf.</span><b>[+ pres_2025_r1_display_mentzen +]%</b><span>[+ pres_2025_r1_votes_mentzen_display +]</span><span>[+ pres_2025_status_mentzen +]</span></div>
+<div class="election-table-row"><span>[+ pres_2025_konf_candidate +]</span><span class="party party-konf">Konf.</span><b>[+ pres_2025_r1_display_mentzen +]%</b><span>[+ pres_2025_r1_votes_mentzen_display +]</span><span>[+ pres_2025_status_mentzen +]</span></div>
 <div class="election-table-row"><span>Grzegorz Braun</span><span class="party party-korona">Korona</span><b>[+ pres_2025_r1_display_braun +]%</b><span>[+ pres_2025_r1_votes_braun_display +]</span><span>[+ pres_2025_status_braun +]</span></div>
-<div class="election-table-row"><span>Szymon Hołownia</span><span class="party party-p2050">PL2050</span><b>[+ pres_2025_r1_display_holownia +]%</b><span>[+ pres_2025_r1_votes_holownia_display +]</span><span>[+ pres_2025_status_holownia +]</span></div>
+<div class="election-table-row"><span>[+ pres_2025_centre_candidate +]</span><span class="party party-p2050">PL2050</span><b>[+ pres_2025_r1_display_holownia +]%</b><span>[+ pres_2025_r1_votes_holownia_display +]</span><span>[+ pres_2025_status_holownia +]</span></div>
 <div class="election-table-row"><span>Krzysztof Stanowski</span><span>independent</span><b>[+ pres_2025_r1_display_stanowski +]%</b><span>[+ pres_2025_r1_votes_stanowski_display +]</span><span>[+ pres_2025_status_stanowski +]</span></div>
 <div class="election-table-row"><span>Five smaller committees</span><span>combined</span><b>[+ pres_2025_r1_display_other +]%</b><span>[+ pres_2025_r1_votes_other_display +]</span><span>eliminated</span></div>
 </div>
@@ -2937,9 +3257,14 @@ wants to define what the new electorate voted for.?]
 [? if pres_2025_leadership_defeat: **[+ pres_2025_left_candidate +]** finishes
 behind Zandberg. A strong combined Left field cannot erase the challenge to New
 Left's leadership, donors or claim to direct a future common list.?]
-[? if pres_2025_radical_result >= 20: Mentzen and Braun together command a
+[? if pres_2025_radical_result >= 20: [+ pres_2025_konf_surname +] and Braun together command a
 large radical-right electorate. Their rivalry no longer makes either one a
 side show.?]
+[? if pres_2025_stanowski_breakout = 1: Stanowski's result is no commentary
+candidacy: **[+ pres_2025_r1_display_stanowski +]%** gives Kanał Zero a
+national electorate, humiliates the centrist campaign that assumed media
+outsiders belonged to it and leaves a ready-made organisation waiting after
+the count.?]
 
 [? if pres_2025_first_round_winner: Elected in the first round: **[+
 pres_2025_winner +] — [+ pres_2025_first_round_winner_share +]%**.?]
@@ -3209,7 +3534,8 @@ Q.news_headline =
     "Poland 2050 and the Left agree an oversight package for the second round";
 !}
 
-Hołownia's people do not deliver voters and say so at the start of the meeting.
+**[+ pres_2025_centre_surname +]** and the Poland 2050 organisers do not
+deliver voters and say so at the start of the meeting.
 What they can deliver is a text: parliamentary oversight of appointments, a
 public-service audit, a commitment that neither camp treats institutional
 reform as a bargaining chip after the ballot.
@@ -3257,10 +3583,14 @@ on-arrival: {!
 Q.resources -= 1;
 Q.pres_2025_support_stanowski = 1;
 Q.pres_2025_support_actions_remaining -= 1;
-Q.pres_2025_trade_boost_stanowski = 0.10;
+Q.pres_2025_trade_boost_stanowski = Q.pres_2025_stanowski_breakout
+    ? 0.16
+    : 0.10;
 Q.media_capacity += 2;
 Q.young_support += 1;
-Q.pres_2025_runoff_target_bonus += 0.08;
+Q.pres_2025_runoff_target_bonus += Q.pres_2025_stanowski_breakout
+    ? 0.16
+    : 0.08;
 Q.news_headline =
     "The Left takes the long interview in front of an audience no party owns";
 !}
@@ -3272,6 +3602,11 @@ first and rights later and does not pretend to be neutral about either.
 There is no way to control what is clipped from it. There is also no other room
 in Poland where this many people who dislike all of us will sit still for two
 hours, and the campaign's own footage is worthless by comparison.
+
+[? if pres_2025_stanowski_breakout = 1: This time the audience is also an
+electorate. Stanowski can point to **[+ pres_2025_r1_display_stanowski +]%**,
+and the interview is bargaining with a campaign-sized constituency rather than
+borrowing reach from a broadcaster.?]
 
 - @pres25_support_next
 - @pres25_support_done
@@ -3341,7 +3676,7 @@ Left vote turns into an abstention.
 - @pres25_support_done
 
 @pres25_support_radical
-title: Contest Mentzen's voters on wages, rents and the cost of the state
+title: Contest [+ pres_2025_konf_surname +]'s voters on wages, rents and the cost of the state
 subtitle: No endorsement is sought or offered. A raid on an electorate that despises us.
 view-if: pres_2025_support_radical = 0 and pres_2025_finalist_a_key != "mentzen" and pres_2025_finalist_b_key != "mentzen"
 on-arrival: {!
@@ -3360,7 +3695,7 @@ Q.news_headline =
 The argument is made without a single concession on rights, which is what makes
 it difficult: a young man renting a room in Rzeszów is being robbed, and the
 people telling him it is the fault of foreigners have a tax programme that will
-close his mother's ward.
+leave his mother's ward without the state they claim to defend.
 
 Some of them listen. The cost is paid at home, where a fortnight of campaigning
 in that vocabulary is read by our own activists as the beginning of the
@@ -3409,7 +3744,447 @@ go-to: pres25_support_market
 @pres25_support_done
 title: Close the negotiations and wait for the second ballot
 view-if: pres_2025_support_actions_remaining <= 0
-go-to: poland_event_queue
+go-to: pres25_torun_democratic if (pres_2025_runoff_support_target = "ko" or pres_2025_runoff_support_target = "holownia") and pres_2025_finalist_a_key != "mentzen" and pres_2025_finalist_b_key != "mentzen"; pres25_torun_pis if pres_2025_runoff_support_target = "right" and pres_2025_finalist_a_key != "mentzen" and pres_2025_finalist_b_key != "mentzen"; poland_event_queue
+
+@pres25_torun_democratic
+title: A beer becomes the democratic camp's runoff photograph
+subtitle: Mentzen offers an audience, a pub and eight terms the Left did not negotiate
+new-page: true
+view-if: (pres_2025_runoff_support_target = "ko" or pres_2025_runoff_support_target = "holownia") and pres_2025_finalist_a_key != "mentzen" and pres_2025_finalist_b_key != "mentzen"
+on-arrival: {!
+Q.mentzen_declaration_2025_done = 1;
+Q.mentzen_kingmaker_active = 1;
+Q.pres_2025_torun_route = "democratic";
+Q.pres_2025_torun_target_key = Q.pres_2025_runoff_support_target;
+Q.pres_2025_torun_target_name = Q.pres_2025_torun_target_key == "ko"
+    ? Q.pres_2025_ko_candidate
+    : Q.pres_2025_centre_candidate;
+Q.konf_normalisation += 8;
+Q.news_headline = Q.pres_2025_torun_target_name +
+    " drinks a beer with Mentzen in the fortnight between ballots";
+!}
+
+= The fortnight between ballots — Piwo z Mentzenem
+
+[? if pres_2025_konf_candidate = "Sławomir Mentzen": <span
+class="party-konf"><b>Sławomir Mentzen</b></span>, eliminated on **[+
+pres_2025_r1_display_mentzen +]%**, invites both finalists to his Toruń pub and
+YouTube programme.?]
+
+[? if pres_2025_konf_candidate = "Krzysztof Bosak": <span
+class="party-konf"><b>Krzysztof Bosak</b></span> leaves Konfederacja with **[+
+pres_2025_r1_display_mentzen +]%** and no finalist. Party chair **Sławomir
+Mentzen** then invites both finalists to his Toruń pub and YouTube programme,
+turning Bosak's electorate into his own inter-round audience.?]
+
+**[+ pres_2025_torun_target_name +]** goes, drinks the beer
+and lets the cameras hold the glass beside Mentzen. Nationalists resent the
+visitor; the democratic camp's left flank sees its endorsement turned into
+somebody else's normalisation campaign.
+
+[? if pres_2025_torun_target_name != "Radosław Sikorski": Sikorski joins the
+table, and the three-man beer clip travels further than the refusal to sign the
+whole declaration.?]
+
+[? if pres_2025_torun_target_name = "Radosław Sikorski": The foreign minister
+needs no second KO figure in the photograph; the two-man beer clip carries his
+Atlanticist campaign into Mentzen's nationalist audience.?]
+
+[? if pres_2025_torun_target_key = "ko": Tusk approves the reach and accepts
+that the picture will anger voters who expected the democratic candidate to
+keep Mentzen at arm's length.?]
+
+[? if pres_2025_torun_target_key = "holownia": Poland 2050 approves the reach
+as proof that the centre can speak outside the old blocs; KO resents lending
+Sikorski and a democratic-camp photograph to a rival finalist.?]
+
+Mentzen puts an eight-point Toruń Declaration on the table: no tax rises, no
+Ukrainian accession to NATO, no further surrender of sovereignty and no new
+gun controls among the tests. The finalist refuses to sign all eight and agrees
+only where the campaign can defend the point. That distinction survives in the
+full recording; the beer photograph travels without it.
+
+Lewica now has three organisational positions. Each changes how much of our
+endorsement still reaches a door in the last week.
+
+- @pres25_torun_razem_withdraw
+- @pres25_torun_progressive_instruction
+- @pres25_torun_democratic_operation
+
+@pres25_torun_razem_withdraw
+title: Accept Razem's demand and withdraw the endorsement entirely
+subtitle: Recover the independent Left line and remove our field operation from the finalist.
+view-if: razem_split = 0 and (razem_in_left = 1 or (left_merger_structure = "federation" and merger_razem_present = 1 and razem_org_status != "departed"))
+on-arrival: {!
+Q.pres_2025_runoff_support_target = "none";
+Q.pres_2025_transfer_strategy =
+    "Endorsement withdrawn after Piwo z Mentzenem";
+Q.pres_2025_transfer_strength = 0;
+Q.pres_2025_runoff_target_bonus -= 0.55;
+Q.razem_cooperation += 8;
+Q.razem_dissent -= 6;
+Q.progressives_dissent -= 3;
+Q.ko_relation -= 9;
+if (Q.pres_2025_torun_target_key == "holownia") Q.p2050_relation -= 6;
+Q.party_unity += 1;
+Q.pres_2025_torun_red_line =
+    "the withdrawal: no use of Lewica's name to validate the Toruń appearance";
+Q.pres_2025_torun_breach =
+    "the finalist's campaign republishes our earlier endorsement beside the beer photograph";
+Q.news_headline =
+    "Razem keeps the Left inside one party by ending the runoff endorsement";
+!}
+
+The endorsement and canvass sheets are withdrawn in the same statement. Razem
+stays inside a party willing to enforce a boundary; organisers already working
+the finalist's lists are told that the work no longer carries Lewica's name.
+
+KO calls the reversal a gift to PiS, and the target campaign loses the only
+part of our first-round electorate that could be reached by an organised
+instruction. The Left has recovered its line by making the runoff harder to
+win.
+
+- @pres25_torun_mirror: Put the written boundary to its final test
+
+@pres25_torun_progressive_instruction
+title: Reduce support to a bare instruction to vote
+subtitle: No shared platforms and no canvassing; the endorsement survives without an operation.
+on-arrival: {!
+Q.pres_2025_transfer_strategy =
+    "Bare voting instruction after Piwo z Mentzenem";
+Q.pres_2025_transfer_strength = Math.min(
+    0.35,
+    Number(Q.pres_2025_transfer_strength) || 0
+);
+Q.pres_2025_runoff_target_bonus -= 0.25;
+Q.razem_cooperation += 2;
+Q.razem_dissent += 1;
+Q.progressives_dissent -= 3;
+Q.ko_relation -= 3;
+if (Q.pres_2025_torun_target_key == "holownia") Q.p2050_relation -= 2;
+Q.organiser_energy += 2;
+Q.pres_2025_torun_red_line =
+    "the written limit of one voting instruction, with no shared platform or canvass";
+Q.pres_2025_torun_breach =
+    "the finalist turns the beer clip into a shared platform and asks our MPs to carry it";
+Q.news_headline =
+    "Lewica keeps a voting instruction and removes its field operation";
+!}
+
+The party says whom it prefers and nothing more. MPs may give the one-sentence
+instruction; offices may not canvass, share a stage or distribute the Toruń
+clip. Progressive currents can defend the boundary, but a line without a field
+operation reaches fewer people than the endorsement negotiated after round one.
+
+The democratic partners keep the name of our preferred candidate and lose the
+organisers they expected to accompany it. They say publicly that abstention is
+now being manufactured by people who know exactly what the alternative means.
+
+- @pres25_torun_mirror: Put the written boundary to its final test
+
+@pres25_torun_democratic_operation
+title: Keep the endorsement and field operation unchanged
+subtitle: Democratic partners retain every organiser; Razem and the progressives own the public objection.
+on-arrival: {!
+Q.pres_2025_transfer_strategy =
+    "Full democratic field operation after Piwo z Mentzenem";
+Q.pres_2025_transfer_strength += 0.35;
+Q.pres_2025_runoff_target_bonus += 0.45;
+Q.razem_cooperation -= 6;
+Q.razem_dissent += 7;
+Q.progressives_dissent += 6;
+Q.ko_relation += 5;
+if (Q.pres_2025_torun_target_key == "holownia") Q.p2050_relation += 4;
+Q.organiser_energy -= 3;
+Q.pres_2025_torun_red_line =
+    "the written refusal of the Toruń Declaration and any further policy concession";
+Q.pres_2025_torun_breach =
+    "the finalist gives Mentzen a no-tax-rise line our agreement reserved for Parliament";
+Q.news_headline =
+    "The democratic runoff operation continues through the Toruń backlash";
+!}
+
+The endorsement, joint appearances and canvass lists remain where they were.
+Democratic partners receive the operation they budgeted for and say, in public,
+that nobody facing a PiS-backed presidency has the luxury of abandoning it over
+a photograph.
+
+Razem and the progressive currents answer in their own names. The field gain is
+real; so is the lesson that a larger ally may borrow nationalist theatre and
+still expect the Left to supply the doors.
+
+- @pres25_torun_mirror: Put the written boundary to its final test
+
+@pres25_torun_pis
+title: The PiS-backed finalist submits a price list to Mentzen—and receives ours
+subtitle: Campaigning for the right can buy terms, a Palace staff and a fight over its next nomination
+new-page: true
+view-if: pres_2025_runoff_support_target = "right" and pres_2025_finalist_a_key != "mentzen" and pres_2025_finalist_b_key != "mentzen"
+on-arrival: {!
+Q.mentzen_declaration_2025_done = 1;
+Q.mentzen_kingmaker_active = 1;
+Q.pres_2025_torun_route = "pis";
+Q.pres_2025_torun_target_key = "right";
+Q.pres_2025_torun_target_name = Q.pres_2025_right_candidate;
+Q.konf_normalisation += 10;
+Q.news_headline = Q.pres_2025_right_candidate +
+    " faces Mentzen's eight points while Lewica prices its runoff work";
+!}
+
+= The fortnight between ballots — Two price lists
+
+**[+ pres_2025_konf_candidate +]** brings **[+
+pres_2025_r1_display_mentzen +]%** of first-round voters; Mentzen brings the Toruń Declaration
+to his pub: no tax rises, no Ukrainian accession to NATO, sovereignty clauses
+and no new gun controls among eight points. **[+ pres_2025_right_candidate +]**
+signals readiness to sign. Mentzen withholds a formal endorsement and says
+there is no reason to vote for the democratic opponent.
+
+Lewica is already bargaining with the PiS-backed finalist. If our endorsement
+is to become campaigning, PiS must receive its own price list. One item is
+personnel: move the right toward Morawiecki's state-and-transfer politics and
+away from the harder culture-war names without pretending the ballot can still
+be changed.
+
+- @pres25_pis_morawiecki_staff
+- @pres25_pis_social_price
+- @pres25_pis_instruction_only
+
+@pres25_pis_morawiecki_staff
+title: Make Morawiecki's administrators the price of Palace campaigning
+subtitle: Secure a personnel lever and carry a PiS-backed candidate through the last week.
+on-arrival: {!
+Q.pres_2025_transfer_strength += 0.30;
+Q.pres_2025_runoff_target_bonus += 0.35;
+Q.pis_relation += 5;
+Q.razem_cooperation -= 5;
+Q.razem_dissent += 6;
+Q.progressives_dissent += 7;
+Q.pis_solidarist_share += 3;
+Q.pis_sovereigntist_strength -= 2;
+Q.far_right_agenda -= 2;
+if (Q.pres_2025_right_candidate == "Mateusz Morawiecki") {
+    Q.pres_2025_morawiecki_push =
+        "Morawiecki's own state-and-transfer team staffs the Palace";
+    Q.pres_2025_torun_red_line =
+        "the written condition that Morawiecki staff the Palace from his state-and-transfer wing and not bind it to all eight Toruń points";
+    Q.pres_2025_torun_breach =
+        "the candidate signs all eight points and announces hard-line culture-war appointments instead";
+} else {
+    Q.pres_2025_morawiecki_push =
+        "Morawiecki-aligned Palace staff and first claim on the right's next nomination";
+    Q.pres_2025_torun_red_line =
+        "the written condition of Morawiecki-aligned Palace staff, a future nomination lever and no signature binding the Palace to all eight points";
+    Q.pres_2025_torun_breach =
+        "the candidate signs all eight points, announces a hard-line Palace slate and disowns the succession bargain";
+}
+Q.news_headline =
+    "Lewica prices Palace campaigning in staff and the right's next succession";
+!}
+
+[? if pres_2025_right_candidate = "Mateusz Morawiecki": Morawiecki is already
+on the ballot. The bargain therefore governs who staffs his Palace and whether
+his own state-and-transfer wing, rather than PiS's harder factions, owns the
+presidency. Nothing is swapped retroactively.?]
+
+[? if pres_2025_right_candidate != "Mateusz Morawiecki": **[+
+pres_2025_right_candidate +]** remains on the ballot. The written price places
+Morawiecki-aligned administrators in the Palace and gives that wing the first
+claim on the next nomination; it does not replace today's candidate after the
+first round.?]
+
+Our organisers campaign on the personnel clause and the transfers it is meant
+to protect. PiS gains a field operation it could not command, while Razem and
+the progressive currents acquire evidence that the party has moved from a
+tactical vote to staffing a right-wing presidency.
+
+- @pres25_torun_mirror: Put the written personnel clause to its final test
+
+@pres25_pis_social_price
+title: Publish a social price list and leave PiS's personnel fight alone
+subtitle: Protect transfers, labour inspection and services without endorsing the succession bargain.
+on-arrival: {!
+Q.pres_2025_transfer_strength += 0.15;
+Q.pres_2025_runoff_target_bonus += 0.22;
+Q.pis_relation += 3;
+Q.labor_credibility += 2;
+Q.razem_cooperation -= 3;
+Q.razem_dissent += 4;
+Q.progressives_dissent += 5;
+Q.pres_2025_morawiecki_push =
+    "No personnel lever; a social price list only";
+Q.pres_2025_torun_red_line =
+    "the written no-cuts guarantee for transfers, labour inspection and public services";
+Q.pres_2025_torun_breach =
+    "the finalist signs every Toruń point, including the tax lock that makes our guarantees impossible";
+Q.news_headline =
+    "The Left publishes the social cost of campaigning for the PiS-backed finalist";
+!}
+
+The list is short enough to read on television: no cut to family transfers, a
+funded labour inspectorate, hospital finance protected from the tax pledge and
+no Palace veto of the agreed worker bills. PiS signs because it needs people
+who can speak to voters outside its own organisation.
+
+We keep out of the succession fight and lose the only opportunity to weaken
+the culture-war wing through personnel. Progressive organisers still have to
+explain why a written social floor justifies canvassing for a candidate who
+signed Mentzen's whole declaration.
+
+- @pres25_torun_mirror: Put the written social floor to its final test
+
+@pres25_pis_instruction_only
+title: Keep the endorsement but refuse a shared PiS campaign
+subtitle: Preserve the tactical line, abandon the price list and accept a weaker transfer.
+on-arrival: {!
+Q.pres_2025_transfer_strategy =
+    "Tactical instruction without a shared PiS campaign";
+Q.pres_2025_transfer_strength = Math.min(
+    0.25,
+    Number(Q.pres_2025_transfer_strength) || 0
+);
+Q.pres_2025_runoff_target_bonus -= 0.30;
+Q.pis_relation -= 5;
+Q.razem_cooperation += 2;
+Q.razem_dissent -= 2;
+Q.progressives_dissent -= 2;
+Q.pres_2025_morawiecki_push =
+    "Morawiecki lever proposed and refused";
+Q.pres_2025_torun_red_line =
+    "the written limit of no second meeting, shared platform or joint canvass";
+Q.pres_2025_torun_breach =
+    "the finalist takes a second meeting, signs all eight points and asks PiS offices to advertise our support";
+Q.news_headline =
+    "Lewica keeps a tactical instruction and refuses to join the PiS field campaign";
+!}
+
+The party repeats the voting instruction and supplies no stage, canvasser or
+price list. Our factions avoid becoming part of the PiS operation; the workers
+and services we might have protected receive no paper guarantee at all.
+
+PiS calls the position cowardice dressed as support. The candidate keeps our
+name in the endorsement column and loses most of the reachable voters that an
+actual joint operation might have moved.
+
+- @pres25_torun_mirror: Put the written campaign limit to its final test
+
+@pres25_torun_mirror
+title: [+ pres_2025_torun_target_name +] breaks the line we put in writing
+subtitle: The last week tests whether an endorsement is leverage or merely permission
+new-page: true
+view-if: pres_2025_torun_route = "democratic" or pres_2025_torun_route = "pis"
+on-arrival: {!
+Q.news_headline = Q.pres_2025_torun_target_name +
+    " breaches the runoff terms agreed with Lewica";
+!}
+
+= The last week — The mirror
+
+The written line was **[+ pres_2025_torun_red_line +]**. The breach is equally
+plain: **[+ pres_2025_torun_breach +]**. Headquarters receives the clip before
+the morning meeting and the explanation before noon: the finalist needed
+[+ pres_2025_konf_surname +]'s voters, the campaign moved too quickly, and reopening the endorsement
+now would only help the other person on the ballot.
+
+[? if pres_2025_torun_route = "democratic": The democratic camp that asked us
+to accept the beer as necessary now asks us to treat its own written limit as
+optional. The Left can preserve the anti-right transfer only by teaching every
+partner what our conditions cost to break.?]
+
+[? if pres_2025_torun_route = "pis": The PiS-backed camp that accepted a
+price for our canvass now treats that price as campaign stationery. A tactical
+bargain with the right has reached the exact test our factions said it would.?]
+
+- @pres25_breach_eat
+- @pres25_breach_public
+- @pres25_breach_pull
+
+@pres25_breach_eat
+title: Eat the breach and keep every organiser in the field
+subtitle: Protect the transfer; make Lewica's written conditions cheaper next time.
+on-arrival: {!
+Q.pres_2025_runoff_breach_shift = 0;
+Q.pres_2025_transfer_strength += 0.10;
+Q.razem_cooperation -= 4;
+Q.razem_dissent += 6;
+Q.progressives_dissent += 6;
+Q.party_unity -= 3;
+Q.public_trust -= 2;
+if (Q.pres_2025_torun_target_key == "right") Q.pis_relation += 2;
+else Q.ko_relation += 2;
+Q.news_headline =
+    "Lewica absorbs the runoff breach and keeps its organisers in the field";
+!}
+
+No corrective statement is issued. The field operation keeps its lists and the
+candidate keeps the full value of our endorsement. Faction representatives
+record in the minutes that a written condition has been broken and discover
+that minutes do not travel.
+
+- @poland_event_queue: Carry the swallowed breach into the count
+
+@pres25_breach_public
+title: Publish the breach and keep a reduced endorsement
+subtitle: Recover a public boundary while taking some votes and trust out of the joint operation.
+on-arrival: {!
+Q.pres_2025_runoff_breach_shift = -0.25;
+Q.pres_2025_transfer_strength -= 0.20;
+Q.pres_2025_runoff_target_bonus -= 0.15;
+Q.razem_cooperation += 2;
+Q.razem_dissent -= 2;
+Q.progressives_dissent -= 1;
+Q.party_unity -= 2;
+Q.public_trust += 2;
+Q.media_capacity += 1;
+if (Q.pres_2025_torun_target_key == "right") Q.pis_relation -= 6;
+else Q.ko_relation -= 6;
+Q.news_headline =
+    "Lewica publishes the broken runoff clause and leaves a narrower endorsement in place";
+!}
+
+The agreement, timestamp and offending clip are released together. The party
+still instructs voters to prefer the finalist, but no spokesperson describes
+the campaign as a partner and several joint appearances disappear from the
+calendar.
+
+The public can see that the line existed. The finalist can see exactly how much
+field strength survived our anger, and will remember that number in the next
+negotiation.
+
+- @poland_event_queue: Carry the published breach into the count
+
+@pres25_breach_pull
+title: Pull the endorsement in the last week
+subtitle: Enforce the agreement at the ballot box; measurably reduce the backed finalist's runoff coalition.
+on-arrival: {!
+if (Q.pres_2025_runoff_support_target == Q.pres_2025_torun_target_key) {
+    Q.pres_2025_runoff_support_target = "none";
+}
+Q.pres_2025_transfer_strategy =
+    "Endorsement pulled after a written runoff breach";
+Q.pres_2025_transfer_strength = 0;
+Q.pres_2025_runoff_target_bonus -= 0.60;
+Q.pres_2025_runoff_breach_shift = -0.85;
+Q.turnout_readiness -= 2;
+Q.razem_cooperation += 4;
+Q.razem_dissent -= 4;
+Q.progressives_dissent -= 3;
+Q.organiser_energy -= 2;
+if (Q.pres_2025_torun_target_key == "right") Q.pis_relation -= 10;
+else Q.ko_relation -= 10;
+Q.news_headline =
+    "Lewica pulls its runoff endorsement after the finalist breaks the written terms";
+!}
+
+Offices receive the stop order with days left. Printed material is pulped,
+joint canvasses are cancelled and voters who heard one instruction on Monday
+hear that the agreement behind it no longer exists on Friday.
+
+The boundary is enforceable because the candidate loses something for crossing
+it. The same fact makes the decision dangerous: the count will include people
+our organisers might have reached and now deliberately will not.
+
+- @poland_event_queue: Carry the withdrawn endorsement into the count
 
 @calculate_presidential_runoff_2025
 on-arrival: {!
@@ -3429,12 +4204,13 @@ const finalistB = Q.pres_2025_finalist_b_key;
 const supportTarget = Q.pres_2025_runoff_support_target;
 const finalistNames = {};
 finalistNames.ko = Q.pres_2025_ko_candidate || "Rafał Trzaskowski";
-finalistNames.right = "Karol Nawrocki";
+finalistNames.right = Q.pres_2025_right_candidate || "Karol Nawrocki";
 finalistNames.left = Q.pres_2025_left_candidate;
 finalistNames.razem = Q.pres_2025_razem_candidate || "Adrian Zandberg";
-finalistNames.mentzen = "Sławomir Mentzen";
+finalistNames.mentzen = Q.pres_2025_konf_candidate;
 finalistNames.braun = "Grzegorz Braun";
-finalistNames.holownia = "Szymon Hołownia";
+finalistNames.holownia =
+    Q.pres_2025_centre_candidate || "Szymon Hołownia";
 finalistNames.stanowski = "Krzysztof Stanowski";
 const historicalKoRight =
     finalistNames.ko == "Rafał Trzaskowski" &&
@@ -3471,6 +4247,12 @@ const tradeBoost25 = function(source) {
 const targetBonus25 =
     (Number(Q.pres_2025_runoff_target_bonus) || 0) +
     (Number(Q.pres_2025_runoff_push_bonus) || 0);
+const breachShift25 =
+    Q.pres_2025_torun_target_key == resultAKey
+        ? (Number(Q.pres_2025_runoff_breach_shift) || 0)
+        : (Q.pres_2025_torun_target_key == resultBKey
+            ? -(Number(Q.pres_2025_runoff_breach_shift) || 0)
+            : 0);
 const allSourceKeys25 = [
     "ko", "right", "left", "razem", "mentzen",
     "braun", "holownia", "stanowski", "other"
@@ -3503,6 +4285,7 @@ if (historicalKoRight) {
         ((Number(Q.ko_relation) || 50) - 50) * 0.018 +
         ((Number(Q.turnout_readiness) || 58) - 58) * 0.012 -
         (Q.razem_split ? 0.28 : 0) +
+        breachShift25 +
         Q.pres_2025_runoff_variance;
 } else {
     const profiles = {
@@ -3592,7 +4375,7 @@ if (historicalKoRight) {
         : (supportTarget == resultBKey ? -targetBonus25 : 0);
     resultAShare =
         votesA * 100 / validTransferTotal +
-        endorsementShift + turnoutShift + marketShift25 +
+        endorsementShift + turnoutShift + marketShift25 + breachShift25 +
         Q.pres_2025_runoff_variance;
 }
 resultAShare = historicalKoRight
@@ -3820,21 +4603,21 @@ democratic camp a friendlier Palace, but KO will own the victory. Lewica gains
 a route around the veto wall for bills it can help pass; every democratic party
 loses the excuse that presidential obstruction explains every undelivered
 social promise.?]
-[? if pres_2025_winner_key = "right": PiS-backed <span class="party-pis"><b>Karol Nawrocki</b></span> wins the
+[? if pres_2025_winner_key = "right": PiS-backed <span class="party-pis"><b>[+ pres_2025_right_candidate +]</b></span> wins the
 Palace. [? if left_in_government: Lewica's ministers face five years in which
 every labour, equality and court bill needs a bargain, an override the cabinet
 does not possess, or a public veto campaign.?][? if not left_in_government:
 Lewica must oppose both the cabinet and a President prepared to block the bills
 it can assemble in the Sejm.?]?]
-[? if pres_2025_winner_key = "mentzen": <span class="party-konf"><b>Sławomir Mentzen</b></span> turns the
-libertarian-nationalist electorate into presidential power. Lewica must defend
+[? if pres_2025_winner_key = "mentzen": <span class="party-konf"><b>[+ pres_2025_konf_candidate +]</b></span> turns the
+Konfederacja electorate into presidential power. Lewica must defend
 public institutions against a hostile pen while PiS decides whether to follow
 or compete with the new leader of the right.?]
 [? if pres_2025_winner_key = "braun": <span class="party-korona"><b>Grzegorz Braun</b></span> carries his personal
 far-right movement into the Palace. Minority organisations and public servants
 now require institutional protection, and every unresolved legal proceeding
 will be recast as a conflict involving the head of state.?]
-[? if pres_2025_winner_key = "holownia": <span class="party-p2050"><b>Szymon Hołownia</b></span> converts a
+[? if pres_2025_winner_key = "holownia": <span class="party-p2050"><b>[+ pres_2025_centre_candidate +]</b></span> converts a
 centrist campaign into the presidency. Poland 2050 must learn to live without
 its founder's daily command; Lewica gains an institutional partner who will
 still compete for reformist and public-service voters.?]
@@ -4651,7 +5434,7 @@ subtitle: Cost: 1 resource. Keep both parties free to talk, but make them share 
 view-if: third_way_active = 1
 choose-if: resources >= 1
 unavailable-subtitle: The parliamentary audit cannot be staffed.
-on-arrival: resources -= 1; third_way_night_meeting_response = "Joint minutes and arithmetic audit"; third_way_cohesion += 8; p2050_coalition_dissent -= 2; psl_coalition_dissent -= 2; rival_relation_psl_p2050 += 4; public_trust += 2; news_headline = "Third Way answers the night meeting with shared minutes and a seat count"
+on-arrival: {! Q.resources -= 1; Q.third_way_night_meeting_response = "Joint minutes and arithmetic audit"; Q.third_way_cohesion = Math.min(100, (Number(Q.third_way_cohesion) || 0) + 8); Q.p2050_coalition_dissent -= 2; Q.psl_coalition_dissent -= 2; Q.rival_relation_psl_p2050 += 4; Q.public_trust += 2; Q.news_headline = "Third Way answers the night meeting with shared minutes and a seat count"; !}
 
 Hołownia and Kosiniak-Kamysz submit future cross-party contacts to a joint
 council with minutes and a live seat count. Neither party surrenders the right
@@ -4891,20 +5674,10 @@ Q.budget = 0;
 Q.budget_authority = "Opposition — no state spending authority";
 Q.position = "Confidence-and-supply opposition";
 Q.coalition_status = "Minority democratic cabinet";
-const sittingCabinetPortfolios = [
-    "labor", "equality", "housing", "health", "digital", "science",
-    "interior", "finance", "economy", "justice", "foreign",
-    "agriculture", "defence"
-];
-// Read actual office-holding before changing the coalition status.  A prior
-// PSL resignation must not be undone merely because this later event resets
-// the broader crisis flag.
-const pslStillInCabinet = sittingCabinetPortfolios.some(function(portfolio) {
-    return Q[portfolio + "_minister_party"] == "PSL";
-});
-const p2050StillInCabinet = sittingCabinetPortfolios.some(function(portfolio) {
-    return Q[portfolio + "_minister_party"] == "Poland 2050";
-});
+// Cabinet membership survives a portfolio trade. A prior resignation clears
+// the party's membership flag even if an old office label survives elsewhere.
+const pslStillInCabinet = Boolean(Q.ministry_psl_in_cabinet);
+const p2050StillInCabinet = Boolean(Q.ministry_p2050_in_cabinet);
 Q.party_unity -= 3;
 Q.razem_cooperation += 5;
 Q.ko_relation -= 10;
@@ -5743,7 +6516,7 @@ go-to: poland_events_2026.snap_formation_attempt_two
 @presidential_oath_crisis_2025
 # prose-audit: Grade A — Hołownia's reported approach remains an allegation, the constitutional offices retain their powers, and the playable delay succeeds only as a temporary, ruinous interregnum.
 title: War of the Powers — the other oath
-subtitle: Hołownia is urged to withhold the National Assembly after Nawrocki's victory
+subtitle: Hołownia is urged to withhold the National Assembly after [+ pres_2025_right_surname +]'s victory
 new-page: true
 tags: poland_event
 priority: 45
@@ -5751,17 +6524,21 @@ order: 4
 max-visits: 1
 face-image: img/poland/cards/presidential-channel.webp
 view-if: continuous_campaign = 1 and year = 2025 and month >= 8 and pres_2025_runoff_done = 1 and pres_2025_winner_key = "right" and pres_2025_inaugurated = 0 and pres_2025_oath_crisis = 0 and government_party != "pis" and government_has_confidence = 1 and caretaker_government = 0 and sejm_speaker = "Szymon Hołownia"
-on-arrival: news_headline = "An unnamed approach asks Hołownia to delay Nawrocki's oath"
+on-arrival: {!
+Q.news_headline = "An unnamed approach asks Hołownia to delay " +
+    Q.pres_2025_right_surname + "'s oath";
+!}
 
 = August 2025 — The date belongs to the Constitution
 
-The official count gives <span class="party-pis"><b>Karol Nawrocki</b></span> the presidency and the Supreme
+The official count gives <span class="party-pis"><b>[+ pres_2025_right_candidate +]</b></span> the presidency and the Supreme
 Court has ruled on the election's validity. Complaints about individual
 precincts can still be examined; Sejm Marshal <span class="party-p2050"><b>Szymon Hołownia</b></span> does not
 gain authority to recertify the national result.
 
 People Hołownia will not name urge him to withhold the National Assembly on
-6 August. If the outgoing President's term expires before Nawrocki takes the oath, they
+6 August. If the outgoing President's term expires before **[+
+pres_2025_right_surname +]** takes the oath, they
 argue, Article 131 lets the Marshal temporarily discharge presidential duties.
 No evidence establishes a collective coalition plan. The proposal is now in
 the room, however, and every party must decide whether to kill it, discipline
@@ -5795,7 +6572,20 @@ title: Review named precincts without moving the oath
 subtitle: Cost: 1 resource. Separate evidence and court remedies from the constitutional date.
 choose-if: resources >= 1
 unavailable-subtitle: A parallel precinct audit requires one party resource.
-on-arrival: resources -= 1; pres_2025_oath_crisis = 1; pres_2025_oath_strategy = "Targeted review without delay"; judicial_legitimacy += 6; constitutional_restraint += 5; institutional_trust += 3; public_trust += 2; media_capacity += 2; pis_relation -= 2; p2050_relation += 3; news_headline = "A published precinct audit proceeds without delaying Nawrocki's oath"
+on-arrival: {!
+Q.resources -= 1;
+Q.pres_2025_oath_crisis = 1;
+Q.pres_2025_oath_strategy = "Targeted review without delay";
+Q.judicial_legitimacy += 6;
+Q.constitutional_restraint += 5;
+Q.institutional_trust += 3;
+Q.public_trust += 2;
+Q.media_capacity += 2;
+Q.pis_relation -= 2;
+Q.p2050_relation += 3;
+Q.news_headline = "A published precinct audit proceeds without delaying " +
+    Q.pres_2025_right_surname + "'s oath";
+!}
 
 Election lawyers publish each protested commission, the ballots at issue and
 the remedy requested. Hołownia keeps the National Assembly date. Suspicion is
@@ -5839,7 +6629,8 @@ Q.news_headline =
 !}
 
 The sitting is not convened. The outgoing President's term expires and Hołownia claims that the
-failure to assume office activates the Marshal's temporary duties. Nawrocki,
+failure to assume office activates the Marshal's temporary duties. **[+
+pres_2025_right_surname +]**,
 PiS and much of the legal profession answer that the Marshal manufactured the
 very obstacle on which his claim depends.
 
@@ -5853,7 +6644,7 @@ senior decisions until Poland identifies one constitutional signature.
 
 @oath_acting_window_2025
 title: Use the acting window for appointments and the court bill
-subtitle: The acts are frozen and Nawrocki still takes office; this is the maximum constitutional rupture.
+subtitle: The acts are frozen and [+ pres_2025_right_surname +] still takes office; this is the maximum constitutional rupture.
 on-arrival: {!
 Q.pres_2025_oath_crisis = 2;
 Q.pres_2025_oath_strategy = "Disputed acts during the interregnum";
@@ -5888,7 +6679,8 @@ Q.news_headline =
 
 Government lawyers send the pending court bill and appointment papers through
 Hołownia's disputed office. Ministries receive signatures; courts immediately
-freeze their effect, civil servants demand indemnities and Nawrocki announces
+freeze their effect, civil servants demand indemnities and **[+
+pres_2025_right_surname +]** announces
 that every act will be challenged on his first day.
 
 The government has briefly done the unspecified thing for which the delay was
@@ -6027,6 +6819,183 @@ decisions will now arrive in our next election leaflet.
 
 - @poland_event_queue: Publish the opposition veto ledger
 
+@campus_health_partners_2025
+# prose-audit: Grade A — The official partner list is separated from any claim of policy influence, while Razem, the labour current, the progressive organisers and the party apparatus each demand a materially different response.
+title: Campus Polska's health partners become a Left ultimatum
+subtitle: LUX MED and Medicover turn Trzaskowski's youth forum into a test of KO's public-health promises
+new-page: true
+tags: poland_event
+priority: 25
+order: 12
+max-visits: 1
+view-if: continuous_campaign = 1 and year = 2025 and month = 9 and pres_2025_ko_candidate = "Rafał Trzaskowski"
+on-arrival: news_headline = "Campus Polska's private-health partners become a test of KO's programme"
+
+= September 2025 — A logo is not a health programme
+
+The full summer Campus was cancelled after the presidential campaign, but its
+smaller September Academy still gives <span class="party-ko"><b>Rafał
+Trzaskowski</b></span>'s political network a stage. Campus Polska's official
+2025 partner page lists **LUX MED** and **Medicover**, two major private health
+providers.
+
+That listing proves a relationship with the event, not control over KO's
+programme. It is nevertheless enough for <span class="party-razem"><b>Razem</b></span>
+to demand that Lewica condemn Trzaskowski personally and withdraw its speakers.
+Without a public boundary, it argues, every promise to keep hospitals,
+insurance and welfare services public will be read beside the companies'
+logos.
+
+The labour current and PPS care more about a binding public-health firewall
+than a personal denunciation. Wiosna and the younger progressives want access
+to the Academy's audience and the right to put the question on its stage. The
+party apparatus warns that condemning KO's 2025 candidate will survive far
+longer than the partner page. Silence avoids the immediate coalition fight and
+leaves every other faction to decide what it means.
+
+- @campus_health_condemn
+- @campus_health_firewall
+- @campus_health_stage
+- @campus_health_silence
+
+@campus_health_condemn
+title: Accept Razem's demand: condemn Trzaskowski and withdraw every Left speaker
+subtitle: Draw a hard public-health line; satisfy the socialist currents and open a lasting fight with KO.
+on-arrival: {!
+Q.ko_relation -= 12;
+if (Q.president_name == "Rafał Trzaskowski") Q.president_relation -= 6;
+Q.ko_coalition_dissent += 6;
+Q.razem_dissent -= 9;
+Q.razem_cooperation += 6;
+Q.labor_dissent -= 5;
+Q.pps_dissent -= 3;
+Q.social_patriot_dissent -= 2;
+Q.barons_dissent += 7;
+Q.spring_dissent += 3;
+Q.progressives_dissent += 2;
+Q.party_unity -= 2;
+Q.public_sector_support += 4;
+Q.health_policy_pressure += 4;
+Q.news_headline =
+    "Lewica condemns Trzaskowski over Campus Polska's private-health partners";
+!}
+
+Lewica names Trzaskowski, says the partnership is incompatible with a credible
+public-health promise and removes its speakers from the Academy. Razem, PPS
+and the labour current receive the unambiguous break they demanded. Public
+health workers hear that the party will not trade institutional access for
+silence.
+
+KO answers that an event partnership has been turned into an accusation for
+which no policy evidence was offered. Wiosna and younger organisers lose a
+youth platform; the apparatus inherits a coalition relationship that now has
+a personal wound as well as a policy dispute.
+
+- @poland_event_queue: File the condemnation and withdrawal
+
+@campus_health_firewall
+title: Demand disclosure and a written firewall for public health and welfare
+subtitle: Keep Left speakers only if the organisers publish the terms and Trzaskowski signs a public-services pledge.
+on-arrival: {!
+Q.ko_relation -= 3;
+if (Q.president_name == "Rafał Trzaskowski") Q.president_relation -= 1;
+Q.ko_coalition_dissent += 2;
+Q.razem_dissent += 2;
+Q.razem_cooperation -= 1;
+Q.labor_dissent -= 4;
+Q.pps_dissent -= 2;
+Q.barons_dissent += 2;
+Q.spring_dissent -= 1;
+Q.progressives_dissent -= 2;
+Q.public_sector_support += 4;
+Q.health_policy_pressure += 7;
+Q.household_policy_pressure += 2;
+Q.public_trust += 2;
+Q.last_policy_stage = "Public conflict-of-interest pledge";
+Q.last_policy_authority = "Party and event-organiser commitment";
+Q.last_policy_implementation = 0;
+Q.news_headline =
+    "Lewica makes Campus access conditional on a public-services firewall";
+!}
+
+Lewica asks the foundation to publish what LUX MED and Medicover supplied,
+what access they received and whether they helped select any health panels.
+Trzaskowski is asked to sign a pledge against substituting private insurance,
+contracted hospital chains or employer benefits for a universal public system.
+The pledge cannot itself bind a cabinet or pass a budget, but a later breach
+will have names, terms and a date.
+
+The labour and progressive currents can defend the result. Razem records that
+the party refused its demand for a personal condemnation; the apparatus
+records another negotiation opened in public rather than through coalition
+channels.
+
+- @poland_event_queue: Publish the partner terms and public-services firewall
+
+@campus_health_stage
+title: Attend and put the private-health question to Trzaskowski on stage
+subtitle: Preserve the youth platform and make the disagreement visible; Razem wanted a condemnation, not another panel.
+on-arrival: {!
+Q.ko_relation += 1;
+Q.razem_dissent += 5;
+Q.razem_cooperation -= 3;
+Q.labor_dissent += 2;
+Q.barons_dissent -= 1;
+Q.spring_dissent -= 3;
+Q.progressives_dissent -= 3;
+Q.media_capacity += 3;
+Q.young_support += 3;
+Q.urban_progressive_support += 2;
+Q.public_sector_support += 1;
+Q.health_policy_pressure += 3;
+Q.news_headline =
+    "Left speakers challenge Trzaskowski from the Campus Academy stage";
+!}
+
+The Left keeps its invitations. Its speakers read the partner list aloud and
+ask Trzaskowski whether KO will protect public hospitals, public insurance and
+welfare administration from replacement by subscriptions and contracts. The
+exchange reaches the audience the younger currents wanted and gives KO an
+answering voice on its own stage.
+
+Razem calls the appearance legitimisation dressed as confrontation. The labour
+current gains a question but no written protection; the party apparatus is
+relieved that a policy argument did not become a formal break.
+
+- @poland_event_queue: Put the Campus exchange on the record
+
+@campus_health_silence
+title: Treat the partner list as the foundation's business and say nothing
+subtitle: Protect the KO relationship; Razem, labour and public-service organisers supply their own interpretation.
+on-arrival: {!
+Q.ko_relation += 4;
+Q.razem_dissent += 11;
+Q.razem_cooperation -= 7;
+Q.labor_dissent += 6;
+Q.pps_dissent += 4;
+Q.social_patriot_dissent += 3;
+Q.barons_dissent -= 3;
+Q.spring_dissent += 2;
+Q.progressives_dissent += 3;
+Q.party_unity -= 3;
+Q.public_sector_support -= 4;
+Q.public_trust -= 2;
+Q.news_headline =
+    "Lewica leaves Campus Polska's private-health partnerships unanswered";
+!}
+
+The leadership says Campus Polska is a foundation, not KO's programme office,
+and declines every further question. Trzaskowski's camp receives no public
+challenge from a potential coalition partner. The apparatus avoids a fight it
+believes could only weaken the democratic bloc.
+
+Razem circulates the logos with the unanswered demand. PPS, the labour current
+and public-service organisers conclude that access to KO mattered more than a
+defence of public provision. The silence becomes the evidence—not of a hidden
+agreement, which nobody has shown, but of what the leadership would not ask.
+
+- @poland_event_queue: Let the silence enter the faction record
+
 @russian_drones_2025
 # prose-audit: Grade B — The airspace breach now places the live defence minister, NATO crews, eastern municipalities and Lewica's civilian constituency inside three materially different security responses.
 title: Russian drones cross Polish airspace
@@ -6157,11 +7126,29 @@ ministerial figure, speaks for green centrists. Hołownia's personal loyalists
 ask whether either current can retain the volunteers who joined a movement
 rather than a conventional party.
 
-[? if president_name != "Szymon Hołownia" and third_way_split: Hołownia's
-presidential defeat and the end of Third Way have removed both the founder's
-electoral magic and the party's threshold shelter.?][? if president_name !=
-"Szymon Hołownia" and third_way_active: His presidential defeat leaves a
-surviving Third Way dependent on a partner whose own command is changing.?]
+[? if pres_2025_centre_candidate = "Szymon Hołownia" and president_name !=
+"Szymon Hołownia" and third_way_split: Hołownia's presidential defeat and the
+end of Third Way have removed both the founder's electoral magic and the
+party's threshold shelter.?]
+[? if pres_2025_centre_candidate = "Szymon Hołownia" and president_name !=
+"Szymon Hołownia" and third_way_active: Hołownia's presidential defeat leaves
+a surviving Third Way dependent on a partner whose own command is changing.?]
+[? if pres_2025_centre_candidate = "Ryszard Petru" and pres_2025_winner_key !=
+"holownia" and third_way_split: Petru's presidential defeat and the end of
+Third Way leave Hołownia retiring from a movement that has lost both its
+market-liberal electoral test and its threshold shelter.?]
+[? if pres_2025_centre_candidate = "Ryszard Petru" and pres_2025_winner_key !=
+"holownia" and third_way_active: Petru's presidential defeat leaves the
+surviving Third Way dependent on a founder who did not carry its ballot and is
+now surrendering daily command.?]
+[? if pres_2025_centre_candidate = "Ryszard Petru" and pres_2025_winner_key =
+"holownia": Petru's victory gives Poland 2050 the Palace without preserving
+Hołownia's daily command of the party; succession now has to divide those two
+sources of authority.?]
+[? if pres_2025_stanowski_breakout = 1: Stanowski's presidential breakthrough
+has also occupied the anti-party electorate Poland 2050 once treated as its
+reserve. The successor inherits a competitor with a larger channel, a measured
+vote and no coalition record to defend.?]
 Ministers and MPs need a successor before uncertainty becomes a defection race.
 
 Lewica can keep channels open across the contest or spend political capital on
@@ -6795,10 +7782,10 @@ inherit trained people—and promises they expect us to keep.
 
 @ind25_civic
 title: Expand the civic-independence alternative
-subtitle: Cost: 1 resource.
-choose-if: resources >= 1
+subtitle: [? if civic_independence_investment >= 3: The permanent network now funds the march itself. No resource cost.?][? if civic_independence_investment < 3: Cost: 1 resource.?]
+choose-if: civic_independence_investment >= 3 or resources >= 1
 unavailable-subtitle: The annual operation cannot be staffed.
-on-arrival: resources -= 1; independence_march_strategy = "Civic tradition"; civic_independence_years += 1; civic_patriotism += 6; local_network += 2; public_trust += 2; far_right_street_capacity -= 1; news_headline = "A permanent civic tradition contests the radical-right monopoly"
+on-arrival: resources -= 1 if civic_independence_investment < 3; civic_independence_investment += 1 if civic_independence_investment < 3; independence_march_strategy = "Civic tradition"; civic_independence_years += 1; civic_patriotism += 6; local_network += 2; public_trust += 2; far_right_street_capacity -= 1; news_headline = "A permanent civic tradition contests the radical-right monopoly"
 
 Municipal stages, veterans, unions and cultural organisations offer a national
 celebration that neither hides the flag nor asks families to walk through a
@@ -6848,7 +7835,7 @@ behind two crowds and the police line between them.
 - @poland_event_queue: Record the counter-march
 
 @matysiak_razem_2025
-# prose-audit: Grade C — The premise explains the branch conditions instead of staging the fight: when development "dominates the public argument and her network has survived, she can challenge Zandberg directly". No congress, no delegates, no exchange between them. The exit scene then addresses the auditor rather than the player ("no notional faction share is moved wholesale").
+# prose-audit: Grade A — The confrontation is staged through a certified delegate roll, rival programme speeches and a two-chair vote; the three choices identify who controls Razem and who must register a successor.
 title: Razem decides Paulina Matysiak's future
 subtitle: Leadership challenge, Zandberg split or expulsion
 new-page: true
@@ -6881,15 +7868,19 @@ Q.news_headline = "Razem votes on Matysiak's developmental challenge";
 
 = November 2025 — Who gets to define Razem?
 
-Matysiak brings the earlier Tak! Dla Rozwoju dispute into Razem's leadership
-vote. [? if social_patriot_active: Lewica Patriotyczna's network gives her an
-additional organisational base, so the confrontation can arrive before
-November.?] When economic development dominates the public argument and her
-network has survived, she can challenge Zandberg directly. Otherwise the
-question is whether the split happens under Zandberg's original-left banner or
-under Matysiak's own developmental banner after expulsion.
-Her programme turns Razem rightward on culture without making it economically
-liberal.
+Razem's national council publishes the delegate roll and asks both statutory
+chairs to certify it. **Adrian Zandberg** defends a democratic-socialist party
+built around housing, public ownership and organised labour. **Paulina
+Matysiak** answers with rail, nuclear power, regional investment and economic
+sovereignty. Her programme turns Razem rightward on culture without making it
+economically liberal.
+
+[? if social_patriot_active: Lewica Patriotyczna's organisers give Matysiak an
+additional caucus beyond her original Razem network.?] If her development
+campaign has secured enough delegates, she can take the first chair or force
+Zandberg's current to leave. If it has not, Zandberg's majority can expel her
+and convert the dispute into a separate developmental party. The second chair
+remains a statutory office whichever programme wins.
 
 - @matysiak_leadership
 - @matysiak_own_party
@@ -6900,35 +7891,15 @@ title: Replace Zandberg with Matysiak and make development the new dividing line
 subtitle: Requires a developed internal base and a less culture-led electorate.
 choose-if: matysiak_caucus_actions >= 4 or (matysiak_development_score >= 46 and cultural_issue_salience <= 50)
 unavailable-subtitle: Matysiak has a platform but not a majority inside Razem.
-on-arrival: {!
-Q.razem_leader = "Paulina Matysiak";
-Q.razem_right_score = 62;
-Q.razem_ideology = "Developmentalist social conservatism";
-Q.razem_leadership_result = "Paulina Matysiak replaces Adrian Zandberg";
-Q.matysiak_status = "Leader of Razem";
-Q.matysiak_party = "Razem";
-Q.matysiak_resolution_done = 1;
-Q.left_right_score += 8;
-Q.labor_credibility += 4;
-Q.progressive_credibility -= 5;
-Q.razem_dissent = Math.max(0, (Number(Q.razem_dissent) || 0) - 4);
-Q.razem_cohesion = Math.min(100, (Number(Q.razem_cohesion) || 0) + 6);
-Q.razem_cooperation = Math.min(100, (Number(Q.razem_cooperation) || 0) + 5);
-Q.news_headline = "Matysiak defeats Zandberg and turns Razem toward developmental conservatism";
-!}
-
-Matysiak defeats Zandberg and keeps Razem's economic radicalism while moving
-its cultural boundary. Developmentalists gain the chair; progressive members
-must decide whether the party they built still speaks for them.
-
-- @poland_event_queue: Record Matysiak's victory
+on-arrival: matysiak_exit_choice = "Matysiak controls Razem"
+go-to: poland_razem_futures.matysiak_control_result
 
 @matysiak_own_party
 title: Let Zandberg's original-left wing split as Akcja Socjalistyczna
 subtitle: Matysiak keeps Razem; the defeated original-left faction leaves under Zandberg.
 choose-if: matysiak_caucus_actions >= 3 or matysiak_development_score >= 42
 unavailable-subtitle: Matysiak's camp is not strong enough to force a durable factional split.
-on-arrival: matysiak_exit_choice = "Akcja Socjalistyczna"; tak_dla_rozwoju_party_formed = 1
+on-arrival: matysiak_exit_choice = "Akcja Socjalistyczna"
 go-to: matysiak_exit_result
 
 @matysiak_expulsion
@@ -6936,84 +7907,12 @@ title: Enforce party discipline and expel Matysiak
 subtitle: Expulsion hardens her network into Tak! Dla Rozwoju under her own label.
 choose-if: matysiak_caucus_actions < 3
 unavailable-subtitle: Three Matysiak caucus actions have secured her leadership of Razem; the original-left faction leaves under Zandberg instead.
-on-arrival: matysiak_exit_choice = "Tak! Dla Rozwoju"; tak_dla_rozwoju_party_formed = 1
+on-arrival: matysiak_exit_choice = "Tak! Dla Rozwoju"
 go-to: matysiak_exit_result
 
 @matysiak_exit_result
-title: Matysiak leaves Razem
-new-page: true
-on-arrival: {!
-let movedSeat = 0;
-if (Q.razem_party_formed && (Number(Q.razem_party_seats) || 0) > 0) {
-    Q.razem_party_seats -= 1;
-    movedSeat = 1;
-} else if (
-    !Q.razem_party_formed &&
-    (Number(Q.razem_seats) || 0) > 0 &&
-    (Number(Q.left_seats) || 0) > 0
-) {
-    Q.razem_seats -= 1;
-    Q.left_seats -= 1;
-    movedSeat = 1;
-}
-Q.matysiak_resolution_done = 1;
-Q.razem_dissent = Math.max(0, (Number(Q.razem_dissent) || 0) - 7);
-Q.razem_cohesion = Math.min(100, (Number(Q.razem_cohesion) || 0) + 6);
-Q.razem_cooperation = Math.min(100, (Number(Q.razem_cooperation) || 0) + 4);
-if (Q.matysiak_exit_choice == "Akcja Socjalistyczna") {
-    Q.zandberg_advisor = 0;
-    Q.advisor_reshuffle_removed_zandberg = 1;
-    Q.tak_rozwoj_seats = (Number(Q.tak_rozwoj_seats) || 0) + movedSeat;
-    Q.tak_rozwoj_party_name = "Akcja Socjalistyczna";
-    Q.razem_leader = "Paulina Matysiak";
-    Q.razem_right_score = 62;
-    Q.razem_ideology = "Developmentalist social conservatism";
-    Q.razem_leadership_result = "Matysiak keeps Razem while Zandberg leads Akcja Socjalistyczna";
-    Q.matysiak_status = "Leader of Razem";
-    Q.matysiak_party = "Razem";
-    Q.matysiak_has_sejm_mandate = Math.max(1, Number(Q.matysiak_has_sejm_mandate) || 0);
-    Q.left_right_score += 7;
-    Q.labor_credibility += 3;
-    Q.progressive_credibility -= 6;
-    Q.razem_cohesion = Math.max(0, (Number(Q.razem_cohesion) || 0) - 8);
-    Q.razem_cooperation = Math.max(0, (Number(Q.razem_cooperation) || 0) - 5);
-    Q.news_headline = "Matysiak keeps Razem while Zandberg launches Akcja Socjalistyczna";
-} else if (Q.matysiak_exit_choice == "Tak! Dla Rozwoju") {
-    Q.matysiak_advisor = 0;
-    Q.matysiak_has_sejm_mandate = movedSeat;
-    Q.tak_rozwoj_seats = (Number(Q.tak_rozwoj_seats) || 0) + movedSeat;
-    Q.tak_rozwoj_party_name = "Tak! Dla Rozwoju";
-    Q.matysiak_status = "Leader of Tak! Dla Rozwoju";
-    Q.matysiak_party = "tak_rozwoj";
-    Q.matysiak_development_pressure += 8;
-    Q.razem_leadership_result = "Adrian Zandberg defeats Matysiak's challenge";
-    Q.news_headline = "Razem expels Matysiak, who formalises Tak! Dla Rozwoju";
-} else {
-    Q.matysiak_advisor = 0;
-    Q.matysiak_has_sejm_mandate = movedSeat;
-    Q.other_seats = (Number(Q.other_seats) || 0) + movedSeat;
-    Q.matysiak_status = "Independent MP after leaving Razem";
-    Q.matysiak_party = "independent";
-    Q.razem_leadership_result = "Adrian Zandberg defeats Matysiak's challenge";
-    Q.news_headline = "Matysiak leaves Razem and keeps an independent seat";
-}
-!}
-
-**[+ matysiak_status +].** Razem remains led by **[+ razem_leader +]**. The
-seat transfer is bounded to Matysiak's own mandate; no notional faction share
-is moved wholesale.
-
-[? if matysiak_exit_choice = "Akcja Socjalistyczna": Matysiak keeps Razem,
-while Zandberg leaves with Akcja Socjalistyczna and, if available, one seat.
-The split is organisational, not a mass caucus transfer.?]
-[? if matysiak_exit_choice = "Tak! Dla Rozwoju": Matysiak leaves with
-Tak! Dla Rozwoju and, if she held one, her own mandate. Razem recovers
-internal cohesion while a developmental competitor begins outside it.?]
-[? if matysiak_exit_choice = "Independent": Matysiak leaves Razem with only
-her individual mandate. Zandberg retains the leadership; Rozwój+ now has one
-more possible recruit, not an automatic ally.?]
-
-- @matysiak_exit_finish
+title: Razem's leadership split is certified
+go-to: poland_razem_futures.split_result
 
 @matysiak_exit_finish
 title: Record another splitter
@@ -7104,7 +8003,7 @@ priority: 24
 order: 21
 max-visits: 1
 face-image: img/poland/cards/equality-bill.webp
-view-if: continuous_campaign = 1 and year = 2025 and month = 11
+view-if: continuous_campaign = 1 and year = 2025 and month = 11 and marriage_reform_stage < 3
 on-arrival: european_judgment_compliance += 3; news_headline = "An EU judgment forces a practical equality decision"
 
 = November 2025 — Recognition is not a full marriage statute
@@ -7213,7 +8112,7 @@ order: 20
 max-visits: 1
 face-image: img/poland/cards/labour-inspection.webp
 view-if: continuous_campaign = 1 and year = 2025 and month = 12 and government_party != "pis" and caretaker_government = 0
-on-arrival: labor_credibility += 4; government_delivery += 3; news_headline = "A new framework can make sectoral bargaining real—or remain paper"
+on-arrival: collective_bargaining_framework_active = 1; labor_credibility += 4; union_trust += 2; opzz_cooperation += 2; labor_dissent -= 1; government_delivery += 3; news_headline = "A new framework can make sectoral bargaining real—or remain paper"
 
 = December 2025 — Enforcement after enactment
 
@@ -7234,27 +8133,43 @@ workplace.
 - @bargaining_claim
 
 @bargaining_enforce
-title: Fund registration, procurement clauses and union organisers
+title: Negotiate implementation with OPZZ and the wider union movement
 subtitle: Cost: 2 budget capacity in government, otherwise 2 resources.
 choose-if: (left_in_government = 1 and budget >= 2) or (left_in_government = 0 and resources >= 2)
 unavailable-subtitle: The framework has no implementation reserve.
 on-arrival: {!
 if (Q.left_in_government) {
     Q.budget -= 2;
+    Q.collective_bargaining_implementation = 2;
     Q.labor_credibility += 7;
+    Q.union_trust += 9;
+    Q.opzz_cooperation += 10;
+    Q.labor_mobilization += 9;
+    Q.labor_dissent -= 7;
     Q.workers_support += 5;
     Q.government_delivery += 4;
+    Q.government_coalition_dissent += 2;
     Q.fiscal_stress += 1;
     Q.news_headline =
         "The bargaining statute receives institutions capable of using it";
 } else {
     Q.resources -= 2;
+    Q.collective_bargaining_implementation = 1;
     Q.labor_credibility += 5;
+    Q.union_trust += 7;
+    Q.opzz_cooperation += 7;
+    Q.labor_mobilization += 8;
+    Q.labor_dissent -= 5;
     Q.workers_support += 3;
     Q.local_network += 3;
     Q.news_headline =
         "Opposition unions build registration support while ministries control enforcement";
 }
+Q.razem_cooperation += 3;
+Q.razem_dissent -= 2;
+Q.progressives_dissent -= 2;
+Q.spring_dissent -= 1;
+Q.barons_dissent += 2;
 !}
 
 [? if left_in_government: Registration teams, procurement clauses and union
@@ -7270,7 +8185,7 @@ remain outside our authority.?]
 @bargaining_claim
 title: Claim the statute and leave implementation to ministries
 subtitle: Take credit for a real law before another workplace receives a collective agreement.
-on-arrival: media_capacity += 2; labor_credibility += 2; government_delivery += 1 if left_in_government = 1; public_trust -= 1; news_headline = "The Left wins a labour headline before workplace coverage changes"
+on-arrival: collective_bargaining_implementation = 0; media_capacity += 2; labor_credibility += 1; union_trust -= 6; opzz_cooperation -= 7; labor_dissent += 7; government_delivery += 1 if left_in_government = 1; public_trust -= 1; razem_dissent += 2; progressives_dissent += 1; news_headline = "The Left wins a labour headline while unions record an implementation breach"
 
 Lewica tours studios with the enacted statute and leaves registration,
 procurement and organising to existing ministries. The party receives some
@@ -7288,7 +8203,7 @@ tags: poland_event
 priority: 24
 order: 21
 max-visits: 1
-view-if: continuous_campaign = 1 and year = 2025 and month = 12
+view-if: continuous_campaign = 1 and year = 2025 and month = 12 and sld_partocracy_stage < 1
 on-arrival: {!
 Q.left_transition_nominee =
     Q.president_name == "Agnieszka Dziemianowicz-Bąk"
@@ -7332,6 +8247,8 @@ Q.left_leader = Q.left_transition_nominee;
 Q.left_leadership_result =
     Q.left_transition_nominee + " elected in the generational handover";
 Q.labor_strength += 3;
+Q.labor_credibility += 2;
+Q.union_trust += 1;
 Q.progressives_strength += 3;
 Q.barons_dissent += 4;
 Q.party_unity += 3;
@@ -7371,10 +8288,13 @@ const leadershipCandidates = [
         name: "Agnieszka Dziemianowicz-Bąk",
         key: "dziemianowicz",
         eligible: Q.labor_active,
-        score: (Number(Q.labor_strength) || 0) +
+        score: (Number(Q.labor_parliamentary_influence) ||
+            Number(Q.labor_strength) || 0) +
             (Number(Q.labor_credibility) || 0) * 0.10 +
+            (Number(Q.union_trust) || 0) * 0.06 +
             (Number(Q.workers_support) || 0) * 0.05 -
-            (Number(Q.labor_dissent) || 0) * 0.12
+            (Number(Q.labor_conflict) ||
+                Number(Q.labor_dissent) || 0) * 0.12
     },
     {
         name: "Krzysztof Gawkowski",
@@ -7391,7 +8311,9 @@ const leadershipCandidates = [
         name: "Magdalena Biejat",
         key: "biejat",
         eligible: Q.razem_active && Q.razem_in_left,
-        score: (Number(Q.labor_strength) || 0) * 0.65 +
+        score: (Number(Q.labor_parliamentary_influence) ||
+            Number(Q.labor_strength) || 0) * 0.65 +
+            (Number(Q.union_trust) || 0) * 0.04 +
             (Number(Q.workers_support) || 0) * 0.20 +
             (Number(Q.local_network) || 0) * 0.10 -
             (Number(Q.razem_dissent) || 0) * 0.12
@@ -7418,9 +8340,8 @@ const leadershipCandidates = [
     {
         name: "Paulina Matysiak",
         key: "matysiak",
-        eligible: Q.razem_active && Q.razem_in_left &&
-            Q.razem_leader == "Paulina Matysiak" &&
-            Q.matysiak_party == "Razem",
+        eligible: Q.social_patriot_leader == "Paulina Matysiak" &&
+            Q.matysiak_party == "Lewica Patriotyczna",
         score: (Number(Q.social_patriot_strength) || 0) +
             (Number(Q.social_patriot_local_organisation) || 0) * 0.08 +
             (Number(Q.rural_support) || 0) * 0.05 -
@@ -7498,10 +8419,10 @@ chairmanship.
 can still win an open electorate, giving Czarzasty a mandate stronger than an
 executive arrangement. Progressives accept the ballot and begin organising for
 the next one.?]
-[? if left_primary_winner = "Agnieszka Dziemianowicz-Bąk": Labour organisers
-turn workplace credibility into control of the party. The barons retain local
-offices, but the new chair owes her mandate to members rather than succession
-terms.?]
+[? if left_primary_winner = "Agnieszka Dziemianowicz-Bąk": Dziemianowicz-Bąk
+turns her parliamentary record and workplace credibility into a personal
+mandate from party members. Lewica Pracy and union organisers strengthen that
+mandate without becoming a separate party current.?]
 [? if left_primary_winner = "Krzysztof Gawkowski": Gawkowski's progressive
 and media network wins the open contest. Labour and the old machine now bargain
 with a chair whose authority came from neither founder's protected half.?]
@@ -7515,8 +8436,8 @@ whose authority comes from the live Razem organisation rather than a merger
 settlement.?]
 [? if left_primary_winner = "Anna-Maria Żukowska": Żukowska's progressive
 wing wins the chair and turns media discipline into a programme mandate. The
-old machine and labour organisers must now negotiate with a sharper public
-voice.?]
+old machine, Lewica Pracy MPs and union organisers must now negotiate with a
+sharper public voice.?]
 [? if left_primary_winner = "Paulina Matysiak": Lewica Patriotyczna supplies
 the winning organisation and the common party adopts a developmental,
 welfare-sovereignty centre under Matysiak.?]
@@ -7537,7 +8458,7 @@ tags: poland_event
 priority: 46
 order: 5
 max-visits: 1
-view-if: continuous_campaign = 1 and year = 2025 and month = 5 and pres_2025_round_one_done = 0 and nawrocki_apartment_2025_done = 0
+view-if: continuous_campaign = 1 and year = 2025 and month = 5 and pres_2025_round_one_done = 0 and nawrocki_apartment_2025_done = 0 and pres_2025_right_candidate = "Karol Nawrocki"
 on-arrival: {!
 Q.nawrocki_apartment_2025_done = 1;
 Q.pres_2025_right_credibility_hit = 1;
@@ -7664,8 +8585,10 @@ Q.news_headline =
 
 = Late May 2025 — The interview nobody can refuse
 
-<span class="party-konf"><b>Sławomir Mentzen</b></span> did not reach the runoff and controls the electorate
-that decides it. He does not endorse. He invites **[+ pres_2025_finalist_a +]**
+Konfederacja's candidate **[+ pres_2025_konf_candidate +]** did not reach the
+runoff. Party chair and broadcaster <span class="party-konf"><b>Sławomir
+Mentzen</b></span> controls the programme through which that electorate now
+decides. He does not endorse. He invites **[+ pres_2025_finalist_a +]**
 and **[+ pres_2025_finalist_b +]** onto his own channel, separately, for long
 unedited interviews in which each is asked to sign an eight-point declaration:
 no new taxes, no restriction on cash, no ratification of the European
@@ -7674,8 +8597,8 @@ no Polish troops in Ukraine, and three further commitments written to be
 uncomfortable for both of them.
 
 This is not an endorsement market. It is a public examination of two
-candidates by a third who has replaced the traditional broadcasters as the
-place where the right-wing electorate decides, and it is being watched by more
+candidates by the party broker who has replaced the traditional broadcasters
+as the place where the right-wing electorate decides, and it is watched by more
 people than the televised debates.
 
 [? if pres_2025_right_credibility_hit >= 2: The right's candidate arrives at

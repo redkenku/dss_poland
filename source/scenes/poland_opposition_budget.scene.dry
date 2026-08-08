@@ -628,22 +628,18 @@ const selectedPriorities = [
     Number(Q.opposition_budget_priority_1_code) || 0,
     Number(Q.opposition_budget_priority_2_code) || 0
 ];
-const budgetFactions = [
-    {id: "barons", seats: "left_barons_seats", name: Q.barons_name,
-        representative: "Tomasz Trela", priorities: [2, 5, 9, 11, 14]},
-    {id: "spring", seats: "left_spring_seats", name: Q.spring_name,
-        representative: "Krzysztof Śmiszek", priorities: [4, 7, 10, 15]},
-    {id: "labor", seats: "left_labor_seats", name: Q.labor_name,
-        representative: "Agnieszka Dziemianowicz-Bąk",
-        priorities: [1, 2, 7, 12, 13, 14]},
-    {id: "progressives", seats: "left_progressives_seats",
-        name: Q.progressives_name, representative: "Katarzyna Kotula",
-        priorities: [3, 4, 8, 10, 15]},
-    {id: "razem", seats: "razem_seats", name: "Razem",
-        representative: "Adrian Zandberg", priorities: [1, 2, 3, 12, 13]},
-    {id: "pps", seats: "left_pps_seats", name: "PPS",
-        representative: "Joanna Senyszyn", priorities: [1, 2, 5, 7, 11, 14]}
-];
+const budgetModel = (typeof window !== "undefined"
+    ? window : globalThis).polandBudgetModel;
+const budgetFactions = Object.keys(budgetModel.factions).map(function(id) {
+    const faction = budgetModel.factions[id];
+    return {
+        id: id,
+        seats: faction.seatsKey,
+        name: faction.nameKey ? (Q[faction.nameKey] || faction.label) : faction.label,
+        representative: faction.representative,
+        priorities: faction.priorities
+    };
+});
 const activeBudgetFactions = budgetFactions.filter(function(faction) {
     return Q[faction.id + "_active"] && Q[faction.id + "_in_left"];
 });
@@ -864,17 +860,19 @@ const leftSeats = Math.max(
     0,
     Math.min(chamberTotal, Math.round(Number(Q.left_seats) || 0))
 );
+const budgetModel = (typeof window !== "undefined"
+    ? window : globalThis).polandBudgetModel;
+/* The coalition's malcontents.  How many of them actually break ranks is
+ * settled further down, once Lewica and the other clubs have declared: a
+ * rebellion is priced by whether it could bring the budget down. */
 const governmentStress =
     (Number(Q.government_coalition_dissent) || 0) +
     (Q.caretaker_government ? 12 : 0) +
     (!Q.government_has_confidence ? 8 : 0);
-const governmentDefections = Math.min(
-    Q.opposition_budget_government_seats,
-    Math.max(0, Math.round((governmentStress - 35) / 8))
+const governmentMalcontents = budgetModel.malcontents(
+    governmentStress,
+    Q.opposition_budget_government_seats
 );
-Q.annual_budget_government_yes =
-    Q.opposition_budget_government_seats - governmentDefections;
-Q.annual_budget_government_abstain = governmentDefections;
 
 const socialShare = Number(Q.annual_budget_social_share) || 17;
 const defenceShare = Number(Q.annual_budget_defence_share) || 4.6;
@@ -889,14 +887,9 @@ if (Q.annual_budget_posture == "Conditional support" && !socialEnough) {
     Q.annual_budget_posture =
         "Abstain on named concession";
 }
-const factionVotes = [
-    {id: "barons", seatsKey: "left_barons_seats", social: 17.2, defence: 4.8, deficit: 4.2},
-    {id: "spring", seatsKey: "left_spring_seats", social: 19.5, defence: 4.2, deficit: 5.0},
-    {id: "labor", seatsKey: "left_labor_seats", social: 20.2, defence: 4.0, deficit: 5.6},
-    {id: "progressives", seatsKey: "left_progressives_seats", social: 19.2, defence: 4.1, deficit: 5.1},
-    {id: "razem", seatsKey: "razem_seats", social: 20.6, defence: 3.9, deficit: 5.8},
-    {id: "pps", seatsKey: "left_pps_seats", social: 19.6, defence: 4.3, deficit: 5.3}
-];
+const factionVotes = Object.keys(budgetModel.factions).map(function(id) {
+    return Object.assign({id: id}, budgetModel.factions[id]);
+});
 let autoLeftYes = 0;
 let autoLeftNo = 0;
 let autoLeftAbstain = 0;
@@ -907,13 +900,29 @@ for (const faction of factionVotes) {
     const dissent = Math.max(0, Number(Q[faction.id + "_dissent"]) || 0);
     let alignment =
         100 -
-        Math.abs(socialShare - faction.social) * 14 -
-        Math.abs(defenceShare - faction.defence) * 22 -
-        Math.abs(deficitShare - faction.deficit) * 12 -
+        Math.max(0, faction.social - socialShare) * 20 -
+        Math.max(0, faction.defenceFloor - defenceShare) * 22 -
+        Math.max(0, defenceShare - faction.defenceCeiling) * 14 -
+        Math.max(0, deficitShare - faction.deficit) * 12 -
         dissent * 0.30;
     if (Q.opposition_budget_conference_code == 1) alignment += 4;
-    if (Q.opposition_budget_conference_code == 4) alignment -= 4;
+    if (Q.opposition_budget_conference_code == 3) alignment -= 4;
     alignment = Math.max(0, Math.min(100, alignment));
+    /* The conference instruction is a whip, not a survey. The declared line
+     * is what the club records; rebellion is a deviation from it, widened by
+     * a free vote and narrowed by imposed discipline. A caucus that dislikes
+     * the frame breaks ranks more often, but never so often that a declared
+     * abstention is counted as opposition. */
+    const whip = Q.opposition_budget_conference_code == 4
+        ? 0.4
+        : (Q.opposition_budget_conference_code == 3 ? 1.3 : 1);
+    const rebelSeats = Math.max(
+        0,
+        Math.min(
+            seats,
+            Math.round(seats * (alignment < 35 ? 0.30 : 0.12) * whip)
+        )
+    );
     if (Q.annual_budget_posture == "Conditional support") {
         const yesSeats = Math.max(0, Math.round(seats * alignment / 100));
         autoLeftYes += yesSeats;
@@ -925,23 +934,17 @@ for (const faction of factionVotes) {
         const yesSeats = socialEnough && alignment >= 75
             ? Math.round(seats * 0.25)
             : 0;
-        const noSeats = alignment < 35
-            ? Math.round(seats * 0.55)
-            : Math.round(seats * 0.25);
+        const noSeats = Math.min(seats - yesSeats, rebelSeats);
         autoLeftYes += Math.max(0, Math.min(seats, yesSeats));
-        autoLeftNo += Math.max(
-            0,
-            Math.min(seats - yesSeats, noSeats)
-        );
+        autoLeftNo += Math.max(0, noSeats);
         autoLeftAbstain += Math.max(
             0,
             seats - yesSeats - noSeats
         );
     } else {
-        const noSeats = Math.max(0, Math.round(seats * 0.70));
-        const abstainSeats = seats - noSeats;
-        autoLeftNo += noSeats;
-        autoLeftAbstain += Math.max(0, abstainSeats);
+        const abstainSeats = Math.min(seats, rebelSeats);
+        autoLeftNo += Math.max(0, seats - abstainSeats);
+        autoLeftAbstain += abstainSeats;
     }
 }
 const assignedLeftSeats = autoLeftYes + autoLeftNo + autoLeftAbstain;
@@ -1015,27 +1018,35 @@ Q.opposition_budget_external_support_basis = externalYes > 0
     : (externalAbstain > 0
         ? "Recorded absences and abstentions outside Lewica"
         : "No support outside the cabinet and Lewica");
-Q.annual_budget_yes =
-    Q.annual_budget_government_yes + Q.annual_budget_left_yes +
-        Q.annual_budget_external_yes;
-Q.annual_budget_no =
-    Q.annual_budget_external_no + Q.annual_budget_left_no;
-Q.annual_budget_abstain =
-    Q.annual_budget_government_abstain + Q.annual_budget_left_abstain +
-        Q.annual_budget_external_abstain;
-Q.annual_budget_present =
-    Q.annual_budget_yes + Q.annual_budget_no + Q.annual_budget_abstain;
-Q.annual_budget_threshold = Q.annual_budget_no + 1;
-Q.annual_budget_passed =
-    Q.annual_budget_present >=
-        Math.max(1, Number(Q.sejm_quorum_floor) || 230) &&
-    Q.annual_budget_yes > Q.annual_budget_no ? 1 : 0;
-Q.annual_budget_margin = Q.annual_budget_passed
-    ? Q.annual_budget_yes - Q.annual_budget_no
-    : 0;
-Q.annual_budget_shortfall = Q.annual_budget_passed
-    ? 0
-    : Math.max(0, Q.annual_budget_no + 1 - Q.annual_budget_yes);
+/* The shared model owns the pivotality rule. A comfortable margin makes a
+ * protest free; a knife-edge vote brings the same malcontent home. */
+const roll = budgetModel.rollCall({
+    sejmTotal: chamberTotal,
+    quorum: Q.sejm_quorum_floor,
+    governmentSeats: Q.opposition_budget_government_seats,
+    malcontents: governmentMalcontents,
+    leftYes: Q.annual_budget_left_yes,
+    leftNo: Q.annual_budget_left_no,
+    leftAbstain: Q.annual_budget_left_abstain,
+    externalYes: Q.annual_budget_external_yes,
+    externalNo: Q.annual_budget_external_no,
+    externalAbstain: Q.annual_budget_external_abstain
+});
+const governmentDefections = roll.defectors;
+Q.annual_budget_government_yes = roll.governmentYes;
+Q.annual_budget_government_no = roll.governmentNo;
+Q.annual_budget_government_abstain = roll.governmentAbstain;
+Q.annual_budget_recorded_defectors = roll.defectors;
+Q.opposition_budget_government_malcontents = governmentMalcontents;
+Q.opposition_budget_rebel_freedom = Math.round(roll.freedom * 100);
+Q.annual_budget_yes = roll.yes;
+Q.annual_budget_no = roll.no;
+Q.annual_budget_abstain = roll.abstain;
+Q.annual_budget_present = roll.present;
+Q.annual_budget_threshold = roll.threshold;
+Q.annual_budget_passed = roll.passed;
+Q.annual_budget_margin = roll.margin;
+Q.annual_budget_shortfall = roll.shortfall;
 Q.annual_budget_strategy = Q.opposition_budget_tactic;
 Q.annual_budget_concession = Q.opposition_budget_amendments_passed
     ? (Q.opposition_budget_amendments_passed == 2
@@ -1056,6 +1067,25 @@ Q["annual_budget_done_" + Q.annual_budget_year] = 1;
 Q["annual_budget_passed_" + Q.annual_budget_year] =
     Q.annual_budget_passed;
 Q.budget_deadline_active = Q.annual_budget_passed ? 0 : 1;
+
+/* A split the chamber can see is the opposition's real return on a hard
+ * line.  The cabinet may keep its budget and still lose cohesion over it. */
+if (governmentDefections > 0) {
+    Q.government_coalition_dissent = Math.min(
+        100,
+        (Number(Q.government_coalition_dissent) || 0) +
+            Math.min(8, Math.ceil(governmentDefections / 3))
+    );
+}
+Q.opposition_budget_split_note = governmentDefections > 0
+    ? governmentDefections + " coalition deputies broke ranks (" +
+        Q.annual_budget_government_no + " against, " +
+        Q.annual_budget_government_abstain + " abstaining)."
+    : (governmentMalcontents > 0
+        ? "The coalition's " + governmentMalcontents +
+            " known malcontents came home: the margin was too thin to " +
+            "protest safely."
+        : "The coalition had no recorded malcontents to lose.");
 
 if (Q.opposition_budget_tactic_code == 1) {
     Q.opposition_budget_issue_ownership += 5;
@@ -1146,14 +1176,16 @@ if (enactedCount == 2) {
         Q.annual_budget_posture + ".";
 } else {
     Q.opposition_budget_result_summary =
-        "The budget failed. Cabinet acceptance cannot enact a clause from a " +
-        "defeated bill.";
+        "The budget failed, and every Lewica clause accepted by the cabinet " +
+        "fell with it.";
 }
 Q.opposition_budget_delivery_status = enactedCount > 0
     ? enactedCount + (enactedCount == 1 ? " clause is" : " clauses are") +
         " eligible for next year's delivery audit after the Senate stage. " +
         "Public capacity does not change today."
-    : "No Lewica clause enters next year's delivery audit.";
+    : (Q.annual_budget_passed
+        ? "No Lewica clause enters the enacted budget."
+        : "The defeated bill sends no Lewica clause to the Senate.");
 Q.opposition_budget_next_step = Q.annual_budget_passed
     ? "Next: Senate review. The Senate may propose amendments, but it cannot " +
         "reject a budget."
@@ -1170,7 +1202,7 @@ Fiscal frame: **Social [+ annual_budget_social_share +]% · Defence [+ annual_bu
 
 <div class="ledger-notice">[+ opposition_budget_result_summary +]</div>
 
-<div class="ledger-section ledger-section-first"><div class="ledger-title">What your choice achieved</div>
+<div class="ledger-section ledger-section-first"><div class="ledger-title">Lewica after the vote</div>
 <div class="ledger-row"><span>Strategy</span><b>[+ opposition_budget_tactic +]</b></div>
 <div class="ledger-row"><span>Lewica line</span><b>[+ annual_budget_posture +]</b></div>
 <div class="ledger-row"><span>Clauses accepted by Sejm</span><b>[+ opposition_budget_sejm_clause_count +] of 2</b></div>
@@ -1186,7 +1218,8 @@ Fiscal frame: **Social [+ annual_budget_social_share +]% · Defence [+ annual_bu
 <details class="ledger-disclosure">
 <summary><span>Full Sejm roll call</span><b>[+ annual_budget_yes +] yes · [+ annual_budget_no +] no · [+ annual_budget_abstain +] abstain</b></summary>
 <div class="disclosure-body">
-<div class="ledger-row"><span>Cabinet bloc</span><b>[+ annual_budget_government_yes +] yes · [+ annual_budget_government_abstain +] abstain</b></div>
+<div class="ledger-row"><span>Cabinet bloc</span><b>[+ annual_budget_government_yes +] yes · [+ annual_budget_government_no +] no · [+ annual_budget_government_abstain +] abstain</b></div>
+<div class="ledger-note">[+ opposition_budget_split_note +]</div>
 <div class="ledger-row"><span>Lewica</span><b>[+ annual_budget_left_yes +] yes · [+ annual_budget_left_no +] no · [+ annual_budget_left_abstain +] abstain</b></div>
 <div class="ledger-row"><span>Other clubs</span><b>[+ annual_budget_external_yes +] yes · [+ annual_budget_external_no +] no · [+ annual_budget_external_abstain +] abstain</b></div>
 <div class="ledger-row"><span>Required</span><b>[+ annual_budget_threshold +] yes</b></div>

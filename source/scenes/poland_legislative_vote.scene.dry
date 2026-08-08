@@ -1,0 +1,423 @@
+title: Follow an ordinary bill through Parliament
+call: poland_senate.refresh
+go-to: forecast
+
+@forecast
+title: Count the votes before the division bell
+new-page: true
+on-arrival: {!
+if (!Q.legvote_prepared) {
+    Q.legvote_sejm_passed = 0;
+    Q.legvote_survived_senate = 0;
+    Q.legvote_senate_decision = "";
+    Q.legvote_senate_overturned = 0;
+    Q.legvote_president_veto = 0;
+    Q.legvote_override_available = 0;
+    Q.legvote_veto_overridden = 0;
+    Q.legvote_outcome = "Vote pending";
+    Q.legvote_enacted = 0;
+    const majorReform = Q.legvote_profile == "major_reform";
+    Q.legvote_allow_bargain = majorReform ? 0 : 1;
+    if (!majorReform) {
+        Q.legvote_force_president_veto = 0;
+    }
+    const clamp = function(value, low, high) {
+        return Math.max(low, Math.min(high, value));
+    };
+    const total = Math.max(1, Math.round(Number(Q.sejm_total) || 460));
+    const seats = {
+        left: Math.max(
+            0,
+            Math.round(
+                Number(Q.left_committed_seats) || Number(Q.left_seats) || 0
+            )
+        ),
+        ko: Math.max(0, Math.round(Number(Q.ko_seats) || 0)),
+        p2050: Math.max(0, Math.round(Number(Q.p2050_seats) || 0)),
+        psl: Math.max(0, Math.round(Number(Q.psl_seats) || 0)),
+        pis: Math.max(0, Math.round(Number(Q.pis_seats) || 0)),
+        konf: Math.max(0, Math.round(Number(Q.konf_seats) || 0))
+    };
+    const knownSeats = Object.keys(seats).reduce(function(sum, party) {
+        return sum + seats[party];
+    }, 0);
+    seats.other = Math.max(0, total - knownSeats);
+
+    const rightDefection = clamp(
+        0.02 + (Number(Q.trz_right_fragmentation) || 0) * 0.0048 +
+            Math.max(
+                0,
+                (Number(Q.government_coalition_dissent) || 0) - 16
+            ) * 0.002,
+        0.02,
+        0.34
+    );
+    const pslRights = clamp(
+        0.08 + Math.max(0, Number(Q.psl_relation) || 0) / 125,
+        0.08,
+        0.82
+    );
+    const rates = majorReform
+        ? {
+            left: clamp(Number(Q.legvote_left_rate) || 0, 0, 1),
+            ko: clamp(Number(Q.legvote_ko_rate) || 0, 0, 1),
+            p2050: clamp(Number(Q.legvote_p2050_rate) || 0, 0, 1),
+            psl: clamp(Number(Q.legvote_psl_rate) || 0, 0, 1),
+            pis: clamp(Number(Q.legvote_pis_rate) || 0, 0, 1),
+            konf: clamp(Number(Q.legvote_konf_rate) || 0, 0, 1),
+            other: clamp(Number(Q.legvote_other_rate) || 0, 0, 1)
+        }
+        : (Q.legvote_profile == "institutions"
+        ? {
+            left: 0.96, ko: 0.94, p2050: 0.88, psl: 0.76,
+            pis: clamp(0.08 + rightDefection, 0.08, 0.46),
+            konf: 0.05, other: 0.58
+        }
+        : (Q.legvote_profile == "marriage"
+            ? {
+                left: 1, ko: 0.95, p2050: 0.68, psl: pslRights,
+                pis: rightDefection, konf: 0, other: 0.45
+            }
+            : {
+                left: 1, ko: 0.98, p2050: 0.82,
+                psl: clamp(pslRights + 0.08, 0.16, 0.86),
+                pis: clamp(rightDefection + 0.02, 0.04, 0.36),
+                konf: 0, other: 0.52
+            }));
+    const labels = {
+        left: Q.left_party_short_name || "Lewica",
+        ko: Q.ko_party_short_name || "KO",
+        p2050: Q.p2050_party_short_name || "PL2050",
+        psl: Q.psl_party_short_name || "PSL",
+        pis: Q.zp_committee_short_name || Q.pis_party_short_name || "PiS",
+        konf: Q.konf_party_short_name || "Konf.",
+        other: "Other and unaffiliated"
+    };
+    const parties = ["left", "ko", "p2050", "psl", "pis", "konf", "other"];
+    let bonus = Math.max(0, Math.round(Number(Q.legvote_campaign_bonus) || 0));
+    for (const party of parties) {
+        const partySeats = seats[party];
+        let yes = Math.min(partySeats, Math.round(partySeats * rates[party]));
+        if (bonus > 0 && ["psl", "other", "pis"].indexOf(party) >= 0) {
+            const moved = Math.min(bonus, partySeats - yes);
+            yes += moved;
+            bonus -= moved;
+        }
+        const undecided = Math.max(0, partySeats - yes);
+        const abstain = Math.min(
+            undecided,
+            Math.round(undecided * (party == "psl" || party == "other" ? 0.16 : 0.05))
+        );
+        Q["legvote_" + party + "_seats"] = partySeats;
+        Q["legvote_" + party + "_yes"] = yes;
+        Q["legvote_" + party + "_abstain"] = abstain;
+        Q["legvote_" + party + "_no"] = partySeats - yes - abstain;
+        Q["legvote_" + party + "_label"] = labels[party];
+    }
+    Q.legvote_parties = parties;
+    Q.legvote_bargain_party = Q.legvote_profile == "institutions"
+        ? "pis"
+        : "psl";
+    Q.legvote_bargain_party_label = labels[Q.legvote_bargain_party];
+    Q.legvote_bargained = 0;
+    Q.legvote_bargain_gain = 0;
+    Q.legvote_prepared = 1;
+}
+
+Q.legvote_forecast_yes = Q.legvote_parties.reduce(function(sum, party) {
+    return sum + Number(Q["legvote_" + party + "_yes"]);
+}, 0);
+Q.legvote_forecast_no = Q.legvote_parties.reduce(function(sum, party) {
+    return sum + Number(Q["legvote_" + party + "_no"]);
+}, 0);
+Q.legvote_forecast_abstain = Q.legvote_parties.reduce(function(sum, party) {
+    return sum + Number(Q["legvote_" + party + "_abstain"]);
+}, 0);
+Q.legvote_forecast_passed =
+    Q.legvote_forecast_yes > Q.legvote_forecast_no ? 1 : 0;
+!}
+
+= Sejm forecast — [+ legvote_bill_name +]
+
+<div class="ledger"><div class="ledger-row ledger-head"><span>Club</span><span>For · against · abstain</span></div>
+<div class="ledger-row"><span>[+ legvote_left_label +]</span><b>[+ legvote_left_yes +] · [+ legvote_left_no +] · [+ legvote_left_abstain +]</b></div>
+<div class="ledger-row"><span>[+ legvote_ko_label +]</span><b>[+ legvote_ko_yes +] · [+ legvote_ko_no +] · [+ legvote_ko_abstain +]</b></div>
+<div class="ledger-row"><span>[+ legvote_p2050_label +]</span><b>[+ legvote_p2050_yes +] · [+ legvote_p2050_no +] · [+ legvote_p2050_abstain +]</b></div>
+<div class="ledger-row"><span>[+ legvote_psl_label +]</span><b>[+ legvote_psl_yes +] · [+ legvote_psl_no +] · [+ legvote_psl_abstain +]</b></div>
+<div class="ledger-row"><span>[+ legvote_pis_label +]</span><b>[+ legvote_pis_yes +] · [+ legvote_pis_no +] · [+ legvote_pis_abstain +]</b></div>
+<div class="ledger-row"><span>[+ legvote_konf_label +]</span><b>[+ legvote_konf_yes +] · [+ legvote_konf_no +] · [+ legvote_konf_abstain +]</b></div>
+<div class="ledger-row"><span>[+ legvote_other_label +]</span><b>[+ legvote_other_yes +] · [+ legvote_other_no +] · [+ legvote_other_abstain +]</b></div>
+<div class="ledger-row ledger-total"><span>Expected division</span><b>[+ legvote_forecast_yes +] · [+ legvote_forecast_no +] · [+ legvote_forecast_abstain +]</b></div></div>
+
+[? if legvote_bargained: The bargain with **[+ legvote_bargain_party_label +]**
+moved **[+ legvote_bargain_gain +] votes** into the yes lobby. Its price is a
+published implementation and consultation commitment.?]
+
+- @bargain
+- @hold_vote
+
+@bargain
+title: Bargain with [+ legvote_bargain_party_label +] before the vote
+subtitle: Cost: 1 resource. Trade a written implementation and consultation guarantee for a small group of votes.
+view-if: legvote_bargained = 0 and legvote_allow_bargain = 1
+choose-if: resources >= 1 and legvote_forecast_passed = 0 and ((legvote_bargain_party = "psl" and legvote_psl_no > 0) or (legvote_bargain_party = "pis" and legvote_pis_no > 0))
+unavailable-subtitle: The bill is already forecast to pass, the target has no movable no votes, or the party lacks one negotiating resource.
+on-arrival: {!
+const party = Q.legvote_bargain_party;
+const relation = Number(Q[party + "_relation"]) || 0;
+const gain = Math.min(
+    Number(Q["legvote_" + party + "_no"]) || 0,
+    Math.max(2, 3 + Math.floor(Math.max(0, relation) / 15))
+);
+Q.resources -= 1;
+Q["legvote_" + party + "_yes"] += gain;
+Q["legvote_" + party + "_no"] -= gain;
+Q.legvote_bargained = 1;
+Q.legvote_bargain_gain = gain;
+Q.news_headline = Q.legvote_bargain_party_label +
+    " signs a narrow bargain before the " + Q.legvote_bill_name + " vote";
+!}
+go-to: forecast
+
+@hold_vote
+title: Ring the division bell
+subtitle: Record the Sejm vote using the published whip count.
+on-arrival: {!
+Q.legvote_sejm_yes = Q.legvote_forecast_yes;
+Q.legvote_sejm_no = Q.legvote_forecast_no;
+Q.legvote_sejm_abstain = Q.legvote_forecast_abstain;
+Q.legvote_sejm_present = Q.legvote_sejm_yes + Q.legvote_sejm_no +
+    Q.legvote_sejm_abstain;
+Q.legvote_sejm_passed =
+    Q.legvote_sejm_present >= (Number(Q.sejm_quorum_floor) || 230) &&
+    Q.legvote_sejm_yes > Q.legvote_sejm_no ? 1 : 0;
+Q.legvote_outcome = Q.legvote_sejm_passed
+    ? "Passed the Sejm"
+    : "Defeated in the Sejm";
+!}
+go-to: sejm_result
+
+@sejm_result
+title: The Sejm division
+
+= Sejm result — [+ legvote_bill_name +]
+
+**[+ legvote_sejm_yes +] for · [+ legvote_sejm_no +] against · [+
+legvote_sejm_abstain +] abstain.**
+
+[? if legvote_sejm_passed: The bill passes the lower chamber. That is passage,
+not enactment: the Senate now receives the text.?]
+[? if not legvote_sejm_passed: The bill is defeated before the Senate or
+President acquires any decision to make.?]
+
+- @senate_vote: Send the bill to the Senate
+- @finish_failed: Record the Sejm defeat
+
+@senate_vote
+title: The Senate votes on the Sejm text
+view-if: legvote_sejm_passed = 1
+on-arrival: {!
+const pairs = [
+    ["left", "left"], ["ko", "ko"], ["p2050", "p2050"],
+    ["psl", "psl"], ["pis", "pis"], ["konf", "konf"]
+];
+let senateYes = 0;
+let senateAbstain = 0;
+for (const pair of pairs) {
+    const party = pair[0];
+    const lowerSeats = Number(Q["legvote_" + party + "_seats"]) || 0;
+    const upperSeats = Number(Q["senate_" + pair[1] + "_seats"]) || 0;
+    const yesShare = lowerSeats > 0
+        ? Number(Q["legvote_" + party + "_yes"]) / lowerSeats
+        : 0;
+    const abstainShare = lowerSeats > 0
+        ? Number(Q["legvote_" + party + "_abstain"]) / lowerSeats
+        : 0;
+    senateYes += Math.round(upperSeats * yesShare);
+    senateAbstain += Math.round(upperSeats * abstainShare);
+}
+const independentSeats = Math.max(
+    0,
+    Number(Q.senate_independent_seats) || 0
+);
+const otherSeats = Number(Q.legvote_other_seats) || 0;
+const otherYesShare = otherSeats > 0
+    ? Number(Q.legvote_other_yes) / otherSeats
+    : 0.5;
+const otherAbstainShare = otherSeats > 0
+    ? Number(Q.legvote_other_abstain) / otherSeats
+    : 0;
+senateYes += Math.round(independentSeats * otherYesShare);
+senateAbstain += Math.round(independentSeats * otherAbstainShare);
+const senateTotal = Math.max(1, Number(Q.senate_total) || 100);
+Q.legvote_senate_yes = Math.min(senateTotal, senateYes);
+Q.legvote_senate_abstain = Math.min(
+    senateTotal - Q.legvote_senate_yes,
+    senateAbstain
+);
+Q.legvote_senate_no = Math.max(
+    0,
+    senateTotal - Q.legvote_senate_yes - Q.legvote_senate_abstain
+);
+Q.legvote_senate_decision = Q.legvote_senate_yes > Q.legvote_senate_no
+    ? "Accepted without amendment"
+    : (Q.legvote_senate_yes >= 45
+        ? "Returned with a compromise amendment"
+        : "Rejected");
+Q.legvote_survived_senate =
+    Q.legvote_senate_decision == "Accepted without amendment" ? 1 : 0;
+Q.senate_last_vote = Q.legvote_bill_name + ": " +
+    Q.legvote_senate_decision;
+!}
+go-to: senate_result
+
+@senate_result
+title: The Senate's decision
+
+= Senate result
+
+**[+ legvote_senate_yes +] for · [+ legvote_senate_no +] against · [+
+legvote_senate_abstain +] abstain.** Decision: **[+
+legvote_senate_decision +]**.
+
+[? if legvote_senate_decision = "Accepted without amendment": The Senate
+accepts the Sejm text, which now goes to the President.?]
+[? if legvote_senate_decision = "Returned with a compromise amendment": The
+Senate returns a narrower text. An absolute majority of the full Sejm — 231
+votes — is needed to reject that amendment and restore the original.?]
+[? if legvote_senate_decision = "Rejected": The Senate rejects the bill. The
+Sejm needs an absolute majority of 231 to overturn that rejection.?]
+
+- @senate_return: Count the Sejm's answer
+- @president: Send the accepted bill to the President
+
+@senate_return
+title: The Sejm answers the Senate
+view-if: legvote_senate_decision != "Accepted without amendment"
+on-arrival: {!
+Q.legvote_senate_overturned = Q.legvote_sejm_yes >= 231 ? 1 : 0;
+if (Q.legvote_senate_decision == "Rejected") {
+    Q.legvote_survived_senate = Q.legvote_senate_overturned;
+    Q.legvote_senate_return_result = Q.legvote_senate_overturned
+        ? "The Sejm overturns the Senate rejection"
+        : "The Senate rejection stands";
+} else {
+    Q.legvote_survived_senate = 1;
+    Q.legvote_senate_return_result = Q.legvote_senate_overturned
+        ? "The Sejm restores its original text"
+        : "The Senate amendment enters the bill";
+}
+if (!Q.legvote_survived_senate) {
+    Q.legvote_outcome = "Defeated after Senate rejection";
+}
+!}
+go-to: senate_return_result
+
+@senate_return_result
+title: The return vote
+
+**[+ legvote_senate_return_result +].** The recorded Sejm yes count is **[+
+legvote_sejm_yes +]**; the constitutional return threshold is **231**.
+
+- @president: Send the surviving bill to the President
+- @finish_failed: Record the Senate defeat
+
+@president
+title: The President decides
+view-if: legvote_senate_decision = "Accepted without amendment" or legvote_survived_senate = 1
+on-arrival: {!
+const hostileNames = [
+    "Andrzej Duda", String(Q.pres_2025_right_candidate || ""),
+    "Sławomir Mentzen", "Grzegorz Braun"
+];
+const hostile = Q.pres_2025_hostile_president ||
+    hostileNames.indexOf(Q.president_name) >= 0;
+const base = Q.legvote_profile == "institutions"
+    ? (hostile ? 38 : 68)
+    : (hostile ? 20 : 58);
+Q.legvote_president_score = Math.round(
+    base + ((Number(Q.president_relation) || 0) - 40) * 0.5 +
+    (Number(Q.legvote_palace_bonus) || 0)
+);
+Q.legvote_president_veto = Q.legvote_force_president_veto ||
+    (!Q.legvote_president_commitment && Q.legvote_president_score < 50)
+        ? 1 : 0;
+Q.legvote_override_votes = Q.legvote_sejm_yes;
+Q.legvote_override_available =
+    Q.legvote_override_votes >= 276 ? 1 : 0;
+if (Q.legvote_president_veto) {
+    Q.president_veto_count = (Number(Q.president_veto_count) || 0) + 1;
+    Q.legvote_outcome = "Vetoed by " + Q.president_name;
+} else {
+    Q.legvote_enacted = 1;
+    Q.legvote_outcome = "Signed by " + Q.president_name;
+}
+!}
+go-to: president_result
+
+@president_result
+title: Signature or veto
+
+= Presidential decision
+
+[? if legvote_president_veto = 0: **[+ president_name +] signs [+
+legvote_bill_name +].** The bill is enacted.?]
+[? if legvote_president_veto = 1: **[+ president_name +] vetoes [+
+legvote_bill_name +].** The Sejm can override only with three-fifths of the
+full chamber: **276 votes**. The current override count is **[+
+legvote_override_votes +]**.?]
+
+- @override_veto
+- @accept_veto
+- @finish_enacted
+
+@override_veto
+title: Override the presidential veto
+subtitle: Three-fifths of the Sejm is 276 votes; current count [+ legvote_override_votes +].
+view-if: legvote_president_veto = 1
+choose-if: legvote_override_available = 1
+unavailable-subtitle: The veto cannot be overturned with the current Sejm count.
+on-arrival: legvote_enacted = 1; legvote_veto_overridden = 1; legvote_outcome = "Presidential veto overridden by the Sejm"; constitutional_restraint += 2; news_headline = legvote_outcome
+go-to: final_result
+
+@accept_veto
+title: Accept that the veto stands
+view-if: legvote_president_veto = 1
+on-arrival: legvote_enacted = 0; legvote_veto_overridden = 0
+go-to: final_result
+
+@finish_enacted
+title: Record enactment
+view-if: legvote_president_veto = 0
+go-to: final_result
+
+@finish_failed
+title: Record the failed bill
+view-if: legvote_sejm_passed = 0 or (legvote_senate_decision != "" and legvote_survived_senate = 0)
+on-arrival: legvote_enacted = 0
+go-to: final_result
+
+@final_result
+title: The bill's final status
+
+= [+ legvote_bill_name +]
+
+Final status: **[+ legvote_outcome +]**.
+
+[? if legvote_bargained: The pre-vote agreement with [+
+legvote_bargain_party_label +] remains part of the public record.?]
+[? if legvote_veto_overridden: The President's veto was real and was then
+lawfully overturned by three-fifths of the Sejm.?]
+
+- @finish_callback
+- @finish_queue
+
+@finish_callback
+title: Return the result to its event
+view-if: legvote_callback = "trz_rights" or legvote_callback = "movement_spring" or legvote_callback = "major_reform"
+go-to: poland_trzaskowski.rights_vote_apply if legvote_callback = "trz_rights"; poland_events_2025.movement_spring_vote_result if legvote_callback = "movement_spring"; poland_major_reforms.legislative_result if legvote_callback = "major_reform"
+
+@finish_queue
+title: Return to the events desk
+view-if: legvote_callback != "trz_rights" and legvote_callback != "movement_spring" and legvote_callback != "major_reform"
+go-to: poland_event_queue

@@ -134,6 +134,7 @@ const knownPeople = [
   'Paulina Hennig-Kloska', 'Radosław Sikorski', 'Adam Bodnar',
   'Mariusz Błaszczak', 'Beata Szydło', 'Przemysław Czarnek',
   'Chrystian Szpilski', 'Patryk Spaliński', 'Maciej Kozłowski', 'Jan Śpiewak',
+  'Damian Soból',
 ];
 const knownOrganisations = [
   'Lewica', 'Nowa Lewica', 'Razem', 'PiS', 'Prawo i Sprawiedliwość',
@@ -142,7 +143,7 @@ const knownOrganisations = [
   'European Commission', 'European Union', 'Sejm', 'Senate',
   'Council of Ministers', 'Constitutional Tribunal', 'Supreme Court',
   'National Council of the Judiciary', 'State Labour Inspection',
-  'Nowa Solidarność',
+  'Nowa Solidarność', 'Ostatnie Pokolenie', 'World Central Kitchen',
 ];
 
 function mentions(section, dictionary) {

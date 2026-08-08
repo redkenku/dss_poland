@@ -46,6 +46,9 @@ Q.reform_ceiling_target = Math.max(
 if (Q.reform_pressure_return_mode != "pressure") {
     Q.reform_pressure_forced = 0;
     Q.reform_pressure_rounds = 0;
+    for (const party of ["pis", "ko", "psl", "p2050", "konf"]) {
+        Q["reform_pressure_ignored_" + party] = 0;
+    }
 }
 !}
 call: poland_reform_ceiling
@@ -56,12 +59,11 @@ title: The bill meets its veto players
 on-arrival: {!
 const issue = Q.reform_pressure_issue;
 const target = Number(Q.reform_ceiling_target_resolved) || 1;
-const forcedTier = Q.reform_pressure_forced ? 1 : 0;
-// Forcing the issue buys exactly one tier above what the coalition would
-// otherwise tolerate, and puts the government at risk for it.
-const effectiveCeiling =
-    Number(Q.reform_ceiling_tier) + (forcedTier ? 1 : 0);
-const blocked = target > effectiveCeiling ? 1 : 0;
+const forcedVote = Q.reform_pressure_forced ? 1 : 0;
+const voteComplete = Q.major_reform_vote_complete ? 1 : 0;
+// Each forced choice removes only the named partner from the pre-flight. The
+// ceiling recount then moves to the next partner, and finally the President.
+const blocked = !voteComplete && target > Number(Q.reform_ceiling_tier) ? 1 : 0;
 Q.reform_pressure_issue_name = Q[issue + "_reform_display_name"] || issue;
 
 if (blocked) {
@@ -82,13 +84,50 @@ if (blocked) {
     Q.news_headline = Q.reform_ceiling_blocker_name +
         " blocks Lewica's " + Q.reform_pressure_issue_name +
         " at tier " + target;
+} else if (!voteComplete) {
+    // The ceiling is a pre-vote whip check, not enactment. Feed every club's
+    // issue-specific score into the shared parliamentary route and return here
+    // only if the bill survives the Sejm, Senate and President.
+    const clamp = function(value, low, high) {
+        return Math.max(low, Math.min(high, value));
+    };
+    const need = Number(Q.reform_ceiling_need) || 45;
+    Q.legvote_left_rate = 0.98;
+    for (const party of ["ko", "p2050", "psl", "pis", "konf"]) {
+        const stance = Number(Q["reform_ceiling_" + party + "_score"]) || 0;
+        Q["legvote_" + party + "_rate"] = clamp(
+            0.70 + (stance - need) * 0.012, 0.02, 0.98
+        );
+    }
+    Q.legvote_other_rate = clamp(
+        0.45 + (Number(Q.reform_ceiling_mandate) || 0) * 0.01,
+        0.15,
+        0.70
+    );
+    const settlementLabel = Q[issue + "_reform_label_" + target] ||
+        ("tier " + target);
+    Q.legvote_bill_name = Q.reform_pressure_issue_name + " — " +
+        settlementLabel;
+    Q.legvote_profile = "major_reform";
+    Q.legvote_callback = "major_reform";
+    Q.legvote_president_commitment =
+        !Q.reform_pressure_palace_override &&
+        Number(Q.reform_ceiling_palace_tier) >= target ? 1 : 0;
+    Q.legvote_force_president_veto =
+        Q.reform_pressure_palace_override ||
+        Number(Q.reform_ceiling_palace_tier) < target ? 1 : 0;
+    Q.legvote_campaign_bonus = 0;
+    Q.legvote_palace_bonus = 0;
+    Q.legvote_prepared = 0;
+    Q.legvote_enacted = 0;
+    Q.legvote_effects_applied = 0;
+    Q.major_reform_vote_ready = 1;
 } else {
-    const forced = forcedTier;
+    const forced = forcedVote;
     Q[issue + "_reform_stage"] = target;
     Q[issue + "_reform_proposal_stage"] = target;
     Q[issue + "_reform_defined"] = 1;
     Q[issue + "_reform_settled"] = 1;
-    Q[issue + "_on_slate"] = 1;
     Q[issue + "_reform_progress"] = Math.max(
         Number(Q[issue + "_reform_progress"]) || 0,
         target * 20
@@ -242,6 +281,21 @@ if (blocked) {
     if (issue == "abortion" && target >= 1) {
         Q.abortion_law_enacted = 1;
     }
+    if (issue == "labor") {
+        const unionTrustByStage = [0, -6, 4, 8, 13];
+        const mobilizationByStage = [0, -2, 3, 6, 10];
+        const conflictChangeByStage = [0, 7, -4, -8, -13];
+        Q.union_trust += unionTrustByStage[target];
+        Q.opzz_cooperation += unionTrustByStage[target];
+        Q.labor_mobilization += mobilizationByStage[target];
+        Q.labor_dissent += conflictChangeByStage[target];
+        Q.razem_cooperation += target >= 2 ? target : -2;
+        Q.razem_dissent += target >= 2 ? -target : 3;
+        Q.progressives_dissent += target >= 2 ? -2 : 2;
+        Q.spring_dissent += target >= 2 ? -1 : 1;
+        Q.barons_dissent += target >= 3 ? 2 : 0;
+        Q.pip_law_enacted = target >= 2 ? 1 : Q.pip_law_enacted;
+    }
     if (issue == "courts") {
         Q.legal_dualism = Math.max(
             0, (Number(Q.legal_dualism) || 0) - target * 3
@@ -259,7 +313,7 @@ if (blocked) {
     Q.last_policy_authority = Q.reform_pressure_palace_override
         ? "Three-fifths Sejm veto override"
         : forced
-            ? "Lewica-forced coalition vote and President " + Q.president_name
+            ? "Lewica-forced parliamentary vote and President " + Q.president_name
             : "Sejm majority and President " + Q.president_name;
     Q.last_policy_implementation = 1;
     Q.news_headline = Q.reform_pressure_issue_name +
@@ -276,9 +330,113 @@ if (blocked) {
         : (target == 2 ? "favourable" : "backlash");
     Q.reform_pressure_forced = 0;
     Q.reform_pressure_rounds = 0;
+    Q.reform_pressure_pending = 0;
+    Q.reform_pressure_mode = "None";
+    Q.reform_pressure_palace_override = 0;
+    for (const party of ["pis", "ko", "psl", "p2050", "konf"]) {
+        Q["reform_pressure_ignored_" + party] = 0;
+    }
+    Q.major_reform_vote_ready = 0;
+    Q.major_reform_vote_complete = 0;
 }
 !}
-go-to: poland_reform_pressure if reform_pressure_return_mode = "pressure" and reform_pressure_pending = 1; pressure_enacted if reform_pressure_return_mode = "pressure" and reform_pressure_pending = 0; objection_queued if reform_pressure_return_mode != "pressure" and reform_pressure_pending = 1; enacted if reform_pressure_return_mode != "pressure" and reform_pressure_pending = 0
+go-to: route_verdict
+
+@route_verdict
+title: Route the completed veto-player count
+go-to: poland_reform_pressure if reform_pressure_return_mode = "pressure" and reform_pressure_pending = 1; objection_queued if reform_pressure_return_mode != "pressure" and reform_pressure_pending = 1; pressure_enacted if major_reform_vote_ready = 0 and reform_pressure_return_mode = "pressure" and reform_pressure_pending = 0; enacted if major_reform_vote_ready = 0 and reform_pressure_return_mode != "pressure" and reform_pressure_pending = 0; poland_legislative_vote if major_reform_vote_ready = 1
+
+@legislative_result
+title: Return the parliamentary result to the reform project
+on-arrival: {!
+const issue = Q.reform_pressure_issue;
+if (Q.legvote_enacted) {
+    // An accepted Senate compromise narrows the settlement by one tier. If the
+    // Sejm restored its own text, the player receives the bill they tabled.
+    if (
+        Q.legvote_senate_decision == "Returned with a compromise amendment" &&
+        !Q.legvote_senate_overturned
+    ) {
+        Q.reform_pressure_target_stage = Math.max(
+            1, Number(Q.reform_pressure_target_stage) - 1
+        );
+    }
+    Q.major_reform_vote_complete = 1;
+    Q.major_reform_vote_ready = 0;
+} else {
+    const previous = Number(Q.reform_pressure_previous_stage) || 0;
+    const progressKey = issue + "_reform_progress";
+    const timerKey = "poland_" + issue + "_reform_timer";
+    const fieldByIssue = {
+        abortion: "abortion_rights", marriage: "lgbt_equality",
+        church: "secular_state", asylum: "refugee_solidarity",
+        border: "border_security", defence: "national_security",
+        labor: "social_spending", health: "vaccination",
+        courts: "rule_of_law"
+    };
+    const trustByIssue = {
+        abortion: "feminist_trust", marriage: "progressive_credibility",
+        church: "progressive_credibility", asylum: "progressive_credibility",
+        border: "public_trust", defence: "public_trust",
+        labor: "labor_credibility", health: "public_sector_support",
+        courts: "judicial_legitimacy"
+    };
+    Q[progressKey] = Math.max(previous * 20, Number(Q[progressKey]) - 10);
+    Q[timerKey] = 5;
+    Q[issue + "_reform_proposal_stage"] =
+        Number(Q[issue + "_reform_goal_stage"]) || 4;
+    Q.public_trust -= 1;
+    const trustKey = trustByIssue[issue];
+    if (trustKey != "public_trust") {
+        Q[trustKey] = (Number(Q[trustKey]) || 0) - 3;
+    }
+    const field = fieldByIssue[issue];
+    Q[field + "_left_ownership"] = Math.max(
+        0, (Number(Q[field + "_left_ownership"]) || 0) - 3
+    );
+    Q[field + "_backlash"] = Math.min(
+        100, (Number(Q[field + "_backlash"]) || 0) + 2
+    );
+    Q.reform_pressure_last_result = Q.legvote_outcome;
+    Q.news_headline = Q.reform_pressure_issue_name + ": " +
+        String(Q.legvote_outcome || "the bill fails").toLowerCase();
+    Q.reform_pressure_pending = 0;
+    Q.reform_pressure_mode = "None";
+    Q.reform_pressure_cooldown = 2;
+    Q.reform_pressure_forced = 0;
+    Q.reform_pressure_rounds = 0;
+    Q.reform_pressure_palace_override = 0;
+    for (const party of ["pis", "ko", "psl", "p2050", "konf"]) {
+        Q["reform_pressure_ignored_" + party] = 0;
+    }
+    Q.major_reform_vote_complete = 0;
+    Q.major_reform_vote_ready = 0;
+}
+!}
+go-to: route_legislative_result
+
+@route_legislative_result
+title: Route the recorded parliamentary result
+go-to: resolve if major_reform_vote_complete = 1; pressure_defeated if major_reform_vote_complete = 0 and reform_pressure_return_mode = "pressure"; defeated if major_reform_vote_complete = 0 and reform_pressure_return_mode != "pressure"
+
+@defeated
+title: Parliament refuses the reform
+new-page: true
+
+**[+ news_headline +].** The project remains on the player's slate, but the
+failed bill loses momentum and cannot be tabled again for five months.
+
+- #poland_card_finish
+
+@pressure_defeated
+title: The delayed reform fails in Parliament
+new-page: true
+on-arrival: reform_pressure_return_mode = "card"
+
+**[+ news_headline +].** The coalition confrontation secured a vote, not a
+law. The project remains unsettled and returns after its five-month cooldown.
+
+- @poland_polling: Carry the defeat into the new month
 
 @enacted
 title: The reform enters the statute book

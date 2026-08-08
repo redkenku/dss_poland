@@ -25,7 +25,7 @@ if (
 ) {
     Q.left_splinter_support_votes =
         (Q.barons_party_relation >= 45 ? Q.sld_breakaway_seats : 0) +
-        (Q.social_patriot_list_committee != "pis" &&
+        (!["pis", "konf"].includes(Q.social_patriot_list_committee) &&
             Q.social_patriot_party_relation >= 45
             ? Q.social_patriot_seats : 0) +
         (Q.spring_party_relation >= 45 ? Q.spring_breakaway_seats : 0) +
@@ -37,14 +37,18 @@ if (
     Q.left_committed_seats =
         Q.left_seats + Q.left_splinter_support_votes;
 }
+const leftOnRightList2023 = ["pis_5", "konf_5"].includes(
+    String(Q.sejm_list_outcome || "left_5")
+);
 Q.coalition_democratic_seats =
     Q.ko_seats + Q.p2050_seats + Q.psl_seats +
-    Q.centrum_seats + Q.left_committed_seats;
+    Q.centrum_seats + (leftOnRightList2023 ? 0 : Q.left_committed_seats);
 Q.coalition_center_seats =
     Q.ko_seats + Q.p2050_seats + Q.psl_seats + Q.centrum_seats;
 Q.coalition_right_seats =
     Q.pis_seats + Q.konf_seats + Q.rozwoj_seats + Q.korona_seats +
-    (Q.social_patriot_list_committee == "pis"
+    (leftOnRightList2023 ? Q.left_seats : 0) +
+    (["pis", "konf"].includes(Q.social_patriot_list_committee)
         ? Q.social_patriot_seats : 0);
 Q.coalition_pis_psl_seats = Q.pis_seats + Q.psl_seats +
     (Q.social_patriot_list_committee == "pis"
@@ -56,10 +60,7 @@ Q.news_headline =
 on-display: {!
 const data = [];
 const certifiedParties = [
-    ["pis", "PiS", "PiS", Q.pis_seats],
-    ["konf", "Konf.", "Konfederacja", Q.konf_seats],
-    ["ko", "KO", "KO", Q.ko_seats],
-    ["left", "NL", Q.left_party_name || "Lewica", Q.left_seats],
+    ["left", Q.left_party_short_name || "Lewica", Q.left_party_long_name || Q.left_party_name || "Lewica", Q.left_seats],
     ["sld_breakaway", "SLD", Q.barons_party_name, Q.sld_breakaway_seats],
     ["social_patriot", "LP", Q.social_patriot_party_name, Q.social_patriot_seats],
     ["spring_breakaway", "Spring", Q.spring_party_name, Q.spring_breakaway_seats],
@@ -67,21 +68,24 @@ const certifiedParties = [
     ["young_left", "Young", Q.progressives_party_name, Q.young_left_seats],
     ["razem", "Razem", Q.razem_party_name, Q.razem_party_seats],
     ["pps", "PPS", Q.pps_party_name, Q.pps_party_seats],
+    ["ko", "KO", "KO", Q.ko_seats],
     ["centrum", "Centrum", "Unia Centrum", Q.centrum_seats],
+    ["pis", "PiS", "PiS", Q.pis_seats],
     ["rozwoj", "Rozwój+", "Rozwój Plus", Q.rozwoj_seats],
+    ["konf", "Konf.", "Konfederacja", Q.konf_seats],
     ["korona", "Korona", "Korona", Q.korona_seats],
     ["other", "Inni", "Inni", Q.other_seats]
 ];
 if (Q.third_way_split) {
     certifiedParties.splice(
-        2,
+        10,
         0,
         ["psl", "PSL", "PSL", Q.psl_seats],
         ["p2050", "PL2050", "Polska 2050", Q.p2050_seats]
     );
 } else {
     certifiedParties.splice(
-        2,
+        10,
         0,
         [
             "third_way",
@@ -287,7 +291,7 @@ if (
 ) {
     Q.left_splinter_support_votes =
         (Q.barons_party_relation >= 45 ? Q.sld_breakaway_seats : 0) +
-        (Q.social_patriot_list_committee != "pis" &&
+        (!["pis", "konf"].includes(Q.social_patriot_list_committee) &&
             Q.social_patriot_party_relation >= 45
             ? Q.social_patriot_seats : 0) +
         (Q.spring_party_relation >= 45 ? Q.spring_breakaway_seats : 0) +
@@ -299,12 +303,17 @@ if (
     Q.left_committed_seats =
         Q.left_seats + Q.left_splinter_support_votes;
 }
+const leftOnRightListCoalition = ["pis_5", "konf_5"].includes(
+    String(Q.sejm_list_outcome || "left_5")
+);
 Q.coalition_democratic_seats =
     Q.ko_seats + Q.p2050_seats + Q.psl_seats +
-    Q.centrum_seats + Q.left_committed_seats;
+    Q.centrum_seats +
+    (leftOnRightListCoalition ? 0 : Q.left_committed_seats);
 Q.coalition_right_seats =
     Q.pis_seats + Q.konf_seats + Q.rozwoj_seats + Q.korona_seats +
-    (Q.social_patriot_list_committee == "pis"
+    (leftOnRightListCoalition ? Q.left_seats : 0) +
+    (["pis", "konf"].includes(Q.social_patriot_list_committee)
         ? Q.social_patriot_seats : 0);
 Q.coalition_center_seats =
     Q.ko_seats + Q.p2050_seats + Q.psl_seats + Q.centrum_seats;
@@ -351,6 +360,7 @@ new-page: true
 call: poland_polling
 on-arrival: {!
 Q.timeline_complete = 0;
+Q.poland_historical_event_phase = 0;
 Q.news_headline = "The campaign enters its final election summer";
 const formatIntent = function(value) {
     const numeric = Number(value);
@@ -377,10 +387,7 @@ Q.third_way_vote_intent_display = formatIntent(
 on-display: {!
 const data = [];
 const projectionParties = [
-    ["pis", "PiS", "PiS", Q.pis_projected_seats],
-    ["konf", "Konf.", "Konfederacja", Q.konf_projected_seats],
-    ["ko", "KO", "KO", Q.ko_projected_seats],
-    ["left", "NL", Q.left_party_name || "Lewica", Q.left_projected_seats],
+    ["left", Q.left_party_short_name || "Lewica", Q.left_party_long_name || Q.left_party_name || "Lewica", Q.left_projected_seats],
     ["sld_breakaway", "SLD", Q.barons_party_name, Q.sld_breakaway_projected_seats],
     ["social_patriot", "LP", Q.social_patriot_party_name, Q.social_patriot_projected_seats],
     ["spring_breakaway", "Spring", Q.spring_party_name, Q.spring_breakaway_projected_seats],
@@ -388,14 +395,17 @@ const projectionParties = [
     ["young_left", "Young", Q.progressives_party_name, Q.young_left_projected_seats],
     ["razem", "Razem", "Razem", Q.razem_projected_seats],
     ["pps", "PPS", "PPS", Q.pps_projected_seats],
+    ["ko", "KO", "KO", Q.ko_projected_seats],
     ["centrum", "Centrum", "Unia Centrum", Q.centrum_projected_seats],
+    ["pis", "PiS", "PiS", Q.pis_projected_seats],
     ["rozwoj", "Rozwój+", "Rozwój Plus", Q.rozwoj_projected_seats],
     ["p0", Q.p0_short_name || "P0", Q.p0_name || "Partia Zero", Q.p0_projected_seats],
+    ["konf", "Konf.", "Konfederacja", Q.konf_projected_seats],
     ["korona", "Korona", "Korona", Q.korona_projected_seats]
 ];
 if (Q.third_way_joint_list) {
     projectionParties.splice(
-        2,
+        10,
         0,
         [
             "third_way",
@@ -406,7 +416,7 @@ if (Q.third_way_joint_list) {
     );
 } else {
     projectionParties.splice(
-        2,
+        10,
         0,
         ["psl", "PSL", "PSL", Q.psl_projected_seats],
         ["p2050", "PL2050", "Polska 2050", Q.p2050_projected_seats]

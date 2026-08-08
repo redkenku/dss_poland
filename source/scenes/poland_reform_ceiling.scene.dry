@@ -241,7 +241,8 @@ if (model) {
     // ---- The Palace --------------------------------------------------------
     const presidentName = String(Q.president_name || "");
     const rightPalaceNames = [
-        "Andrzej Duda", "Karol Nawrocki", "Mateusz Morawiecki",
+        "Andrzej Duda", String(Q.pres_2025_right_candidate || ""),
+        "Mateusz Morawiecki",
         "Beata Szydło", "Przemysław Czarnek"
     ];
     const farRightPalaceNames = [
@@ -298,10 +299,24 @@ if (model) {
         prep -
         headwind
     );
-    const palaceProfileCap = number(
+    let palaceProfileCap = number(
         palaceProfileCaps[palaceCamp][axis], 1
     );
+    // Trzaskowski's campaign pledges are explicit exceptions to his ordinary
+    // liberal-Palace profile. They remain attached to his one-off event, but a
+    // matching Major Reform can rely on the same promised signature.
+    let palacePledgedTier = 0;
+    if (presidentName == "Rafał Trzaskowski") {
+        if (issue == "marriage" && Q.trz_marriage_signature) {
+            palaceProfileCap = 4;
+            palacePledgedTier = 4;
+        } else if (issue == "abortion" && Q.trz_abortion_signature) {
+            palaceProfileCap = Math.max(palaceProfileCap, 3);
+            palacePledgedTier = 3;
+        }
+    }
     let palaceTier = Math.min(palaceProfileCap, tierFromScore(palaceStance));
+    palaceTier = Math.max(palaceTier, palacePledgedTier);
     if (Q.reform_pressure_palace_override) {
         palaceTier = 4;
     }
@@ -318,8 +333,12 @@ if (model) {
     const partnerNames = {
         pis: "PiS",
         ko: "KO",
-        psl: Q.third_way_display_name || "PSL",
-        p2050: Q.third_way_display_name || "Poland 2050",
+        psl: Q.third_way_active
+            ? (Q.third_way_display_name || "Third Way") + " (PSL)"
+            : "PSL",
+        p2050: Q.third_way_active
+            ? (Q.third_way_display_name || "Third Way") + " (Poland 2050)"
+            : "Poland 2050",
         konf: "Konfederacja"
     };
     let partnerCeiling = 4;
@@ -328,13 +347,18 @@ if (model) {
     let worstPartnerScore = 0;
     let worstPartnerTier = 4;
     for (const party of ["pis", "ko", "psl", "p2050", "konf"]) {
-        if (!inCabinet(party)) {
-            continue;
-        }
         const stance = partyStance(party);
         const tier = tierFromScore(stance);
         Q["reform_ceiling_" + party + "_score"] = stance;
         Q["reform_ceiling_" + party + "_tier"] = tier;
+        // Every club's score feeds the parliamentary forecast. Only parties in
+        // cabinet are veto players for the pre-vote coalition ceiling.
+        if (
+            !inCabinet(party) ||
+            Q["reform_pressure_ignored_" + party]
+        ) {
+            continue;
+        }
         if (tier < worstPartnerTier || !worstPartner) {
             worstPartner = party;
             worstPartnerName = partnerNames[party];
@@ -372,11 +396,6 @@ if (model) {
         }
     }
     Q.reform_ceiling_partner_tier = partnerCeiling;
-    // Forcing coerces coalition votes for exactly one tier. It cannot coerce a
-    // signature and it cannot manufacture governing authority.
-    Q.reform_ceiling_forceable = Math.min(
-        authorityTier, palaceTier, partnerCeiling + 1
-    );
     Q.reform_ceiling_referendum_live = referendum;
     // The highest tier still worth negotiating for. Partner resistance is a
     // price and can be bought; governing authority and the Palace's profile
@@ -454,7 +473,6 @@ if (model) {
     Q.reform_ceiling_need = 0;
     Q.reform_ceiling_gap = 0;
     Q.reform_ceiling_target_resolved = 0;
-    Q.reform_ceiling_forceable = 0;
     Q.reform_ceiling_partner_tier = 0;
     Q.reform_ceiling_palace_locked = 0;
     Q.reform_ceiling_palace_cap = 0;

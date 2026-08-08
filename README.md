@@ -38,6 +38,7 @@ Pages workflow still uses Node 16.
 | `npm run smoke:braun` | Build and run the focused Braun legal-chain fixture |
 | `npm run smoke:lists` | Build and test right-turn caucuses plus the 2023 list negotiation |
 | `npm run smoke:senate` | Build and run the Senate election and budget-correction fixtures |
+| `npm run smoke:legislative` | Build and test the shared Sejm–Senate–president bill route |
 | `npm run smoke:dossier` | Build and test the live dossier, chamber charts, cabinet roster and polling history |
 | `npm run smoke:phase7` | Build and run the focused persistent PiS/KO organisation fixtures |
 | `npm run serve` | Serve the existing build without recompiling |

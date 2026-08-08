@@ -74,6 +74,23 @@ for (const id of [
     Q["pres_r1_shock_" + id] = randomShock(1.15);
 }
 Q.pres_r1_turnout_shock = randomShock(0.45);
+Q.pres_2020_ko_name = Q.pres_2020_ko_kidawa
+    ? "Małgorzata Kidawa-Błońska"
+    : "Rafał Trzaskowski";
+Q.pres_2020_ko_surname = Q.pres_2020_ko_kidawa
+    ? "Kidawa-Błońska"
+    : "Trzaskowski";
+// A first round held under lockdown is unusually open. One campaign outside the
+// two established blocs can catch fire; which one, and how far, is drawn now so
+// that no poll in the chapter can be re-read until it says something else.
+const breakoutRoll = this.random.uint32() / 4294967296;
+const breakoutScale = this.random.uint32() / 4294967296;
+Q.pres_breakout_key = breakoutRoll < 0.17
+    ? "holownia"
+    : (breakoutRoll < 0.26 ? "bosak" : "none");
+Q.pres_breakout_size = Q.pres_breakout_key == "holownia"
+    ? 6 + breakoutScale * 16
+    : (Q.pres_breakout_key == "bosak" ? 4 + breakoutScale * 12 : 0);
 Q.pres_debate_roll = this.random.uint32() / 4294967296;
 Q.pres_debate_upset_roll =
     this.random.uint32() / 4294967296;
@@ -86,8 +103,10 @@ Q.news_headline =
 After the collapse of the planned May vote, Poland is heading into a
 rescheduled presidential election under pandemic conditions. Eleven candidates
 have secured places on the ballot, but the campaign is already taking shape
-around the incumbent, a late opposition challenger and several contenders
-trying to break through the established political divide.
+around the incumbent[? if not pres_2020_ko_kidawa:, a late opposition
+challenger?][? if pres_2020_ko_kidawa:, a liberal challenger her own party no
+longer believes in?] and several contenders trying to break through the
+established political divide.
 
 <div class="candidate-field">
 <div class="candidate-field-heading">The eleven candidates</div>
@@ -104,10 +123,10 @@ trying to break through the established political divide.
 
 <div class="candidate-entry">
 <div class="candidate-copy">
-<span class="party party-ko"><b>Rafał Trzaskowski</b></span>
+<span class="party party-ko"><b>[+ pres_2020_ko_name +]</b></span>
 <small>PO · Civic Coalition</small>
 </div>
-<span class="candidate-badge">main challenger</span>
+<span class="candidate-badge">[? if pres_2020_ko_kidawa: primary winner?][? if not pres_2020_ko_kidawa: main challenger?]</span>
 </div>
 
 <div class="candidate-field-group">Other contenders</div>
@@ -204,9 +223,11 @@ His danger is that the election becomes a verdict on the government's handling
 of the pandemic and its failed attempt to force through the May vote.
 
 - @candidate_trzaskowski: KO changed its candidate
+- @candidate_kidawa: KO kept its candidate
 
 @candidate_trzaskowski
 title: Rafał Trzaskowski — the late challenger
+view-if: pres_2020_ko_kidawa = 0
 face-image: img/poland/events/pres-candidate-trzaskowski.webp
 
 **Rafał Trzaskowski — Warsaw mayor and KO's replacement candidate**
@@ -219,6 +240,27 @@ another attempt to escape the two-bloc contest.
 A Trzaskowski victory would place an opposition president above a PiS cabinet.
 Vetoes, judicial appointments and the constitutional limits of cohabitation
 would become the next political battlefield.
+
+- @candidate_holownia: Now the outsider
+
+@candidate_kidawa
+title: Małgorzata Kidawa-Błońska — the candidate KO could not replace
+view-if: pres_2020_ko_kidawa = 1
+face-image: img/poland/events/pres-candidate-kidawa.webp
+
+**Małgorzata Kidawa-Błońska — KO's primary winner and Deputy Marshal of the
+Sejm**
+
+She won the nomination, called for a boycott of a vote that never took place,
+and spent the collapse of the calendar losing the argument about whether her
+own campaign should continue. It continues anyway. KO's executive could not
+agree on a replacement in time, and the mayors who wanted one were told that
+overturning a primary in June would cost more than losing with its winner.
+
+She is polling in single figures, which makes the largest anti-PiS electorate
+in the country politically homeless for the next six weeks. Where those voters
+go — to Hołownia, to us, to the countryside, or nowhere at all — decides who
+faces Duda in July.
 
 - @candidate_holownia: Now the outsider
 
@@ -315,6 +357,8 @@ campaigner offers a movement-facing progressive campaign.?][? if
 presidential_candidate = "Magdalena Biejat": A Razem Sejm deputy identified
 with housing and social policy offers an organiser-led campaign.?]
 
+<div class="face-figure left-candidate-portrait" data-candidate-quality="presidential_candidate"><img class="face-img" alt="Portrait of the Left's presidential nominee"></div>
+
 Our candidate begins outside the runoff places. The campaign can still defend
 an independent electorate, force social issues into the contest and determine
 which finalist receives Left votes—and at what price.
@@ -395,8 +439,9 @@ const raw = {
         (45 - (Number(Q.household_security) || 45)) * 0.012 +
         (Number(Q.pres_bonus_duda) || 0),
     trzaskowski:
-        30.46 +
-        ((Number(Q.ko_vote_intent) || 27.4) - 27.4) * 0.24 +
+        (Q.pres_2020_ko_kidawa ? 8.40 : 30.46) +
+        ((Number(Q.ko_vote_intent) || 27.4) - 27.4) *
+            (Q.pres_2020_ko_kidawa ? 0.12 : 0.24) +
         ((Number(Q.judicial_legitimacy) || 36) - 36) * 0.018 +
         (Number(Q.pres_bonus_trzaskowski) || 0),
     holownia:
@@ -446,6 +491,24 @@ if (Q.postal_election_stance == "Democratic legal front") {
     raw.left += 0.25;
     Q.pres_postal_stance_effect =
         "Ballot preparation survives the legal challenge and aids the Left campaign";
+}
+
+if (Q.pres_2020_ko_kidawa) {
+    // The support KO's nominee cannot hold does not disappear into the
+    // average: an anti-PiS electorate with no viable candidate of its own
+    // moves to the campaigns that can still plausibly reach the runoff.
+    const shed = 30.46 - 8.40;
+    raw.holownia += shed * 0.50;
+    raw.left += shed * 0.14;
+    raw.kosiniak += shed * 0.13;
+    raw.bosak += shed * 0.08;
+    raw.duda += shed * 0.07;
+    raw.other += shed * 0.08;
+}
+
+if (Q.pres_breakout_key && Q.pres_breakout_key != "none" &&
+    raw[Q.pres_breakout_key] !== undefined) {
+    raw[Q.pres_breakout_key] += Number(Q.pres_breakout_size) || 0;
 }
 
 if (Q.pres_ko_joint_candidate) {
@@ -543,7 +606,7 @@ if (Q.pres_first_calc_mode == "first_result") {
     });
     const names = {
         duda: "Andrzej Duda",
-        trzaskowski: "Rafał Trzaskowski",
+        trzaskowski: Q.pres_2020_ko_name || "Rafał Trzaskowski",
         holownia: "Szymon Hołownia",
         bosak: "Krzysztof Bosak",
         kosiniak: "Władysław Kosiniak-Kamysz",
@@ -642,13 +705,18 @@ if (Q.pres_first_calc_mode == "first_result") {
         : "Between rounds";
 
     if (Q.pres_first_round_majority) {
-        Q.pres_runoff_winner_key = Q.pres_r1_leader_key;
+        // The KO row keeps its internal key through the count, but only an
+        // actual Trzaskowski presidency may enter the Trzaskowski chapter.
+        const electedKey =
+            Q.pres_r1_leader_key == "trzaskowski" && Q.pres_2020_ko_kidawa
+                ? "kidawa"
+                : Q.pres_r1_leader_key;
+        Q.pres_runoff_winner_key = electedKey;
         Q.pres_runoff_winner_name = Q.pres_r1_leader_name;
-        Q.pres_2020_president_elect_key = Q.pres_r1_leader_key;
+        Q.pres_2020_president_elect_key = electedKey;
         Q.pres_2020_president_elect_name = Q.pres_r1_leader_name;
         Q.pres_runoff_complete = 1;
-        Q.trzaskowski_won =
-            Q.pres_r1_leader_key == "trzaskowski" ? 1 : 0;
+        Q.trzaskowski_won = electedKey == "trzaskowski" ? 1 : 0;
         Q.left_president = 0;
         if (Q.trzaskowski_won) {
             Q.trz_inauguration_status =
@@ -850,7 +918,7 @@ Postal-election carryover: **[+ pres_postal_stance_effect +]**.
 
 <div class="poll-table">
 <div class="poll-row"><span class="party party-pis"><b>Duda</b></span><span>[+ pres_poll_duda +]%</span><span>PiS</span></div>
-[? if pres_ko_joint_candidate = 0: <div class="poll-row"><span class="party party-ko"><b>Trzaskowski</b></span><span>[+ pres_poll_trzaskowski +]%</span><span>KO</span></div>?]
+[? if pres_ko_joint_candidate = 0: <div class="poll-row"><span class="party party-ko"><b>[+ pres_2020_ko_surname +]</b></span><span>[+ pres_poll_trzaskowski +]%</span><span>KO</span></div>?]
 <div class="poll-row"><span class="party party-p2050"><b>Hołownia</b></span><span>[+ pres_poll_holownia +]%</span><span>civic campaign</span></div>
 <div class="poll-row"><span class="party party-konf"><b>Bosak</b></span><span>[+ pres_poll_bosak +]%</span><span>Konf.</span></div>
 <div class="poll-row"><span class="party party-psl"><b>Kosiniak-Kamysz</b></span><span>[+ pres_poll_kosiniak +]%</span><span>PSL</span></div>
@@ -1498,9 +1566,9 @@ dates, ending with the ones that were never given. The President is standing
 four lecterns away and cannot answer, which is the entire construction.
 
 By morning the clip is circulating inside the democratic camp — shared, with
-approval, by people who intend to vote for Trzaskowski. It is the most-watched
-thing our campaign produces and the least likely to change whom anyone votes
-for.
+approval, by people who intend to vote for [+ pres_2020_ko_surname +]. It is
+the most-watched thing our campaign produces and the least likely to change
+whom anyone votes for.
 
 - @debate_verdict: The spin room
 
@@ -1708,7 +1776,7 @@ Debate movement for **[+ presidential_candidate +]**:
 
 <div class="poll-table">
 <div class="poll-row"><span class="party party-pis"><b>Duda</b></span><span>[+ pres_poll_duda +]%</span><span>±1.8</span></div>
-[? if pres_ko_joint_candidate = 0: <div class="poll-row"><span class="party party-ko"><b>Trzaskowski</b></span><span>[+ pres_poll_trzaskowski +]%</span><span>±1.8</span></div>?]
+[? if pres_ko_joint_candidate = 0: <div class="poll-row"><span class="party party-ko"><b>[+ pres_2020_ko_surname +]</b></span><span>[+ pres_poll_trzaskowski +]%</span><span>±1.8</span></div>?]
 <div class="poll-row"><span class="party party-p2050"><b>Hołownia</b></span><span>[+ pres_poll_holownia +]%</span><span>±1.8</span></div>
 <div class="poll-row"><span class="party party-konf"><b>Bosak</b></span><span>[+ pres_poll_bosak +]%</span><span>±1.8</span></div>
 <div class="poll-row"><span class="party party-psl"><b>Kosiniak-Kamysz</b></span><span>[+ pres_poll_kosiniak +]%</span><span>±1.8</span></div>
@@ -1730,7 +1798,7 @@ Turnout: **[+ pres_r1_turnout +]%**
 
 <div class="poll-table">
 <div class="poll-row"><span class="party party-pis"><b>Andrzej Duda</b></span><span>[+ pres_r1_display_duda +]%</span><span>[+ pres_r1_votes_duda_display +]</span></div>
-[? if pres_ko_joint_candidate = 0: <div class="poll-row"><span class="party party-ko"><b>Rafał Trzaskowski</b></span><span>[+ pres_r1_display_trzaskowski +]%</span><span>[+ pres_r1_votes_trzaskowski_display +]</span></div>?]
+[? if pres_ko_joint_candidate = 0: <div class="poll-row"><span class="party party-ko"><b>[+ pres_2020_ko_name +]</b></span><span>[+ pres_r1_display_trzaskowski +]%</span><span>[+ pres_r1_votes_trzaskowski_display +]</span></div>?]
 <div class="poll-row"><span class="party party-p2050"><b>Szymon Hołownia</b></span><span>[+ pres_r1_display_holownia +]%</span><span>[+ pres_r1_votes_holownia_display +]</span></div>
 <div class="poll-row"><span class="party party-konf"><b>Krzysztof Bosak</b></span><span>[+ pres_r1_display_bosak +]%</span><span>[+ pres_r1_votes_bosak_display +]</span></div>
 <div class="poll-row"><span class="party party-psl"><b>Władysław Kosiniak-Kamysz</b></span><span>[+ pres_r1_display_kosiniak +]%</span><span>[+ pres_r1_votes_kosiniak_display +]</span></div>
@@ -1823,7 +1891,8 @@ if (Q.pres_first_round_complete && !Q.pres_first_round_majority &&
         Q.pres_left_is_finalist = 1;
     } else if (finalists.includes("trzaskowski")) {
         Q.pres_runoff_support_key = "trzaskowski";
-        Q.pres_runoff_support_name = "Rafał Trzaskowski";
+        Q.pres_runoff_support_name =
+            Q.pres_2020_ko_name || "Rafał Trzaskowski";
         Q.pres_left_is_finalist = 0;
     } else if (finalists.includes("holownia")) {
         Q.pres_runoff_support_key = "holownia";
@@ -2172,7 +2241,7 @@ progressive organisations read twice and do not like.
 
 @support_ko
 title: Exchange constitutional guarantees for KO's full field operation
-subtitle: Cost: 2 resources. Available only when Trzaskowski is eliminated.
+subtitle: Cost: 2 resources. Available only when KO's candidate is eliminated.
 view-if: pres_support_ko = 0 and pres_finalist_a_key != "trzaskowski" and pres_finalist_b_key != "trzaskowski" and pres_runoff_support_key != "duda" and pres_runoff_support_key != "bosak"
 choose-if: resources >= 2 and ko_relation >= 45
 unavailable-subtitle: KO lacks trust in the target or the operation cannot be financed.
@@ -2391,6 +2460,21 @@ const boostToward = function(vector, candidate, amount) {
     return vector;
 };
 
+// A runoff that puts the incumbent against a challenger from outside the
+// democratic camp is partly a referendum on five years of PiS. Where trust has
+// collapsed, part of the eliminated electorate votes against Duda whoever the
+// alternative is, instead of staying at home.
+const dudaReferendum =
+    !commonDudaTrz && !leftDuda && (a == "duda" || b == "duda");
+const dudaChallenger = a == "duda" ? b : a;
+const antiIncumbentPull = clampRunoff(
+    0.10 +
+        (45 - (Number(Q.public_trust) || 43)) * 0.010 +
+        ((Number(Q.far_right_agenda) || 32) - 32) * 0.004,
+    0,
+    0.55
+);
+
 let rawA = 0;
 let rawB = 0;
 let abstentionRaw = 0;
@@ -2468,6 +2552,9 @@ for (const source of sources) {
             target,
             Number(Q.pres_trade_bosak_boost) || 0
         );
+    }
+    if (dudaReferendum && source != "duda" && source != dudaChallenger) {
+        vector = boostToward(vector, dudaChallenger, antiIncumbentPull);
     }
     const sourceShare = sourceShares[source];
     rawA += sourceShare * vector.a;
@@ -2571,7 +2658,13 @@ if (Q.pres_runoff_calc_mode == "result") {
         formatVotes(Q.pres_runoff_votes_b);
     Q.pres_runoff_valid_votes_display =
         formatVotes(Q.pres_runoff_valid_votes);
-    const winnerKey = shareA > shareB ? a : b;
+    const rankedKey = shareA > shareB ? a : b;
+    // The KO row keeps its internal key through the transfer model, but only
+    // an actual Trzaskowski presidency may enter the Trzaskowski chapter.
+    const winnerKey =
+        rankedKey == "trzaskowski" && Q.pres_2020_ko_kidawa
+            ? "kidawa"
+            : rankedKey;
     const winnerName = shareA > shareB
         ? Q.pres_finalist_a_name
         : Q.pres_finalist_b_name;
@@ -2585,14 +2678,16 @@ if (Q.pres_runoff_calc_mode == "result") {
     Q.trzaskowski_won = winnerKey == "trzaskowski" ? 1 : 0;
     Q.left_president = 0;
     if (wasNewRunoff) {
-        if (winnerKey == "trzaskowski") {
+        if (winnerKey == "trzaskowski" || winnerKey == "kidawa") {
             Q.president_relation = Math.max(
                 Number(Q.president_relation) || 0,
                 Q.pres_runoff_support_key == "trzaskowski" ? 58 : 48
             );
             Q.ko_relation += 5;
-            Q.trz_inauguration_status =
-                "President-elect — certification pending";
+            if (winnerKey == "trzaskowski") {
+                Q.trz_inauguration_status =
+                    "President-elect — certification pending";
+            }
         } else if (winnerKey == "left") {
             Q.president_relation = 82;
             Q.party_unity += 8;
@@ -2634,8 +2729,8 @@ people whose preferred name is no longer on the ballot.
 We are asking our voters to support **[+ pres_runoff_support_name +]** under
 **[+ pres_runoff_endorsement +]**. [? if pres_finalist_a_key = "trzaskowski" or
 pres_finalist_b_key = "trzaskowski": Razem organisers remain reluctant to
-campaign for Trzaskowski; a leadership endorsement will not make every Left
-voter follow.?] Hołownia's volunteers, PSL's local networks and Bosak's
+campaign for [+ pres_2020_ko_surname +]; a leadership endorsement will not
+make every Left voter follow.?] Hołownia's volunteers, PSL's local networks and Bosak's
 anti-system electorate are making their own choices too.
 
 - @final_push_safe
@@ -2722,6 +2817,12 @@ build a mandate of his own.?]
 [? if pres_runoff_winner_key = "trzaskowski": Poland enters cohabitation: a KO
 candidate has won the count, but PiS still controls the institutions that must
 certify the result, convene the National Assembly and hear the oath.?]
+
+[? if pres_runoff_winner_key = "kidawa": Poland enters cohabitation behind the
+candidate KO spent the spring trying to replace. She has won the count; PiS
+still controls the institutions that must certify the result, convene the
+National Assembly and hear the oath, and her own party now has to govern the
+Palace it did not want her in.?]
 
 [? if pres_runoff_winner_key = "left": The almost impossible route has opened.
 The Left holds the presidency without controlling the government, and every

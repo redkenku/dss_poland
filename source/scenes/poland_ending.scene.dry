@@ -254,7 +254,7 @@ const endingLeftOrganisations = [
     ],
     [
         "labor_left", Q.labor_party_formed,
-        Q.labor_party_name || "Labour Left", "labor_left_seats"
+        Q.labor_party_name || "Independent Labour Left", "labor_left_seats"
     ],
     [
         "young_left", Q.progressives_party_formed,
@@ -519,10 +519,14 @@ if (votedOut && endingWasInGovernment) {
 Q.ending_fragmentation_penalty =
     Math.max(0, Q.ending_fragmentation_lists - 1) * 2 +
     Q.ending_threshold_losses * 2;
-Q.ending_major_reform_score =
-    endingNumber(Q.abortion_reform_stage, 0) +
-    endingNumber(Q.marriage_reform_stage, 0) +
-    endingNumber(Q.labor_reform_stage, 0);
+Q.ending_major_reform_score = [
+    "abortion", "marriage", "church", "asylum", "border",
+    "defence", "labor", "health", "courts"
+].reduce(function(total, issue) {
+    return total + (Q[issue + "_on_slate"]
+        ? endingNumber(Q[issue + "_reform_stage"], 0)
+        : 0);
+}, 0);
 Q.ending_score =
     Math.round(endingNumber(Q.party_unity, 0) / 10) +
     Math.round(endingNumber(Q.ending_family_vote, 0) / 2) +
@@ -568,12 +572,12 @@ if (votedOut) {
     Q.ending_name = "The long fragmentation";
 }
 Q.ending_constitutional_status = votedOut
-    ? "The electorate removed the player-controlled list from the Sejm"
+    ? "The electorate removed Lewica's filed committee from the Sejm"
     : (Q.snap_campaign_active
-        ? "Parliament dissolved; snap-election polling day falls after the playable horizon"
+        ? "Parliament dissolved; snap-election polling day falls in the next year"
         : (Q.snap_repeated_deadlock
             ? "Two elections ended without an investiture majority"
-            : "No unresolved election campaign at the horizon"));
+            : "No election campaign remains unresolved"));
 
 const publicLegacy = (
     endingNumber(Q.public_trust, 0) +
@@ -807,29 +811,27 @@ if (votedOut) {
 } else {
     Q.ending_opening = Q.election_2027_terminal
         ? Q.ending_exit_date + ". The Sejm and Senate counts are certified. " +
-            "The playable campaign ends where its accumulated alliances, " +
+            "The campaign ends where its accumulated alliances, " +
             "splits and governing record finally meet the electorate."
         : (Q.snap_campaign_active
-        ? Q.ending_exit_date + ". The playable horizon closes while a " +
-            "constitutionally scheduled campaign is still underway. There " +
-            "is no invented polling-day result—only the country and " +
-            "organisation you carry into it."
-        : Q.ending_exit_date + ". The constitutional horizon closes without " +
-            "inventing an election after an earlier dissolution reset the " +
-            "parliamentary term.");
+        ? Q.ending_exit_date + ". A constitutionally scheduled campaign is " +
+            "still underway. The outgoing cabinet remains in care and the " +
+            "party carries its present organisation into polling day."
+        : Q.ending_exit_date + ". An earlier dissolution reset the " +
+            "parliamentary term, so no election is due this autumn.");
     Q.ending_coda = Q.ending_future_strength >= 50
         ? "You do not leave behind a finished Left. You leave behind one with a future large enough to fight over."
         : "History does not preserve the plan exactly as written. It preserves the institutions, grudges and people still capable of trying again.";
     Q.news_headline = Q.election_2027_terminal
-        ? "The 2027 parliamentary election closes the playable campaign"
+        ? "The 2027 parliamentary election closes the campaign"
         : (Q.snap_campaign_active
         ? "The campaign ends with a constitutionally scheduled snap election still underway"
-        : "The 2027 horizon closes after an earlier election reset the term");
+        : "The year closes after an earlier election reset the term");
 }
 !}
 
 @final_assessment
-title: Epilogue — autumn 2027
+title: Autumn 2027 — the final assessment
 new-page: true
 game-over: true
 on-arrival: game_over = 1; ending_exit_type = "Natural conclusion"
@@ -841,20 +843,20 @@ call: poland_ending.prepare_epilogue
 
 ## What survives the count
 
-**The achievement most closely tied to your leadership:** [+
+**The legacy most closely tied to your leadership:** [+
 ending_signature_achievement +]
 
 [+ ending_public_memory +]
 
-The fuller record is not a victory screen. **Achievements:** [+
-ending_achievements +] **Failures:** [+ ending_failures +]
+The fuller record is mixed. **What endured:** [+ ending_achievements +]
+**What failed:** [+ ending_failures +]
 
-## The party after you
+## The party after the campaign
 
 [+ ending_party_future +]
 
-The player finishes as **[+ strategic_centre_label +]**. During the campaign,
-there were **[+ individual_defections +] individual defections**, **[+
+By the close, the party's strategic centre is **[+ strategic_centre_label +]**.
+The campaign produced **[+ individual_defections +] individual defections**, **[+
 parliamentary_circles +] parliamentary clubs** and **[+ organised_left_splits
 +] organised splits**.
 
@@ -864,32 +866,27 @@ parliamentary_circles +] parliamentary clubs** and **[+ organised_left_splits
 
 [+ ending_national_future +]
 
-## Final ledger
+## Political balance
 
-Lewica modelled vote: **[+ left_vote_intent +]%**  
+Lewica vote estimate: **[+ left_vote_intent +]%**<br>
 Left electoral family: **[+ ending_family_vote +]% across [+
 ending_fragmentation_lists +] lists**<br>
 Lists clearing their filed threshold: **[+ ending_lists_above_threshold +]**;
 sub-threshold
 lists: **[+ ending_threshold_losses +]**; certified family seats: **[+
 ending_family_seats +]**<br>
-Alliance unity: **[+ party_unity +]/100**  
 Current position: **[+ position +]**  
 Budgets carried since the transfer of power: **[+ ending_budget_wins +]/4**  
-Judicial settlement quality: **[+ ending_judiciary_score +]/100**  
 Major settlements: **abortion — [+ abortion_reform_stage_label +] ·
 recognition — [+ marriage_reform_stage_label +] · labour — [+
 labor_reform_stage_label +]**
 2025 president: **[+ pres_2025_winner +]**  
 [? if pres_2025_oath_crisis: 2025 oath: **[+ pres_2025_oath_strategy +]**[? if pres_2025_oath_crisis = 3:  · delay collapsed?]  ?]
-Media and local capacity: **[+ media_capacity +] + [+ local_network +]**  
-Leadership months used: **[+ leadership_actions_taken +]/97**
-Neglected months: **[+ neglected_months +]**
 
-[? if snap_campaign_active: **Constitutional horizon:** [+
+[? if snap_campaign_active: **Constitutional position:** [+
 ending_constitutional_status +]. The dissolution trigger was **[+
-snap_election_trigger +]** and the chosen campaign was **[+
-snap_campaign_strategy +]**. No result is credited before polling day.?]
+snap_election_trigger +]** and Lewica's campaign is **[+
+snap_campaign_strategy +]**.?]
 
 *“[+ ending_coda +]”*
 

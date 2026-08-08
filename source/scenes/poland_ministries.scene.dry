@@ -51,7 +51,7 @@ const partyDisplay = function(code) {
     if (code == "pis") return "PiS";
     if (code == "ko") return "KO";
     if (code == "psl") return "PSL";
-    if (code == "p2050") return "Polska 2050";
+    if (code == "p2050") return "Poland 2050";
     if (code == "lewica") return "Lewica";
     return "Cabinet";
 };
@@ -102,6 +102,21 @@ const formationCommitmentsActive =
     ["cabinet_program", "governing_agreement", "pis_coalition"].includes(
         String(Q.ministry_return_mode || "")
     ) || Boolean(Q.formation_cabinet_commitments_recorded);
+const thirdAttemptDemocraticCabinet =
+    Number(Q.confidence_stage) == 4 &&
+    Boolean(Q.third_left_cabinet) &&
+    currentGovernmentCode != "pis";
+const selectedFormationMembers = {
+    democratic_2023: ["ko", "p2050", "psl"],
+    ko_psl_left: ["ko", "psl"],
+    ko_p2050_left: ["ko", "p2050"],
+    third_left_pis: ["p2050", "psl"],
+    ko_left: ["ko"],
+    pis_konf_third: ["p2050", "psl"],
+    pis_konf_psl: ["psl"],
+    ko_third: ["ko", "p2050", "psl"],
+    ko_konf: ["ko"]
+}[String(Q.formation_coalition_code || "").replace(/_tolerated$/, "")];
 const resolveCommitment = function(code) {
     if (preserveExisting) {
         if (flagRecorded("ministry_" + code + "_in_cabinet")) {
@@ -112,6 +127,15 @@ const resolveCommitment = function(code) {
     const formationKey = "formation_" + code + "_cabinet_committed";
     const snapKey = "snap_" + code + "_cabinet_committed";
     if (formationCommitmentsActive) {
+        if (Q.formation_coalition_selected && selectedFormationMembers) {
+            return selectedFormationMembers.includes(code);
+        }
+        if (
+            thirdAttemptDemocraticCabinet &&
+            ["ko", "p2050", "psl"].includes(code)
+        ) {
+            return true;
+        }
         if (flagRecorded(formationKey)) {
             return flagValue(formationKey);
         }
@@ -186,7 +210,12 @@ const statutoryMajority = Math.max(
     Math.round(finiteMinistry(Q.sejm_statutory_majority, 231))
 );
 const leftHasMajority = leftCabinetSeats >= statutoryMajority;
+const democraticFormation =
+    ["cabinet_program", "governing_agreement"].includes(
+        String(Q.ministry_return_mode || "")
+    );
 const pisInCabinet =
+    !democraticFormation &&
     !Boolean(Q.caretaker_government) &&
     currentGovernmentCode == "pis" &&
     finiteMinistry(Q.pis_seats, 0) > 0;
@@ -330,11 +359,24 @@ const cabinetSeats = Math.max(
         (pslInCabinet ? Math.max(0, finiteMinistry(Q.psl_seats, 0)) : 0)
 );
 const negotiationBonus = maximalMandate ? 8 : wholeLeftMandate ? 6 : 3;
+const democraticCandidate = String(Q.democratic_candidate || "").trim();
+const leftLeader = String(Q.left_leader || "").trim();
+const leftPrimeMinister = [
+    "Agnieszka Dziemianowicz-Bąk", "Magdalena Biejat",
+    "Krzysztof Gawkowski", "Włodzimierz Czarzasty", "Robert Biedroń",
+    "Adrian Zandberg", "Anna Maria Żukowska", "Tomasz Trela",
+    "Dariusz Wieczorek", "Katarzyna Kotula"
+].includes(democraticCandidate) ||
+    democraticCandidate != "" &&
+    democraticCandidate != "Undecided" &&
+    leftLeader != "" &&
+    democraticCandidate == leftLeader;
 const leftLedCabinet =
     cabinetLeaderCode == "lewica" ||
     currentGovernmentCode == "lewica" ||
     normalizePartyCode(Q.prime_minister_party) == "lewica" ||
     normalizePartyCode(Q.democratic_candidate_party) == "lewica" ||
+    leftPrimeMinister ||
     Boolean(Q.snap_dem_candidate_left);
 // Leading the cabinet is worth something only when Lewica is the largest
 // party in it. A compromise premiership handed over by bigger partners buys

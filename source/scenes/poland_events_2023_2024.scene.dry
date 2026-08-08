@@ -88,6 +88,7 @@ Q.sejm_list_internal_score = 0;
 Q.news_headline =
     "The Left opens talks over the legal form of its October list";
 !}
+go-to: poland_sld_populist.list_filing if sld_populist_route_active = 1
 
 = August 2023 — Five percent or eight?
 
@@ -100,6 +101,12 @@ The talks can include KO and the democratic parties, Third Way or one of its
 hosts, PiS, independent Razem and compatible minor-left breakaways. A revived
 SLD will not return through Razem, and PPS insists on its own committee if it
 has already left.
+
+[? if left_merger_structure = "federation": Our federal constitution already
+contains a candidate rule, finance formula and local organising settlement.
+Using a coalition committee can turn those rules into an acceptance advantage;
+seeking a host-party list means breaking the autonomy they were written to
+protect.?]
 
 - @list_target_left_host
 - @list_target_left_coalition
@@ -347,6 +354,42 @@ const fit = function(otherRight) {
 };
 const outcome = String(Q.sejm_list_candidate_outcome || "left_5");
 const coalitionForm = Number(Q.sejm_list_candidate_threshold) == 8;
+const liveFederation = String(Q.left_merger_structure) == "federation";
+let federalListBonus = 0;
+if (liveFederation && coalitionForm) {
+    federalListBonus += Q.federation_candidate_rule == "Joint federal primary"
+        ? 8
+        : (Q.federation_candidate_rule == "Rotating member-party candidacy"
+            ? 5
+            : (Q.federation_candidate_rule == "Inter-party delegate bargain"
+                ? -3
+                : -7));
+    federalListBonus += Q.federation_finance_model == "Audited common treasury"
+        ? 6
+        : (Q.federation_finance_model == "Matched member-party budgets"
+            ? 3
+            : (Q.federation_finance_model == "SLD-hosted federal assets"
+                ? -3
+                : -5));
+    federalListBonus +=
+        Q.federation_membership_model == "Reciprocal organising passport"
+            ? 5
+            : (Q.federation_membership_model == "Territorial party specialisation"
+                ? 3
+                : (Q.federation_membership_model == "Parallel member-party branches"
+                    ? -5
+                    : -4));
+    federalListBonus += Q.federation_successful ? 4 : 0;
+    federalListBonus -= (Number(Q.federation_veto_pressure) || 0) * 0.6;
+    federalListBonus -= (Number(Q.federation_brand_dilution) || 0) * 0.4;
+} else if (liveFederation) {
+    // A host-party committee places nominations and subsidy under one legal
+    // owner, contradicting the federal compact rather than benefiting from it.
+    federalListBonus = -6 -
+        (Number(Q.federation_veto_pressure) || 0) * 0.8 -
+        (Number(Q.federation_brand_dilution) || 0) * 0.5;
+}
+Q.sejm_list_federal_bonus = Math.round(federalListBonus);
 const termPartner = Q.sejm_list_terms_code == 1 ? 14 :
     (Q.sejm_list_terms_code == 2 ? 10 :
         (Q.sejm_list_terms_code == 3 ? 8 :
@@ -355,16 +398,17 @@ const termInternal = Q.sejm_list_terms_code == 1 ? -2 :
     (Q.sejm_list_terms_code == 2 ? 3 :
         (Q.sejm_list_terms_code == 3 ? 6 :
             (Q.sejm_list_terms_code == 4 ? 5 : 0)));
-const structurePartner = coalitionForm ? 10 : -8;
+const structurePartner = (coalitionForm ? 10 : -8) + federalListBonus;
 let partnerScores = [];
 let partnerNames = [];
 let internalScore =
     76 - (Number(Q.internal_dissent) || 0) * 0.42 -
-    (Number(Q.faction_vetoes) || 0) * 5 + termInternal;
+    (Number(Q.faction_vetoes) || 0) * 5 + termInternal +
+    (liveFederation ? federalListBonus * 0.5 : 0);
 let host = String(Q.sejm_list_candidate_host || "left");
 const optionalMinorLeft = [
     {id: "spring", name: "Wiosna", list: "spring_breakaway"},
-    {id: "labor", name: Q.labor_party_name || "Labour Left", list: "labor_left"},
+    {id: "labor", name: Q.labor_party_name || "Independent Labour Left", list: "labor_left"},
     {id: "progressives", name: Q.progressives_party_name || "Young Left", list: "young_left"}
 ].filter(function(party) {
     return !!Q[party.id + "_party_formed"];
@@ -462,10 +506,14 @@ if (outcome == "left_5") {
     partnerNames = ["PiS political committee"];
     internalScore +=
         Math.max(0, (Number(Q.left_right_score) || 35) - 44) * 0.8 - 24;
-    for (const caucus of ["spring", "labor", "progressives", "razem", "pps"]) {
+    for (const caucus of ["spring", "progressives", "razem", "pps"]) {
         if (Q[caucus + "_active"] && Q[caucus + "_in_left"]) {
             internalScore -= (Number(Q[caucus + "_strength"]) || 0) * 0.18;
         }
+    }
+    if (Q.labor_active && Q.labor_in_left && !Q.labor_party_formed) {
+        internalScore -=
+            (Number(Q.labor_movement_leverage) || 0) * 0.18;
     }
 }
 if (
@@ -531,6 +579,11 @@ Q.sejm_list_acceptances = partnerNames.map(function(name, index) {
     (Q.social_patriot_party_formed
         ? "; Lewica Patriotyczna chooses " +
             Q.social_patriot_electoral_strategy
+        : "") +
+    (liveFederation
+        ? "; federal structural modifier " +
+            (Q.sejm_list_federal_bonus >= 0 ? "+" : "") +
+            Q.sejm_list_federal_bonus
         : "");
 
 if (accepted) {
@@ -1325,10 +1378,10 @@ wait for us to finish negotiating ministries.
 
 @ind23_civic
 title: Establish a permanent democratic-independence committee
-subtitle: Cost: 1 resource. Give mayors, unions and democratic veterans a tradition of their own; accept another annual organisational obligation.
-choose-if: resources >= 1
+subtitle: [? if civic_independence_investment >= 3: The committee and its partners now cover the annual operation. No resource cost.?][? if civic_independence_investment < 3: Cost: 1 resource.?] Give mayors, unions and democratic veterans a tradition of their own.
+choose-if: civic_independence_investment >= 3 or resources >= 1
 unavailable-subtitle: Formation has consumed the organisers.
-on-arrival: resources -= 1; independence_march_strategy = "Civic tradition"; civic_independence_years += 1; civic_patriotism += 5; local_network += 2; public_trust += 2; far_right_street_capacity -= 1; news_headline = "A civic independence tradition survives the transfer of power"
+on-arrival: resources -= 1 if civic_independence_investment < 3; civic_independence_investment += 1 if civic_independence_investment < 3; independence_march_strategy = "Civic tradition"; civic_independence_years += 1; civic_patriotism += 5; local_network += 2; public_trust += 2; far_right_street_capacity -= 1; news_headline = "A civic independence tradition survives the transfer of power"
 
 Mayors, trade unionists and democratic veterans agree to meet every year under
 their own programme rather than as a hurried counter-demonstration. Local
@@ -2577,7 +2630,7 @@ new-page: true
 on-arrival: {!
 const abortionRightWingPresident = [
     "Andrzej Duda",
-    "Karol Nawrocki",
+    String(Q.pres_2025_right_candidate || ""),
     "Sławomir Mentzen",
     "Grzegorz Braun"
 ].includes(Q.president_name);
@@ -3041,6 +3094,8 @@ if (mergerSupport >= 60 && mergerDissent <= 45) {
         0,
         Math.round(Number(Q.pis_seats) || 0) - independentSeats
     );
+    Q.other_seats = Math.max(0, Number(Q.other_seats) || 0) +
+        independentSeats;
     if (
         Q.government_party == "pis" && Q.government_has_confidence &&
         !Q.caretaker_government
@@ -3688,13 +3743,35 @@ const razemCurrentSeats = Math.max(
     0,
     Math.round(Number(Q.razem_seats) || 0)
 );
-const cooperativeSeats = Math.min(5, razemCurrentSeats);
-const oppositionSeats = Math.max(0, razemCurrentSeats - cooperativeSeats);
+const cooperativeSejmSeats = Math.min(4, razemCurrentSeats);
+const oppositionSeats = Math.max(
+    0,
+    razemCurrentSeats - cooperativeSejmSeats
+);
+const currentRazemStrength = Math.max(0, Number(Q.razem_strength) || 0);
+const cooperativeStrength = currentRazemStrength * (
+    razemCurrentSeats > 0
+        ? cooperativeSejmSeats / razemCurrentSeats
+        : 0.4
+);
 const razemExitStrength = Math.max(
-    1,
-    Number(Q.razem_strength) || 0
+    0,
+    currentRazemStrength - cooperativeStrength
+);
+const currentProgressiveStrength = Math.max(
+    0,
+    Number(Q.progressives_strength) || 0
+);
+const combinedProgressiveStrength =
+    currentProgressiveStrength + cooperativeStrength;
+const cooperativeDissent = Math.max(
+    0,
+    (Number(Q.razem_dissent) || 0) - 8
 );
 Q.razem_split = 1;
+Q.razem_split_outcome = "historical";
+Q.razem_cooperation_protocol = 0;
+Q.razem_breakaway_protected = 0;
 Q.razem_in_left_club = 0;
 Q.razem_opposition_circle = 1;
 Q.razem_active = 0;
@@ -3703,20 +3780,55 @@ Q.razem_party_formed = 1;
 Q.razem_party_relation = 42;
 Q.razem_exit_strength = razemExitStrength;
 Q.razem_strength = 0;
-Q.razem_dissent = 100;
-Q.progressives_strength += razemExitStrength * 0.60;
-Q.labor_strength += razemExitStrength * 0.15;
+Q.razem_dissent = 0;
+Q.razem_escalation_stage = 7;
+Q.razem_circle_formed = 1;
+Q.razem_mp_departed = oppositionSeats;
+Q.razem_mp_retained = cooperativeSejmSeats;
+Q.progressives_strength = combinedProgressiveStrength;
+Q.progressives_dissent = combinedProgressiveStrength > 0
+    ? (
+        currentProgressiveStrength *
+            Math.max(0, Number(Q.progressives_dissent) || 0) +
+        cooperativeStrength * cooperativeDissent
+    ) / combinedProgressiveStrength
+    : 0;
+Q.progressives_name = "Wspólne Jutro";
+Q.progressives_leader = "Magdalena Biejat";
+Q.progressives_broker = "Biejat and the cooperative former Razem MPs";
+Q.progressives_active = 1;
+Q.progressives_in_left = 1;
+Q.wspolne_jutro_formed = 1;
+Q.wspolne_jutro_outcome =
+    "Biejat-led cooperative current inside the Left";
+Q.razem_leader = "Adrian Zandberg";
+Q.razem_co_leader = "Vacant";
+Q.razem_leadership_result =
+    "Zandberg chairs independent Razem after Biejat's departure";
+Q.biejat_party = "Wspólne Jutro";
+Q.gosek_popiolek_party = "Wspólne Jutro";
+Q.olko_party = "Wspólne Jutro";
+Q.wicha_party = "Wspólne Jutro";
+Q.stozek_party = "Wspólne Jutro";
+Q.razem_biejat_relation = 42;
 Q.party_unity -= 8;
-Q.razem_cooperation -= 10;
+Q.razem_cooperation = Math.max(
+    0,
+    (Number(Q.razem_cooperation) || 0) - 10
+);
+Q.barons_dissent += 2;
+Q.spring_dissent -= 1;
+Q.labor_dissent -= 2;
+Q.pps_dissent += 2;
 Q.left_seats = Math.max(0, Number(Q.left_seats) - oppositionSeats);
 Q.razem_party_seats =
     Math.max(0, Number(Q.razem_party_seats) || 0) + oppositionSeats;
 Q.left_cooperative_independent_seats =
     Math.max(0, Number(Q.left_cooperative_independent_seats) || 0) +
-    cooperativeSeats;
+    cooperativeSejmSeats;
 Q.left_progressives_seats =
     Math.max(0, Number(Q.left_progressives_seats) || 0) +
-    cooperativeSeats;
+    cooperativeSejmSeats;
 Q.left_new_generation_seats =
     Math.max(0, Number(Q.left_labor_seats) || 0) +
     Math.max(0, Number(Q.left_progressives_seats) || 0);
@@ -3742,6 +3854,12 @@ its left flank is smaller and now has an organised critic outside it.?]
 same voters are now courted by rival organisations with rival accounts of why
 Lewica failed to deliver.?]
 
+The SLD barons value the four retained Sejm votes; Wiosna veterans recognise a
+bridge rather than a new rival party. Lewica Pracy MPs and union organisers
+welcome Biejat's housing-and-care voice, the progressive current gives
+**Wspólne Jutro** its name and leadership, and PPS warns that cooperation
+without an autonomous party can still become dependence.
+
 - @poland_event_queue: Put the separation agreement on the events desk
 
 @razem_protocol
@@ -3749,7 +3867,50 @@ title: Offer funded milestones and a binding outside-support protocol
 subtitle: Spend 2 resources on deadlines Razem can enforce without surrendering its autonomy.
 choose-if: resources >= 2 and razem_cooperation >= 48 and party_unity >= 42
 unavailable-subtitle: Too little trust remains for another paper settlement.
-on-arrival: resources -= 2; razem_split = 0; razem_active = 1; razem_in_left = 1; razem_in_left_club = 1; razem_party_formed = 0; razem_opposition_circle = 0; razem_dissent -= 12; razem_cooperation += 8; budget_promises += 3; ko_relation -= 4; psl_relation -= 3; government_coalition_dissent += 4; party_unity += 4; news_headline = "A binding support protocol postpones the Left's expected rupture"
+on-arrival: {!
+Q.resources -= 2;
+Q.razem_split = 0;
+Q.razem_split_outcome = "protocol";
+Q.razem_cooperation_protocol = 1;
+Q.razem_breakaway_protected = 1;
+Q.razem_active = 1;
+Q.razem_in_left = 1;
+Q.razem_in_left_club = 1;
+Q.razem_party_formed = 0;
+Q.razem_opposition_circle = 0;
+Q.razem_dissent = Math.max(0, (Number(Q.razem_dissent) || 0) - 12);
+Q.razem_cooperation = Math.min(
+    100,
+    (Number(Q.razem_cooperation) || 0) + 8
+);
+Q.razem_biejat_relation = Math.min(
+    100,
+    (Number(Q.razem_biejat_relation) || 52) + 12
+);
+Q.razem_leader = "Adrian Zandberg";
+Q.razem_co_leader = "Magdalena Biejat";
+Q.razem_leadership_result =
+    "Zandberg and Biejat co-chair Razem under a binding cooperation protocol";
+Q.biejat_party = "Razem";
+Q.gosek_popiolek_party = "Razem";
+Q.olko_party = "Razem";
+Q.wicha_party = "Razem";
+Q.stozek_party = "Razem";
+Q.wspolne_jutro_formed = 0;
+Q.wspolne_jutro_outcome = "Rupture prevented by the binding Razem protocol";
+Q.budget_promises += 3;
+Q.ko_relation -= 4;
+Q.psl_relation -= 3;
+Q.government_coalition_dissent += 4;
+Q.party_unity += 4;
+Q.barons_dissent += 4;
+Q.spring_dissent -= 1;
+Q.labor_dissent -= 2;
+Q.progressives_dissent -= 2;
+Q.pps_dissent -= 1;
+Q.news_headline =
+    "A binding support protocol prevents the Left's expected rupture";
+!}
 
 The signatures sit beneath funded housing and health milestones, an abortion
 vote date and a clause allowing Razem to oppose the government outside that
@@ -3757,6 +3918,11 @@ programme. Zandberg postpones the departure because the paper now contains
 dates and money, not another appeal to unity. KO and PSL see a second coalition
 agreement written for a party which still reserves the right to vote against
 them.
+
+The SLD barons resent the enforceable veto, while Wiosna veterans accept the
+price of unity. Labour and the progressives claim the funded milestones and
+rights deadline; PPS treats the appeal clause as a useful guarantee that a
+smaller socialist partner can remain itself.
 
 - @poland_event_queue: Put the signed support protocol on the events desk
 
@@ -3768,16 +3934,36 @@ const razemCurrentSeats = Math.max(
     0,
     Math.round(Number(Q.razem_seats) || 0)
 );
-const oppositionSeats = Math.min(
-    razemCurrentSeats,
-    Math.max(1, razemCurrentSeats - 5)
+const cooperativeSejmSeats = Math.min(4, razemCurrentSeats);
+const oppositionSeats = Math.max(
+    0,
+    razemCurrentSeats - cooperativeSejmSeats
 );
-const cooperativeSeats = Math.max(0, razemCurrentSeats - oppositionSeats);
+const currentRazemStrength = Math.max(0, Number(Q.razem_strength) || 0);
+const cooperativeStrength = currentRazemStrength * (
+    razemCurrentSeats > 0
+        ? cooperativeSejmSeats / razemCurrentSeats
+        : 0.4
+);
 const razemExitStrength = Math.max(
-    1,
-    Number(Q.razem_strength) || 0
+    0,
+    currentRazemStrength - cooperativeStrength
 );
+const currentProgressiveStrength = Math.max(
+    0,
+    Number(Q.progressives_strength) || 0
+);
+const combinedProgressiveStrength =
+    currentProgressiveStrength + cooperativeStrength;
+const cooperativeDissent = Math.min(
+    100,
+    (Number(Q.razem_dissent) || 0) + 12
+);
+const leftOrganisation = String(Q.left_party_name || "Nowa Lewica");
 Q.razem_split = 1;
+Q.razem_split_outcome = "absorbed";
+Q.razem_cooperation_protocol = 0;
+Q.razem_breakaway_protected = 0;
 Q.razem_active = 0;
 Q.razem_in_left = 0;
 Q.razem_in_left_club = 0;
@@ -3786,21 +3972,50 @@ Q.razem_party_relation = 18;
 Q.razem_opposition_circle = 1;
 Q.razem_exit_strength = razemExitStrength;
 Q.razem_strength = 0;
-Q.razem_dissent = 100;
-Q.progressives_strength += razemExitStrength * 0.75;
-Q.labor_strength += razemExitStrength * 0.10;
+Q.razem_dissent = 0;
+Q.razem_escalation_stage = 7;
+Q.razem_circle_formed = 1;
+Q.razem_mp_departed = oppositionSeats;
+Q.razem_mp_retained = cooperativeSejmSeats;
+Q.progressives_strength = combinedProgressiveStrength;
+Q.progressives_dissent = combinedProgressiveStrength > 0
+    ? (
+        currentProgressiveStrength *
+            Math.max(0, Number(Q.progressives_dissent) || 0) +
+        cooperativeStrength * cooperativeDissent
+    ) / combinedProgressiveStrength
+    : 0;
+Q.razem_leader = "Adrian Zandberg";
+Q.razem_co_leader = "Vacant";
+Q.razem_leadership_result =
+    "Zandberg chairs independent Razem after the cooperative group is absorbed";
+Q.biejat_party = leftOrganisation;
+Q.gosek_popiolek_party = leftOrganisation;
+Q.olko_party = leftOrganisation;
+Q.wicha_party = leftOrganisation;
+Q.stozek_party = leftOrganisation;
+Q.wspolne_jutro_formed = 0;
+Q.wspolne_jutro_outcome =
+    "The cooperative group was absorbed before Wspólne Jutro could form";
+Q.razem_biejat_relation = 12;
 Q.party_unity -= 5;
-Q.razem_cooperation -= 16;
+Q.razem_cooperation = Math.max(
+    0,
+    (Number(Q.razem_cooperation) || 0) - 16
+);
 Q.media_capacity += 2;
+Q.barons_dissent -= 2;
+Q.spring_dissent += 3;
+Q.labor_dissent += 1;
+Q.pps_dissent += 5;
 Q.left_seats = Math.max(0, Number(Q.left_seats) - oppositionSeats);
 Q.razem_party_seats =
     Math.max(0, Number(Q.razem_party_seats) || 0) + oppositionSeats;
-Q.left_cooperative_independent_seats =
-    Math.max(0, Number(Q.left_cooperative_independent_seats) || 0) +
-    cooperativeSeats;
+Q.nowa_lewica_seats =
+    Math.max(0, Number(Q.nowa_lewica_seats) || 0) + cooperativeSejmSeats;
 Q.left_progressives_seats =
     Math.max(0, Number(Q.left_progressives_seats) || 0) +
-    cooperativeSeats;
+    cooperativeSejmSeats;
 Q.left_new_generation_seats =
     Math.max(0, Number(Q.left_labor_seats) || 0) +
     Math.max(0, Number(Q.left_progressives_seats) || 0);
@@ -3823,6 +4038,12 @@ ended as a raid on his membership.
 Our former Razem advisers depart with him. The split is administratively neat
 and politically hostile; every future appeal for a common list will begin with
 the memory of this absorption.
+
+The SLD barons approve the cleaner chain of command. Wiosna veterans dislike
+turning a strategic dispute into a membership raid; labour keeps the four MPs'
+social work, while progressive organisers resent inheriting them without an
+autonomous settlement. PPS reads the absorption as a warning about its own
+future inside a larger party.
 
 - @poland_event_queue: Put the membership cards on the events desk
 
@@ -4007,10 +4228,10 @@ protect those in its path.?]
 
 @ind24_civic
 title: Lead a civic-independence commemoration outside government protocol
-subtitle: Spend 1 resource to give unions, veterans and mayors a patriotic institution of their own.
-choose-if: resources >= 1
+subtitle: [? if civic_independence_investment >= 3: The institution now pays its own annual costs. No resource cost.?][? if civic_independence_investment < 3: Spend 1 resource.?] Give unions, veterans and mayors a patriotic institution of their own.
+choose-if: civic_independence_investment >= 3 or resources >= 1
 unavailable-subtitle: The party organisation cannot stage a separate event.
-on-arrival: resources -= 1; independence_march_strategy = "Civic tradition"; civic_independence_years += 1; civic_patriotism += 6; local_network += 2; public_trust += 2; far_right_street_capacity -= 1; news_headline = "The Left contests patriotism without commanding the police response"
+on-arrival: resources -= 1 if civic_independence_investment < 3; civic_independence_investment += 1 if civic_independence_investment < 3; independence_march_strategy = "Civic tradition"; civic_independence_years += 1; civic_patriotism += 6; local_network += 2; public_trust += 2; far_right_street_capacity -= 1; news_headline = "The Left contests patriotism without commanding the police response"
 
 Union banners, veterans of the democratic opposition and local choirs gather
 under a committee independent of the day's police operation. [? if
@@ -4108,36 +4329,96 @@ onto the street.
 @ko_primary_2024
 # prose-audit: Grade A — Both KO contenders arrive with roles and constituencies, the incumbent counterfactual remains coherent, and each Lewica intervention retains a political relationship.
 title: KO chooses its presidential candidate
-subtitle: Trzaskowski defeats Sikorski in an internal ballot
+subtitle: A three-way internal ballot decides who carries the democratic camp
 new-page: true
 tags: poland_event
 priority: 20
 order: 21
 max-visits: 1
 view-if: continuous_campaign = 1 and year = 2024 and month = 11
-on-arrival: news_headline = "KO's primary turns its presidential choice into a future leadership map"
+on-arrival: {!
+// An incumbent President is renominated; otherwise the ballot is genuinely
+// open, and which current wins it depends on where KO's own weight now sits.
+if (Q.president_name == "Rafał Trzaskowski") {
+    Q.ko_primary_2024_winner = "Rafał Trzaskowski";
+} else {
+    const classicalWing = Number(Q.ko_classical_liberal_share) || 50;
+    const socialWing = Number(Q.ko_social_liberal_share) || 50;
+    const primaryWeights = {
+        "Rafał Trzaskowski": 58,
+        "Radosław Sikorski":
+            24 + Math.max(0, classicalWing - 50) * 0.9 +
+            (Q.ko_leader == "Radosław Sikorski" ? 40 : 0),
+        "Barbara Nowacka":
+            13 + Math.max(0, socialWing - 50) * 0.9 +
+            (Q.ko_leader == "Barbara Nowacka" ? 40 : 0)
+    };
+    if (Q.ko_leader == "Radosław Sikorski" ||
+        Q.ko_leader == "Barbara Nowacka") {
+        primaryWeights["Rafał Trzaskowski"] = 22;
+    }
+    const primaryNames = Object.keys(primaryWeights);
+    const primaryTotal = primaryNames.reduce(function(sum, name) {
+        return sum + primaryWeights[name];
+    }, 0);
+    let primaryDraw =
+        (this.random.uint32() / 4294967296) * primaryTotal;
+    Q.ko_primary_2024_winner = primaryNames[0];
+    for (const name of primaryNames) {
+        primaryDraw -= primaryWeights[name];
+        if (primaryDraw <= 0) {
+            Q.ko_primary_2024_winner = name;
+            break;
+        }
+    }
+}
+Q.ko_primary_2024_surname =
+    Q.ko_primary_2024_winner == "Radosław Sikorski" ? "Sikorski" :
+    (Q.ko_primary_2024_winner == "Barbara Nowacka" ? "Nowacka" : "Trzaskowski");
+Q.news_headline = Q.ko_primary_2024_winner +
+    " wins KO's presidential nomination";
+!}
 
-= November 2024 — Trzaskowski or Sikorski
+= November 2024 — Trzaskowski, Sikorski or Nowacka
 
 KO members choose between <span class="party-ko"><b>Rafał Trzaskowski</b></span>, [? if president_name =
 "Rafał Trzaskowski": the incumbent President?][? if president_name != "Rafał
-Trzaskowski": Warsaw's mayor?] and the party's 2020 presidential nominee, and
+Trzaskowski": Warsaw's mayor?] and the party's 2020 presidential nominee;
 <span class="party-ko"><b>Radosław Sikorski</b></span>, its foreign-policy
-heavyweight and voice of a more Atlanticist, security-minded current. Party
+heavyweight and voice of a more Atlanticist, security-minded current; and
+<span class="party-ko"><b>Barbara Nowacka</b></span>, the education minister
+whose Inicjatywa Polska current speaks for the party's secular, social-liberal
+wing. Party
 leader <span class="party-ko"><b>Donald Tusk</b></span> has turned the nomination into a ballot rather than a
 private designation. Lewica cannot choose KO's candidate, but it can decide
 whether that candidate leaves the contest owing us anything.
 
 [? if president_name = "Rafał Trzaskowski": In this timeline Trzaskowski
-already holds the Palace. Sikorski's challenge tests an incumbent shaped by
-five years of cohabitation, but the decision facing us comes after the party
-rallies behind the President: attach a social record to his re-election or
-preserve a separate Left campaign.?]
-[? if president_name != "Rafał Trzaskowski": Members give Trzaskowski the
-nomination. Sikorski's substantial minority does not disappear; it becomes a
-network of parliamentarians and foreign-policy figures waiting for the next
-KO succession fight. We can recognise the winner, or make the ballot a public
-argument over the kind of liberalism he represents.?]
+already holds the Palace. The challenge tests an incumbent shaped by five years
+of cohabitation, but the decision facing us comes after the party rallies
+behind the President: attach a social record to his re-election or preserve a
+separate Left campaign.?]
+[? if president_name != "Rafał Trzaskowski": Members give **[+
+ko_primary_2024_winner +]** the nomination.?]
+
+[? if president_name != "Rafał Trzaskowski" and ko_primary_2024_winner = "Rafał Trzaskowski": Sikorski's
+substantial minority does not disappear; it becomes a network of
+parliamentarians and foreign-policy figures waiting for the next KO succession
+fight. We can recognise the winner, or make the ballot a public argument over
+the kind of liberalism he represents.?]
+[? if ko_primary_2024_winner = "Radosław Sikorski": The result puts security,
+NATO and the eastern border at the centre of the democratic camp's campaign,
+and puts the Left's entire social agenda a long way from it. Sikorski owes
+nothing to the parties on his left and has never pretended otherwise. We can
+recognise the winner, or make the ballot a public argument over the kind of
+liberalism he represents.?]
+[? if ko_primary_2024_winner = "Barbara Nowacka": The result is the one KO's
+apparatus least wanted and our own organisers quietly hoped for: a nominee who
+has spent a decade on secular schooling, reproductive rights and the parts of
+the coalition programme that never reached a vote. That overlap is an
+opportunity and a problem — she competes for exactly our voters. We can
+recognise the winner, or make the ballot a public argument over the kind of
+liberalism she represents.?]
 
 - @ko_primary_respect
 - @ko_primary_intervene
@@ -4148,13 +4429,14 @@ argument over the kind of liberalism he represents.?]
 title: Respect the result and negotiate a social-policy compact
 subtitle: Recognise KO's nominee in exchange for commitments on work, housing and rights.
 view-if: president_name != "Rafał Trzaskowski"
-on-arrival: ko_relation += 5; pres_2025_ko_candidate = "Rafał Trzaskowski"; pres_2025_incumbent = 0; ko_social_liberal_share += 2; ko_classical_liberal_share -= 2; news_headline = "The Left prices cooperation with KO's chosen candidate"
+on-arrival: ko_relation += 5; pres_2025_ko_candidate = ko_primary_2024_winner; pres_2025_incumbent = 0; ko_social_liberal_share += 2; ko_classical_liberal_share -= 2; news_headline = "The Left prices cooperation with KO's chosen candidate"
 
-Trzaskowski receives Lewica's congratulations together with a written list on
-collective bargaining, housing and reproductive rights. His social-liberal
-supporters use the negotiation to pull the campaign away from a simple rerun
-of anti-PiS unity. Sikorski's current accepts the primary result, while warning
-that KO has allowed a smaller party to price its endorsement.
+**[+ ko_primary_2024_surname +]** receives Lewica's congratulations together
+with a written list on collective bargaining, housing and reproductive rights.
+KO's social-liberal supporters use the negotiation to pull the campaign away
+from a simple rerun of anti-PiS unity. The defeated currents accept the primary
+result, while warning that KO has allowed a smaller party to price its
+endorsement.
 
 We have not endorsed the candidate. We have made future cooperation easier
 and left a document against which both parties can be judged.
@@ -4165,16 +4447,17 @@ and left a document against which both parties can be judged.
 title: Publicly back the more progressive KO current
 subtitle: Enter another party's contest to shift its argument, knowing its members may resent the intrusion.
 view-if: president_name != "Rafał Trzaskowski"
-on-arrival: pres_2025_ko_candidate = "Rafał Trzaskowski"; pres_2025_incumbent = 0; ko_relation -= 5; progressive_credibility += 2; ko_coalition_dissent += 4; ko_social_liberal_share += 4; ko_classical_liberal_share -= 4; news_headline = "Lewica turns KO's internal ballot into a coalition argument"
+on-arrival: pres_2025_ko_candidate = ko_primary_2024_winner; pres_2025_incumbent = 0; ko_relation -= 5; progressive_credibility += 2; ko_coalition_dissent += 4; ko_social_liberal_share += 4; ko_classical_liberal_share -= 4; news_headline = "Lewica turns KO's internal ballot into a coalition argument"
 
 Lewica organisers publicly urge KO members to choose the current more open to
-social spending and civil rights. Trzaskowski still wins, but now part of his
-mandate is read through our intervention. Progressives inside KO feel less
-isolated; Sikorski's supporters and Tusk's apparatus accuse us of treating
-their members as an electorate we are entitled to manage.
+social spending and civil rights. The members vote as they were going to vote,
+and **[+ ko_primary_2024_surname +]** wins anyway — but part of that mandate is
+now read through our intervention. Progressives inside KO feel less isolated;
+Tusk's apparatus accuses us of treating their members as an electorate we are
+entitled to manage.
 
-The new nominee begins his campaign with a stronger left-facing wing and a
-colder relationship with the party that helped make it visible.
+The nominee begins the campaign with a stronger left-facing wing and a colder
+relationship with the party that helped make it visible.
 
 - @poland_event_queue: Put KO's irritated result on the events desk
 
@@ -4224,7 +4507,28 @@ priority: 20
 order: 20
 max-visits: 1
 view-if: continuous_campaign = 1 and year = 2024 and month = 12
-on-arrival: news_headline = "The Left opens its 2025 presidential nomination"
+on-arrival: {!
+const razemFederated =
+    String(Q.left_merger_structure || "") == "federation" &&
+    Q.merger_razem_present &&
+    String(Q.razem_org_status || "") != "departed";
+const razemOutside =
+    Q.razem_split || Q.razem_party_formed || !Q.razem_in_left;
+const razemCampaignStrength = razemOutside
+    ? Math.max(
+        Number(Q.razem_exit_strength) || 0,
+        Number(Q.razem_vote_intent) || 0
+    )
+    : Number(Q.razem_strength) || 0;
+const razemCohesive =
+    Q.razem_cooperation_protocol || Q.razem_breakaway_protected ||
+    (Number(Q.razem_cooperation) || 0) >= 55;
+const razemRupture = (Number(Q.razem_dissent) || 0) >= 45;
+Q.pres_2025_razem_separate_eligible =
+    !razemFederated && !razemCohesive && razemRupture &&
+    razemCampaignStrength >= 8 ? 1 : 0;
+Q.news_headline = "The Left opens its 2025 presidential nomination";
+!}
 
 = December 2024 — Who carries the Left into the presidential election?
 
@@ -4249,10 +4553,18 @@ worth entering government for.?] [? if left_in_government = 0: No nominee can
 campaign on current ministerial delivery. The contest is instead over which
 kind of opposition can return the Left to power.?]
 
-Choosing Biejat or Dziemianowicz-Bąk gives New Left its own voice and leaves
-Razem free to register Zandberg. A primary asks members to close the split for
-one campaign. Handing Zandberg a negotiated mandate produces one candidate,
-but asks New Left's own apparatus to surrender the nomination.
+[? if pres_2025_razem_separate_eligible: Choosing Biejat or
+Dziemianowicz-Bąk gives New Left its own voice and leaves a sufficiently
+separate, organised Razem free to register Zandberg. A primary asks members to
+close the split for one campaign. Handing Zandberg a negotiated mandate
+produces one candidate, but asks New Left's own apparatus to surrender the
+nomination.?]
+
+[? if not pres_2025_razem_separate_eligible: Razem has neither the
+organisational rupture nor the independent strength for a second committee.
+Federation, a binding cooperation protocol or simple weakness therefore turns
+a Biejat or Dziemianowicz-Bąk nomination into the common Left campaign. A
+primary or a negotiated Zandberg mandate can still decide who leads it.?]
 
 - @biejat_confirm
 - @dziemianowicz_bak_nomination
@@ -4260,27 +4572,65 @@ but asks New Left's own apparatus to surrender the nomination.
 - @biejat_zandberg
 
 @biejat_confirm
-title: Confirm Biejat and let Razem run separately
-subtitle: Give the cooperative Left and Zandberg's opposition separate ballots on their strategy.
-on-arrival: pres_2025_left_candidate = "Magdalena Biejat"; pres_2025_candidate = "Magdalena Biejat"; pres_2025_razem_candidate = "Adrian Zandberg"; pres_2025_united_left = 0; pres_2025_nomination_method = "Separate candidacies"; pres_2025_unity_effect = 0; pres_2025_campaign_strength += 1; progressives_dissent -= 2; razem_cooperation -= 3; news_headline = "Two Left candidacies prepare to measure government and opposition"
+title: [? if pres_2025_razem_separate_eligible: Confirm Biejat and let Razem run separately?][? if not pres_2025_razem_separate_eligible: Confirm Biejat as the common Left nominee?]
+subtitle: [? if pres_2025_razem_separate_eligible: Give the cooperative Left and Zandberg's opposition separate ballots on their strategy.?][? if not pres_2025_razem_separate_eligible: Razem remains inside the common campaign because no credible rupture supports a second committee.?]
+on-arrival: {!
+const separate = Boolean(Q.pres_2025_razem_separate_eligible);
+Q.pres_2025_left_candidate = "Magdalena Biejat";
+Q.pres_2025_candidate = "Magdalena Biejat";
+Q.pres_2025_razem_candidate = separate ? "Adrian Zandberg" : "None";
+Q.pres_2025_united_left = separate ? 0 : 1;
+Q.pres_2025_nomination_method = separate
+    ? "Separate candidacies" : "Common Left nomination";
+Q.pres_2025_unity_effect = separate ? 0 : 0.6;
+Q.pres_2025_campaign_strength += separate ? 1 : 3;
+Q.progressives_dissent -= 2;
+Q.razem_cooperation += separate ? -3 : 2;
+Q.party_unity += separate ? 0 : 2;
+Q.news_headline = separate
+    ? "Two Left candidacies prepare to measure government and opposition"
+    : "Biejat receives the common Left presidential nomination";
+!}
 
-Biejat accepts New Left's nomination and begins building a campaign around
-care, housing and the practical use of institutions. Zandberg answers with a
-Razem candidacy centred on wages, public investment and the price of
-compromise. Their programmes overlap more than either campaign's account of
-power.
+[? if pres_2025_razem_separate_eligible: Biejat accepts New Left's nomination
+and begins building a campaign around care, housing and the practical use of
+institutions. Zandberg answers with a Razem candidacy centred on wages, public
+investment and the price of compromise. Their programmes overlap more than
+either campaign's account of power.?]
 
-Journalists now have a simple nightly question—why should a voter choose one
-Left candidate over the other? The two organisations gain clean identities
-and lose the shelter of a common result. The first-round count will be read as
-a verdict on the split itself.
+[? if pres_2025_razem_separate_eligible: Journalists now have a simple nightly
+question—why should a voter choose one Left candidate over the other? The two
+organisations gain clean identities and lose the shelter of a common result.
+The first-round count will be read as a verdict on the split itself.?]
+
+[? if not pres_2025_razem_separate_eligible: Razem accepts Biejat's nomination
+inside the common campaign. Its organisers keep their programme and internal
+voice, but federation, cooperation and the balance of forces leave no honest
+case for pretending that a second national committee already exists.?]
 
 - @poland_event_queue: Put both nomination papers on the events desk
 
 @dziemianowicz_bak_nomination
 title: Nominate Agnieszka Dziemianowicz-Bąk
-subtitle: Run on work and public services; Razem will still field Zandberg from the opposition Left.
-on-arrival: pres_2025_left_candidate = "Agnieszka Dziemianowicz-Bąk"; pres_2025_candidate = "Agnieszka Dziemianowicz-Bąk"; pres_2025_razem_candidate = "Adrian Zandberg"; pres_2025_united_left = 0; pres_2025_nomination_method = "New Left national council"; pres_2025_unity_effect = 0; pres_2025_campaign_strength += 2; labor_credibility += 3; public_sector_support += 2; razem_cooperation -= 2; news_headline = "Dziemianowicz-Bąk carries New Left's presidential campaign"
+subtitle: [? if pres_2025_razem_separate_eligible: Run on work and public services while an organised Razem fields Zandberg.?][? if not pres_2025_razem_separate_eligible: Run a common Left campaign on work and public services.?]
+on-arrival: {!
+const separate = Boolean(Q.pres_2025_razem_separate_eligible);
+Q.pres_2025_left_candidate = "Agnieszka Dziemianowicz-Bąk";
+Q.pres_2025_candidate = "Agnieszka Dziemianowicz-Bąk";
+Q.pres_2025_razem_candidate = separate ? "Adrian Zandberg" : "None";
+Q.pres_2025_united_left = separate ? 0 : 1;
+Q.pres_2025_nomination_method = separate
+    ? "New Left national council" : "Common Left national council";
+Q.pres_2025_unity_effect = separate ? 0 : 0.6;
+Q.pres_2025_campaign_strength += separate ? 2 : 4;
+Q.labor_credibility += 3;
+Q.public_sector_support += 2;
+Q.razem_cooperation += separate ? -2 : 2;
+Q.party_unity += separate ? 0 : 2;
+Q.news_headline = separate
+    ? "Dziemianowicz-Bąk carries New Left's presidential campaign"
+    : "Dziemianowicz-Bąk carries the common Left presidential campaign";
+!}
 
 Dziemianowicz-Bąk accepts a nomination built around wages, labour inspection,
 schools and the public services that make freedom usable. [? if
@@ -4289,9 +4639,15 @@ every coalition retreat is now part of her record.?][? if not
 left_in_government: She turns her ministerial record into an argument for a
 Left capable of returning to office without abandoning its programme.?]
 
-Razem registers Zandberg separately. The two campaigns will often diagnose
-the same economic failures; voters will judge whether implementation or the
-freedom to oppose offers the more credible remedy.
+[? if pres_2025_razem_separate_eligible: Razem registers Zandberg separately.
+The two campaigns will often diagnose the same economic failures; voters will
+judge whether implementation or the freedom to oppose offers the more
+credible remedy.?]
+
+[? if not pres_2025_razem_separate_eligible: Razem supplies organisers and a
+sharper economic brief to the same campaign. Dziemianowicz-Bąk carries the
+nomination; Zandberg retains the right to test its labour and investment
+programme without inventing a rival ballot line.?]
 
 - @poland_event_queue: Put both nomination papers on the events desk
 

@@ -1,6 +1,6 @@
 # Media ecosystem and communications minigame
 
-Last researched: **29 July 2026**.
+Last researched: **8 August 2026**.
 
 Status: **research and design only**, apart from the implemented press-review
 presentation scaffold. The historical baseline is sourced; proposed mechanics
@@ -111,13 +111,18 @@ per political month**. It rotates source-labelled slots from Onet, WP,
 Rzeczpospolita, TVP, TVN and Republika, with Kanał Zero joining from February
 2024. The selection is deterministic for a given turn so opening a card or
 changing a ledger tab does not make the press cycle flicker. The former
-Objectives panel remains available as the second right-rail tab. A small set of
-contemporaneous non-political reports keeps its source links and dates. Authored
-monthly reports remain the primary copy. A live `news_headline` fallback covers
+Objectives panel remains available as the second right-rail tab. Every playable
+month from October 2019 through August 2026 has a contemporaneous report with
+its source link and date. Authored monthly reports cover every slot through the
+October 2027 scenario horizon.
+When a month contains a contemporaneous real report, one sourced item is always
+reserved in the visible edition; authored reactions to the latest outcome fill
+the remaining slots before monthly copy. A live `news_headline` fallback covers
 outcomes without an authored slot, while public-opinion support and backlash
 enter one analysis-oriented report only when its subject actually concerns the
 matching issue field. The same polling sentence is never appended to every
-outlet in an edition.
+outlet in an edition. Real-source coverage stops in 2026: reports in the 2027
+scenario cannot truthfully be attributed to future outlet pages.
 
 The first outcome-specific authoring pass adds 162 reports across 58 branches:
 the presidential nomination, media strategy, lockdown, rescue shield, abortion
@@ -136,9 +141,9 @@ The content stage should fill each slot with this small record:
 | `text` | An outlet-specific opening followed by a public-mood response. |
 | `source_url`, `source_date` | Required only for a contemporaneous real non-political item. |
 
-Copy selection follows a fixed priority: respond to the latest consequential
-in-game event; otherwise comment on the current political balance; otherwise
-adapt a contemporaneous, non-political item researched from that outlet. Real
+Copy selection follows a fixed priority: show one contemporaneous sourced item
+when the month has one; respond to the latest consequential in-game event in
+the remaining slots; otherwise comment on the current political balance. Real
 items belong in a checked authoring ledger rather than a live browser request:
 the game is static, the campaign date is historical, and a current homepage
 would produce the wrong month. The underlying fact or game outcome must stay

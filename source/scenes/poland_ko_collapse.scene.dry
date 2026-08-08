@@ -167,6 +167,12 @@ const splinterSeats = Math.max(0, leavers - toLewica);
 Q.ko_seats = koSeats - leavers;
 Q.ko_splinter_active = 1;
 Q.ko_splinter_type = Q.ko_break_wing;
+const iplSplinter = Q.ko_break_wing == "Progressive" &&
+    Q.ko_break_leader == "Barbara Nowacka";
+Q.ko_splinter_name = iplSplinter
+    ? "Inicjatywa Polska"
+    : Q.ko_break_wing + " KO splinter";
+if (iplSplinter) Q.snap_progressive_ko_candidate = "Monika Rosa";
 Q.ko_splinter_seats =
     Math.max(0, Number(Q.ko_splinter_seats) || 0) + splinterSeats;
 Q.ko_collapse_defectors = toLewica;
@@ -209,12 +215,21 @@ Q.ko_poll = Math.max(4, (Number(Q.ko_poll) || 20) - 1.2);
 Q.ko_collapse_result = Q.ko_break_wing +
     " wing leaves with " + splinterSeats + " MPs" +
     (toLewica > 0 ? " and " + toLewica + " cross to Lewica" : "");
-const splinter = group("ko_splinter");
+const genericSplinter = group("ko_splinter");
+if (genericSplinter) genericSplinter.active = iplSplinter ? 0 : 1;
+const splinter = group(iplSplinter ? "ipl" : "ko_splinter");
 if (splinter) {
     splinter.active = 1;
-    splinter.name = Q.ko_break_wing + " breakaway";
+    splinter.name = Q.ko_splinter_name;
     splinter.leader = Q.ko_break_leader;
+    splinter.bloc = "ko";
+    splinter.kind = "party";
+    splinter.parent = "Civic coalition";
+    splinter.allied = 0;
     splinter.legal_status = "independent organisation";
+    splinter.list_committee = "ko_splinter";
+    splinter.club = "ko_splinter";
+    splinter.independent = 1;
     splinter.organisation = 30 + Math.min(20, splinterSeats);
     splinter.cohesion = 62;
     splinter.mp_count = splinterSeats;
@@ -251,7 +266,7 @@ Q.news_headline = "KO splits: " + Q.ko_collapse_result;
 
 = [+ ko_collapse_result +]
 
-**[+ ko_break_leader +]** registers the [+ ko_break_wing +] breakaway with **[+
+**[+ ko_break_leader +]** registers **[+ ko_splinter_name +]** with **[+
 ko_splinter_seats +] MPs**; **[+ ko_leader +]** is left with a smaller,
 angrier and considerably more governable KO of **[+ ko_seats +]**. Both will
 appear on the next ballot, and neither can reach the other's voters without
@@ -331,6 +346,8 @@ choose-if: ko_break_wing = "Progressive" and left_poll >= 10
 unavailable-subtitle: A classical-liberal caucus will not stand on a Left programme, and a Left polling this low cannot shelter anybody.
 on-arrival: {!
 const joined = Math.max(0, Math.round(Number(Q.ko_splinter_seats) || 0));
+const iplSplinter = Q.ko_break_leader == "Barbara Nowacka" &&
+    Q.ko_splinter_type == "Progressive";
 Q.left_seats = Math.max(0, Number(Q.left_seats) || 0) + joined;
 Q.left_progressives_seats =
     Math.max(0, Number(Q.left_progressives_seats) || 0) + joined;
@@ -342,12 +359,16 @@ Q.ko_splinter_seats = 0;
 Q.ko_splinter_active = 0;
 Q.ko_splinter_settled = 1;
 Q.ko_splinter_outcome = "Joined the Left list with " + joined + " MPs";
+if (iplSplinter) {
+    Q.ipl_joined_left = 1;
+    Q.left_ipl_current_seats = joined;
+}
 Q.barons_dissent = (Number(Q.barons_dissent) || 0) + 6;
 Q.progressives_strength = (Number(Q.progressives_strength) || 0) + 3;
 Q.local_network = (Number(Q.local_network) || 0) + 2;
 Q.left_poll = (Number(Q.left_poll) || 0) + 0.5;
 const splinter = (Q.rival_group_records || []).find(function(record) {
-    return record.id == "ko_splinter";
+    return record.id == (iplSplinter ? "ipl" : "ko_splinter");
 });
 if (splinter) {
     splinter.active = 1;
@@ -355,6 +376,10 @@ if (splinter) {
     splinter.kind = "current";
     splinter.parent = Q.left_party_name || "Lewica";
     splinter.legal_status = "internal civic-progressive current";
+    splinter.allied = 1;
+    splinter.list_committee = "left";
+    splinter.club = "left";
+    splinter.independent = 0;
     splinter.exclusive_seats = 0;
 }
 Q.news_headline = "KO's breakaway joins the Left list";
@@ -387,6 +412,8 @@ subtitle: No offer. They rejoin KO, dissolve or fail, and we inherit whatever is
 on-arrival: {!
 const splinterSeats = Math.max(0, Number(Q.ko_splinter_seats) || 0);
 const returning = (Number(Q.ko_relation) || 0) >= 45;
+const iplSplinter = Q.ko_break_leader == "Barbara Nowacka" &&
+    Q.ko_splinter_type == "Progressive";
 Q.ko_splinter_settled = 1;
 if (returning) {
     Q.ko_seats = Math.max(0, Number(Q.ko_seats) || 0) + splinterSeats;
@@ -395,19 +422,29 @@ if (returning) {
     Q.ko_cohesion = Math.min(80, (Number(Q.ko_cohesion) || 42) + 10);
     Q.ko_splinter_outcome = "Returned to KO with " + splinterSeats + " MPs";
     Q.news_headline = "The breakaway returns to KO rather than face a threshold";
+    if (iplSplinter) Q.snap_progressive_ko_candidate = "Barbara Nowacka";
 } else {
     Q.ko_splinter_outcome = "Standing alone with no agreement";
     Q.left_poll = (Number(Q.left_poll) || 0) + 0.2;
     Q.news_headline = "The breakaway will contest the election alone";
 }
 const splinter = (Q.rival_group_records || []).find(function(record) {
-    return record.id == "ko_splinter";
+    return record.id == (iplSplinter ? "ipl" : "ko_splinter");
 });
 if (splinter && returning) {
-    splinter.active = 0;
-    splinter.legal_status = "reabsorbed into Koalicja Obywatelska";
-    splinter.mp_count = 0;
-    splinter.sejm_mps = 0;
+    splinter.active = iplSplinter ? 1 : 0;
+    splinter.bloc = "ko";
+    splinter.kind = Q.ko_consolidated ? "current" : "party";
+    splinter.parent = "Koalicja Obywatelska";
+    splinter.allied = 1;
+    splinter.legal_status = Q.ko_consolidated
+        ? "internal KO current"
+        : "allied party";
+    splinter.list_committee = "ko";
+    splinter.club = "ko";
+    splinter.independent = 0;
+    splinter.mp_count = iplSplinter ? splinterSeats : 0;
+    splinter.sejm_mps = iplSplinter ? splinterSeats : 0;
     splinter.exclusive_seats = 0;
 }
 !}

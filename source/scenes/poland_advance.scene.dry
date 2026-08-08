@@ -83,7 +83,19 @@ const advisorRepresentation = {
     razem: Number(Q.razem_advisor_count) || 0,
     social_patriot: Number(Q.social_patriot_advisor_count) || 0
 };
-const activeLeftCaucusCount = Math.max(1, Number(Q.factions.length) || 0);
+// Lewica Pracy is a movement relationship rather than a member caucus, so it
+// stays out of Q.factions. It is still a live current whose neglect drifts and
+// whose presence gives the others somebody else to blame, so the monthly
+// representation drift counts and moves it alongside the party caucuses.
+const dissentDriftCaucuses = Q.factions.concat(
+    !Q.factions.includes("labor") && Q.labor_active && Q.labor_in_left
+        ? ["labor"]
+        : []
+);
+const activeLeftCaucusCount = Math.max(
+    1,
+    Number(dissentDriftCaucuses.length) || 0
+);
 const lowCaucusDissentRiseScale = activeLeftCaucusCount <= 1
     ? 0.20
     : (activeLeftCaucusCount == 2
@@ -100,7 +112,7 @@ const apparatusGlue = Math.max(
 const dissentRecovery = Number(Q.party_unity) >= 60
     ? 1.25
     : (Number(Q.party_unity) >= 45 ? 0.75 : 0.35);
-for (const faction of Q.factions) {
+for (const faction of dissentDriftCaucuses) {
     const represented = advisorRepresentation[faction] || 0;
     let structuralDrift = 0;
     if (represented <= 0) {
@@ -261,6 +273,7 @@ const monthlyTimers = [
     "poland_party_clubs_timer",
     "poland_party_discipline_timer",
     "poland_wiosna_project_timer",
+    "poland_sld_machine_timer",
     "poland_social_welfare_review_timer",
     "poland_fundraising_timer",
     "poland_campaigning_timer",
@@ -2146,6 +2159,35 @@ if (monthlyGrievance >= 30) {
         Q.government_delivery -= 0.3;
         Q.public_trust -= 0.15;
     }
+}
+
+// Coalition dissent is a survival ledger, not a mood. Above 40 the partners
+// price an exit every month the cabinet does not answer it: relations cool,
+// delivery slows and the early-election ledger moves, which is what the
+// constructive-motion and budget-confidence machinery already reads. It also
+// cools slowly on its own, so a single bad month is not permanent.
+if (Q.left_in_government && !Q.caretaker_government) {
+    const coalitionDissent = Math.max(
+        0,
+        Number(Q.government_coalition_dissent) || 0
+    );
+    const coalitionStrain = Math.max(0, coalitionDissent - 40);
+    if (coalitionStrain > 0) {
+        if ((Number(Q.ko_seats) || 0) > 0) Q.ko_relation -= coalitionStrain * 0.06;
+        if ((Number(Q.psl_seats) || 0) > 0) Q.psl_relation -= coalitionStrain * 0.06;
+        if ((Number(Q.p2050_seats) || 0) > 0) {
+            Q.p2050_relation -= coalitionStrain * 0.05;
+        }
+        Q.government_delivery -= coalitionStrain * 0.04;
+        Q.early_election_risk = Math.min(
+            100,
+            (Number(Q.early_election_risk) || 0) + coalitionStrain * 0.10
+        );
+        if (coalitionDissent >= 70) {
+            Q.coalition_break_threat = 1;
+        }
+    }
+    Q.government_coalition_dissent = Math.max(0, coalitionDissent - 0.6);
 }
 
 if (Q.year == 2020 && Q.month >= 1) {
