@@ -21,6 +21,10 @@ carries a Creative Commons licence, including press photographs released under
 one by the Chancellery of the Prime Minister, the Ministry of Finance and party
 press offices.
 
+Exception: `wajda.jpg` was supplied directly for this project. The publication
+credit identifies Tomasz Urbanek / East News, but no redistribution licence was
+provided with the file; confirm permission before distributing it.
+
 | Local file | Wikimedia Commons source | Creator / credit | License |
 | --- | --- | --- | --- |
 | `adrian-zandberg-2020.webp` | [Adrian Zandberg in the Sejm, 14 February 2020](https://commons.wikimedia.org/wiki/File:Adrian_Zandberg_Sejm_2020.jpg) | Adrian Grycuk | CC BY-SA 3.0 PL |
@@ -58,10 +62,22 @@ press offices.
 | `paulina-matysiak-2019.webp` | [Paulina Matysiak in the Sejm, 23 October 2019](https://commons.wikimedia.org/wiki/File:Paulina_Matysiak_Sejm_2019.jpg) | Adrian Grycuk | CC BY-SA 3.0 PL |
 | `polish-f16.webp` | [Polish Air Force F-16C, 14 July 2018](https://commons.wikimedia.org/wiki/File:Polish_Air_Force_F-16C_(43837355371).jpg) | Dave S. (Witney, England) | CC BY 2.0 |
 | `pres-candidate-bosak.webp` | [Krzysztof Bosak in Poznań, 7 June 2020](https://commons.wikimedia.org/wiki/File:BOSAK_2020_(cropped).jpg) | Enstropia | CC BY-SA 4.0 |
+| `pres-candidate-biedron-2020.webp` | [Robert Biedroń in the Sejm, 2 March 2020](https://commons.wikimedia.org/wiki/File:Beata_Maciejewska_Katarzyna_Kotula_Robert_Biedro%C5%84_Tomasz_Trela_2020_(Biedro%C5%84_cropped).jpg) | Adrian Grycuk | CC BY-SA 3.0 PL |
+| `pres-candidate-biejat-2025.webp` | [Magdalena Biejat at her presidential campaign convention, 2 February 2025](https://commons.wikimedia.org/wiki/File:Magdalena_Biejat_in_2025.jpg) | Klub Lewicy / Monika Szafrańska | Public domain |
+| `pres-candidate-duda-2020.webp` | [Andrzej Duda at the 75th anniversary of the liberation of Auschwitz, 27 January 2020](https://commons.wikimedia.org/wiki/File:Prezydent_Andrzej_Duda._75._rocznica_wyzwolenia_Auschwitz.jpg) | Wojciech Grabowski | CC BY-SA 4.0 |
 | `pres-candidate-duda.webp` | [Official portrait of Andrzej Duda, 2019](https://commons.wikimedia.org/wiki/File:Andrzej_Duda_Official_Portrait.jpg) | Jakub Szymczuk / Chancellery of the President of Poland | CC BY-SA 4.0 |
 | `pres-candidate-holownia.webp` | [Szymon Hołownia](https://commons.wikimedia.org/wiki/File:Ho%C5%82ownia.JPG) | Otwarte Klatki | CC BY 2.0 |
+| `pres-candidate-holownia-2020.webp` | [Szymon Hołownia presenting Poland 2050, 30 September 2020](https://commons.wikimedia.org/wiki/File:Przentacja_Polski_2050.jpg) | Tomasz Kaczor | CC BY-SA 4.0 |
+| `pres-candidate-holownia-2025.webp` | User-provided Szymon Hołownia portrait | User-provided | Project asset |
+| `pres-candidate-kidawa-2020.webp` | [Małgorzata Kidawa-Błońska speaking to supporters, 8 February 2020](https://commons.wikimedia.org/wiki/File:Kidawa-B%C5%82o%C5%84ska_8_February_2020_02_(cropped).jpg) | Platforma Obywatelska RP | CC0 |
+| `pres-candidate-kosiniak-2020.webp` | Composite of the existing CC0 portrait and [Kosiniak-Kamysz's official 2020 presidential campaign mark](https://commons.wikimedia.org/wiki/File:W%C5%82adys%C5%82aw_Kosiniak-Kamysz_2020_presidential_campaign.png) | Ministry of Family and Social Policy / Władysław Kosiniak-Kamysz presidential campaign | CC0 / public domain |
 | `pres-candidate-kosiniak.webp` | [Władysław Kosiniak-Kamysz, 2015](https://commons.wikimedia.org/wiki/File:W%C5%82adys%C5%82aw_Kosiniak-Kamysz_3_(21079125704).jpg) | Ministry of Family and Social Policy | CC0 |
+| `pres-candidate-mentzen-2025.webp` | [Sławomir Mentzen campaigning in Rabka-Zdrój, 25 January 2025](https://commons.wikimedia.org/wiki/File:Slawomir_mentzen_rabka.jpg) | Jan Majer Palikot | CC BY 4.0 |
 | `pres-candidate-trzaskowski.webp` | [Rafał Trzaskowski, 22 May 2020](https://commons.wikimedia.org/wiki/File:Rafa%C5%82_Trzaskowski_22_May_2020.jpg) | Platforma Obywatelska RP | CC0 |
+| `pres-candidate-trzaskowski-2025.webp` | [Rafał Trzaskowski at the Wielki Marsz Patriotów, 25 May 2025](https://commons.wikimedia.org/wiki/File:Warszawa_2025_Wielki_Marsz_Patriot%C3%B3w_Rafa%C5%82_Trzaskowski.jpg) | Januszk57 | CC BY-SA 4.0 |
+| `pres-candidate-zandberg-2025.webp` | [Adrian Zandberg 2025 presidential campaign portrait](https://commons.wikimedia.org/wiki/File:Adrian_Zandberg_cover_photo_2025_(cropped).png) | Zandberg 2025 campaign | CC0 |
+| `presidential-ballot-2020.webp` | [Polish presidential ballot paper, 28 June 2020](https://commons.wikimedia.org/wiki/File:Polish_ballot_paper_2020-06-28.webp) | Metro edition | Public domain |
+| `presidential-ballot-2025.webp` | [Polish presidential ballot paper, 18 May 2025](https://commons.wikimedia.org/wiki/File:Karta_do_g%C5%82osowania_w_wyborach_Prezydenta_Rzeczypospolitej_Polskiej_w_dniu_18_maja_2025_r.jpg) | Mateusz Opasiński | CC BY 4.0 |
 | `presidential-palace.webp` | [Presidential Palace, Warsaw, 7 June 2019](https://commons.wikimedia.org/wiki/File:Pa%C5%82ac_Prezydencki_Warszawa_Q608932.jpg) | Omenaga | CC BY-SA 4.0 |
 | `pride-march-2025.webp` | [Equality Parade, Warsaw, 14 June 2025](https://commons.wikimedia.org/wiki/File:Warszawa_Parada_R%C3%B3wno%C5%9Bci_2025_03.jpg) | Zala | CC BY-SA 4.0 |
 | `robert-biedron-2023.webp` | [Robert Biedroń, 4 January 2023](https://commons.wikimedia.org/wiki/File:Robert_Biedro%C5%84_2023.jpg) | Klub Lewicy | Public domain |
@@ -78,7 +94,14 @@ press offices.
 | `union-march.webp` | [OPZZ members demonstrating in Brussels, 29 September 2010](https://commons.wikimedia.org/wiki/File:OPZZ_2010_Bruxelles_2758.JPG) | Gérald Garitan | CC BY-SA 3.0 |
 | `us-election-2020.webp` | [Official portrait of Joe Biden, 2021](https://commons.wikimedia.org/wiki/File:Joe_Biden_presidential_portrait_(cropped).jpg) | Adam Schultz / The White House | Public domain |
 | `us-election-2024.webp` | [Official portrait of Donald Trump, 2025](https://commons.wikimedia.org/wiki/File:Donald_Trump_official_portrait,_2025_(headshot).jpg) | Daniel Torok / The White House | Public domain |
+| `us-candidate-desantis.webp` | [Official portrait of Ron DeSantis, 113th Congress](https://commons.wikimedia.org/wiki/File:Ron_DeSantis,_Official_Portrait,_113th_Congress.jpg) | United States Congress | Public domain |
+| `us-candidate-haley.webp` | [Official portrait of Nikki Haley as U.S. ambassador to the United Nations, 2017](https://commons.wikimedia.org/wiki/File:Nikki_Haley_official_photo.jpg) | United States Department of State | Public domain |
+| `us-candidate-harris.webp` | [Official Senate portrait of Kamala Harris, 2017](https://commons.wikimedia.org/wiki/File:Kamala_Harris_official_photo_(1).jpg) | Office of Senator Kamala Harris | Public domain |
+| `us-candidate-ramaswamy.webp` | [Vivek Ramaswamy, 28 October 2023](https://commons.wikimedia.org/wiki/File:Vivek_Ramaswamy_(53298760809)_(cropped).jpg) | Gage Skidmore | CC BY-SA 2.0 |
+| `us-candidate-rubio.webp` | [Official portrait of Marco Rubio, 112th Congress](https://commons.wikimedia.org/wiki/File:Marco_Rubio,_Official_Portrait,_112th_Congress_(cropped).jpg) | United States Senate | Public domain |
+| `us-candidate-vance.webp` | [Official portrait of JD Vance, 118th Congress](https://commons.wikimedia.org/wiki/File:Senator_Vance_official_portrait._118th_Congress_(cropped_2).jpg) | United States Congress | Public domain |
 | `viktor-orban-2022.webp` | [Viktor Orbán in Maribor, 2 December 2022](https://commons.wikimedia.org/wiki/File:Orban_Viktor_2022_(cropped).jpg) | Bor Slana / Government of the Republic of Slovenia | Public domain |
+| `wajda.jpg` | [Andrzej Wajda and Krystyna Zachwatowicz at Bronisław Komorowski's 2015 election night](https://www.rp.pl/kraj/art11760391-andrzej-stankiewicz-bronkobus-na-parkingu) | Tomasz Urbanek / East News | User-provided; redistribution licence not documented |
 | `wlodzimierz-czarzasty-2019.webp` | [Włodzimierz Czarzasty in the Sejm, 23 October 2019](https://commons.wikimedia.org/wiki/File:W%C5%82odzimierz_Czarzasty_Sejm_2019_(cropped).jpg) | Adrian Grycuk | CC BY-SA 3.0 PL |
 | `womens-strike-2020.webp` | [All-Poland Women's Strike in Warsaw, 30 October 2020](https://commons.wikimedia.org/wiki/File:Protest_of_All-Poland_Women%27s_Strike_in_Warsaw_(October_30,_2020)_07.jpg) | RoodyAlien | CC BY 4.0 |
 | `zbigniew-ziobro-2015.webp` | [Zbigniew Ziobro in the Sejm, 16 September 2015](https://commons.wikimedia.org/wiki/File:Zbigniew_Ziobro_Sejm_2015_09.JPG) | Adrian Grycuk | CC BY-SA 3.0 PL |

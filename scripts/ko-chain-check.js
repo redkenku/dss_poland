@@ -45,6 +45,11 @@ function start(seed) {
 function group(q, id) {
   return (q.rival_group_records || []).find(function(r) { return r.id === id; });
 }
+function pageText() {
+  return engine.state.currentContent.map(function(block) {
+    return Array.isArray(block.content) ? block.content.join('') : '';
+  }).join('');
+}
 
 // 1. A cohesive convention produces one party and keeps the incumbent.
 let q = start('ko-consolidate');
@@ -130,6 +135,22 @@ assert.strictEqual(q.ko_collapsed, 1);
 assert.strictEqual(q.ko_splinter_active, 1);
 assert.strictEqual(q.ko_seats + q.ko_splinter_seats, koBeforeSplit);
 assert.strictEqual(group(q, 'ko_splinter').active, 1);
+q.month += 1;
+q.date_label = 'November 2019';
+engine.goToScene('poland_polling');
+assert(q.ko_splinter_poll > 0, 'KO breakaway received no polling share');
+engine.goToScene('status.polls');
+const pollingLedger = pageText();
+assert(
+  pollingLedger.includes(q.ko_splinter_name) &&
+    pollingLedger.includes(String(q.status_ko_splinter_poll) + '%'),
+  'KO breakaway is missing from the polling ledger'
+);
+engine.goToScene('library.polling');
+assert(
+  pageText().includes(q.ko_splinter_name),
+  'KO breakaway is missing from the dossier poll tracker'
+);
 engine.goToScene('poland_normalize');
 assert.strictEqual(q.ko_collapse_pressure, 0);
 

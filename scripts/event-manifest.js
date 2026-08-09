@@ -38,6 +38,38 @@ function readProseAudit(block) {
   return match ? { grade: match[1], note: oneLine(match[2]) } : null;
 }
 
+function readScenarioLedgerIds(block) {
+  const ids = [];
+  for (const match of block.matchAll(/^# scenario-ledger:\s*(.+)$/gm)) {
+    ids.push.apply(ids, match[1].split(',').map(function(id) {
+      return oneLine(id);
+    }).filter(Boolean));
+  }
+  return Array.from(new Set(ids));
+}
+
+const auditedScenarioIds = [
+  'FAR-01', 'FAR-02', 'FAR-04', 'FAR-05', 'FAR-06', 'FAR-07',
+  'FAR-08', 'FAR-09',
+  'PSL-07', 'PSL-08', 'PSL-09', 'PSL-12', 'PSL-13',
+  'BOR-03', 'BOR-04', 'BOR-05', 'BOR-11', 'BOR-12', 'BOR-13',
+  'BOR-14', 'BOR-17', 'BOR-18', 'BOR-19', 'BOR-20', 'BOR-21',
+  'PRE-11', 'PRE-19', 'PRE-20',
+  'DIP-05', 'DIP-06', 'DIP-07', 'DIP-08', 'DIP-09', 'DIP-10',
+  'DIP-11', 'DIP-13', 'DIP-14',
+  'MED-06', 'MED-07', 'MED-08', 'MED-16', 'MED-17', 'MED-18',
+  'MED-19', 'MED-20', 'MED-21', 'MED-22', 'MED-23', 'MED-24',
+  'MED-25', 'MED-26',
+  'KO-01', 'KO-07', 'KO-08', 'KO-09', 'KO-10', 'KO-13',
+  'PIS-03', 'PIS-06', 'PIS-07', 'PIS-08', 'PIS-09', 'PIS-10',
+  'PIS-13', 'PIS-14',
+  'TD-03', 'TD-06', 'TD-09', 'TD-10',
+  'SHK-04', 'SHK-05', 'SHK-06', 'SHK-13', 'SHK-16', 'SHK-17',
+  'SHK-19', 'SHK-21', 'SHK-22', 'SHK-24', 'SHK-25', 'SHK-27',
+  'SHK-28',
+  'ISS-COV-06', 'ISS-REL-04', 'ISS-LGBT-06', 'ISS-LGBT-08',
+];
+
 function readArrival(block) {
   const match = block.match(/^on-arrival:\s*(.*)$/m);
   if (!match) return '';
@@ -296,6 +328,7 @@ function eventRecord(section) {
   return {
     id: section.id,
     source: path.relative(projectRoot, section.file) + ':' + section.line,
+    scenarioLedgerIds: readScenarioLedgerIds(section.source),
     proseGrade: proseAudit ? proseAudit.grade : '',
     proseAudit: proseAudit ? proseAudit.note : '',
     historicalDate: dateFor(section),
@@ -322,9 +355,22 @@ function eventRecord(section) {
 const datedSections = sections.filter(isDatedEvent).sort(function(left, right) {
   return left.id.localeCompare(right.id);
 });
+const scenarioCoverage = sections.flatMap(function(section) {
+  return readScenarioLedgerIds(section.source).map(function(id) {
+    return {
+      id,
+      scene: section.id,
+      source: path.relative(projectRoot, section.file) + ':' + section.line,
+    };
+  });
+}).sort(function(left, right) {
+  return left.id.localeCompare(right.id) || left.scene.localeCompare(right.scene);
+});
 const manifest = {
-  schemaVersion: 1,
+  schemaVersion: 2,
   generatedFrom: 'source/scenes/**/*.scene.dry',
+  auditedScenarioIds,
+  scenarioCoverage,
   authorityStages: [
     'proposal', 'negotiated_concession', 'passage', 'implementation',
     'institutional_decision',
@@ -332,6 +378,24 @@ const manifest = {
   coalitionSeatsInvariant: 'MPs belonging to recognised parties that hold at least one Council of Ministers portfolio; external confidence-and-supply votes are excluded.',
   events: datedSections.map(eventRecord),
 };
+
+function validateScenarioCoverage() {
+  const audited = new Set(auditedScenarioIds);
+  assert.strictEqual(audited.size, auditedScenarioIds.length,
+    'The audited scenario target list contains a duplicate ID');
+  const owners = new Map();
+  for (const entry of scenarioCoverage) {
+    if (!audited.has(entry.id)) continue;
+    if (!owners.has(entry.id)) owners.set(entry.id, []);
+    owners.get(entry.id).push(entry.scene);
+  }
+  for (const id of auditedScenarioIds) {
+    const scenes = owners.get(id) || [];
+    assert.strictEqual(scenes.length, 1,
+      id + ' must have exactly one scenario-ledger owner; found ' +
+      (scenes.length ? scenes.join(', ') : 'none'));
+  }
+}
 
 function sectionNamed(fileName, localId) {
   const target = sections.find(function(section) {
@@ -349,15 +413,6 @@ function validateArchitecture() {
   );
   const ids = new Set();
   for (const event of manifest.events) {
-    if (event.id === 'poland_events_2021_2023.nov21_konf') {
-      console.error('DEBUG validateArchitecture event', JSON.stringify(event));
-    }
-    if (event.id === 'poland_events_2021_2023.nov21_konf') {
-      fs.appendFileSync(path.join(projectRoot, '.event_manifest_debug.log'), 'event=' + JSON.stringify(event) + '\n');
-    }
-    if (!/^[A-FR]$/.test(event.proseGrade)) {
-      fs.appendFileSync(path.join(projectRoot, '.event_manifest_debug.log'), 'grade-fail=' + JSON.stringify(event) + '\n');
-    }
     assert(/^[A-FR]$/.test(event.proseGrade),
       'Missing prose audit grade: ' + event.id);
     assert(event.proseAudit,
@@ -393,6 +448,22 @@ function validateArchitecture() {
           choice.id + ' needs a player-facing consequence subtitle'
         );
         assert(choice.immediateConsequence, choice.id + ' has no consequence');
+        assert(
+          choice.delayedCallbacks.length > 0,
+          choice.id + ' is not remembered by a later route or system'
+        );
+      }
+    }
+    if (event.scenarioLedgerIds.length) {
+      for (const choice of event.choices) {
+        if (/^(Return|Close|Begin|Continue|Record|Read|Certify)\b/.test(choice.title)) {
+          continue;
+        }
+        assert.strictEqual(
+          choice.subtitleSource,
+          'source',
+          choice.id + ' needs a player-facing consequence subtitle'
+        );
         assert(
           choice.delayedCallbacks.length > 0,
           choice.id + ' is not remembered by a later route or system'
@@ -651,10 +722,8 @@ function validateCorrectnessInvariants() {
     if (!target || !target.localId || !/_hub$/.test(target.localId)) continue;
     if (!/^new-page:\s*true\b/m.test(target.source)) continue;
     if (/^=\s+/m.test(section.source) || isPureRoutingChoice(section)) {
-      console.log('SKIP', section.id, 'hasHeading', /^=\s+/m.test(section.source), 'isPure', isPureRoutingChoice(section));
       continue;
     }
-    console.log('FAIL', section.id, 'hasHeading', /^=\s+/m.test(section.source), 'isPure', isPureRoutingChoice(section), 'sourceSnippet', JSON.stringify(section.source.split('\n').slice(0, 20).join('\n')));
     assert.fail(
       section.id +
         ' jumps straight into the clean hub page ' + target.id +
@@ -748,6 +817,7 @@ function validateCorrectnessInvariants() {
 
 validateArchitecture();
 validateCorrectnessInvariants();
+validateScenarioCoverage();
 
 const output = JSON.stringify(manifest, null, 2) + '\n';
 if (writeMode) {

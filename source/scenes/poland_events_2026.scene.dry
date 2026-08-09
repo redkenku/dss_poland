@@ -296,6 +296,9 @@ max-visits: 1
 view-if: continuous_campaign = 1 and year = 2026 and month = 2 and sejm_speaker = "Włodzimierz Czarzasty" and us_president = "Donald Trump"
 on-arrival: {!
 Q.ambassador_crisis = 1;
+Q.ambassador_stage = 1;
+Q.ambassador_due_time = Number(Q.time) + 1;
+Q.ambassador_outcome = "Ambassador boycott opened";
 Q.us_ambassador_channel = 10;
 Q.us_defence_channel = Number.isFinite(Number(Q.us_defence_channel))
     ? Number(Q.us_defence_channel)
@@ -354,6 +357,9 @@ max-visits: 1
 view-if: continuous_campaign = 1 and year = 2026 and month = 2 and sejm_speaker = "Marta Stożek" and us_president = "Donald Trump"
 on-arrival: {!
 Q.ambassador_crisis = 1;
+Q.ambassador_stage = 1;
+Q.ambassador_due_time = Number(Q.time) + 1;
+Q.ambassador_outcome = "Ambassador boycott opened";
 Q.us_ambassador_channel = 10;
 Q.us_defence_channel = Number.isFinite(Number(Q.us_defence_channel))
     ? Number(Q.us_defence_channel)
@@ -469,7 +475,7 @@ title: Invite the ambassador to a formal institutional meeting
 subtitle: Spend parliamentary capacity on a meeting whose agenda and minutes belong to the Sejm, not either office-holder's pride.
 choose-if: resources >= 1
 unavailable-subtitle: The Sejm channel cannot support a delegation.
-on-arrival: resources -= 1; us_ambassador_channel += 12; us_congress_channel += 6; constitutional_restraint += 3; public_trust += 3; media_capacity += 1; news_headline = "Institutional contact resumes without endorsement of either statement"
+on-arrival: resources -= 1; us_ambassador_channel += 12; us_congress_channel += 6; constitutional_restraint += 3; public_trust += 3; media_capacity += 1; ambassador_outcome = "Rules-based institutional reset"; ambassador_done = 1; ambassador_stage = 5; news_headline = "Institutional contact resumes without endorsement of either statement"
 
 The invitation comes from the Sejm Presidium and places party leaders, the
 foreign-affairs committee and a published agenda beside **[+ sejm_speaker +]**. Rose attends
@@ -1864,7 +1870,7 @@ tags: poland_event
 priority: 30
 order: 10
 max-visits: 1
-view-if: continuous_campaign = 1 and year = 2026 and month = 7
+view-if: continuous_campaign = 1 and year = 2026 and month = 7 and election_2027_terminal = 0
 on-arrival: {!
 Q.braun_legal_preparation = Number(Q.braun_legal_preparation) || 0;
 Q.braun_procedure_score = Math.round(
@@ -1874,6 +1880,9 @@ Q.braun_procedure_score = Math.round(
     Math.max(0, Number(Q.braun_martyrdom) || 0) * 0.10
 );
 Q.braun_martyrdom += 2;
+Q.braun_stage = Math.max(Number(Q.braun_stage) || 0, 1);
+Q.braun_due_time = Math.max(Number(Q.time) + 1, Number(Q.braun_due_time) || -1);
+Q.braun_outcome = "Immunity and compelled appearance pending";
 Q.news_headline =
     "Five failed summonses produce a request for Braun's compelled appearance";
 !}
@@ -4271,6 +4280,10 @@ if (Q.constructive_passed) {
     const sikorskiReplacement =
         Q.constructive_candidate == "Radosław Sikorski";
     Q.prime_minister = Q.constructive_candidate;
+    Q.prime_minister_intro_return = sikorskiReplacement
+        ? "sikorski_compact_2026"
+        : "event_queue";
+    Q.prime_minister_intro_pending = 1;
     Q.government_name = Q.constructive_candidate + " replacement cabinet";
     Q.government_party = sikorskiReplacement ? "ko" : "pis";
     Q.government_owner = sikorskiReplacement
@@ -4423,8 +4436,10 @@ separate destructive vote or automatic election follows.?]
 partners have seen exactly who was willing to leave, while PiS has learned that
 this named alternative could not reach 231.?]
 
-- @sikorski_compact_2026: Face the replacement compact
-- @constructive_return_2026: Record the vote
+- @constructive_result_continue_2026: Record the vote
+
+@constructive_result_continue_2026
+go-to: poland_prime_minister_intro.show if constructive_passed = 1; poland_event_queue if constructive_passed = 0
 
 @constructive_return_2026
 view-if: not (constructive_passed = 1 and constructive_candidate = "Radosław Sikorski")
@@ -4984,11 +4999,19 @@ Q.snap_formation_nominee_is_left =
         "Krzysztof Gawkowski", "Włodzimierz Czarzasty",
         "Robert Biedroń", "Adrian Zandberg"
     ].includes(Q.snap_formation_candidate) ? 1 : 0;
-const pisKonfPledge =
-    Q.coalition_viable_pis_konf &&
-    (Number(Q.rival_relation_pis_konf) || 0) >= 50
-        ? Math.max(0, Number(Q.konf_seats) || 0)
-        : 0;
+const sharedRightFormation = Math.max(
+    0,
+    Number(Q.snap_election_right_2027_seats) || 0
+);
+const pisKonfPledge = sharedRightFormation > 0
+    ? Math.max(0, sharedRightFormation - Number(Q.pis_seats || 0))
+    : (Q.coalition_viable_pis_konf &&
+        (Number(Q.rival_relation_pis_konf) || 0) >= 50
+        ? Math.max(0, Number(Q.konf_seats) || 0) +
+            Math.max(0, Number(Q.new_hope_seats) || 0) +
+            Math.max(0, Number(Q.national_movement_seats) || 0) +
+            Math.max(0, Number(Q.korona_seats) || 0)
+        : 0);
 const pisPslPledge =
     Q.coalition_viable_pis_psl &&
     (Number(Q.rival_relation_pis_psl) || 0) >= 55 &&
@@ -5012,7 +5035,15 @@ const centrumPledge =
         ? Math.max(0, Number(Q.centrum_seats) || 0)
         : 0;
 Q.right_committed_seats =
-    Math.max(0, Number(Q.pis_seats) || 0) + pisKonfPledge;
+    Math.max(0, Number(Q.pis_seats) || 0) + pisKonfPledge +
+    (sharedRightFormation > 0
+        ? Math.max(0, Number(Q.duda_seats) || 0) +
+            Math.max(0, Number(Q.social_conservative_seats) || 0)
+        : ((Number(Q.pis_relation) || 0) >= 45
+            ? Math.max(0, Number(Q.rozwoj_seats) || 0) +
+                Math.max(0, Number(Q.duda_seats) || 0) +
+                Math.max(0, Number(Q.social_conservative_seats) || 0)
+            : 0));
 Q.democratic_committed_seats =
     Math.max(0, Number(Q.ko_seats) || 0) + koPslPledge +
     koP2050Pledge + centrumPledge;
@@ -5529,6 +5560,8 @@ if (typeof Q.confidence_candidate != "string" || !Q.confidence_candidate) {
     );
 }
 Q.prime_minister = Q.confidence_candidate;
+Q.prime_minister_intro_return = "ministries_or_event_queue";
+Q.prime_minister_intro_pending = 1;
 Q.government_name =
     Q.confidence_candidate + " constitutional formation cabinet";
 const recordedNomineeParty =
@@ -5756,7 +5789,7 @@ Q.news_headline =
     Q.confidence_candidate + " wins confidence on attempt " +
     Q.snap_formation_attempt;
 !}
-go-to: poland_ministries if left_in_government = 1; poland_event_queue if left_in_government = 0
+go-to: poland_prime_minister_intro.show
 
 @snap_formation_mandatory_election
 title: The third attempt fails
@@ -5843,7 +5876,8 @@ const ids = [
     "pis", "ko", "p2050", "psl", "left", "konf", "other",
     "sld_breakaway", "social_patriot", "spring_breakaway", "labor_left", "young_left",
     "razem", "pps", "tak_rozwoj", "centrum", "rozwoj", "korona",
-    "ko_splinter"
+    "ko_splinter", "new_hope", "national_movement", "duda",
+    "social_conservative"
 ];
 const seatQuality = function(id) {
     if (id == "razem") return "razem_party_seats";
@@ -5972,7 +6006,30 @@ if (sejmListOutcome == "left_coalition_8") {
 } else if (sejmListOutcome == "konf_5") {
     committeeFor.left = "konf";
 }
-
+const electionRecordIds = {
+    pis: "pis_party", ko: "ko_party", psl: "psl_party",
+    p2050: "p2050_party", konf: "konf_committee",
+    korona: "kkp", rozwoj: "rozwoj_plus",
+    ko_splinter: "ko_splinter", centrum: "unia_centrum",
+    new_hope: "nowa_nadzieja",
+    national_movement: "ruch_narodowy", duda: "duda_movement",
+    social_conservative: "pis_welfare"
+};
+const electionRecord = function(id) {
+    return (Q.rival_group_records || []).find(function(record) {
+        return record && record.id == electionRecordIds[id];
+    });
+};
+for (const id of Object.keys(electionRecordIds)) {
+    const record = electionRecord(id);
+    if (!record || !record.active || !record.contesting) continue;
+    const committee = String(record.list_committee || id);
+    if (["right_2027", "common_centre_2027", "third_way_2027",
+        "social_conservative_2027", "new_hope", "national_movement",
+        "duda"].includes(committee)) {
+        committeeFor[id] = committee;
+    }
+}
 const componentBaseVotes = {};
 for (const id of ids) {
     if (id == "other") continue;
@@ -6008,6 +6065,14 @@ const thresholds = {
     democratic_list: 8,
     third_way: 8
 };
+thresholds.new_hope = 5;
+thresholds.national_movement = 5;
+thresholds.duda = 5;
+thresholds.social_conservative = 5;
+thresholds.right_2027 = 8;
+thresholds.common_centre_2027 = 8;
+thresholds.third_way_2027 = 8;
+thresholds.social_conservative_2027 = 5;
 
 let qualifiedCommittees = Object.keys(committeeVotes).filter(function(id) {
     return committeeVotes[id] >= (thresholds[id] || 5);
@@ -6035,6 +6100,18 @@ for (let seat = 0; seat < 460; seat += 1) {
     }
     committeeSeats[winner] += 1;
 }
+for (const committee of [
+    "right_2027", "common_centre_2027", "third_way_2027",
+    "social_conservative_2027"
+]) {
+    Q["snap_election_" + committee + "_vote"] = Math.round(
+        Math.max(0, Number(committeeVotes[committee]) || 0) * 100
+    ) / 100;
+    Q["snap_election_" + committee + "_seats"] = Math.max(
+        0,
+        Math.round(Number(committeeSeats[committee]) || 0)
+    );
+}
 
 const resultSeats = {};
 for (const id of ids.concat(["third_way"])) resultSeats[id] = 0;
@@ -6059,11 +6136,25 @@ for (const committee of Object.keys(committeeVotes)) {
         }
         continue;
     }
-    const weightTotal = members.reduce(function(total, id) {
-        return total + componentBaseVotes[id];
-    }, 0);
+    const negotiatedShares = members.map(function(id) {
+        const record = electionRecordIds[id] ? electionRecord(id) : null;
+        return record ? Math.max(0, Number(record.negotiated_list_share) || 0) : 0;
+    });
+    const useNegotiatedShares = negotiatedShares.length > 1 &&
+        negotiatedShares.every(function(share) { return share > 0; });
+    const weightTotal = useNegotiatedShares
+        ? negotiatedShares.reduce(function(total, share) {
+            return total + share;
+        }, 0)
+        : members.reduce(function(total, id) {
+            return total + componentBaseVotes[id];
+        }, 0);
     const allocations = members.map(function(id) {
-        const exact = totalSeats * componentBaseVotes[id] /
+        const memberIndex = members.indexOf(id);
+        const weight = useNegotiatedShares
+            ? negotiatedShares[memberIndex]
+            : componentBaseVotes[id];
+        const exact = totalSeats * weight /
             Math.max(0.01, weightTotal);
         return {
             id: id,
@@ -6117,6 +6208,18 @@ for (const id of ids) {
         Math.max(0.01, committeeWeight);
     Q["snap_election_" + id + "_vote"] =
         Math.round(memberVote * 100) / 100;
+}
+for (const id of Object.keys(electionRecordIds)) {
+    const record = electionRecord(id);
+    if (!record) continue;
+    record.projected_seats = Math.max(0, Math.round(resultSeats[id] || 0));
+    record.exclusive_seats = record.projected_seats;
+    record.sejm_mps = record.projected_seats;
+    record.mp_count = record.projected_seats;
+    record.vote_intent = Math.max(
+        0,
+        Number(Q["snap_election_" + id + "_vote"]) || 0
+    );
 }
 
 // A new election replaces the old main-list caucus ledger. Reapportion only
@@ -6277,8 +6380,10 @@ const snapSenateVote = function(id) {
     );
 };
 const snapSenateVotes = {
-    pis: snapSenateVote("pis") + snapSenateVote("rozwoj"),
-    konf: snapSenateVote("konf") + snapSenateVote("korona"),
+    pis: snapSenateVote("pis") + snapSenateVote("rozwoj") +
+        snapSenateVote("duda") + snapSenateVote("social_conservative"),
+    konf: snapSenateVote("konf") + snapSenateVote("korona") +
+        snapSenateVote("new_hope") + snapSenateVote("national_movement"),
     ko: snapSenateVote("ko") + snapSenateVote("ko_splinter"),
     p2050: snapSenateVote("p2050") + snapSenateVote("centrum"),
     psl: snapSenateVote("psl"),
@@ -6534,6 +6639,8 @@ Q.coalition_democratic_seats =
     (snapLeftOnRightList ? 0 : Q.left_committed_seats);
 Q.coalition_right_seats =
     Q.pis_seats + Q.konf_seats + Q.rozwoj_seats + Q.korona_seats +
+    Q.new_hope_seats + Q.national_movement_seats + Q.duda_seats +
+    Q.social_conservative_seats +
     (snapLeftOnRightList ? Q.left_seats : 0) +
     (["pis", "konf"].includes(Q.social_patriot_list_committee)
         ? Q.social_patriot_seats : 0);
@@ -6557,10 +6664,16 @@ Q.snap_p2050_cabinet_committed = snapKoP2050Pledge > 0 ? 1 : 0;
 Q.snap_centrum_cabinet_committed =
     Q.centrum_relation >= 55 && Q.centrum_seats > 0 ? 1 : 0;
 Q.snap_cabinet_commitments_recorded = 1;
-Q.right_committed_seats =
-    Q.pis_seats +
-    (Q.coalition_viable_pis_konf && Q.rival_relation_pis_konf >= 50
-            ? Q.konf_seats : 0);
+const sharedRightSeats = Number(Q.snap_election_right_2027_seats) || 0;
+Q.right_committed_seats = sharedRightSeats > 0
+    ? sharedRightSeats + Q.duda_seats + Q.social_conservative_seats
+    : Q.pis_seats +
+        (Q.coalition_viable_pis_konf && Q.rival_relation_pis_konf >= 50
+            ? Q.konf_seats + Q.new_hope_seats +
+                Q.national_movement_seats + Q.korona_seats
+            : 0) +
+        (Q.pis_relation >= 45 ? Q.rozwoj_seats + Q.duda_seats +
+            Q.social_conservative_seats : 0);
 Q.seat_subvention_seats = Q.left_seats;
 Q.snap_election_complete = 1;
 Q.caretaker_government = 1;
@@ -6595,6 +6708,10 @@ const certifiedParties = [
     ["rozwoj", "Rozwój+", "Rozwój Plus", Q.rozwoj_seats],
     ["konf", "Konf.", "Konfederacja", Q.konf_seats],
     ["korona", "Korona", "Korona", Q.korona_seats],
+    ["new_hope", "NN", "Nowa Nadzieja", Q.new_hope_seats],
+    ["national_movement", "RN", "Ruch Narodowy", Q.national_movement_seats],
+    ["duda", "Duda", "Ruch Dudy", Q.duda_seats],
+    ["social_conservative", "Soc.", "Konserwatyści społeczni", Q.social_conservative_seats],
     ["ko_splinter", "KO-S", Q.ko_splinter_name || "KO breakaway", Q.ko_splinter_seats],
     ["other", "Inni", "Inni", Q.other_seats]
 ];
@@ -6660,10 +6777,13 @@ fresh campaign; the parties do not simply inherit the previous count.?]
 
 <div class="election-table">
 <div class="election-table-head"><span>Committee</span><span>Vote</span><span>Seats</span><span>Status</span></div>
-<div class="election-table-row"><span class="party party-pis">PiS</span><span>[+ snap_election_pis_vote +]%</span><b>[+ pis_seats +]</b><span>certified</span></div>
-<div class="election-table-row"><span class="party party-ko">KO</span><span>[+ snap_election_ko_vote +]%</span><b>[+ ko_seats +]</b><span>[? if ko_consolidated: separate list · 5%?][? if not ko_consolidated: coalition form · 8%?]</span></div>
-[? if snap_third_way_joint_list = 1: <div class="election-table-row"><span class="party party-third-way">Trzecia Droga</span><span>[+ snap_election_third_way_vote +]%</span><b>[+ p2050_seats + psl_seats +]</b><span>joint list · 8% threshold</span></div>?]
-[? if snap_third_way_joint_list = 0: <div class="election-table-row"><span class="party party-p2050">Polska 2050</span><span>[+ snap_election_p2050_vote +]%</span><b>[+ p2050_seats +]</b><span>separate list · 5%</span></div><div class="election-table-row"><span class="party party-psl">PSL</span><span>[+ snap_election_psl_vote +]%</span><b>[+ psl_seats +]</b><span>separate list · 5%</span></div>?]
+[? if snap_election_right_2027_seats > 0: <div class="election-table-row"><span class="party party-pis">Wspólna Prawica 2027</span><span>[+ snap_election_right_2027_vote +]%</span><b>[+ snap_election_right_2027_seats +]</b><span>one certified coalition list · internal shares allocated</span></div>?]
+[? if snap_election_common_centre_2027_seats > 0: <div class="election-table-row"><span class="party party-ko">Wspólne Centrum 2027</span><span>[+ snap_election_common_centre_2027_vote +]%</span><b>[+ snap_election_common_centre_2027_seats +]</b><span>one certified coalition list · autonomous components</span></div>?]
+[? if snap_election_third_way_2027_seats > 0: <div class="election-table-row"><span class="party party-third-way">Trzecia Droga 2027</span><span>[+ snap_election_third_way_2027_vote +]%</span><b>[+ snap_election_third_way_2027_seats +]</b><span>one certified coalition list</span></div>?]
+[? if snap_election_right_2027_seats = 0: <div class="election-table-row"><span class="party party-pis">PiS</span><span>[+ snap_election_pis_vote +]%</span><b>[+ pis_seats +]</b><span>certified</span></div>?]
+[? if snap_election_common_centre_2027_seats = 0: <div class="election-table-row"><span class="party party-ko">KO</span><span>[+ snap_election_ko_vote +]%</span><b>[+ ko_seats +]</b><span>[? if ko_consolidated: separate list · 5%?][? if not ko_consolidated: coalition form · 8%?]</span></div>?]
+[? if snap_third_way_joint_list = 1 and snap_election_third_way_2027_seats = 0 and snap_election_common_centre_2027_seats = 0: <div class="election-table-row"><span class="party party-third-way">Trzecia Droga</span><span>[+ snap_election_third_way_vote +]%</span><b>[+ p2050_seats + psl_seats +]</b><span>joint list · 8% threshold</span></div>?]
+[? if snap_third_way_joint_list = 0 and snap_election_third_way_2027_seats = 0 and snap_election_common_centre_2027_seats = 0: <div class="election-table-row"><span class="party party-p2050">Polska 2050</span><span>[+ snap_election_p2050_vote +]%</span><b>[+ p2050_seats +]</b><span>separate list · 5%</span></div><div class="election-table-row"><span class="party party-psl">PSL</span><span>[+ snap_election_psl_vote +]%</span><b>[+ psl_seats +]</b><span>separate list · 5%</span></div>?]
 <div class="election-table-row"><span class="party party-lewica">[+ left_party_name +]</span><span>[+ snap_election_left_vote +]%</span><b>[+ left_seats +]</b><span>main list</span></div>
 [? if sld_breakaway_seats > 0 or barons_party_formed = 1: <div class="election-table-row"><span class="party party-sld">[+ barons_party_name +]</span><span>[+ snap_election_sld_breakaway_vote +]%</span><b>[+ sld_breakaway_seats +]</b><span>breakaway</span></div>?]
 [? if social_patriot_seats > 0 or social_patriot_party_formed = 1: <div class="election-table-row"><span class="party party-social-patriot">[+ social_patriot_party_name +]</span><span>[+ snap_election_social_patriot_vote +]%</span><b>[+ social_patriot_seats +]</b><span>[? if social_patriot_list_committee = "pis": PiS host list?][? if social_patriot_list_committee != "pis": independent?]</span></div>?]
@@ -6673,11 +6793,15 @@ fresh campaign; the parties do not simply inherit the previous count.?]
 [? if razem_party_seats > 0 or razem_party_formed = 1: <div class="election-table-row"><span class="party party-razem">Razem</span><span>[+ snap_election_razem_vote +]%</span><b>[+ razem_party_seats +]</b><span>independent list</span></div>?]
 [? if pps_party_seats > 0 or pps_party_formed = 1: <div class="election-table-row"><span class="party party-pps">PPS</span><span>[+ snap_election_pps_vote +]%</span><b>[+ pps_party_seats +]</b><span>independent list</span></div>?]
 [? if tak_rozwoj_seats > 0 or tak_dla_rozwoju_party_formed = 1: <div class="election-table-row"><span class="party party-razem">[+ tak_rozwoj_party_name +]</span><span>[+ snap_election_tak_rozwoj_vote +]%</span><b>[+ tak_rozwoj_seats +]</b><span>[? if tak_rozwoj_party_name = "Akcja Socjalistyczna": Zandberg-led split?][? if tak_rozwoj_party_name != "Akcja Socjalistyczna": Matysiak splitter?]</span></div>?]
-[? if centrum_seats > 0 or unia_centrum_formed = 1: <div class="election-table-row"><span class="party party-centrum">Unia Centrum</span><span>[+ snap_election_centrum_vote +]%</span><b>[+ centrum_seats +]</b><span>PL2050 split</span></div>?]
-[? if ko_splinter_seats > 0 or ko_splinter_active = 1: <div class="election-table-row"><span class="party party-ko">[+ ko_splinter_name +]</span><span>[+ snap_election_ko_splinter_vote +]%</span><b>[+ ko_splinter_seats +]</b><span>KO split</span></div>?]
-[? if rozwoj_seats > 0 or rozwoj_party_formed = 1: <div class="election-table-row"><span class="party party-rozwoj">Rozwój Plus</span><span>[+ snap_election_rozwoj_vote +]%</span><b>[+ rozwoj_seats +]</b><span>PiS split</span></div>?]
-[? if korona_seats > 0 or far_right_split > 0: <div class="election-table-row"><span class="party party-korona">Korona</span><span>[+ snap_election_korona_vote +]%</span><b>[+ korona_seats +]</b><span>Konf. split</span></div>?]
-<div class="election-table-row"><span class="party party-konf">Konfederacja</span><span>[+ snap_election_konf_vote +]%</span><b>[+ konf_seats +]</b><span>certified</span></div>
+[? if (centrum_seats > 0 or unia_centrum_formed = 1) and snap_election_common_centre_2027_seats = 0: <div class="election-table-row"><span class="party party-centrum">Unia Centrum</span><span>[+ snap_election_centrum_vote +]%</span><b>[+ centrum_seats +]</b><span>PL2050 split</span></div>?]
+[? if (ko_splinter_seats > 0 or ko_splinter_active = 1) and snap_election_common_centre_2027_seats = 0: <div class="election-table-row"><span class="party party-ko">[+ ko_splinter_name +]</span><span>[+ snap_election_ko_splinter_vote +]%</span><b>[+ ko_splinter_seats +]</b><span>KO split</span></div>?]
+[? if (rozwoj_seats > 0 or rozwoj_party_formed = 1) and snap_election_right_2027_seats = 0: <div class="election-table-row"><span class="party party-rozwoj">Rozwój Plus</span><span>[+ snap_election_rozwoj_vote +]%</span><b>[+ rozwoj_seats +]</b><span>PiS split</span></div>?]
+[? if (korona_seats > 0 or far_right_split > 0) and snap_election_right_2027_seats = 0: <div class="election-table-row"><span class="party party-korona">Korona</span><span>[+ snap_election_korona_vote +]%</span><b>[+ korona_seats +]</b><span>Konf. split</span></div>?]
+[? if new_hope_seats > 0 and snap_election_right_2027_seats = 0: <div class="election-table-row"><span class="party party-konf">Nowa Nadzieja</span><span>[+ snap_election_new_hope_vote +]%</span><b>[+ new_hope_seats +]</b><span>separate organisation</span></div>?]
+[? if national_movement_seats > 0 and snap_election_right_2027_seats = 0: <div class="election-table-row"><span class="party party-konf">Ruch Narodowy</span><span>[+ snap_election_national_movement_vote +]%</span><b>[+ national_movement_seats +]</b><span>separate organisation</span></div>?]
+[? if duda_seats > 0: <div class="election-table-row"><span class="party party-pis">Ruch Dudy</span><span>[+ snap_election_duda_vote +]%</span><b>[+ duda_seats +]</b><span>declared candidates only</span></div>?]
+[? if social_conservative_seats > 0: <div class="election-table-row"><span class="party party-pis">Konserwatyści społeczni</span><span>[+ snap_election_social_conservative_vote +]%</span><b>[+ social_conservative_seats +]</b><span>welfare current</span></div>?]
+[? if snap_election_right_2027_seats = 0: <div class="election-table-row"><span class="party party-konf">Konfederacja</span><span>[+ snap_election_konf_vote +]%</span><b>[+ konf_seats +]</b><span>certified</span></div>?]
 </div>
 
 Election-day movement: **[+ snap_election_day_summary +]**.
@@ -6861,8 +6985,8 @@ responsibility.
 
 @election_2027_epilogue
 title: Read the final assessment
-view-if: left_seats > 0 and election_2027_terminal = 1
-go-to: poland_ending.final_assessment
+view-if: election_2027_terminal = 1
+go-to: poland_scenario_epilogue.legal
 
 @snap_left_offer
 title: The Palace nominee courts the Left
@@ -7029,6 +7153,8 @@ title: The presidential nominee takes office
 view-if: government_has_confidence = 1
 on-arrival: {!
 Q.prime_minister = Q.snap_pm_candidate;
+Q.prime_minister_intro_return = "ministries_or_event_queue";
+Q.prime_minister_intro_pending = 1;
 Q.government_name = Q.snap_pm_candidate + " cabinet";
 Q.government_party = Q.snap_pm_party;
 Q.government_owner = Q.snap_pm_is_right
@@ -7080,7 +7206,7 @@ Q.ministry_return_mode = "event_queue";
 Q.news_headline =
     Q.snap_pm_candidate + " forms the post-election government";
 !}
-go-to: poland_ministries if left_in_government = 1; poland_event_queue if left_in_government = 0
+go-to: poland_prime_minister_intro.show
 
 @snap_sejm_candidate
 title: The Sejm receives the second attempt
@@ -7321,6 +7447,8 @@ Q.government_has_confidence = Q.confidence_yes >= 231 ? 1 : 0;
 Q.confidence_mode = "Post-snap Sejm second attempt";
 if (Q.government_has_confidence) {
     Q.prime_minister = Q.snap_dem_candidate;
+    Q.prime_minister_intro_return = "ministries_or_event_queue";
+    Q.prime_minister_intro_pending = 1;
     Q.government_name = Q.snap_dem_candidate + " democratic cabinet";
     const leftLedSnapCabinet =
         Number(Q.snap_dem_candidate_left) == 1;
@@ -7407,7 +7535,7 @@ simple majority of votes cast; only failure there requires another election.?]
 title: Record the formed government
 view-if: government_has_confidence = 1
 on-arrival: snap_election_requested = 0
-go-to: poland_ministries if left_in_government = 1 and ministries_finalized = 0; poland_event_queue if left_in_government = 0 or ministries_finalized = 1
+go-to: poland_prime_minister_intro.show
 
 @snap_post_election_third
 title: Proceed to the President's third attempt

@@ -160,6 +160,167 @@ assert(
     loose.width + ' vs ' + informed.width);
 }
 
+// Coalition partners become much easier to whip once relations are genuinely
+// good, while ordinary relations still receive only a small loyalty benefit.
+function partnerBudgetSupport(seed, relation, coalitionDissent, coalitionSeats) {
+  const engine = new dendry.DendryEngine(new dendry.UserInterface(), game);
+  engine.beginGame([seed]);
+  const Q = engine.state.qualities;
+  const choose = function(sceneId) {
+    const choices = engine.getCurrentChoices();
+    const index = choices.findIndex(function(c) { return c.id === sceneId; });
+    assert(index >= 0, 'Missing choice ' + sceneId + ' among ' +
+      choices.map(function(c) { return c.id; }).join(', '));
+    engine.choose(index);
+  };
+  choose('root.campaign_game');
+  choose('root.standard');
+  Object.assign(Q, {
+    year: 2024,
+    month: 12,
+    annual_budget_year: 2024,
+    left_in_government: 1,
+    government_party: 'lewica',
+    prime_minister_party: 'lewica',
+    finance_minister_party: 'Lewica',
+    government_has_confidence: 1,
+    caretaker_government: 0,
+  });
+  engine.goToScene('poland_budget_2023_2026.annual_budget');
+  const governmentSeats = coalitionSeats === undefined ? 250 : coalitionSeats;
+  Object.assign(Q, {
+    coalition_seats: governmentSeats,
+    government_support_seats: governmentSeats,
+    government_coalition_dissent: coalitionDissent || 0,
+    ministry_left_cabinet_seats: 30,
+    left_seats: 30,
+    ko_seats: 80,
+    ministry_ko_in_cabinet: 1,
+    ko_relation: relation,
+    ko_coalition_dissent: 20,
+  });
+  choose('poland_budget_2023_2026.government_minimum');
+  choose('poland_budget_2023_2026.finance_progressive_revenue');
+  choose('poland_budget_2023_2026.internal_lock');
+  return {
+    support: Q.annual_budget_ko_cabinet_support,
+    relation: Q.ko_relation,
+    passed: Q.annual_budget_predicted_passed,
+    partnerDefectors: Q.annual_budget_predicted_partner_defectors,
+  };
+}
+
+{
+  const neutral = partnerBudgetSupport('budget-relation-neutral', 40);
+  const fair = partnerBudgetSupport('budget-relation-fair', 60);
+  const good = partnerBudgetSupport('budget-relation-good', 90);
+  assert(fair.support > neutral.support,
+    'Better relations did not make a coalition partner more cooperative');
+  assert(good.support - fair.support >
+    (fair.support - neutral.support) * 2,
+    'Good relations did not make the coalition partner very cooperative: ' +
+      neutral.support + '@' + neutral.relation + ' / ' +
+      fair.support + '@' + fair.relation + ' / ' +
+      good.support + '@' + good.relation);
+
+  const functional = partnerBudgetSupport(
+    'budget-functional-coalition', 40, 40, 231
+  );
+  const dysfunctional = partnerBudgetSupport(
+    'budget-dysfunctional-coalition', 10, 80, 231
+  );
+  assert.strictEqual(functional.passed, 1,
+    'A functional coalition could not carry its own budget');
+  assert.strictEqual(dysfunctional.passed, 0,
+    'A genuinely dysfunctional coalition still carried its budget cleanly');
+  assert(dysfunctional.partnerDefectors > functional.partnerDefectors,
+    'Coalition dysfunction did not produce additional budget rebels');
+}
+
+// Every available bargain publishes the same vote commitment it will make.
+// The democratic-centre option must also ignore a zero-seat club even when
+// that club has the warmer relationship.
+{
+  const engine = new dendry.DendryEngine(new dendry.UserInterface(), game);
+  engine.beginGame(['budget-deal-preview']);
+  const Q = engine.state.qualities;
+  const choose = function(sceneId) {
+    const choices = engine.getCurrentChoices();
+    const index = choices.findIndex(function(c) { return c.id === sceneId; });
+    assert(index >= 0, 'Missing choice ' + sceneId + ' among ' +
+      choices.map(function(c) { return c.id; }).join(', '));
+    engine.choose(index);
+  };
+  choose('root.campaign_game');
+  choose('root.standard');
+
+  Q.year = 2024;
+  Q.month = 12;
+  Q.annual_budget_year = 2024;
+  Q.left_in_government = 1;
+  Q.government_party = 'lewica';
+  Q.prime_minister_party = 'lewica';
+  Q.finance_minister_party = 'Lewica';
+  Q.government_has_confidence = 1;
+  Q.caretaker_government = 0;
+  engine.goToScene('poland_budget_2023_2026.annual_budget');
+
+  Object.assign(Q, {
+    coalition_seats: 210,
+    government_support_seats: 210,
+    ministry_left_cabinet_seats: 30,
+    left_seats: 30,
+    ko_seats: 40,
+    p2050_seats: 0,
+    psl_seats: 32,
+    razem_seats: 6,
+    pis_seats: 142,
+    konf_seats: 30,
+    ministry_ko_in_cabinet: 0,
+    ministry_p2050_in_cabinet: 0,
+    ministry_psl_in_cabinet: 0,
+    ministry_pis_in_cabinet: 0,
+    ministry_konf_in_cabinet: 0,
+    razem_in_government: 0,
+    ko_relation: 40,
+    p2050_relation: 90,
+    resources: 3,
+    budget: 5,
+  });
+
+  choose('poland_budget_2023_2026.government_minimum');
+  choose('poland_budget_2023_2026.finance_progressive_revenue');
+  choose('poland_budget_2023_2026.internal_lock');
+  assert.strictEqual(Q.annual_budget_predicted_passed, 0,
+    'Minority-cabinet fixture unexpectedly had a safe budget');
+  choose('poland_budget_2023_2026.budget_deal_market');
+
+  assert.strictEqual(Q.annual_budget_deal_democratic_target, 'ko',
+    'Deal preview targeted a zero-seat club over an available club');
+  assert(Q.annual_budget_deal_psl_votes >= 4,
+    'Major PSL concession still returned only one or two MPs');
+  assert(Q.annual_budget_deal_pis_votes >= 4,
+    'Major PiS concession still returned only one or two MPs');
+  assert(Q.annual_budget_deal_democratic_votes >= 3,
+    'Democratic-centre deal returned fewer than its viable cohort floor');
+  assert.strictEqual(Q.annual_budget_deal_democratic_seats, Q.ko_seats,
+    'Deal preview did not publish the target club\'s actual seats');
+  const previewVotes = Q.annual_budget_deal_democratic_votes;
+  const democraticChoice = engine.getCurrentChoices().find(function(choice) {
+    return choice.id ===
+      'poland_budget_2023_2026.deal_democratic_green_register';
+  });
+  assert(democraticChoice &&
+    String(democraticChoice.subtitle).includes(String(previewVotes)),
+  'Deal choice did not publish its vote commitment');
+  choose('poland_budget_2023_2026.deal_democratic_green_register');
+  assert.strictEqual(Q.annual_budget_external_votes_committed, previewVotes,
+    'Accepted deal did not commit the number of votes it previewed');
+  choose('poland_budget_2023_2026.internal_lock');
+  assert.strictEqual(Q.annual_budget_external_votes_live, previewVotes,
+    'The re-whip discarded votes from a concession whose terms still held');
+}
+
 // The cabinet route exercises the spending envelope through the complete
 // parliamentary procedure. Seat fixtures are deliberately applied after the
 // annual-budget entry because poland_normalize rebuilds the coalition first.

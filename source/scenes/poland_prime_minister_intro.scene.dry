@@ -1,0 +1,60 @@
+title: Prime Minister introduction
+
+@show
+title: A new government takes office
+subtitle: [+ prime_minister_cabinet_label +]
+new-page: true
+face-image: img/poland/events/chancellery-2022.webp
+on-arrival: {!
+const primeMinister = String(Q.prime_minister || "Prime Minister");
+const cabinetCounts =
+    Q.prime_minister_cabinet_counts &&
+    typeof Q.prime_minister_cabinet_counts == "object" &&
+    !Array.isArray(Q.prime_minister_cabinet_counts)
+        ? Q.prime_minister_cabinet_counts
+        : {};
+if (Q.prime_minister_intro_pending == 1) {
+    cabinetCounts[primeMinister] =
+        Math.max(0, Math.round(Number(cabinetCounts[primeMinister]) || 0)) + 1;
+    Q.prime_minister_intro_pending = 0;
+}
+const cabinetNumber = Math.max(
+    1,
+    Math.round(Number(cabinetCounts[primeMinister]) || 0)
+);
+const ordinalWords = [
+    "zeroth", "first", "second", "third", "fourth", "fifth",
+    "sixth", "seventh", "eighth", "ninth", "tenth", "eleventh",
+    "twelfth", "thirteenth", "fourteenth", "fifteenth", "sixteenth",
+    "seventeenth", "eighteenth", "nineteenth", "twentieth"
+];
+const ordinalSuffix =
+    cabinetNumber % 100 >= 11 && cabinetNumber % 100 <= 13
+        ? "th"
+        : cabinetNumber % 10 == 1
+            ? "st"
+            : cabinetNumber % 10 == 2
+                ? "nd"
+                : cabinetNumber % 10 == 3
+                    ? "rd"
+                    : "th";
+const ordinal = ordinalWords[cabinetNumber] || cabinetNumber + ordinalSuffix;
+const surname = primeMinister.split(/\s+/).pop();
+Q.prime_minister_cabinet_counts = cabinetCounts;
+Q.prime_minister_cabinet_number = cabinetNumber;
+Q.prime_minister_cabinet_label =
+    "The " + ordinal + " " + surname + " cabinet";
+Q.government_name = Q.prime_minister_cabinet_label;
+!}
+
+= [+ prime_minister_cabinet_label +]
+
+**[+ prime_minister +]** has won the confidence of the Sejm and now leads the
+Council of Ministers.
+
+<span data-prime-minister-bio>[+ prime_minister +] has won the confidence required to take office.</span>
+
+- @continue: Continue
+
+@continue
+go-to: poland_government_formation.formation_exit if prime_minister_intro_return = "formation_exit"; poland_government_formation.formation_tusk_suit if prime_minister_intro_return = "formation_government" and formation_tusk_suit_done = 0 and president_name = "Andrzej Duda" and democratic_candidate = "Donald Tusk" and candidate_psl_votes > 0 and democratic_votes < 276; poland_government_formation.government_entry_gate if prime_minister_intro_return = "formation_government" and (formation_tusk_suit_done = 1 or president_name != "Andrzej Duda" or democratic_candidate != "Donald Tusk" or candidate_psl_votes <= 0 or democratic_votes >= 276); poland_government_formation.resolution_exit if prime_minister_intro_return = "formation_constructive"; poland_events_2026.sikorski_compact_2026 if prime_minister_intro_return = "sikorski_compact_2026"; poland_ministries if prime_minister_intro_return = "ministries_or_event_queue" and left_in_government = 1 and ministries_finalized = 0; poland_event_queue if prime_minister_intro_return = "event_queue" or prime_minister_intro_return = "None" or (prime_minister_intro_return = "ministries_or_event_queue" and (left_in_government = 0 or ministries_finalized = 1))

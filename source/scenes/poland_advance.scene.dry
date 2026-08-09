@@ -170,14 +170,10 @@ if (culturalRightPressure + marketRightPressure >= 4) {
     Q.party_unity -= 1;
 }
 
-// An adopted Wiosna doctrine keeps working between events. The social-liberal
-// route accumulates ownership of the rights and secular arguments; the New
-// Ruch Postępu route keeps drifting right and pays for it on the labour flank
-// through the market pressure already computed above.
+// An adopted Wiosna doctrine keeps working between events. The dynamic public
+// mood model treats the social-liberal route as a bounded ownership target;
+// it must not add permanent ownership every month.
 if (Q.spring_path_stage >= 2 && Q.spring_path_route == "social_liberal") {
-    Q.lgbt_equality_left_ownership += 0.5;
-    Q.abortion_rights_left_ownership += 0.4;
-    Q.secular_state_left_ownership += 0.3;
     Q.spring_liberal_bridge += 0.5;
 } else if (
     Q.spring_path_stage >= 2 &&
@@ -338,6 +334,46 @@ const monthlyTimers = [
     "poland_populist_bank_timer",
     "poland_populist_foreign_capital_timer",
     "poland_populist_referendum_timer",
+    "poland_sld_markets_timer",
+    "poland_sld_economic_freedom_timer",
+    "poland_sld_bank_tax_timer",
+    "poland_sld_broadband_timer",
+    "poland_sld_ipn_timer",
+    "poland_sld_housebuilding_timer",
+    "poland_sld_inspector_timer",
+    "poland_sld_public_work_timer",
+    "poland_sld_ivf_timer",
+    "poland_sld_research_timer",
+    "poland_wiosna_dialogue_timer",
+    "poland_wiosna_thirteen_bills_timer",
+    "poland_wiosna_2035_timer",
+    "poland_wiosna_transparency_timer",
+    "poland_wiosna_stamps_timer",
+    "poland_wiosna_powiat_train_timer",
+    "poland_wiosna_specialist_timer",
+    "poland_wiosna_alimony_timer",
+    "poland_wiosna_assistant_timer",
+    "poland_wiosna_conscience_timer",
+    "poland_pps_socialist_timer",
+    "poland_pps_local_democracy_timer",
+    "poland_pps_lobbying_timer",
+    "poland_pps_property_timer",
+    "poland_pps_cooperative_timer",
+    "poland_pps_six_hour_timer",
+    "poland_pps_councils_timer",
+    "poland_pps_maximum_wage_timer",
+    "poland_pps_housing_first_timer",
+    "poland_pps_public_fibre_timer",
+    "poland_nowa_lewica_caring_state_timer",
+    "poland_nowa_lewica_first_bell_timer",
+    "poland_nowa_lewica_equal_leave_timer",
+    "poland_nowa_lewica_body_positive_timer",
+    "poland_nowa_lewica_two_traditions_timer",
+    "poland_nowa_lewica_second_breakfast_timer",
+    "poland_nowa_lewica_student_ticket_timer",
+    "poland_nowa_lewica_school_health_timer",
+    "poland_nowa_lewica_widow_pension_timer",
+    "poland_nowa_lewica_empty_homes_timer",
     "emergency_fundraising_timer",
     "constructive_vonc_cooldown",
     "pressure_event_cooldown",
@@ -1161,6 +1197,7 @@ const clampMood = function(value, low, high) {
         Math.min(high, Number.isFinite(numeric) ? numeric : low)
     );
 };
+if (Number(Q.public_opinion_version) < 3) {
 Q.story_salience_memory =
     clampMood(Q.story_salience_memory, 0, 100) * 0.78;
 Q.story_distrust_memory =
@@ -1508,6 +1545,7 @@ for (const story of queuedStories) {
             backlash * 0.10;
     }
 }
+}
 
 // Pandemic trajectory: the initial emergency creates solidaristic and public-
 // health openings. Prolonged restriction, insecurity and administrative
@@ -1797,6 +1835,9 @@ Q.tactical_desertion_to_abstention +=
 Q.tactical_desertion_to_p2050 +=
     (tacticalP2050Target - Q.tactical_desertion_to_p2050) * 0.16;
 
+if (Number(Q.public_opinion_version) < 3) {
+// Version-2 compatibility. Version 3 resolves the same state through the
+// shared model after structural and historical changes have finished.
 // Public attention can cool quickly between shocks. Support itself does not
 // reset; distrust, backlash and party reputation recover through the much
 // slower and deliberately uneven memory tracks above.
@@ -2115,6 +2156,7 @@ Q.public_climate_report =
 Q.public_climate_media_bonus = Math.round(
     Math.max(-6, Math.min(6, trend * 2.2))
 );
+}
 
 // Women's Strike participation cools faster than movement reputation. Broad
 // sympathy, conservative backlash and party-conversion memory move on separate
@@ -2136,7 +2178,7 @@ for (const attitude of [
     "cultural_conservatism", "order_threat_sensitivity",
     "universal_solidarity", "institutional_trust", "change_appetite"
 ]) {
-    Q[attitude] = clampPublic(Q[attitude]);
+    Q[attitude] = Math.max(0, Math.min(100, Number(Q[attitude]) || 0));
 }
 for (const trajectory of [
     "womens_strike_activist_mobilisation",
@@ -2147,7 +2189,7 @@ for (const trajectory of [
     "migration_local_service_capacity", "migration_welfare_competition",
     "migration_disinformation"
 ]) {
-    Q[trajectory] = clampPublic(Q[trajectory]);
+    Q[trajectory] = Math.max(0, Math.min(100, Number(Q[trajectory]) || 0));
 }
 
 // Unanswered demands cool slowly, and faster when the competent ledger has
@@ -2251,6 +2293,11 @@ if (Q.year == 2022) {
 }
 if (Q.year >= 2023) {
     Q.next_budget_label = "December " + Q.year;
+}
+const publicMoodModel = (typeof window !== "undefined"
+    ? window : globalThis).polandPublicMoodModel;
+if (publicMoodModel) {
+    publicMoodModel.resolve(Q, {advance: true, finalize: false});
 }
 !}
 go-to: poland_party_ai

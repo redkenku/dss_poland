@@ -10,7 +10,7 @@ priority: 25
 order: 10
 max-visits: 1
 face-image: img/poland/cards/campaigning.webp
-view-if: continuous_campaign = 1 and year = 2025 and month = 1
+view-if: continuous_campaign = 1 and year = 2025 and month = 1 and election_2027_terminal = 0
 on-arrival: {!
 if (!Q.pres_2025_left_candidate ||
     Q.pres_2025_left_candidate == "Undecided") {
@@ -447,7 +447,7 @@ be competing against.
 @pres25_meet_trzaskowski
 title: Rafał Trzaskowski — the democratic camp's candidate
 view-if: pres_2025_ko_candidate = "Rafał Trzaskowski"
-face-image: img/poland/events/pres-candidate-trzaskowski.webp
+face-image: img/poland/events/pres-candidate-trzaskowski-2025.webp
 
 **Rafał Trzaskowski — Civic Coalition**
 
@@ -595,7 +595,7 @@ whether a smoother manager changes anything he would sign.
 
 @pres25_meet_mentzen
 title: Sławomir Mentzen — the cheap state on the ballot
-face-image: img/poland/events/pres-candidate-mentzen.webp
+face-image: img/poland/events/pres-candidate-mentzen-2025.webp
 view-if: pres_2025_konf_candidate = "Sławomir Mentzen"
 
 **Sławomir Mentzen — Konfederacja chair, tax adviser**
@@ -653,7 +653,7 @@ other candidate can work on.
 @pres25_meet_holownia
 title: Szymon Hołownia — the outsider who governed
 view-if: pres_2025_centre_candidate = "Szymon Hołownia"
-face-image: img/poland/events/pres-candidate-holownia.webp
+face-image: img/poland/events/pres-candidate-holownia-2025.webp
 
 **Szymon Hołownia — Marshal of the Sejm, founder of Poland 2050**
 
@@ -1015,9 +1015,10 @@ view-if: pres_2025_campaign_actions_remaining <= 0
 go-to: poland_event_queue
 
 @braun_breaks_konf
+# scenario-ledger: FAR-02
 # prose-audit: Grade B — Braun and Mentzen are introduced as rival radical-right organisers with different constituencies, and each Lewica response now changes the public meaning of the split on screen.
-title: Braun breaks with Konfederacja
-subtitle: The radical right divides between electoral discipline and Braun's personal movement
+title: Braun's place inside Konfederacja is decided
+subtitle: Organisational strength determines whether the federation disciplines him, bargains or breaks
 face-image: img/poland/events/grzegorz-braun-2025.webp
 new-page: true
 tags: poland_event
@@ -1027,26 +1028,61 @@ max-visits: 1
 view-if: continuous_campaign = 1 and year = 2025 and month = 1
 on-arrival: {!
 Q.braun_legal_preparation = Number(Q.braun_legal_preparation) || 0;
-Q.far_right_split = 1;
-if (Q.konf_seats >= 1) {
-    Q.korona_seats += 1;
-    Q.konf_seats -= 1;
+const kkpRecord = (Q.rival_group_records || []).find(function(record) {
+    return record && record.id == "kkp";
+});
+const braunistOrganisation = Math.max(
+    Number(Q.konf_braunist_share) || 0,
+    kkpRecord ? Number(kkpRecord.organisation) || 0 : 0
+);
+const braunStays = braunistOrganisation >= 55 &&
+    Number(Q.far_right_fragmentation || 0) < 35;
+if (braunStays) {
+    Q.far_right_split = 0;
+    Q.braun_federation_outcome = braunistOrganisation >= 68
+        ? "Konfederacja accepts Braun's presidential candidacy"
+        : "Konfederacja buys Braun's withdrawal with protected list places";
+    if (braunistOrganisation >= 68) {
+        Q.pres_2025_konf_candidate = "Grzegorz Braun";
+    }
+    Q.konf_braunist_share += 3;
+    Q.far_right_fragmentation += 2;
+    Q.news_headline = Q.braun_federation_outcome;
+} else {
+    Q.far_right_split = 1;
+    Q.braun_federation_outcome =
+        "Braun leaves Konfederacja with Korona as an independent vehicle";
+    if (Q.konf_seats >= 1) {
+        Q.korona_seats += 1;
+        Q.konf_seats -= 1;
+    }
+    if (kkpRecord) {
+        kkpRecord.active = 1;
+        kkpRecord.contesting = 1;
+        kkpRecord.list_committee = "kkp";
+        kkpRecord.exclusive_seats = Math.max(1, kkpRecord.exclusive_seats || 0);
+    }
+    Q.konf_braunist_share -= 8;
+    Q.konf_mentzenite_share += 5;
+    Q.konf_nationalist_share += 3;
+    Q.news_headline =
+        "Braun takes a seat and an electoral vehicle out of Konfederacja";
 }
-Q.konf_braunist_share -= 8;
-Q.konf_mentzenite_share += 5;
-Q.konf_nationalist_share += 3;
-Q.news_headline =
-    "Braun takes a seat and an electoral vehicle out of Konfederacja";
 !}
 
 = January 2025 — Two radical-right electorates
 
-Far-right MEP and presidential candidate <span class="party-korona"><b>Grzegorz Braun</b></span> takes his Crown
-organisation out of Konfederacja after challenging its chosen candidate,
-New Hope leader <span class="party-konf"><b>Sławomir Mentzen</b></span>. Mentzen wants younger anti-tax voters and
-coalition respectability; Braun wants a personal movement unrestrained by the
-federation's discipline. Any elected representation held by Braun's current
-moves with it.
+Far-right MEP <span class="party-korona"><b>Grzegorz Braun</b></span> challenges
+New Hope leader <span class="party-konf"><b>Sławomir Mentzen</b></span> for the
+federation's presidential nomination. Mentzen wants younger anti-tax voters
+and coalition respectability; Braun wants a personal movement unrestrained by
+the federation's discipline.
+
+**[+ braun_federation_outcome +].** [? if far_right_split: Any elected
+representation declared for Braun moves with his organisation; no undeclared
+MP is reassigned.?][? if not far_right_split: Crown keeps its organisation
+inside the federation. Protected places or a nomination settle this congress,
+but do not erase the rivalry.?]
 
 Jewish organisations, minority advocates and people targeted by Braun's public
 actions need protection. Lewica also has to understand that calling every
@@ -2650,7 +2686,7 @@ go-to: poland_event_queue
 # prose-audit: Grade A — The seven-level verdict on Lewica's result is genuinely authored, and the inter-round bargain beneath it now matches: eight endorsement routes each report what was signed and what it cost, and they open a two-move support market over the electorates the first round left without a candidate.
 title: Presidential election — first round
 subtitle: [? if pres_2025_united_left: One Left campaign receives a national verdict?][? if not pres_2025_united_left: Two Left strategies receive separate verdicts?]
-face-image: img/poland/events/election-2023-ballot.webp
+face-image: img/poland/events/presidential-ballot-2025.webp
 new-page: true
 tags: poland_event
 priority: 45
@@ -2893,6 +2929,30 @@ if (firstRoundWinnerKey) {
 } else {
     Q.pres_2025_runoff_done = 0;
 }
+const presWinnerImages2025 = {
+    "Rafał Trzaskowski": "img/poland/events/pres-candidate-trzaskowski-2025.webp",
+    "Radosław Sikorski": "img/poland/events/pres-candidate-sikorski.webp",
+    "Barbara Nowacka": "img/poland/events/pres-candidate-nowacka.webp",
+    "Karol Nawrocki": "img/poland/events/pres-candidate-nawrocki.webp",
+    "Mateusz Morawiecki": "img/poland/cards/advisor-morawiecki.webp",
+    "Przemysław Czarnek": "img/poland/events/pres-candidate-czarnek.webp",
+    "Tobiasz Bocheński": "img/poland/events/pres-candidate-bochenski.webp",
+    "Magdalena Biejat": "img/poland/events/pres-candidate-biejat-2025.webp",
+    "Agnieszka Dziemianowicz-Bąk": "img/poland/cards/advisor-dziemianowicz-bak.webp",
+    "Adrian Zandberg": "img/poland/events/pres-candidate-zandberg-2025.webp",
+    "Sławomir Mentzen": "img/poland/events/pres-candidate-mentzen-2025.webp",
+    "Krzysztof Bosak": "img/poland/events/pres-candidate-bosak.webp",
+    "Grzegorz Braun": "img/poland/events/grzegorz-braun-2025.webp",
+    "Szymon Hołownia": "img/poland/events/pres-candidate-holownia-2025.webp",
+    "Ryszard Petru": "img/poland/events/pres-candidate-petru.webp",
+    "Krzysztof Stanowski": "img/poland/events/pres-candidate-stanowski.webp"
+};
+this.game.scenes[
+    "poland_events_2025.presidential_first_round_2025"
+].faceImage = firstRoundWinnerKey
+    ? presWinnerImages2025[Q.pres_2025_winner] ||
+        "img/poland/events/presidential-ballot-2025.webp"
+    : "img/poland/events/presidential-ballot-2025.webp";
 Q.pres_2025_player_result = Math.round(raw.left * 100) / 100;
 Q.pres_2025_field_result =
     Math.round((raw.left + raw.razem) * 100) / 100;
@@ -3213,7 +3273,7 @@ Q.news_headline = Q.pres_2025_first_round_winner
 Turnout: **[+ pres_2025_r1_turnout +]%** ·
 Valid votes: **[+ pres_2025_r1_valid_votes_display +]**
 
-<div class="election-table">
+<div class="election-table presidential-result-table">
 <div class="election-table-head"><span>Candidate</span><span>Camp</span><span>Vote</span><span>Votes</span><span>Status</span></div>
 <div class="election-table-row"><span>[+ pres_2025_ko_candidate +]</span><span class="party party-ko">KO</span><b>[+ pres_2025_r1_display_ko +]%</b><span>[+ pres_2025_r1_votes_ko_display +]</span><span>[+ pres_2025_status_ko +]</span></div>
 <div class="election-table-row"><span>[+ pres_2025_right_candidate +]</span><span class="party party-pis">PiS-backed</span><b>[+ pres_2025_r1_display_right +]%</b><span>[+ pres_2025_r1_votes_right_display +]</span><span>[+ pres_2025_status_right +]</span></div>
@@ -4453,6 +4513,32 @@ if (resultAShare > 50) {
     Q.pres_2025_winner = Q.pres_2025_runoff_b_name;
     Q.pres_2025_winner_key = resultBKey;
 }
+const presWinnerImages2025 = {
+    "Rafał Trzaskowski": "img/poland/events/pres-candidate-trzaskowski-2025.webp",
+    "Radosław Sikorski": "img/poland/events/pres-candidate-sikorski.webp",
+    "Barbara Nowacka": "img/poland/events/pres-candidate-nowacka.webp",
+    "Karol Nawrocki": "img/poland/events/pres-candidate-nawrocki.webp",
+    "Mateusz Morawiecki": "img/poland/cards/advisor-morawiecki.webp",
+    "Przemysław Czarnek": "img/poland/events/pres-candidate-czarnek.webp",
+    "Tobiasz Bocheński": "img/poland/events/pres-candidate-bochenski.webp",
+    "Magdalena Biejat": "img/poland/events/pres-candidate-biejat-2025.webp",
+    "Agnieszka Dziemianowicz-Bąk": "img/poland/cards/advisor-dziemianowicz-bak.webp",
+    "Adrian Zandberg": "img/poland/events/pres-candidate-zandberg-2025.webp",
+    "Sławomir Mentzen": "img/poland/events/pres-candidate-mentzen-2025.webp",
+    "Krzysztof Bosak": "img/poland/events/pres-candidate-bosak.webp",
+    "Grzegorz Braun": "img/poland/events/grzegorz-braun-2025.webp",
+    "Szymon Hołownia": "img/poland/events/pres-candidate-holownia-2025.webp",
+    "Ryszard Petru": "img/poland/events/pres-candidate-petru.webp",
+    "Krzysztof Stanowski": "img/poland/events/pres-candidate-stanowski.webp"
+};
+this.game.scenes[
+    "poland_events_2025.presidential_runoff_2025"
+].faceImage = ["right", "mentzen", "braun"].includes(
+    Q.pres_2025_winner_key
+)
+    ? "img/poland/events/wajda.jpg"
+    : presWinnerImages2025[Q.pres_2025_winner] ||
+        "img/poland/events/presidential-ballot-2025.webp";
 Q.pres_2025_hostile_president =
     Q.pres_2025_winner_key == "right" ||
     Q.pres_2025_winner_key == "mentzen" ||
@@ -4562,7 +4648,7 @@ title: Presidential election — runoff
 subtitle: Endorsements matter, but voters do not transfer automatically
 new-page: true
 max-visits: 1
-face-image: img/poland/cards/campaigning.webp
+face-image: img/poland/events/presidential-ballot-2025.webp
 on-arrival: pres_2025_runoff_calc_mode = "result"
 call: poland_events_2025.calculate_presidential_runoff_2025
 
@@ -4630,37 +4716,6 @@ but no settled party machine.?]
 
 - @poland_event_queue: Let the result reach the June events desk
 
-@post_presidential_cabinet_continuity
-# prose-audit: Grade B — The constitutional continuity bulletin now names the president-elect, prime minister and Lewica's live role, explaining the political cost of refusing an invented vote.
-title: A friendly presidency does not require a confidence spectacle
-subtitle: The cabinet continues under its existing Sejm confidence
-new-page: true
-tags: poland_event
-priority: 35
-order: 5
-max-visits: 1
-face-image: img/poland/cards/government-affairs.webp
-view-if: continuous_campaign = 1 and year = 2025 and month >= 6 and pres_2025_runoff_done = 1 and pres_2025_hostile_president = 0 and coalition_confidence_2025_done = 0 and caretaker_government = 0 and government_has_confidence = 1 and government_party != "pis"
-on-arrival: coalition_confidence_2025_done = 1; public_trust += 1; news_headline = "The cabinet declines to manufacture a confidence crisis after the presidential result"
-
-= June 2025 — Continuity is also a choice
-
-President-elect **[+ pres_2025_winner +]** changes the Palace; the result does
-not erase the majority already held by Prime Minister **[+ prime_minister +]**.
-There has been no resignation, coalition rupture or hostile-election shock to
-the cabinet itself. An extra Article 160 vote would therefore be a spectacle,
-not a constitutional requirement.
-
-[? if left_in_government: Lewica's ministers remain responsible for the same
-programme and the same coalition partners on Monday morning. Continuity denies
-them a cleansing drama: delivery, not another investiture speech, must answer
-the election.?][? if not left_in_government: Lewica remains in opposition to a
-democratic cabinet that still possesses confidence. We can test it bill by bill
-or assemble a constructive replacement; a presidential result does not hand us
-the government's resignation.?]
-
-- @poland_event_queue: Record continuity without a confidence spectacle
-
 @post_presidential_caretaker_status
 # prose-audit: Grade B — The caretaker bulletin now situates the president-elect, outgoing prime minister and Lewica inside the real formation ladder rather than repeating a legal status flag.
 title: A caretaker cannot ask for fresh political confidence
@@ -4671,7 +4726,7 @@ priority: 35
 order: 5
 max-visits: 1
 face-image: img/poland/cards/government-affairs.webp
-view-if: continuous_campaign = 1 and year = 2025 and month >= 6 and pres_2025_runoff_done = 1 and coalition_confidence_2025_done = 0 and caretaker_government = 1 and government_party != "pis"
+view-if: continuous_campaign = 1 and year = 2025 and month >= 6 and pres_2025_runoff_done = 1 and coalition_confidence_2025_done = 0 and caretaker_government = 1
 on-arrival: coalition_confidence_2025_done = 1; formation_in_progress = 1; news_headline = "The presidential result lands during caretaker formation talks, not a second confidence vote"
 
 = June 2025 — The cabinet has already fallen
@@ -4691,72 +4746,412 @@ only a successor cabinet's investiture can end the caretaker period.?]
 
 - @poland_event_queue: Return the caretaker status to the events desk
 
-@post_presidential_pis_status
-# prose-audit: Grade B — The PiS branch now names the live government and president-elect, preserves Lewica's actual cabinet or opposition role, and distinguishes continuity from caretaker formation.
-title: A PiS cabinet follows its own confidence status
-subtitle: The presidential result does not trigger the democratic coalition's Article 160 ritual
+@post_presidential_democratic_2023
+# prose-audit: Grade A — The historical four-party contract gets its own post-runoff stakes: KO owns the premiership, both Third Way clubs own the hinge and Lewica owns delivery.
+title: Four signatures survive the runoff
+subtitle: KO, Poland 2050, PSL and Lewica still have to govern the contract they signed
+new-page: true
+tags: poland_event
+priority: 35
+order: 5
+max-visits: 1
+face-image: img/poland/cards/coalition-council.webp
+view-if: continuous_campaign = 1 and year = 2025 and month >= 6 and pres_2025_runoff_done = 1 and coalition_confidence_2025_done = 0 and caretaker_government = 0 and government_has_confidence = 1 and formation_coalition_code = "democratic_2023"
+on-arrival: news_headline = "The four-party coalition reads the presidential result four different ways"
+
+= June 2025 — The original contract, under new pressure
+
+Prime Minister **[+ prime_minister +]** still leads the cabinet built by KO,
+Poland 2050, PSL and Lewica. The runoff does not dissolve that agreement. It
+changes the price of every clause: KO must defend the premiership, Poland 2050
+and PSL must prove that their hinge still matters, and Lewica must show what
+its ministries delivered.
+
+[? if pres_2025_hostile_president: A hostile President can veto the programme
+the four parties promised. Before blaming the Palace, the cabinet must show
+that all four signatures still produce a Sejm majority.?][? if not
+pres_2025_hostile_president: A friendly President removes the coalition's best
+excuse for delay. The next dispute will be measured against laws it can now
+actually enact.?]
+
+- @post_presidential_continue_status
+- @post_presidential_continue_vote
+
+@post_presidential_ko_psl_left
+# prose-audit: Grade A — The event makes the Third Way rupture concrete: PSL governs, Poland 2050 supplies only outside votes and Lewica has to protect its programme inside an agrarian-led bargain.
+title: The agrarian hinge faces the Palace
+subtitle: KO, PSL and Lewica govern; Poland 2050 counts its votes from outside
+new-page: true
+tags: poland_event
+priority: 35
+order: 5
+max-visits: 1
+face-image: img/poland/cards/rural-hinge.webp
+view-if: continuous_campaign = 1 and year = 2025 and month >= 6 and pres_2025_runoff_done = 1 and coalition_confidence_2025_done = 0 and caretaker_government = 0 and government_has_confidence = 1 and formation_coalition_code = "ko_psl_left"
+on-arrival: news_headline = "PSL's separate coalition contract meets the presidential result"
+
+= June 2025 — PSL chose government over Third Way
+
+The cabinet belongs to KO, PSL and Lewica. Poland 2050 never received a
+ministry; any votes it supplies remain toleration, not coalition ownership.
+Prime Minister **[+ prime_minister +]** therefore depends on an agrarian partner
+inside the room and a wounded centrist competitor outside it.
+
+[? if pres_2025_hostile_president: The Palace can now reward Poland 2050 for
+distance and invite PSL to defect issue by issue. A confidence count tests
+whether the split arrangement still reaches a majority.?][? if not
+pres_2025_hostile_president: The friendly result leaves PSL without a veto-wall
+excuse and Lewica without patience for another rural delay to social bills.?]
+
+- @post_presidential_continue_status
+- @post_presidential_continue_vote
+
+@post_presidential_ko_p2050_left
+# prose-audit: Grade A — Poland 2050's cabinet role and PSL's external toleration receive their own institutional and programme consequences instead of generic democratic-coalition prose.
+title: A reformist triangle meets the Palace
+subtitle: KO, Poland 2050 and Lewica govern while PSL bargains from outside
+new-page: true
+tags: poland_event
+priority: 35
+order: 5
+max-visits: 1
+face-image: img/poland/cards/coalition-council.webp
+view-if: continuous_campaign = 1 and year = 2025 and month >= 6 and pres_2025_runoff_done = 1 and coalition_confidence_2025_done = 0 and caretaker_government = 0 and government_has_confidence = 1 and formation_coalition_code = "ko_p2050_left"
+on-arrival: news_headline = "The KO-Poland 2050-Lewica cabinet counts PSL from outside"
+
+= June 2025 — Reformers inside, agrarians outside
+
+KO, Poland 2050 and Lewica hold the ministries. PSL did not sign the cabinet
+contract and owes it only the outside votes it explicitly promised. That makes
+rights and institutional reform easier to write, but budgets and rural policy
+harder to carry through the chamber.
+
+[? if pres_2025_hostile_president: A hostile Palace gives PSL a second auction
+for every vetoed bill. The cabinet must prove its three-party core can still
+assemble confidence before calling itself a majority.?][? if not
+pres_2025_hostile_president: A friendly signature strengthens the reformist
+core and raises PSL's price on agriculture, spending and local government.?]
+
+- @post_presidential_continue_status
+- @post_presidential_continue_vote
+
+@post_presidential_third_left_pis
+# prose-audit: Grade A — The event distinguishes the governing Third Way–Lewica parties from PiS toleration and makes the presidential result a test of the outside support contract.
+title: A cabinet kept alive from the opposite bench
+subtitle: Third Way and Lewica govern; PiS decides whether toleration still pays
+new-page: true
+tags: poland_event
+priority: 35
+order: 5
+max-visits: 1
+face-image: img/poland/cards/palace-mediation.webp
+view-if: continuous_campaign = 1 and year = 2025 and month >= 6 and pres_2025_runoff_done = 1 and coalition_confidence_2025_done = 0 and caretaker_government = 0 and government_has_confidence = 1 and formation_coalition_code = "third_left_pis"
+on-arrival: news_headline = "The Third Way-Lewica cabinet asks what PiS toleration means after the runoff"
+
+= June 2025 — Government on one bench, survival on another
+
+Poland 2050, PSL and Lewica hold office under Prime Minister **[+
+prime_minister +]**. PiS holds no ministry under their contract, but its
+toleration supplies the votes the cabinet cannot find elsewhere. Calling PiS
+an opposition party does not make those votes disappear.
+
+[? if pres_2025_hostile_president: The presidential result lets PiS coordinate
+its outside leverage with the Palace. The governing parties need a recorded
+majority before the tolerator rewrites their programme.?][? if not
+pres_2025_hostile_president: A friendlier Palace reduces the cabinet's need for
+PiS on legislation, but not on the confidence arithmetic that put it in office.?]
+
+- @post_presidential_continue_status
+- @post_presidential_continue_vote
+
+@post_presidential_left_pis
+# prose-audit: Grade A — The PiS–Lewica cabinet is treated as a real joint contract with a named left responsibility, rather than as an embarrassing deviation from another timeline.
+title: The red-and-white bargain reaches the Palace
+subtitle: PiS and Lewica still own every ministry and compromise they divided
+new-page: true
+tags: poland_event
+priority: 35
+order: 5
+max-visits: 1
+face-image: img/poland/cards/palace-mediation.webp
+view-if: continuous_campaign = 1 and year = 2025 and month >= 6 and pres_2025_runoff_done = 1 and coalition_confidence_2025_done = 0 and caretaker_government = 0 and government_has_confidence = 1 and formation_coalition_code = "left_pis"
+on-arrival: news_headline = "The PiS-Lewica coalition keeps the Sejm mandate it actually won"
+
+= June 2025 — No borrowed history
+
+PiS and Lewica chose to govern together under Prime Minister **[+
+prime_minister +]**. PiS owns the state programme it demanded; Lewica owns the
+social guarantees and offices it accepted in return. KO, PSL and Poland 2050
+remain outside this contract, however loudly they invoke the coalition that
+might have been.
+
+The President-elect changes the prospects for bills and vetoes, not the
+cabinet's recorded Sejm confidence. Lewica must defend or leave this bargain on
+its own terms; it cannot erase it by staging the four-party coalition's ritual.
+
+- @post_presidential_continue_status
+- @post_presidential_continue_vote
+
+@post_presidential_ko_left
+# prose-audit: Grade A — The two-party minority protocol now names both governing owners and the Third Way votes outside cabinet that make its survival contingent.
+title: Two parties and a borrowed majority
+subtitle: KO and Lewica govern; Third Way support remains outside the cabinet
+new-page: true
+tags: poland_event
+priority: 35
+order: 5
+max-visits: 1
+face-image: img/poland/cards/coalition-council.webp
+view-if: continuous_campaign = 1 and year = 2025 and month >= 6 and pres_2025_runoff_done = 1 and coalition_confidence_2025_done = 0 and caretaker_government = 0 and government_has_confidence = 1 and formation_coalition_code = "ko_left"
+on-arrival: news_headline = "The KO-Lewica minority protocol meets its presidential test"
+
+= June 2025 — A compact cabinet, a larger dependency
+
+KO and Lewica divided the ministries. Poland 2050 and PSL stayed outside and
+promised only enough support to let the two-party cabinet begin. Prime Minister
+**[+ prime_minister +]** can negotiate with fewer partners around the cabinet
+table, but every difficult vote reopens the majority bargain.
+
+[? if pres_2025_hostile_president: A hostile President makes outside Third Way
+votes more valuable and less reliable. Article 160 will expose whether the
+minority protocol is still a government or merely a memory.?][? if not
+pres_2025_hostile_president: A friendly signature helps the cabinet pass its
+own programme; it does not turn outside supporters into ministers.?]
+
+- @post_presidential_continue_status
+- @post_presidential_continue_vote
+
+@post_presidential_left_only
+# prose-audit: Grade A — A Lewica-only cabinet gets a direct accountability event that distinguishes formal Left ministries from any splitter toleration holding up its majority.
+title: Every ministry, every consequence
+subtitle: Lewica governs alone and cannot invoice a centrist partner for the result
 new-page: true
 tags: poland_event
 priority: 35
 order: 5
 max-visits: 1
 face-image: img/poland/cards/government-affairs.webp
-view-if: continuous_campaign = 1 and year = 2025 and month >= 6 and pres_2025_runoff_done = 1 and coalition_confidence_2025_done = 0 and government_party = "pis"
-on-arrival: {!
-Q.coalition_confidence_2025_done = 1;
-Q.confidence_2025_left_posture =
-    Q.left_in_government
-        ? "Junior coalition partner under a PiS government — no democratic-coalition reset"
-        : "Opposition under a PiS government — no democratic-coalition reset";
-if (Q.caretaker_government) {
-    Q.formation_in_progress = 1;
-    Q.news_headline =
-        "The PiS caretaker remains in formation talks after the presidential result";
-} else {
-    Q.news_headline =
-        "The PiS cabinet keeps its existing Sejm status after the presidential result";
-}
-!}
+view-if: continuous_campaign = 1 and year = 2025 and month >= 6 and pres_2025_runoff_done = 1 and coalition_confidence_2025_done = 0 and caretaker_government = 0 and government_has_confidence = 1 and formation_coalition_code = "left_only"
+on-arrival: news_headline = "Lewica's single-party cabinet owns the presidential aftermath alone"
 
-= June 2025 — A different government, the same constitutional rule
+= June 2025 — The whole record is ours
 
-President-elect **[+ pres_2025_winner +]** takes the result to a state still
-administered by Prime Minister **[+ prime_minister +]** and PiS. [? if
-left_in_government: Lewica holds junior offices in that cabinet; it cannot
-borrow a confidence ritual designed for a different historical coalition.?][?
-if not left_in_government: Lewica remains an opposition caucus; it cannot
-borrow a confidence ritual designed for a different historical cabinet.?]
+Prime Minister **[+ prime_minister +]** leads a cabinet in which every ministry
+belongs to Lewica. [? if formation_left_splitter_votes > 0: Left splitter clubs
+keep the majority alive under their written protocol, but they hold no office
+and cannot be blamed for executive decisions.?][? if
+formation_left_splitter_votes = 0: No coalition partner and no outside Left
+club stands between the party and full responsibility.?]
 
-[? if caretaker_government: The PiS Council of Ministers has already fallen
-and now serves in caretaker form. A successor must climb the constitutional
-formation ladder; another confidence spectacle would not restore the old
-cabinet or give Lewica authority it does not hold.?][? if not
-caretaker_government: The PiS cabinet keeps exactly the Sejm status it held
-before the runoff. It can be changed by resignation, a proper confidence vote
-or a constructive replacement—not by pretending the presidential result was a
-parliamentary motion.?]
+[? if pres_2025_hostile_president: The Palace can obstruct the programme, but
+only the Sejm can answer whether this Left majority still exists.?][? if not
+pres_2025_hostile_president: A compatible President gives the party the cleanest
+governing mandate it could ask for. Delay now belongs entirely to us.?]
 
-[? if left_in_government: Our ministers therefore return either to caretaker
-duties or to their negotiated portfolios inside the PiS-led cabinet. The
-presidential result changes the coalition's room for bills; it does not expel
-Lewica from offices it actually holds.?]
+- @post_presidential_continue_status
+- @post_presidential_continue_vote
 
-Recording that status also lets PSL and Poland 2050 reach their own June
-decision on whether Third Way has a future. Their electoral pact does not wait
-for a KO-led cabinet to exist.
-
-- @poland_event_queue: Record the PiS cabinet's constitutional status
-
-@confidence_after_presidential
-# prose-audit: Grade C — The four responses have real consequences, but the premise is a two-line menu instruction ("The cabinet can close ranks, reopen the agreement, or change prime minister") with no prime minister named, no partner in the room and no account of what June actually did to the coalition.
-title: Confidence after presidential defeat
-subtitle: The cabinet asks whether 2027 still has a majority
-face-image: img/poland/events/sejm-chamber.webp
+@post_presidential_pis_konf
+# prose-audit: Grade A — The PiS–Konfederacja cabinet receives its own conflict over state power and market radicalism, with Lewica's formal or tolerating role stated exactly.
+title: The right governs without a centre
+subtitle: PiS controls the cabinet while Konfederacja prices every compromise
 new-page: true
 tags: poland_event
 priority: 35
 order: 5
 max-visits: 1
+face-image: img/poland/cards/government-affairs.webp
+view-if: continuous_campaign = 1 and year = 2025 and month >= 6 and pres_2025_runoff_done = 1 and coalition_confidence_2025_done = 0 and caretaker_government = 0 and government_has_confidence = 1 and (formation_coalition_code = "pis_konf" or formation_coalition_code = "pis_konf_tolerated")
+on-arrival: news_headline = "The PiS-Konfederacja cabinet carries its own presidential settlement"
+
+= June 2025 — State power and market revolt in one cabinet
+
+PiS and Konfederacja put Prime Minister **[+ prime_minister +]** in office.
+Their contract joins a party that wants to command the state to a partner that
+wants to strip back taxes, services and restraints. The presidential result
+changes which side can threaten the other with the Palace.
+
+[? if formation_player_toleration: Lewica holds no ministry. Its written
+toleration helped this cabinet survive and must be defended or withdrawn as
+outside support, never disguised as coalition membership.?][? if not
+formation_player_toleration: Lewica is opposition to both governing parties
+and bears no responsibility for their cabinet arithmetic.?]
+
+- @post_presidential_continue_status
+- @post_presidential_continue_vote
+
+@post_presidential_pis_konf_third
+# prose-audit: Grade A — The broad right-centre fallback gets a bespoke account of who governs, where Third Way is trapped and whether Lewica merely tolerates it.
+title: A majority across every old boundary
+subtitle: PiS, Konfederacja and Third Way have to explain what binds them
+new-page: true
+tags: poland_event
+priority: 35
+order: 5
+max-visits: 1
+face-image: img/poland/cards/palace-mediation.webp
+view-if: continuous_campaign = 1 and year = 2025 and month >= 6 and pres_2025_runoff_done = 1 and coalition_confidence_2025_done = 0 and caretaker_government = 0 and government_has_confidence = 1 and (formation_coalition_code = "pis_konf_third" or formation_coalition_code = "pis_konf_third_tolerated")
+on-arrival: news_headline = "The PiS-Konfederacja-Third Way cabinet faces the result it cannot interpret together"
+
+= June 2025 — Four parties, no shared opposition
+
+PiS, Konfederacja, Poland 2050 and PSL all hold responsibility for Prime
+Minister **[+ prime_minister +]**. Security, taxes, Europe, public services and
+rights pull that cabinet in different directions; its breadth is arithmetic,
+not agreement.
+
+[? if formation_player_toleration: Lewica remained outside but signed the
+toleration votes that completed the majority. The party owns those votes, not
+the ministries or the contradictions inside them.?][? if not
+formation_player_toleration: Lewica faces a governing bloc stretching from the
+centre to the radical right and must oppose it without pretending Third Way is
+still available for a separate majority.?]
+
+- @post_presidential_continue_status
+- @post_presidential_continue_vote
+
+@post_presidential_pis_konf_psl
+# prose-audit: Grade A — PSL's specific role in a PiS–Konfederacja cabinet is separated from Poland 2050 and tied to rural guarantees, cabinet ownership and Lewica's outside status.
+title: The rural key in a hard-right cabinet
+subtitle: PSL joined PiS and Konfederacja; Poland 2050 did not
+new-page: true
+tags: poland_event
+priority: 35
+order: 5
+max-visits: 1
+face-image: img/poland/cards/rural-hinge.webp
+view-if: continuous_campaign = 1 and year = 2025 and month >= 6 and pres_2025_runoff_done = 1 and coalition_confidence_2025_done = 0 and caretaker_government = 0 and government_has_confidence = 1 and (formation_coalition_code = "pis_konf_psl" or formation_coalition_code = "pis_konf_psl_tolerated")
+on-arrival: news_headline = "PSL's hard-right cabinet bargain meets the presidential result"
+
+= June 2025 — The agrarian guarantee has a right-wing price
+
+PSL accepted ministries and rural guarantees from PiS and Konfederacja.
+Poland 2050 stayed outside, ending any claim that Third Way entered this cabinet
+as one bloc. Prime Minister **[+ prime_minister +]** now needs PSL to translate
+a hard-right programme into county budgets and farm policy.
+
+[? if formation_player_toleration: Lewica supplied external toleration, not a
+minister. That vote kept the arrangement alive but gave the party no authority
+over it.?][? if not formation_player_toleration: Lewica remains in opposition
+and can force PSL to account for every right-wing measure it enables.?]
+
+- @post_presidential_continue_status
+- @post_presidential_continue_vote
+
+@post_presidential_ko_third
+# prose-audit: Grade A — The centrist fallback names KO and both Third Way parties as cabinet owners while preserving Lewica's opposition or toleration status.
+title: The centre governs without the Left
+subtitle: KO and both Third Way parties own the cabinet they assembled
+new-page: true
+tags: poland_event
+priority: 35
+order: 5
+max-visits: 1
+face-image: img/poland/cards/coalition-council.webp
+view-if: continuous_campaign = 1 and year = 2025 and month >= 6 and pres_2025_runoff_done = 1 and coalition_confidence_2025_done = 0 and caretaker_government = 0 and government_has_confidence = 1 and (formation_coalition_code = "ko_third" or formation_coalition_code = "ko_third_tolerated")
+on-arrival: news_headline = "The KO-Third Way cabinet meets the presidential result without Lewica"
+
+= June 2025 — A centrist cabinet owns a centrist record
+
+KO, Poland 2050 and PSL divided the ministries under Prime Minister **[+
+prime_minister +]**. Lewica was not invited into their programme and cannot be
+used as the explanation for its limits.
+
+[? if formation_player_toleration: Our caucus did promise confidence from
+outside. That makes each supplied vote visible, but it does not give us a
+ministry or make this a four-party coalition.?][? if not
+formation_player_toleration: We remain parliamentary opposition and can offer
+support only for bills that meet our terms.?] [? if pres_2025_hostile_president:
+The cabinet now has to show that its own three parties still form a majority.?]
+
+- @post_presidential_continue_status
+- @post_presidential_continue_vote
+
+@post_presidential_ko_konf
+# prose-audit: Grade A — The KO–Konfederacja fallback is presented as a specific institutional bargain whose incompatible programmes and Lewica support status survive the runoff.
+title: An institutional pact without a common programme
+subtitle: KO holds the premiership; Konfederacja holds the cabinet's exposed flank
+new-page: true
+tags: poland_event
+priority: 35
+order: 5
+max-visits: 1
+face-image: img/poland/cards/palace-mediation.webp
+view-if: continuous_campaign = 1 and year = 2025 and month >= 6 and pres_2025_runoff_done = 1 and coalition_confidence_2025_done = 0 and caretaker_government = 0 and government_has_confidence = 1 and (formation_coalition_code = "ko_konf" or formation_coalition_code = "ko_konf_tolerated")
+on-arrival: news_headline = "The KO-Konfederacja bargain meets a President neither partner can ignore"
+
+= June 2025 — The firewall became a cabinet table
+
+KO and Konfederacja installed Prime Minister **[+ prime_minister +]** through a
+contract about offices and institutional control, not a shared account of
+taxes, Europe or minority rights. The presidential result gives one partner a
+new ally and the other a new reason to invoke the bargain's limits.
+
+[? if formation_player_toleration: Lewica stayed outside yet supplied written
+toleration. Those votes require an account; they do not make the party a member
+of this cabinet.?][? if not formation_player_toleration: Lewica is opposition
+to the bargain and owes neither governing party a rescue.?]
+
+- @post_presidential_continue_status
+- @post_presidential_continue_vote
+
+@post_presidential_live_contract
+# prose-audit: Grade A — Cabinets formed by later replacements or custom nominees are described from their live owner, status and Left role instead of being called deviations from history.
+title: The live cabinet contract reaches the runoff
+subtitle: Name who governs now; do not substitute the coalition another timeline expected
+new-page: true
+tags: poland_event
+priority: 35
+order: 5
+max-visits: 1
+face-image: img/poland/cards/government-affairs.webp
+view-if: continuous_campaign = 1 and year = 2025 and month >= 6 and pres_2025_runoff_done = 1 and coalition_confidence_2025_done = 0 and caretaker_government = 0 and government_has_confidence = 1 and (formation_coalition_selected = 0 or formation_coalition_code = "none")
+on-arrival: news_headline = "The presidential result reaches the cabinet that actually holds confidence"
+
+= June 2025 — Read the live record
+
+Prime Minister **[+ prime_minister +]** leads **[+ government_owner +]**. The
+parliamentary record describes its position as **[+ coalition_status +]**.
+Those are the officeholder and agreement the runoff reaches, whether they came
+from an original formation vote, a constructive replacement or a later
+realignment.
+
+[? if left_in_government: Lewica holds offices in this cabinet and remains
+responsible for the programme attached to them.?][? if not left_in_government:
+Lewica holds no ministry and must judge this cabinet from the Sejm.?] The next
+step follows its actual confidence and presidential relationship, not a
+supposedly normal coalition imported from history.
+
+- @post_presidential_continue_status
+- @post_presidential_continue_vote
+
+@post_presidential_continue_status
+title: Keep the cabinet's existing Sejm status
+subtitle: No new Article 160 vote is needed on this result.
+view-if: pres_2025_hostile_president = 0 or government_party = "pis"
+on-arrival: {!
+Q.coalition_confidence_2025_done = 1;
+if (!Q.pres_2025_hostile_president && Q.government_party != "pis") {
+    Q.public_trust += 1;
+}
+Q.confidence_2025_left_posture = Q.left_in_government
+    ? "Cabinet partner under the live coalition contract"
+    : "Opposition or external support under the live coalition contract";
+!}
+go-to: poland_event_queue
+
+@post_presidential_continue_vote
+title: Put the signed coalition to Article 160
+subtitle: A hostile presidential defeat makes the cabinet prove its majority.
+view-if: pres_2025_hostile_president = 1 and government_party != "pis"
+go-to: confidence_after_presidential
+
+@confidence_after_presidential
+# prose-audit: Grade A — A coalition-specific briefing now names the partners and dependencies before this shared Article 160 decision, while the four responses retain their distinct roll-call consequences.
+title: Confidence after presidential defeat
+subtitle: The cabinet asks whether 2027 still has a majority
+face-image: img/poland/events/sejm-chamber.webp
+new-page: true
 view-if: continuous_campaign = 1 and year = 2025 and month >= 6 and pres_2025_runoff_done = 1 and pres_2025_hostile_president = 1 and coalition_confidence_2025_done = 0 and government_party != "pis" and caretaker_government = 0 and government_has_confidence = 1
 on-arrival: {!
 Q.confidence_mode =
@@ -6339,6 +6734,8 @@ Q.snap_formation_context =
 Q.government_party = "ko";
 Q.government_owner = "KO-led democratic coalition";
 Q.prime_minister = Q.formation_2025_candidate;
+Q.prime_minister_intro_return = "ministries_or_event_queue";
+Q.prime_minister_intro_pending = 1;
 Q.government_name =
     Q.formation_2025_candidate + " democratic cabinet";
 Q.razem_in_government = 0;
@@ -6456,8 +6853,7 @@ allocation still has to match the coalition protocol.?]
 remains outside the cabinet. It has no ministries and no state budget
 authority.?]
 
-- @formation_success_ministries_2025
-- @formation_success_opposition_2025
+- @poland_prime_minister_intro.show: Meet the new Prime Minister
 
 @formation_success_ministries_2025
 title: Allocate the negotiated Left portfolios
@@ -7522,6 +7918,7 @@ as recruitment from an ally that deliberately remained separate.
 - @poland_event_queue: Record the invitation to Zieloni
 
 @marshal_rotation_2025
+# scenario-ledger: TD-03
 # prose-audit: Grade A — The rotation dispute now distinguishes nomination from election and gives every governing and opposition choice an authored aftermath.
 title: The Marshal's chair
 subtitle: The coalition agreement rotates the office only if both office-holders remain eligible
@@ -7531,7 +7928,7 @@ tags: poland_event
 priority: 32
 order: 5
 max-visits: 1
-view-if: continuous_campaign = 1 and year = 2025 and month = 11 and government_party != "pis" and caretaker_government = 0 and sejm_speaker = "Szymon Hołownia"
+view-if: continuous_campaign = 1 and year = 2025 and month = 11 and government_party != "pis" and caretaker_government = 0 and sejm_speaker = "Szymon Hołownia" and election_2027_terminal = 0
 on-arrival: sejm_rotation_crisis = 1; news_headline = "The scheduled Speakership rotation becomes a test of coalition loyalty"
 
 = November 2025 — A promise made when everyone polled higher
@@ -8093,7 +8490,7 @@ sovereignty campaign. Introduction begins the fight—it does not enact the righ
 @marriage_registry_truce
 title: Implement recognition but declare a cultural truce on wider reform
 subtitle: Legal compliance and centrist relations improve; the developmental-right path opens at a cost to progressives.
-on-arrival: european_judgment_compliance += 5; minority_safety += 2; lgbt_equality_salience -= 12; abortion_rights_salience -= 4; secular_state_salience -= 3; cultural_issue_salience -= 8; economic_issue_salience += 5; left_right_score += 6; left_cultural_position += 4; social_patriot_support += 8; razem_right_score += 8; matysiak_development_pressure += 8; psl_relation += 6; p2050_relation += 5; progressive_credibility -= 6; progressives_dissent += 10; spring_dissent += 6; razem_dissent += 7; news_headline = "Lewica implements the judgment while declaring a truce on cultural legislation"
+on-arrival: european_judgment_compliance += 5; minority_safety += 2; public_mood_pending_lgbt_equality_salience -= 12; public_mood_pending_abortion_rights_salience -= 4; public_mood_pending_secular_state_salience -= 3; cultural_issue_salience -= 8; economic_issue_salience += 5; left_right_score += 6; left_cultural_position += 4; social_patriot_support += 8; razem_right_score += 8; matysiak_development_pressure += 8; psl_relation += 6; p2050_relation += 5; progressive_credibility -= 6; progressives_dissent += 10; spring_dissent += 6; razem_dissent += 7; news_headline = "Lewica implements the judgment while declaring a truce on cultural legislation"
 
 [? if left_in_government: The government orders registries to comply, then
 Lewica declares that equal marriage, abortion and church-state reform will not

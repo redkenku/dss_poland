@@ -168,6 +168,22 @@ function formationChamber(Q) {
     'The hung-chamber escape must stay hidden while an arrangement is signable'
   );
 
+  const fallbackChoice =
+    'poland_government_formation.formation_fallback_menu';
+  const coalitionMenu =
+    'poland_government_formation.formation_coalition_menu';
+  const chooseIndex = engine.getCurrentChoices().findIndex(function(c) {
+    return c.id === fallbackChoice;
+  });
+  assert(chooseIndex >= 0, 'The coalition menu lost its fallback browser');
+  engine.choose(chooseIndex);
+  const backIndex = engine.getCurrentChoices().findIndex(function(c) {
+    return c.id === coalitionMenu;
+  });
+  assert(backIndex >= 0, 'Fallback exploration has no back step');
+  engine.choose(backIndex);
+  assert.strictEqual(engine.state.sceneId, coalitionMenu);
+
   engine.goToScene('poland_government_formation.formation_fallback_ko_menu');
   assert.strictEqual(
     choiceById(engine, 'poland_government_formation.formation_fallback_ko_konf').canChoose,

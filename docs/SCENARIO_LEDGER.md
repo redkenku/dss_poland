@@ -1,10 +1,28 @@
 # DSS Poland scenario ledger
 
-Last researched: **29 July 2026**.
+Last researched: **29 July 2026**. Coverage index updated: **9 August 2026**.
 
-Status: **research and design ideas only**. Nothing in this document is an
-implemented event, a settled canon or a forecast. Historical events are marked
-as anchors; every alternative branch is counterfactual.
+Status: **living research and implementation ledger**. Historical anchors,
+implemented counterfactual scenes and still-planned ideas coexist here. An
+implemented scenario is game logic, not a forecast; every post-July-2026 branch
+is visibly scenario-horizon or counterfactual material.
+
+## Coverage index
+
+The audited-gap pass is complete for the target set below. Ownership is read
+from `# scenario-ledger:` metadata and enforced by `scripts/event-manifest.js`:
+every audited ID has exactly one authored scene or explicit dossier owner.
+
+| State | Ledger coverage |
+| --- | --- |
+| **Implemented** | FAR 01–02, 04–09; PSL 07–09, 12–13; BOR 03–05, 11–14, 17–21; PRE 11, 19–20; DIP 05–11, 13–14; MED 06–08, 16–26; KO 01, 07–10, 13; PIS 03, 06–10, 13–14; TD 03, 06, 09–10; SHK 04–06, 13, 16–17, 19, 21–22, 24–25, 27–28; ISS-COV-06; ISS-REL-04; ISS-LGBT-06; ISS-LGBT-08. |
+| **Fixed prehistory** | Black Monday, Black Friday and the 2019 teachers' strike seed movement autonomy, repression memory and union state. They are not replayed as flashbacks. |
+| **Partial** | Rows outside the audited target may already have historical anchors or fragments in the current campaign but have not received the same metadata-and-downstream audit. |
+| **Still planned** | The remainder of the 310-row research inventory, the 41-district Sejm model and any post-election playable campaign remain outside this pass. |
+
+The generated [event manifest](EVENT_MANIFEST.json) exposes
+`scenarioLedgerIds`, `auditedScenarioIds` and `scenarioCoverage` for tooling and
+review.
 
 The factual chronology is in
 [POLITICAL_TIMELINE.md](POLITICAL_TIMELINE.md). This ledger turns that research
@@ -60,8 +78,8 @@ The Poland adaptation should follow the same principles:
    destruction of KO or violent unrest should require several failed safeguards,
    not one dramatic option.
 
-The files above are examples to consult when scenes are eventually written;
-this document does not change them.
+The inherited files above remain design references. Implemented Poland scenes
+are indexed through the metadata described in the coverage table.
 
 ## Plausibility labels
 

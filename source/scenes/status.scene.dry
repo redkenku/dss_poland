@@ -11,6 +11,11 @@ const statusText = function(value, fallback) {
         ? value
         : fallback;
 };
+const statusPublicMood = (typeof window !== "undefined"
+    ? window : globalThis).polandPublicMoodModel;
+if (statusPublicMood) {
+    statusPublicMood.resolve(Q, {advance: false, finalize: false});
+}
 const statusDisplayName = function(value, fallback, partyKey) {
     const raw = typeof value === "string" && value.trim().length
         ? value.trim()
@@ -668,19 +673,27 @@ Q.status_rozwoj_seats = statusWhole(Q.rozwoj_seats, 0);
 Q.status_korona_seats = statusWhole(Q.korona_seats, 0);
 Q.status_ko_splinter_seats = statusWhole(Q.ko_splinter_seats, 0);
 Q.status_porozumienie_seats = statusWhole(Q.porozumienie_seats, 0);
-const statusParliamentaryFamilies = Array.isArray(Q.parliamentary_family_records)
-    ? Q.parliamentary_family_records
-    : [];
-const statusFamilySejm = function(id, fallback) {
-    const family = statusParliamentaryFamilies.find(function(record) {
-        return record && record.id == id;
-    });
-    return statusWhole(family ? family.sejm_seats : fallback, fallback);
-};
-Q.status_pis_seats = statusFamilySejm("zp", Q.pis_seats || 235);
-Q.status_ko_seats = statusFamilySejm("ko", Q.ko_seats || 134);
-Q.status_psl_seats = statusFamilySejm("kp", Q.psl_seats || 30);
-Q.status_konf_seats = statusFamilySejm("konf", Q.konf_seats || 11);
+Q.status_suwerenna_seats = statusWhole(Q.suwerenna_seats, 0);
+Q.status_kukiz_seats = statusWhole(Q.kukiz_seats, 0);
+Q.status_p0_seats = statusWhole(Q.p0_seats, 0);
+Q.status_new_hope_seats = statusWhole(Q.new_hope_seats, 0);
+Q.status_national_movement_seats = statusWhole(
+    Q.national_movement_seats,
+    0
+);
+Q.status_duda_seats = statusWhole(Q.duda_seats, 0);
+Q.status_social_conservative_seats = statusWhole(
+    Q.social_conservative_seats,
+    0
+);
+// Pulse reads the live seat qualities. The normalized parliamentary roster is
+// a useful dossier, but it can be one scene behind while this always-visible
+// panel is refreshed immediately after a choice.
+Q.status_pis_seats = statusWhole(Q.pis_seats, 235);
+Q.status_ko_seats = statusWhole(Q.ko_seats, 134);
+Q.status_psl_seats = statusWhole(Q.psl_seats, 30) +
+    (Q.status_third_way_visible ? statusWhole(Q.p2050_seats, 0) : 0);
+Q.status_konf_seats = statusWhole(Q.konf_seats, 11);
 Q.status_p2050_seats = statusWhole(Q.p2050_seats, 0);
 Q.status_other_seats = statusWhole(Q.other_seats, 1);
 Q.status_left_intent = statusOneDecimal(Q.left_vote_intent, 12.6);
@@ -1671,6 +1684,14 @@ for (const issue of Object.keys(publicOpinionStatusDefinitions)) {
     Q["status_" + issue + "_support"] = support;
     Q["status_" + issue + "_salience"] = salience;
     Q["status_" + issue + "_backlash"] = backlash;
+    Q["status_" + issue + "_left_ownership"] = Math.round(
+        statusNumber(Q[issue + "_left_ownership"], 30)
+    );
+    for (const bloc of ["progressive", "centrist", "conservative"]) {
+        Q["status_" + issue + "_" + bloc + "_ownership"] = Math.round(
+            statusNumber(Q[issue + "_" + bloc + "_ownership"], 100 / 3)
+        );
+    }
     Q["status_" + issue + "_support_band"] =
         publicSupportBand(support);
     Q["status_" + issue + "_salience_band"] =
@@ -1712,6 +1733,11 @@ Q.status_public_progressive_index = Math.round(
 Q.status_public_field_ownership = Math.round(
     statusNumber(Q.public_climate_left_ownership_index, 30)
 );
+for (const bloc of ["progressive", "centrist", "conservative"]) {
+    Q["status_public_" + bloc + "_ownership"] = Math.round(
+        statusNumber(Q["public_climate_" + bloc + "_ownership_index"], 100 / 3)
+    );
+}
 Q.status_public_climate_media = Math.round(
     statusNumber(Q.public_climate_media_bonus, 0)
 );
@@ -2175,22 +2201,31 @@ for (const group of voterGroupsForStatus) {
 <div class="disclosure-body">
 <div class="ledger-title">Sejm</div>
 <div class="poll-row"><span class="party party-united-right"><b>ZP</b></span><span></span><span>[+ status_pis_seats +] seats</span></div>
+[? if status_porozumienie_seats > 0: <div class="poll-row"><span class="party party-agreement"><b>Porozumienie</b></span><span></span><span>[+ status_porozumienie_seats +] seats</span></div>?]
+[? if status_suwerenna_seats > 0: <div class="poll-row"><span class="party party-sovereign-poland"><b>Suwerenna Polska</b></span><span></span><span>[+ status_suwerenna_seats +] seats</span></div>?]
 <div class="poll-row"><span class="party party-ko"><b>KO</b></span><span></span><span>[+ status_ko_seats +] seats</span></div>
+[? if status_ko_splinter_seats > 0: <div class="poll-row"><span class="party [+ ko_splinter_class +]"><b>[+ ko_splinter_name +]</b></span><span></span><span>[+ status_ko_splinter_seats +] seats</span></div>?]
 <div class="poll-row"><span class="party party-lewica"><b>[+ status_left_party_short_name +]</b></span><span></span><span>[+ status_left_seats +] seats</span></div>
-[? if barons_party_formed: <div class="poll-row"><span class="party party-sld"><b>[+ status_barons_party_name +]</b></span><span></span><span>[+ status_sld_breakaway_seats +] seats</span></div>?]
-[? if social_patriot_party_formed: <div class="poll-row"><span class="party party-social-patriot"><b>[+ status_social_patriot_party_name +]</b></span><span></span><span>[+ status_social_patriot_seats +] seats</span></div>?]
-[? if spring_party_formed: <div class="poll-row"><span class="party party-wiosna"><b>[+ status_spring_party_name +]</b></span><span></span><span>[+ status_spring_breakaway_seats +] seats</span></div>?]
-[? if labor_party_formed: <div class="poll-row"><span class="party party-left-labor"><b>[+ status_labor_party_name +]</b></span><span></span><span>[+ status_labor_left_seats +] seats</span></div>?]
-[? if progressives_party_formed: <div class="poll-row"><span class="party party-progressive"><b>[+ status_progressives_party_name +]</b></span><span></span><span>[+ status_young_left_seats +] seats</span></div>?]
-[? if razem_party_formed: <div class="poll-row"><span class="party party-razem"><b>Razem</b></span><span></span><span>[+ status_razem_party_seats +] seats</span></div>?]
-[? if pps_party_formed: <div class="poll-row"><span class="party party-pps"><b>PPS</b></span><span></span><span>[+ status_pps_party_seats +] seats</span></div>?]
-[? if tak_dla_rozwoju_party_formed: <div class="poll-row"><span class="party party-razem"><b>[+ status_tak_rozwoj_party_name +]</b></span><span></span><span>[+ status_tak_rozwoj_seats +] seats</span></div>?]
+[? if status_sld_breakaway_seats > 0: <div class="poll-row"><span class="party party-sld"><b>[+ status_barons_party_name +]</b></span><span></span><span>[+ status_sld_breakaway_seats +] seats</span></div>?]
+[? if status_social_patriot_seats > 0: <div class="poll-row"><span class="party party-social-patriot"><b>[+ status_social_patriot_party_name +]</b></span><span></span><span>[+ status_social_patriot_seats +] seats</span></div>?]
+[? if status_spring_breakaway_seats > 0: <div class="poll-row"><span class="party party-wiosna"><b>[+ status_spring_party_name +]</b></span><span></span><span>[+ status_spring_breakaway_seats +] seats</span></div>?]
+[? if status_labor_left_seats > 0: <div class="poll-row"><span class="party party-left-labor"><b>[+ status_labor_party_name +]</b></span><span></span><span>[+ status_labor_left_seats +] seats</span></div>?]
+[? if status_young_left_seats > 0: <div class="poll-row"><span class="party party-progressive"><b>[+ status_progressives_party_name +]</b></span><span></span><span>[+ status_young_left_seats +] seats</span></div>?]
+[? if status_razem_party_seats > 0: <div class="poll-row"><span class="party party-razem"><b>Razem</b></span><span></span><span>[+ status_razem_party_seats +] seats</span></div>?]
+[? if status_pps_party_seats > 0: <div class="poll-row"><span class="party party-pps"><b>PPS</b></span><span></span><span>[+ status_pps_party_seats +] seats</span></div>?]
+[? if status_tak_rozwoj_seats > 0: <div class="poll-row"><span class="party party-razem"><b>[+ status_tak_rozwoj_party_name +]</b></span><span></span><span>[+ status_tak_rozwoj_seats +] seats</span></div>?]
 <div class="poll-row"><span class="party party-polish-coalition"><b>KP</b></span><span></span><span>[+ status_psl_seats +] seats</span></div>
-[? if status_p2050_visible: <div class="poll-row"><span class="party party-p2050"><b>PL2050</b></span><span></span><span>[+ status_p2050_seats +] seats</span></div>?]
+[? if status_kukiz_seats > 0: <div class="poll-row"><span class="party party-kukiz"><b>Kukiz'15</b></span><span></span><span>[+ status_kukiz_seats +] seats</span></div>?]
+[? if status_p2050_seats > 0 and not status_third_way_visible: <div class="poll-row"><span class="party party-p2050"><b>PL2050</b></span><span></span><span>[+ status_p2050_seats +] seats</span></div>?]
 <div class="poll-row"><span class="party party-konf"><b>Konf.</b></span><span></span><span>[+ status_konf_seats +] seats</span></div>
-[? if unia_centrum_formed or status_centrum_seats > 0: <div class="poll-row"><span class="party party-centrum"><b>Unia Centrum</b></span><span></span><span>[+ status_centrum_seats +] seats</span></div>?]
-[? if rozwoj_party_formed and not rozwoj_joined_left: <div class="poll-row"><span class="party party-rozwoj"><b>Rozwój Plus</b></span><span></span><span>[+ status_rozwoj_seats +] seats</span></div>?]
-[? if far_right_split > 0: <div class="poll-row"><span class="party party-korona"><b>Korona</b></span><span></span><span>[+ status_korona_seats +] seats</span></div>?]
+[? if status_p0_seats > 0: <div class="poll-row"><span class="party"><b>[+ status_p0_short_name +]</b></span><span></span><span>[+ status_p0_seats +] seats</span></div>?]
+[? if status_centrum_seats > 0: <div class="poll-row"><span class="party party-centrum"><b>Unia Centrum</b></span><span></span><span>[+ status_centrum_seats +] seats</span></div>?]
+[? if status_rozwoj_seats > 0 and not rozwoj_joined_left: <div class="poll-row"><span class="party party-rozwoj"><b>Rozwój Plus</b></span><span></span><span>[+ status_rozwoj_seats +] seats</span></div>?]
+[? if status_korona_seats > 0: <div class="poll-row"><span class="party party-korona"><b>Korona</b></span><span></span><span>[+ status_korona_seats +] seats</span></div>?]
+[? if status_new_hope_seats > 0: <div class="poll-row"><span class="party party-new-hope"><b>Nowa Nadzieja</b></span><span></span><span>[+ status_new_hope_seats +] seats</span></div>?]
+[? if status_national_movement_seats > 0: <div class="poll-row"><span class="party party-national-movement"><b>Ruch Narodowy</b></span><span></span><span>[+ status_national_movement_seats +] seats</span></div>?]
+[? if status_duda_seats > 0: <div class="poll-row"><span class="party party-pis"><b>Ruch Dudy</b></span><span></span><span>[+ status_duda_seats +] seats</span></div>?]
+[? if status_social_conservative_seats > 0: <div class="poll-row"><span class="party party-pis"><b>Konserwatyści społeczni</b></span><span></span><span>[+ status_social_conservative_seats +] seats</span></div>?]
 <div class="poll-row"><span>Others</span><span></span><span>[+ status_other_seats +] seats</span></div>
 
 <div class="ledger-title">Senate</div>
@@ -2596,6 +2631,7 @@ call: status
 [? if suwerenna_walkout or suwerenna_merger_result = "Merger refused": <div class="poll-row"><span class="party party-sovereign-poland"><b>Suwerenna Polska</b></span><span>[+ status_suwerenna_poll +]%</span><span>[+ status_suwerenna_projection +] projected</span></div>?]
 [? if porozumienie_exit_done and porozumienie_active: <div class="poll-row"><span class="party party-agreement"><b>Porozumienie</b></span><span>[+ status_porozumienie_poll +]%</span><span>[+ status_porozumienie_projection +] projected</span></div>?]
 <div class="poll-row"><span class="party party-ko"><b>KO</b></span><span>[+ status_ko_poll +]%</span><span>[+ status_ko_projection +] projected</span></div>
+[? if ko_splinter_active: <div class="poll-row"><span class="party [+ ko_splinter_class +]"><b>[+ ko_splinter_name +]</b></span><span>[+ status_ko_splinter_poll +]%</span><span>[+ status_ko_splinter_projection +] projected</span></div>?]
 <div class="poll-row"><span class="party party-lewica"><b>[+ status_left_party_name +]</b></span><span>[+ status_left_poll +]%</span><span>[+ status_left_projection +] projected</span></div>
 [? if status_third_way_visible: <div class="poll-row"><span class="party party-third-way"><b>[+ status_third_way_display_name +]</b></span><span>[+ status_third_way_poll +]%</span><span>[+ status_third_way_projection +] projected</span></div>?]
 [? if status_nowa_solidarnosc_visible: <div class="poll-row"><span class="party party-nowa-solidarnosc"><b>Nowa Solidarność</b></span><span>&lt;0.1%</span><span>0 projected</span></div>?]
@@ -2660,6 +2696,7 @@ call: status
 <div class="ledger-section ledger-section-first"><div class="ledger-title">Likely-voter poll</div>
 <div class="poll-row"><span class="party party-pis"><b>PiS</b></span><span>[+ status_pis_poll +]%</span><span>[+ status_pis_projection +] projected</span></div>
 <div class="poll-row"><span class="party party-ko"><b>KO</b></span><span>[+ status_ko_poll +]%</span><span>[+ status_ko_projection +] projected</span></div>
+[? if ko_splinter_active: <div class="poll-row"><span class="party [+ ko_splinter_class +]"><b>[+ ko_splinter_name +]</b></span><span>[+ status_ko_splinter_poll +]%</span><span>[+ status_ko_splinter_projection +] projected</span></div>?]
 <div class="poll-row"><span class="party party-lewica"><b>[+ status_left_party_name +]</b></span><span>[+ status_left_poll +]%</span><span>[+ status_left_projection +] projected</span></div>
 [? if status_nowa_solidarnosc_visible: <div class="poll-row"><span class="party party-nowa-solidarnosc"><b>Nowa Solidarność</b></span><span>&lt;0.1%</span><span>0 projected</span></div>?]
 [? if barons_party_formed: <div class="poll-row"><span class="party party-sld"><b>[+ status_barons_party_name +]</b></span><span>[+ status_sld_breakaway_poll +]%</span><span>[+ status_sld_breakaway_projection +] projected</span></div>?]
@@ -2756,6 +2793,7 @@ call: status
 <div class="ledger-section ledger-section-first"><div class="ledger-title">National climate</div>
 <div class="ledger-row"><span>Direction of travel</span><b>[+ status_public_climate_direction +]</b></div>
 <div class="ledger-subrow">Terrain [+ status_public_climate_band +] · rights and solidarity support [+ status_public_progressive_index +]/100 · Left owns the field [+ status_public_field_ownership +]/100</div>
+<div class="ledger-subrow">National ownership: progressive [+ status_public_progressive_ownership +] · centre [+ status_public_centrist_ownership +] · conservative [+ status_public_conservative_ownership +]</div>
 [? if status_public_climate_media != 0: <div class="ledger-subrow">Media weather: [+ status_public_climate_media +] to the reach of every story we tell.</div>?]
 <div class="ledger-row"><span>Issue pressure</span><b>[+ status_public_panic_band +]</b></div>
 <div class="ledger-subrow">Hottest field: [+ status_public_hottest +]</div>
@@ -2766,6 +2804,16 @@ call: status
 
 <div class="ledger-section"><div class="ledger-title">Reform slate</div>
 <div class="ledger-row"><span>Fields chosen</span><b>[+ status_reform_slate_count +] of [+ status_reform_slate_max +]</b></div>
+[? if status_reform_slate_count = 0: <div class="ledger-subrow">No reform fields chosen yet.</div>?]
+[? if abortion_on_slate: <div class="faction-row"><span>Reproductive rights</span><span>[? if abortion_reform_settled: settled?][? if not abortion_reform_settled: chosen?]</span></div>?]
+[? if marriage_on_slate: <div class="faction-row"><span>Legal recognition and equal marriage</span><span>[? if marriage_reform_settled: settled?][? if not marriage_reform_settled: chosen?]</span></div>?]
+[? if church_on_slate: <div class="faction-row"><span>Church, school and the secular state</span><span>[? if church_reform_settled: settled?][? if not church_reform_settled: chosen?]</span></div>?]
+[? if asylum_on_slate: <div class="faction-row"><span>Asylum and refugee reception</span><span>[? if asylum_reform_settled: settled?][? if not asylum_reform_settled: chosen?]</span></div>?]
+[? if border_on_slate: <div class="faction-row"><span>The eastern-border regime</span><span>[? if border_reform_settled: settled?][? if not border_reform_settled: chosen?]</span></div>?]
+[? if defence_on_slate: <div class="faction-row"><span>Defence and allied security</span><span>[? if defence_reform_settled: settled?][? if not defence_reform_settled: chosen?]</span></div>?]
+[? if labor_on_slate: <div class="faction-row"><span>Labour-law reconstruction</span><span>[? if labor_reform_settled: settled?][? if not labor_reform_settled: chosen?]</span></div>?]
+[? if health_on_slate: <div class="faction-row"><span>Public health service reconstruction</span><span>[? if health_reform_settled: settled?][? if not health_reform_settled: chosen?]</span></div>?]
+[? if courts_on_slate: <div class="faction-row"><span>Rule-of-law repair</span><span>[? if courts_reform_settled: settled?][? if not courts_reform_settled: chosen?]</span></div>?]
 <div class="ledger-row"><span>Settled</span><b>[+ status_reform_slate_settled +]</b></div>
 <div class="ledger-subrow">[? if status_reform_slate_left > 0: [+ status_reform_slate_left +] slot(s) still open. A pick is permanent and a settlement — even a bad one — closes that field.?][? if status_reform_slate_left <= 0: The slate is closed for the rest of the campaign.?]</div>
 </div>
@@ -2773,21 +2821,21 @@ call: status
 [? if status_public_last_issue != "None": <div class="ledger-section"><div class="ledger-title">Latest public test</div><div class="ledger-row"><span>[+ status_public_last_action +]</span><b>[+ status_public_last_reception +]</b></div><div class="ledger-row"><span>Public movement</span><b>[+ status_public_last_movement +]</b></div><div class="ledger-subrow">Issue field: [+ status_public_last_issue +]</div></div>?]
 
 <details class="ledger-disclosure" open><summary>Rights, family and church</summary>
-<div class="ledger-section"><div class="faction-row"><span><b>Abortion rights</b></span><span>[+ status_abortion_rights_climate +]</span></div><div class="ledger-subrow">[+ status_abortion_rights_support_band +] · [+ status_abortion_rights_salience_band +] · [+ status_abortion_rights_backlash_band +]</div>
-<div class="faction-row"><span><b>LGBT equality</b></span><span>[+ status_lgbt_equality_climate +]</span></div><div class="ledger-subrow">[+ status_lgbt_equality_support_band +] · [+ status_lgbt_equality_salience_band +] · [+ status_lgbt_equality_backlash_band +]</div>
-<div class="faction-row"><span><b>Secular state and schools</b></span><span>[+ status_secular_state_climate +]</span></div><div class="ledger-subrow">[+ status_secular_state_support_band +] · [+ status_secular_state_salience_band +] · [+ status_secular_state_backlash_band +]</div></div>
+<div class="ledger-section"><div class="faction-row"><span><b>Abortion rights</b></span><span>[+ status_abortion_rights_climate +]</span></div><div class="ledger-subrow">S/S/B [+ status_abortion_rights_support +]/[+ status_abortion_rights_salience +]/[+ status_abortion_rights_backlash +] · [+ status_abortion_rights_support_band +] · [+ status_abortion_rights_salience_band +] · [+ status_abortion_rights_backlash_band +]</div><div class="ledger-subrow">Ownership P/C/K [+ status_abortion_rights_progressive_ownership +]/[+ status_abortion_rights_centrist_ownership +]/[+ status_abortion_rights_conservative_ownership +] · Left credit [+ status_abortion_rights_left_ownership +]</div>
+<div class="faction-row"><span><b>LGBT equality</b></span><span>[+ status_lgbt_equality_climate +]</span></div><div class="ledger-subrow">S/S/B [+ status_lgbt_equality_support +]/[+ status_lgbt_equality_salience +]/[+ status_lgbt_equality_backlash +] · [+ status_lgbt_equality_support_band +] · [+ status_lgbt_equality_salience_band +] · [+ status_lgbt_equality_backlash_band +]</div><div class="ledger-subrow">Ownership P/C/K [+ status_lgbt_equality_progressive_ownership +]/[+ status_lgbt_equality_centrist_ownership +]/[+ status_lgbt_equality_conservative_ownership +] · Left credit [+ status_lgbt_equality_left_ownership +]</div>
+<div class="faction-row"><span><b>Secular state and schools</b></span><span>[+ status_secular_state_climate +]</span></div><div class="ledger-subrow">S/S/B [+ status_secular_state_support +]/[+ status_secular_state_salience +]/[+ status_secular_state_backlash +] · [+ status_secular_state_support_band +] · [+ status_secular_state_salience_band +] · [+ status_secular_state_backlash_band +]</div><div class="ledger-subrow">Ownership P/C/K [+ status_secular_state_progressive_ownership +]/[+ status_secular_state_centrist_ownership +]/[+ status_secular_state_conservative_ownership +] · Left credit [+ status_secular_state_left_ownership +]</div></div>
 </details>
 
 <details class="ledger-disclosure" open><summary>Borders, refugees and security</summary>
-<div class="ledger-section"><div class="faction-row"><span><b>Refugee and asylum solidarity</b></span><span>[+ status_refugee_solidarity_climate +]</span></div><div class="ledger-subrow">[+ status_refugee_solidarity_support_band +] · [+ status_refugee_solidarity_salience_band +] · [+ status_refugee_solidarity_backlash_band +]</div>
-<div class="faction-row"><span><b>Eastern-border security</b></span><span>[+ status_border_security_climate +]</span></div><div class="ledger-subrow">[+ status_border_security_support_band +] · [+ status_border_security_salience_band +] · [+ status_border_security_backlash_band +]</div>
-<div class="faction-row"><span><b>Defence and allied security</b></span><span>[+ status_national_security_climate +]</span></div><div class="ledger-subrow">[+ status_national_security_support_band +] · [+ status_national_security_salience_band +] · [+ status_national_security_backlash_band +]</div></div>
+<div class="ledger-section"><div class="faction-row"><span><b>Refugee and asylum solidarity</b></span><span>[+ status_refugee_solidarity_climate +]</span></div><div class="ledger-subrow">S/S/B [+ status_refugee_solidarity_support +]/[+ status_refugee_solidarity_salience +]/[+ status_refugee_solidarity_backlash +] · [+ status_refugee_solidarity_support_band +] · [+ status_refugee_solidarity_salience_band +] · [+ status_refugee_solidarity_backlash_band +]</div><div class="ledger-subrow">Ownership P/C/K [+ status_refugee_solidarity_progressive_ownership +]/[+ status_refugee_solidarity_centrist_ownership +]/[+ status_refugee_solidarity_conservative_ownership +] · Left credit [+ status_refugee_solidarity_left_ownership +]</div>
+<div class="faction-row"><span><b>Eastern-border security</b></span><span>[+ status_border_security_climate +]</span></div><div class="ledger-subrow">S/S/B [+ status_border_security_support +]/[+ status_border_security_salience +]/[+ status_border_security_backlash +] · [+ status_border_security_support_band +] · [+ status_border_security_salience_band +] · [+ status_border_security_backlash_band +]</div><div class="ledger-subrow">Ownership P/C/K [+ status_border_security_progressive_ownership +]/[+ status_border_security_centrist_ownership +]/[+ status_border_security_conservative_ownership +] · Left credit [+ status_border_security_left_ownership +]</div>
+<div class="faction-row"><span><b>Defence and allied security</b></span><span>[+ status_national_security_climate +]</span></div><div class="ledger-subrow">S/S/B [+ status_national_security_support +]/[+ status_national_security_salience +]/[+ status_national_security_backlash +] · [+ status_national_security_support_band +] · [+ status_national_security_salience_band +] · [+ status_national_security_backlash_band +]</div><div class="ledger-subrow">Ownership P/C/K [+ status_national_security_progressive_ownership +]/[+ status_national_security_centrist_ownership +]/[+ status_national_security_conservative_ownership +] · Left credit [+ status_national_security_left_ownership +]</div></div>
 </details>
 
 <details class="ledger-disclosure" open><summary>Material, health and institutions</summary>
-<div class="ledger-section"><div class="faction-row"><span><b>Social spending and services</b></span><span>[+ status_social_spending_climate +]</span></div><div class="ledger-subrow">[+ status_social_spending_support_band +] · [+ status_social_spending_salience_band +] · [+ status_social_spending_backlash_band +]</div>
-<div class="faction-row"><span><b>Vaccination and public health</b></span><span>[+ status_vaccination_climate +]</span></div><div class="ledger-subrow">[+ status_vaccination_support_band +] · [+ status_vaccination_salience_band +] · [+ status_vaccination_backlash_band +]</div>
-<div class="faction-row"><span><b>Rule-of-law repair</b></span><span>[+ status_rule_of_law_climate +]</span></div><div class="ledger-subrow">[+ status_rule_of_law_support_band +] · [+ status_rule_of_law_salience_band +] · [+ status_rule_of_law_backlash_band +]</div></div>
+<div class="ledger-section"><div class="faction-row"><span><b>Social spending and services</b></span><span>[+ status_social_spending_climate +]</span></div><div class="ledger-subrow">S/S/B [+ status_social_spending_support +]/[+ status_social_spending_salience +]/[+ status_social_spending_backlash +] · [+ status_social_spending_support_band +] · [+ status_social_spending_salience_band +] · [+ status_social_spending_backlash_band +]</div><div class="ledger-subrow">Ownership P/C/K [+ status_social_spending_progressive_ownership +]/[+ status_social_spending_centrist_ownership +]/[+ status_social_spending_conservative_ownership +] · Left credit [+ status_social_spending_left_ownership +]</div>
+<div class="faction-row"><span><b>Vaccination and public health</b></span><span>[+ status_vaccination_climate +]</span></div><div class="ledger-subrow">S/S/B [+ status_vaccination_support +]/[+ status_vaccination_salience +]/[+ status_vaccination_backlash +] · [+ status_vaccination_support_band +] · [+ status_vaccination_salience_band +] · [+ status_vaccination_backlash_band +]</div><div class="ledger-subrow">Ownership P/C/K [+ status_vaccination_progressive_ownership +]/[+ status_vaccination_centrist_ownership +]/[+ status_vaccination_conservative_ownership +] · Left credit [+ status_vaccination_left_ownership +]</div>
+<div class="faction-row"><span><b>Rule-of-law repair</b></span><span>[+ status_rule_of_law_climate +]</span></div><div class="ledger-subrow">S/S/B [+ status_rule_of_law_support +]/[+ status_rule_of_law_salience +]/[+ status_rule_of_law_backlash +] · [+ status_rule_of_law_support_band +] · [+ status_rule_of_law_salience_band +] · [+ status_rule_of_law_backlash_band +]</div><div class="ledger-subrow">Ownership P/C/K [+ status_rule_of_law_progressive_ownership +]/[+ status_rule_of_law_centrist_ownership +]/[+ status_rule_of_law_conservative_ownership +] · Left credit [+ status_rule_of_law_left_ownership +]</div></div>
 </details>
 
 <div class="ledger-note">Issue summaries read public support · salience · backlash. They are separate signals, not parts of one score.</div>

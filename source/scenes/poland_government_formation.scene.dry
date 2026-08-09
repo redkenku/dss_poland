@@ -1082,6 +1082,13 @@ Q.order_threat_sensitivity = 66;
 Q.universal_solidarity = 61;
 Q.institutional_trust = 40;
 Q.change_appetite = 73;
+// Force the v3 mood migrator to install the October 2023 electorate instead
+// of carrying the campaign_2019 opening fields into the standalone scenario.
+Q.public_opinion_version = 2;
+Q.public_mood_effect_queue = [];
+Q.public_mood_effect_log = [];
+Q.public_mood_last_advanced_month_key = -1;
+Q.public_mood_finalized_month_key = -1;
 Q.electoral_viability = 50;
 Q.winner_reputation = 38;
 Q.issue_ownership = 36;
@@ -1820,6 +1827,8 @@ Q.formation_in_progress = 0;
 Q.caretaker_government = 0;
 Q.government_has_confidence = 1;
 Q.prime_minister = "Mateusz Morawiecki";
+Q.prime_minister_intro_return = "formation_exit";
+Q.prime_minister_intro_pending = 1;
 Q.government_name = "PiS-led bargain cabinet";
 Q.government_party = "pis";
 Q.government_owner = "PiS and its governing partners";
@@ -1865,7 +1874,7 @@ There is no government budget interface here. Opposition can propose,
 condition or reject spending, but it cannot spend the cabinet's fiscal
 capacity.
 
-- @formation_exit: Record the new opposition
+- @poland_prime_minister_intro.show: Meet the new Prime Minister
 
 @sejm_candidate
 title: [? if presidential_majority_designation: The President designates the majority's candidate?][? if not presidential_majority_designation: The Sejm chooses a candidate?]
@@ -2548,6 +2557,7 @@ player stays outside and supplies toleration.
 
 - @formation_fallback_right_menu: Examine PiS-led fallback governments
 - @formation_fallback_ko_menu: Examine KO-led fallback governments
+- @formation_coalition_menu: Back to coalition arrangements
 
 @formation_fallback_right_menu
 title: PiS-led fallback governments
@@ -3806,6 +3816,8 @@ Q.formation_in_progress = 0;
 Q.caretaker_government = 0;
 Q.government_has_confidence = 1;
 Q.prime_minister = Q.democratic_candidate;
+Q.prime_minister_intro_return = "formation_government";
+Q.prime_minister_intro_pending = 1;
 Q.government_name = Q.democratic_candidate + " coalition cabinet";
 const leftHeadedCabinet = [
     "Agnieszka Dziemianowicz-Bąk", "Magdalena Biejat",
@@ -3985,8 +3997,7 @@ available. ?]
 over bills and may have supplied toleration, but it does not control the state
 budget and receives no governing-spend actions. ?]
 
-- @formation_tusk_suit
-- @government_entry_gate: Continue into the new government
+- @poland_prime_minister_intro.show: Meet the new Prime Minister
 
 @formation_tusk_suit
 # prose-audit: Grade B — A sharp five-line vignette; "the government is already wearing the smell of PSL's bargaining power" is the best sentence in the file. It is a bulletin with a single Continue and no Lewica decision.
@@ -4544,6 +4555,8 @@ Q.formation_in_progress = 0;
 Q.caretaker_government = 0;
 Q.government_has_confidence = 1;
 Q.prime_minister = Q.third_candidate;
+Q.prime_minister_intro_return = "formation_government";
+Q.prime_minister_intro_pending = 1;
 Q.government_name = Q.third_candidate + " third-attempt cabinet";
 const thirdCandidateKey = String(Q.third_candidate || "").toLowerCase();
 if (
@@ -4628,7 +4641,7 @@ The simple-majority rule has done what the absolute-majority stage could not.
 [+ prime_minister +] has a cabinet, but its authority is exactly as broad as
 the agreement behind **[+ government_support_seats +] confidence votes**.
 
-- @government_entry_gate: Continue from the formation vote
+- @poland_prime_minister_intro.show: Meet the new Prime Minister
 
 @early_election
 title: The Sejm is shortened
@@ -5827,6 +5840,8 @@ Q.constructive_passed =
     Q.confidence_yes >= Q.confidence_threshold ? 1 : 0;
 if (Q.constructive_passed) {
     Q.prime_minister = Q.constructive_candidate;
+    Q.prime_minister_intro_return = "formation_constructive";
+    Q.prime_minister_intro_pending = 1;
     Q.government_name = Q.constructive_candidate + " constructive cabinet";
     Q.government_has_confidence = 1;
     Q.caretaker_government = 0;
@@ -5943,7 +5958,10 @@ intervening vacuum and no separate destructive removal vote exist. ?]
 [? if not constructive_passed: The sitting cabinet remains. The ordinary
 three-month cooldown is now recorded. ?]
 
-- @resolution_exit: Record the result
+- @constructive_result_continue: Record the result
+
+@constructive_result_continue
+go-to: poland_prime_minister_intro.show if constructive_passed = 1; resolution_exit if constructive_passed = 0
 
 @formation_exit
 title: Return from the formation crisis

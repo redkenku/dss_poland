@@ -1,6 +1,7 @@
 title: The Right stops being one project
 
 @pis_collapse
+# scenario-ledger: PIS-06, PIS-07, PIS-08, PIS-09
 # prose-audit: Grade A — The congress is caused by whichever PiS failure the player can already see, the claimants and the size of the contested caucus are fixed before any choice is offered, and Lewica decides only what it does about a rupture it has no authority to cause or prevent.
 title: PiS holds the congress it has spent two years postponing
 subtitle: Kaczyński's succession finally happens in a room he no longer controls; Lewica decides what the wreckage is for
@@ -10,7 +11,7 @@ tags: poland_event
 priority: 31
 order: 4
 max-visits: 1
-view-if: continuous_campaign = 1 and pis_collapsed = 0 and pis_collapse_pressure >= 68 and pis_seats >= 20 and snap_campaign_active = 0
+view-if: continuous_campaign = 1 and pis_collapsed = 0 and pis_collapse_pressure >= 68 and pis_seats >= 20 and snap_campaign_active = 0 and election_2027_terminal = 0
 on-arrival: {!
 const pisSeats = Math.max(0, Math.round(Number(Q.pis_seats) || 0));
 const cohesion = Number(Q.united_right_cohesion) || 0;
@@ -33,24 +34,76 @@ const pick = function(names) {
     return names.find(function(name) { return !taken(name); }) ||
         "a collective presidium";
 };
-// Three claimants, each with a base the congress can count: the welfare
-// current, the culture-war current and the apparatus. The sovereigntists are
-// not claimants — they are leaving.
+// Every claimant needs a live organisational record. A serving president or
+// prime minister cannot also take the party chair; Nawrocki's presidential
+// current therefore runs through its organiser when he holds the Palace.
+const groups = Q.rival_group_records || [];
+const group = function(id) {
+    return groups.find(function(record) { return record.id == id; });
+};
+const organisation = function(id) {
+    const record = group(id);
+    return record && record.active ? Number(record.organisation || 0) : -100;
+};
 const solidaristShare = Number(Q.pis_solidarist_share) || 50;
 const culturalPull = (Number(Q.cultural_issue_salience) || 30) -
     (Number(Q.economic_issue_salience) || 40);
-Q.pis_successor_leader = solidaristShare >= 52
-    ? pick(["Beata Szydło", "Mariusz Błaszczak", "Przemysław Czarnek"])
-    : culturalPull >= 0
-        ? pick(["Przemysław Czarnek", "Mariusz Błaszczak", "Beata Szydło"])
-        : pick(["Mariusz Błaszczak", "Przemysław Czarnek", "Beata Szydło"]);
-Q.pis_successor_bloc = Q.pis_successor_leader == "Beata Szydło"
-    ? "the welfare-conservative current"
-    : Q.pis_successor_leader == "Przemysław Czarnek"
-        ? "the culture-war current"
-        : Q.pis_successor_leader == "Mariusz Błaszczak"
-            ? "the security and apparatus current"
-            : "a caretaker presidium";
+const claimants = [
+    {
+        leader: "Mateusz Morawiecki",
+        bloc: "the reconciled developmental current",
+        score: organisation("morawiecki") +
+            (Q.pis_morawiecki_reconciled ? 18 : -12)
+    },
+    {
+        leader: "Mariusz Błaszczak",
+        bloc: "an apparatus compact without a majority claimant",
+        score: organisation("pis_apparatus") * 0.72 +
+            organisation("pis_security") * 0.28 - 12
+    },
+    {
+        leader: "Patryk Jaki",
+        bloc: "the sovereigntist organisational network",
+        score: organisation("solidarna") +
+            (Q.suwerenna_walkout ? 10 : -15)
+    },
+    {
+        leader: Q.president_name == "Karol Nawrocki"
+            ? "Paweł Szefernaker" : "Karol Nawrocki",
+        bloc: "Nawrocki's presidential current",
+        score: organisation("pis_security") +
+            (Q.pres_2025_winner == "Karol Nawrocki" ? 12 : -8)
+    },
+    {
+        leader: "Beata Szydło",
+        bloc: "the welfare-conservative current",
+        score: organisation("pis_welfare") + (solidaristShare - 50) * 0.8
+    },
+    {
+        leader: "Przemysław Czarnek",
+        bloc: "the culture-war current",
+        score: organisation("pis_culture") + culturalPull * 0.6
+    }
+].filter(function(claimant) { return !taken(claimant.leader); });
+claimants.sort(function(left, right) { return right.score - left.score; });
+const szydlo = claimants.find(function(item) { return item.leader == "Beata Szydło"; });
+const czarnek = claimants.find(function(item) { return item.leader == "Przemysław Czarnek"; });
+const dualLeadership = szydlo && czarnek &&
+    Math.abs(szydlo.score - czarnek.score) <= 5 &&
+    Math.max(szydlo.score, czarnek.score) >= (claimants[0] ? claimants[0].score - 3 : 0);
+if (dualLeadership) {
+    Q.pis_successor_leader = "Beata Szydło and Przemysław Czarnek";
+    Q.pis_successor_bloc = "a dual welfare and culture-war leadership";
+} else if (claimants[0] && claimants[0].score >= 64) {
+    Q.pis_successor_leader = claimants[0].leader;
+    Q.pis_successor_bloc = claimants[0].bloc;
+} else {
+    Q.pis_successor_leader = pick(["Mariusz Błaszczak", "Beata Szydło"]);
+    Q.pis_successor_bloc = "an apparatus compact without a majority claimant";
+}
+Q.pis_congress_scores = claimants.map(function(item) {
+    return item.leader + " " + Math.round(item.score);
+}).join(" · ");
 // The sovereigntist camp files first because it already has a registration,
 // a justice network and a reason to distrust whoever wins.
 Q.pis_sovereigntist_leader = pick(["Patryk Jaki", "Zbigniew Ziobro"]);
@@ -235,7 +288,15 @@ Q.pis_ideology = Q.pis_successor_leader == "Beata Szydło"
         ? "Culture-war national-conservative · clerical · post-Kaczyński leadership"
         : Q.pis_successor_leader == "Mariusz Błaszczak"
             ? "Security-conservative · apparatus continuity · post-Kaczyński leadership"
-            : "Caretaker national-conservative · contested leadership";
+            : Q.pis_successor_leader == "Mateusz Morawiecki"
+                ? "Developmental conservative · managerial · reconciled current"
+                : Q.pis_successor_leader == "Patryk Jaki"
+                    ? "Sovereigntist national-conservative · legal confrontation"
+                    : Q.pis_successor_bloc == "Nawrocki's presidential current"
+                        ? "Presidential national-conservative · security and memory politics"
+                        : Q.pis_successor_bloc == "a dual welfare and culture-war leadership"
+                            ? "Welfare-conservative · clerical · dual leadership"
+                            : "Caretaker national-conservative · contested leadership";
 Q.pis_welfare_destination = Q.pis_successor_leader == "Beata Szydło"
     ? "kept inside the party that kept the name"
     : "left without a natural home on the right";

@@ -328,6 +328,715 @@ if (!budgetHost.polandBudgetModel) {
         forecast: forecast
     };
 }
+const publicMoodHost = budgetHost;
+if (!publicMoodHost.polandPublicMoodModel) {
+    const clampMood = function(value, low, high) {
+        const number = Number(value);
+        return Math.max(
+            low,
+            Math.min(high, Number.isFinite(number) ? number : low)
+        );
+    };
+    const finiteMood = function(value, fallback) {
+        const number = Number(value);
+        return Number.isFinite(number) ? number : fallback;
+    };
+    const moodMonthKey = function(state) {
+        return Math.round(finiteMood(state.year, 2019)) * 100 +
+            Math.round(finiteMood(state.month, 1));
+    };
+    const moodLabels = {
+        abortion_rights: "Abortion rights",
+        refugee_solidarity: "Refugees and asylum solidarity",
+        border_security: "Eastern-border security",
+        vaccination: "Vaccination and public health",
+        social_spending: "Social spending and public services",
+        lgbt_equality: "LGBT equality",
+        secular_state: "Secular state and schools",
+        rule_of_law: "Rule-of-law repair",
+        national_security: "Defence and allied security"
+    };
+    const knownStoryKinds = [
+        "pandemic_opening", "pandemic_aftershock",
+        "womens_ruling", "womens_followup",
+        "migration_border", "migration_services", "migration_welfare"
+    ];
+    // Baselines are support, salience, backlash, Left credit, then
+    // progressive/centrist/conservative ownership. The three bloc values are
+    // shares of one public argument; Left credit remains a separate measure.
+    const moodIssues = {
+        abortion_rights: {
+            b19: [49, 42, 58, 34, 38, 22, 40],
+            b23: [54, 60, 55, 30, 42, 25, 33],
+            drivers: [["change_appetite", 1], ["cultural_conservatism", -1]]
+        },
+        refugee_solidarity: {
+            b19: [38, 34, 58, 26, 25, 25, 50],
+            b23: [44, 65, 60, 22, 30, 25, 45],
+            drivers: [
+                ["universal_solidarity", 1], ["order_threat_sensitivity", -1],
+                ["migration_empathy", 1], ["migration_local_service_capacity", 1],
+                ["migration_welfare_competition", -1], ["migration_disinformation", -1]
+            ]
+        },
+        border_security: {
+            b19: [70, 44, 36, 18, 15, 25, 60],
+            b23: [75, 70, 40, 15, 15, 30, 55],
+            drivers: [
+                ["order_threat_sensitivity", 1], ["migration_border_competence", 1],
+                ["border_security_confidence", 1]
+            ]
+        },
+        vaccination: {
+            b19: [76, 24, 27, 20, 20, 55, 25],
+            b23: [65, 35, 45, 16, 18, 50, 32],
+            drivers: [
+                ["institutional_trust", 1], ["health_capacity", 1],
+                ["covid_anti_system_pressure", -1]
+            ]
+        },
+        social_spending: {
+            b19: [72, 67, 38, 44, 38, 22, 40],
+            b23: [74, 75, 40, 35, 35, 25, 40],
+            drivers: [
+                ["welfare_expectation", 1], ["capitalism_acceptance", -1],
+                ["household_security", -1], ["health_capacity", -1]
+            ]
+        },
+        lgbt_equality: {
+            b19: [48, 52, 62, 36, 35, 20, 45],
+            b23: [54, 55, 58, 30, 40, 25, 35],
+            drivers: [
+                ["change_appetite", 1], ["cultural_conservatism", -1],
+                ["minority_safety", 1]
+            ]
+        },
+        secular_state: {
+            b19: [52, 43, 58, 31, 35, 25, 40],
+            b23: [56, 45, 55, 29, 38, 27, 35],
+            drivers: [
+                ["change_appetite", 1], ["cultural_conservatism", -1],
+                ["institutional_trust", 1]
+            ]
+        },
+        rule_of_law: {
+            b19: [58, 56, 52, 24, 30, 45, 25],
+            b23: [62, 70, 50, 21, 35, 45, 20],
+            drivers: [
+                ["institutional_trust", 1], ["judicial_legitimacy", 1],
+                ["judicial_repair_mandate", 1]
+            ]
+        },
+        national_security: {
+            b19: [74, 48, 34, 17, 15, 30, 55],
+            b23: [82, 80, 35, 14, 15, 35, 50],
+            drivers: [
+                ["order_threat_sensitivity", 1], ["military_trust", 1],
+                ["border_security_confidence", 1]
+            ]
+        }
+    };
+    const driverBaselines = {
+        campaign_2019: {
+            capitalism_acceptance: 64, welfare_expectation: 76,
+            cultural_conservatism: 63, order_threat_sensitivity: 57,
+            universal_solidarity: 52, institutional_trust: 44,
+            change_appetite: 56, migration_empathy: 58, refugee_empathy: 58,
+            migration_local_service_capacity: 28,
+            migration_welfare_competition: 24, migration_disinformation: 27,
+            migration_border_competence: 48, border_security_confidence: 48,
+            health_capacity: 48, household_security: 45,
+            covid_anti_system_pressure: 0, minority_safety: 56,
+            judicial_legitimacy: 36, judicial_repair_mandate: 38,
+            military_trust: 66
+        },
+        formation_2023: {
+            capitalism_acceptance: 65, welfare_expectation: 77,
+            cultural_conservatism: 62, order_threat_sensitivity: 66,
+            universal_solidarity: 61, institutional_trust: 40,
+            change_appetite: 73, migration_empathy: 64, refugee_empathy: 64,
+            migration_local_service_capacity: 42,
+            migration_welfare_competition: 32, migration_disinformation: 38,
+            migration_border_competence: 56, border_security_confidence: 56,
+            health_capacity: 46, household_security: 40,
+            covid_anti_system_pressure: 32, minority_safety: 55,
+            judicial_legitimacy: 34, judicial_repair_mandate: 58,
+            military_trust: 74
+        }
+    };
+    const scenarioId = function(state) {
+        return state.scenario_mode == "formation_2023"
+            ? "formation_2023" : "campaign_2019";
+    };
+    const baselineFor = function(state, issue) {
+        return moodIssues[issue][scenarioId(state) == "formation_2023"
+            ? "b23" : "b19"];
+    };
+    const normalizeOwnership = function(state, issue) {
+        const keys = ["progressive", "centrist", "conservative"];
+        const values = keys.map(function(bloc) {
+            return clampMood(state[issue + "_" + bloc + "_ownership"], 0, 100);
+        });
+        const total = values.reduce(function(sum, value) { return sum + value; }, 0);
+        for (let index = 0; index < keys.length; index += 1) {
+            state[issue + "_" + keys[index] + "_ownership"] =
+                total > 0 ? values[index] * 100 / total : 100 / 3;
+        }
+    };
+    const aggregateMood = function(state) {
+        let panic = 0;
+        let consensus = 0;
+        let left = 0;
+        const blocTotals = {progressive: 0, centrist: 0, conservative: 0};
+        let hottest = Object.keys(moodIssues)[0];
+        let hottestScore = -1;
+        for (const issue of Object.keys(moodIssues)) {
+            const support = clampMood(state[issue + "_support"], 0, 100);
+            const salience = clampMood(state[issue + "_salience"], 0, 100);
+            const backlash = clampMood(state[issue + "_backlash"], 0, 100);
+            const heat = salience * 0.65 + backlash * 0.35;
+            panic += heat;
+            consensus += Math.abs(support - 50) * 2 * (1 - backlash / 200);
+            left += clampMood(state[issue + "_left_ownership"], 0, 100);
+            for (const bloc of Object.keys(blocTotals)) {
+                blocTotals[bloc] += clampMood(
+                    state[issue + "_" + bloc + "_ownership"], 0, 100
+                );
+            }
+            if (heat > hottestScore) {
+                hottest = issue;
+                hottestScore = heat;
+            }
+        }
+        const issueCount = Object.keys(moodIssues).length;
+        const progressiveIssues = [
+            "abortion_rights", "lgbt_equality", "secular_state",
+            "refugee_solidarity"
+        ];
+        state.public_panic_index = Math.round(panic / issueCount);
+        state.public_consensus_index = Math.round(consensus / issueCount);
+        state.public_opinion_hottest_issue = moodLabels[hottest];
+        state.public_climate_progressive_index = progressiveIssues.reduce(
+            function(sum, issue) {
+                return sum + clampMood(state[issue + "_support"], 0, 100);
+            }, 0
+        ) / progressiveIssues.length;
+        state.public_climate_left_ownership_index = left / issueCount;
+        for (const bloc of Object.keys(blocTotals)) {
+            state["public_climate_" + bloc + "_ownership_index"] =
+                blocTotals[bloc] / issueCount;
+        }
+        const trend = finiteMood(state.public_climate_progressive_trend, 0);
+        state.public_climate_direction = trend >= 1.6
+            ? "progressive wave"
+            : (trend >= 0.5
+                ? "slow liberalisation"
+                : (trend <= -1.6
+                    ? "reactionary surge"
+                    : (trend <= -0.5 ? "conservative drift" : "settled trench")));
+        state.public_climate_band = state.public_climate_progressive_index >= 58
+            ? "permissive"
+            : (state.public_climate_progressive_index >= 50
+                ? "balanced"
+                : (state.public_climate_progressive_index >= 43
+                    ? "resistant" : "hostile"));
+        state.public_climate_report =
+            "Rights and solidarity climate: " + state.public_climate_band +
+            " terrain, " + state.public_climate_direction +
+            ". Hottest field: " + state.public_opinion_hottest_issue + ".";
+    };
+    const normalizeMood = function(state) {
+        const oldVersion = Math.round(finiteMood(state.public_opinion_version, 2));
+        const formationMigration = oldVersion < 3 &&
+            scenarioId(state) == "formation_2023";
+        if (!Array.isArray(state.public_mood_effect_queue)) {
+            state.public_mood_effect_queue = [];
+        }
+        if (!Array.isArray(state.public_mood_effect_log)) {
+            state.public_mood_effect_log = [];
+        }
+        state.public_opinion_issues = Object.keys(moodIssues);
+        for (const issue of state.public_opinion_issues) {
+            const baseline = baselineFor(state, issue);
+            const measures = ["support", "salience", "backlash", "left_ownership"];
+            for (const measure of measures) {
+                const pendingKey = "public_mood_pending_" + issue + "_" + measure;
+                const pending = finiteMood(state[pendingKey], 0);
+                state[pendingKey] = 0;
+                if (Math.abs(pending) <= 0.000001) continue;
+                const effect = {
+                    id: "authored-" + moodMonthKey(state) + "-" + issue +
+                        "-" + measure + "-" +
+                        state.public_mood_effect_queue.length,
+                    mode: "delta", source: "event", actor: "left",
+                    bloc: "progressive", issue: issue,
+                    title: state.news_headline || "Authored public response"
+                };
+                effect[measure == "left_ownership"
+                    ? "leftOwnership" : measure] = pending;
+                state.public_mood_effect_queue.push(effect);
+            }
+            for (let index = 0; index < measures.length; index += 1) {
+                const key = issue + "_" + measures[index];
+                if (formationMigration || !Number.isFinite(Number(state[key]))) {
+                    state[key] = baseline[index];
+                }
+                const snapshotKey = "public_mood_resolved_" + key;
+                const snapshot = Number(state[snapshotKey]);
+                // ponytail: capture legacy direct writes at the normalization
+                // boundary; convert individual scenes only when they need a
+                // non-default actor/bloc instead of duplicating 150 payloads.
+                if (!formationMigration && oldVersion >= 3 &&
+                    Number.isFinite(snapshot) &&
+                    Math.abs(Number(state[key]) - snapshot) > 0.000001) {
+                    const effect = {
+                        id: "authored-" + moodMonthKey(state) + "-" + key + "-" +
+                            state.public_mood_effect_queue.length,
+                        mode: "delta", source: "event", actor: "left",
+                        bloc: "progressive", issue: issue,
+                        title: state.news_headline || "Authored public response"
+                    };
+                    const effectMeasure = measures[index] == "left_ownership"
+                        ? "leftOwnership" : measures[index];
+                    effect[effectMeasure] = Number(state[key]) - snapshot;
+                    state.public_mood_effect_queue.push(effect);
+                    state[key] = snapshot;
+                }
+                state[key] = clampMood(state[key], 0, 100);
+                if (!Number.isFinite(Number(state[snapshotKey])) ||
+                    formationMigration) {
+                    state[snapshotKey] = state[key];
+                }
+            }
+            for (let index = 0; index < 3; index += 1) {
+                const bloc = ["progressive", "centrist", "conservative"][index];
+                const key = issue + "_" + bloc + "_ownership";
+                if (formationMigration || !Number.isFinite(Number(state[key]))) {
+                    state[key] = baseline[index + 4];
+                }
+            }
+            normalizeOwnership(state, issue);
+        }
+        if (Array.isArray(state.story_queue) && state.story_queue.length) {
+            for (let index = 0; index < state.story_queue.length; index += 1) {
+                const story = state.story_queue[index] || {};
+                state.public_mood_effect_queue.push(Object.assign({
+                    id: "legacy-story-" + moodMonthKey(state) + "-" + index,
+                    mode: "story",
+                    source: "event",
+                    actor: "left",
+                    bloc: "progressive"
+                }, story));
+            }
+            state.story_queue = [];
+        }
+        aggregateMood(state);
+        if (!Number.isFinite(Number(state.public_climate_previous_index)) ||
+            formationMigration) {
+            state.public_climate_previous_index =
+                state.public_climate_progressive_index;
+        }
+        if (!Number.isFinite(Number(state.public_mood_last_advanced_month_key))) {
+            state.public_mood_last_advanced_month_key = -1;
+        }
+        if (!Number.isFinite(Number(state.public_mood_finalized_month_key))) {
+            state.public_mood_finalized_month_key = -1;
+        }
+        const driverBaseline = driverBaselines[scenarioId(state)];
+        for (const driver of Object.keys(driverBaseline)) {
+            const key = "public_mood_driver_" + driver;
+            if (!Number.isFinite(Number(state[key])) || formationMigration) {
+                state[key] = finiteMood(state[driver], driverBaseline[driver]);
+            }
+        }
+        state.public_opinion_version = 3;
+    };
+    const snapshotMood = function(state) {
+        for (const issue of Object.keys(moodIssues)) {
+            for (const measure of [
+                "support", "salience", "backlash", "left_ownership"
+            ]) {
+                const key = issue + "_" + measure;
+                state["public_mood_resolved_" + key] = state[key];
+            }
+        }
+    };
+    const enqueueMood = function(state, effect) {
+        normalizeMood(state);
+        state.public_mood_effect_queue.push(Object.assign({
+            id: "mood-" + moodMonthKey(state) + "-" +
+                state.public_mood_effect_queue.length,
+            mode: "delta",
+            source: "event",
+            actor: "none",
+            bloc: "centrist"
+        }, effect || {}));
+    };
+    const transferOwnership = function(state, issue, bloc, amount) {
+        if (!["progressive", "centrist", "conservative"].includes(bloc)) return;
+        const delta = clampMood(Math.abs(amount), 0, 30) * (amount < 0 ? -1 : 1);
+        if (!delta) return;
+        const targetKey = issue + "_" + bloc + "_ownership";
+        const otherBlocs = ["progressive", "centrist", "conservative"]
+            .filter(function(other) { return other != bloc; });
+        state[targetKey] = clampMood(state[targetKey] + delta, 0, 100);
+        const target = state[targetKey];
+        const remaining = Math.max(0, 100 - target);
+        const otherTotal = otherBlocs.reduce(function(sum, other) {
+            return sum + clampMood(state[issue + "_" + other + "_ownership"], 0, 100);
+        }, 0);
+        for (const other of otherBlocs) {
+            const key = issue + "_" + other + "_ownership";
+            state[key] = otherTotal > 0
+                ? remaining * clampMood(state[key], 0, 100) / otherTotal
+                : remaining / 2;
+        }
+        normalizeOwnership(state, issue);
+    };
+    const storyFrame = function(state, effect) {
+        if (Number.isFinite(Number(effect.frame))) return Number(effect.frame);
+        if (effect.kind == "pandemic_opening") {
+            return state.covid_policy == "Restrictions with a social shield" ? 78
+                : (state.covid_policy == "Constitutional emergency" ? 34
+                    : (state.covid_policy == "National unity" ? 24 : -74));
+        }
+        if (effect.kind == "pandemic_aftershock") {
+            return ["Public-health mobilisation", "Local access"]
+                .includes(state.vaccination_strategy) ? 58 : -62;
+        }
+        if (effect.kind == "womens_ruling") {
+            return state.abortion_strategy == "Autonomous movement support" ? 74
+                : (state.abortion_strategy == "Broad democratic front" ? 68
+                    : (state.abortion_strategy == "Party-led mobilisation" ? 34 : -66));
+        }
+        if (effect.kind == "womens_followup") {
+            return state.womens_strike_followup == "Independent legal defence" ? 70
+                : (state.womens_strike_followup == "Social programme" ? 54 : -58);
+        }
+        if (["migration_border", "migration_services", "migration_welfare"]
+            .includes(effect.kind)) {
+            return state.migration_local_service_capacity >= 48 ? 56 : -42;
+        }
+        return effect.bloc == "conservative" ? -45 : 45;
+    };
+    const resolveStory = function(state, effect) {
+        const issue = moodIssues[effect.issue] ? effect.issue : "social_spending";
+        const frame = clampMood(storyFrame(state, effect), -100, 100);
+        const direction = frame < 0 ? -1 : (frame > 0 ? 1 : 0);
+        const reach = clampMood(effect.reach, 0, 100) ||
+            (effect.kind == "pandemic_opening" ? 96
+                : (effect.kind == "pandemic_aftershock" ? 84 : 72));
+        const trust = clampMood(
+            Number.isFinite(Number(effect.audienceTrust))
+                ? effect.audienceTrust : state.public_trust,
+            0, 100
+        );
+        const messenger = clampMood(
+            Number.isFinite(Number(effect.messengerCredibility))
+                ? effect.messengerCredibility
+                : (finiteMood(state.public_trust, 45) +
+                    finiteMood(state.media_capacity, 35)) / 2,
+            0, 100
+        );
+        const salience = clampMood(
+            Number.isFinite(Number(effect.issueSalience))
+                ? effect.issueSalience : state[issue + "_salience"],
+            0, 100
+        );
+        const leftCredibility = clampMood(
+            Number.isFinite(Number(effect.leftCredibility))
+                ? effect.leftCredibility : state.issue_ownership,
+            0, 100
+        );
+        const messageCredibility = direction < 0
+            ? clampMood(100 - leftCredibility * 0.5, 0, 100)
+            : leftCredibility;
+        const signal = 100 * direction * (reach / 100) * (trust / 100) *
+            (Math.abs(frame) / 100) * (messenger / 100) * (salience / 100) *
+            (messageCredibility / 100);
+        const positive = Math.max(0, signal);
+        const negative = Math.max(0, -signal);
+        const persuasion = positive * 0.82;
+        const backlash = negative * 0.88 + positive *
+            clampMood(state[issue + "_backlash"], 0, 100) / 620;
+        const ownership = signal * (0.62 + leftCredibility / 320) -
+            backlash * 0.10;
+        state.story_last_title = effect.title || "Important story";
+        state.story_last_issue = effect.label || moodLabels[issue];
+        state.story_last_reach = Math.round(reach);
+        state.story_last_audience_trust = Math.round(trust);
+        state.story_last_frame = Math.round(frame);
+        state.story_last_messenger_credibility = Math.round(messenger);
+        state.story_last_issue_salience = Math.round(salience);
+        state.story_last_left_credibility = Math.round(leftCredibility);
+        state.story_last_signal = Math.round(signal * 10) / 10;
+        state.story_persuasion = Math.round(persuasion * 10) / 10;
+        state.story_backlash = Math.round(backlash * 10) / 10;
+        state.story_issue_ownership = Math.round(ownership * 10) / 10;
+        const changeAppetite = clampMood(state.change_appetite, 0, 100);
+        const mobilisation = signal * (0.46 + changeAppetite / 240) -
+            backlash * 0.12;
+        const abstention = negative * (0.72 - changeAppetite / 300) -
+            positive * (0.18 + trust / 600);
+        state.story_mobilisation = Math.round(mobilisation * 10) / 10;
+        state.story_abstention = Math.round(abstention * 10) / 10;
+        state.story_salience_memory = clampMood(
+            finiteMood(state.story_salience_memory, 0) + Math.abs(signal) * 0.70,
+            0, 100
+        );
+        state.story_distrust_memory = clampMood(
+            finiteMood(state.story_distrust_memory, 0) + negative * 0.32 +
+                backlash * 0.10, 0, 100
+        );
+        state.story_backlash_memory = clampMood(
+            finiteMood(state.story_backlash_memory, 0) + backlash * 0.34,
+            0, 100
+        );
+        state.story_reputation_memory = clampMood(
+            finiteMood(state.story_reputation_memory, 0) + negative * 0.20,
+            0, 100
+        );
+        state.issue_ownership = finiteMood(state.issue_ownership, 35) +
+            ownership * 0.055;
+        state.winner_reputation = finiteMood(state.winner_reputation, 45) +
+            (persuasion - backlash - abstention) * 0.020;
+        state.turnout_readiness = finiteMood(state.turnout_readiness, 50) +
+            mobilisation * 0.035 - abstention * 0.045;
+        state.left_poll_momentum = finiteMood(state.left_poll_momentum, 0) +
+            (persuasion - backlash) * 0.012;
+        if (effect.kind == "womens_ruling" ||
+            effect.kind == "womens_followup") {
+            let activist = 0;
+            let sympathy = 0;
+            let conversion = 0;
+            let conservative = 0;
+            if (effect.kind == "womens_ruling" &&
+                state.abortion_strategy == "Autonomous movement support") {
+                activist = 12; sympathy = 9; conversion = 2; conservative = 4;
+            } else if (effect.kind == "womens_ruling" &&
+                state.abortion_strategy == "Party-led mobilisation") {
+                activist = 15; sympathy = -6; conversion = 8; conservative = 13;
+            } else if (effect.kind == "womens_ruling" &&
+                state.abortion_strategy == "Broad democratic front") {
+                activist = 9; sympathy = 12; conversion = 3; conservative = 5;
+            } else if (effect.kind == "womens_followup" &&
+                state.womens_strike_followup == "Independent legal defence") {
+                activist = 11; sympathy = 5; conversion = 1; conservative = 3;
+            } else if (effect.kind == "womens_followup" &&
+                state.womens_strike_followup == "Social programme") {
+                activist = 7; sympathy = 7; conversion = 4; conservative = 6;
+            } else {
+                activist = -8; sympathy = -8; conversion = -5; conservative = -2;
+            }
+            state.womens_strike_activist_mobilisation = finiteMood(
+                state.womens_strike_activist_mobilisation, 0
+            ) + activist + Math.max(0, mobilisation) * 0.12;
+            state.womens_strike_public_sympathy = finiteMood(
+                state.womens_strike_public_sympathy, 49
+            ) + sympathy + persuasion * 0.08 - backlash * 0.08;
+            state.womens_strike_party_conversion = finiteMood(
+                state.womens_strike_party_conversion, 0
+            ) + conversion + ownership * 0.06;
+            state.womens_strike_conservative_backlash = finiteMood(
+                state.womens_strike_conservative_backlash, 24
+            ) + conservative + backlash * 0.10;
+        }
+        return Object.assign({}, effect, {
+            mode: "delta",
+            issue: issue,
+            bloc: signal < 0 ? "conservative" : (effect.bloc || "progressive"),
+            support: persuasion * 0.08 - backlash * 0.035,
+            salience: Math.abs(signal) * 0.38,
+            backlash: backlash * 0.15,
+            blocOwnership: Math.abs(ownership) * 0.18,
+            leftOwnership: ownership * 0.24,
+            resolvedSignal: signal
+        });
+    };
+    const applyEffect = function(state, rawEffect) {
+        if (rawEffect.mode == "story" && rawEffect.kind &&
+            !knownStoryKinds.includes(rawEffect.kind)) {
+            state.public_mood_invalid_effects =
+                finiteMood(state.public_mood_invalid_effects, 0) + 1;
+            return;
+        }
+        const effect = rawEffect.mode == "story"
+            ? resolveStory(state, rawEffect) : rawEffect;
+        const issue = String(effect.issue || "");
+        if (!moodIssues[issue]) {
+            state.public_mood_invalid_effects =
+                finiteMood(state.public_mood_invalid_effects, 0) + 1;
+            return;
+        }
+        const bloc = ["progressive", "centrist", "conservative"]
+            .includes(effect.bloc) ? effect.bloc : "centrist";
+        state[issue + "_support"] = clampMood(
+            state[issue + "_support"] + finiteMood(effect.support, 0), 0, 100
+        );
+        state[issue + "_salience"] = clampMood(
+            state[issue + "_salience"] + finiteMood(effect.salience, 0), 0, 100
+        );
+        state[issue + "_backlash"] = clampMood(
+            state[issue + "_backlash"] + finiteMood(effect.backlash, 0), 0, 100
+        );
+        state[issue + "_left_ownership"] = clampMood(
+            state[issue + "_left_ownership"] +
+                finiteMood(effect.leftOwnership, 0), 0, 100
+        );
+        transferOwnership(
+            state, issue, bloc, finiteMood(effect.blocOwnership, 0)
+        );
+        const publicDelta = finiteMood(effect.support, 0) -
+            Math.max(0, finiteMood(effect.backlash, 0)) * 0.35;
+        state.public_opinion_last_issue = effect.label || moodLabels[issue];
+        state.public_opinion_last_action = effect.title || "Public mood shift";
+        state.public_opinion_last_delta = Math.round(publicDelta * 10) / 10;
+        state.public_opinion_last_reception = publicDelta >= 1
+            ? "favourable" : (publicDelta <= -1 ? "backlash" : "contested");
+        state.public_mood_effect_log.push({
+            id: effect.id || "mood-effect",
+            month: moodMonthKey(state), source: effect.source || "event",
+            actor: effect.actor || "none", bloc: bloc, issue: issue,
+            title: effect.title || "Public mood shift",
+            support: Math.round(finiteMood(effect.support, 0) * 10) / 10,
+            salience: Math.round(finiteMood(effect.salience, 0) * 10) / 10,
+            backlash: Math.round(finiteMood(effect.backlash, 0) * 10) / 10,
+            blocOwnership:
+                Math.round(finiteMood(effect.blocOwnership, 0) * 10) / 10,
+            leftOwnership:
+                Math.round(finiteMood(effect.leftOwnership, 0) * 10) / 10
+        });
+        while (state.public_mood_effect_log.length > 18) {
+            state.public_mood_effect_log.shift();
+        }
+    };
+    const supportTarget = function(state, issue) {
+        const config = moodIssues[issue];
+        const baseline = baselineFor(state, issue);
+        const driverBaseline = driverBaselines[scenarioId(state)];
+        let movement = 0;
+        for (const driver of config.drivers) {
+            let driverMovement =
+                finiteMood(state[driver[0]], driverBaseline[driver[0]]) -
+                finiteMood(driverBaseline[driver[0]], 50);
+            if (driver[0] == "migration_empathy") {
+                driverMovement = (driverMovement +
+                    finiteMood(state.refugee_empathy,
+                        driverBaseline.refugee_empathy) -
+                    finiteMood(driverBaseline.refugee_empathy, 50)) / 2;
+            }
+            movement += driver[1] * driverMovement;
+        }
+        return clampMood(
+            baseline[0] + 0.25 * movement / config.drivers.length,
+            15, 90
+        );
+    };
+    const moveToward = function(value, target, rate, cap) {
+        return value + clampMood((target - value) * rate, -cap, cap);
+    };
+    const advanceMood = function(state) {
+        state.story_salience_memory =
+            clampMood(state.story_salience_memory, 0, 100) * 0.78;
+        state.story_distrust_memory =
+            clampMood(state.story_distrust_memory, 0, 100) * 0.975;
+        state.story_backlash_memory =
+            clampMood(state.story_backlash_memory, 0, 100) * 0.985;
+        state.story_reputation_memory =
+            clampMood(state.story_reputation_memory, 0, 100) * 0.992;
+        const driverSnapshot = driverBaselines[scenarioId(state)];
+        let bridgePressure = 0;
+        for (const driver of Object.keys(driverSnapshot)) {
+            const key = "public_mood_driver_" + driver;
+            const current = finiteMood(state[driver], driverSnapshot[driver]);
+            const previous = finiteMood(state[key], current);
+            bridgePressure += Math.abs(current - previous);
+            state[key] = current;
+        }
+        state.public_opinion_bridge_pressure = Math.round(
+            bridgePressure * 10 /
+                Math.max(1, Object.keys(driverSnapshot).length)
+        ) / 10;
+        for (const issue of Object.keys(moodIssues)) {
+            const baseline = baselineFor(state, issue);
+            state[issue + "_support"] = moveToward(
+                state[issue + "_support"], supportTarget(state, issue),
+                0.025, 0.75
+            );
+            state[issue + "_salience"] = moveToward(
+                state[issue + "_salience"], baseline[1], 0.05, 1.5
+            );
+            const centrist = clampMood(
+                state[issue + "_centrist_ownership"], 0, 100
+            );
+            const backlashTarget = clampMood(
+                20 + state[issue + "_salience"] * 0.25 +
+                Math.abs(state[issue + "_support"] - 50) * 0.35 +
+                Math.max(0, 40 - centrist) * 0.25,
+                15, 85
+            );
+            state[issue + "_backlash"] = moveToward(
+                state[issue + "_backlash"], backlashTarget, 0.04, 1.5
+            );
+            const doctrineBonus = state.spring_path_stage >= 2 &&
+                state.spring_path_route == "social_liberal" &&
+                ["abortion_rights", "lgbt_equality", "secular_state"]
+                    .includes(issue) ? 8 : 0;
+            state[issue + "_left_ownership"] = moveToward(
+                state[issue + "_left_ownership"],
+                clampMood(baseline[3] + doctrineBonus, 0, 100), 0.01, 0.6
+            );
+            for (let index = 0; index < 3; index += 1) {
+                const bloc = ["progressive", "centrist", "conservative"][index];
+                const key = issue + "_" + bloc + "_ownership";
+                state[key] = moveToward(state[key], baseline[index + 4], 0.01, 0.6);
+            }
+            normalizeOwnership(state, issue);
+        }
+    };
+    const resolveMood = function(state, options) {
+        normalizeMood(state);
+        const settings = options || {};
+        const key = moodMonthKey(state);
+        if (settings.advance && state.public_mood_last_advanced_month_key != key) {
+            advanceMood(state);
+            state.public_mood_last_advanced_month_key = key;
+        }
+        const effects = state.public_mood_effect_queue.slice();
+        state.public_mood_effect_queue = [];
+        for (const effect of effects) applyEffect(state, effect || {});
+        aggregateMood(state);
+        if (settings.finalize && state.public_mood_finalized_month_key != key) {
+            const previous = finiteMood(
+                state.public_climate_previous_index,
+                state.public_climate_progressive_index
+            );
+            state.public_climate_progressive_trend =
+                finiteMood(state.public_climate_progressive_trend, 0) * 0.88 +
+                (state.public_climate_progressive_index - previous);
+            state.public_climate_previous_index =
+                state.public_climate_progressive_index;
+            state.public_mood_finalized_month_key = key;
+            state.public_climate_media_bonus = Math.round(clampMood(
+                state.public_climate_progressive_trend * 2.2, -6, 6
+            ));
+            aggregateMood(state);
+        }
+        state.public_opinion_last_updated =
+            (state.date_label || "Current month") + " dynamic model";
+        snapshotMood(state);
+        return effects.length;
+    };
+    publicMoodHost.polandPublicMoodModel = {
+        issues: moodIssues,
+        labels: moodLabels,
+        storyKinds: knownStoryKinds,
+        normalize: normalizeMood,
+        enqueue: enqueueMood,
+        resolve: resolveMood,
+        aggregate: aggregateMood
+    };
+}
 if (Q.started) {
     const clamp = function(value, low, high) {
         if (!Number.isFinite(Number(value))) {
@@ -360,7 +1069,8 @@ if (Q.started) {
         !Number(Q.tusk_return_2021_done) &&
         (Number(Q.year) > 2021 ||
             (Number(Q.year) === 2021 && Number(Q.month) > 7)) &&
-        Q.ko_leader === "Borys Budka"
+        Q.ko_leader === "Borys Budka" &&
+        Q.ko_alternative_2021_outcome !== "Tusk does not return"
     ) {
         Q.tusk_return_2021_done = 1;
         Q.ko_outgoing_leader = "Borys Budka";
@@ -1210,7 +1920,8 @@ if (Q.started) {
         ["konf_committee", "konf", "party", "Konfederacja Wolność i Niepodległość", "collective presidium", "Konfederacja Wolność i Niepodległość", "electoral alliance", 1, 1, 34, 44, 2, 0],
         ["zp_committee", "pis", "party", "Zjednoczona Prawica", "Jarosław Kaczyński", "Zjednoczona Prawica", "electoral alliance", 1, 1, 70, 66, 8, 0],
         ["republikanie", "pis", "party", "Partia Republikańska", "Adam Bielan", "United Right", "not formed", 0, 1, 0, 0, 18, 0],
-        ["odnowa", "pis", "party", "OdNowa RP", "Marcin Ociepa", "United Right", "not formed", 0, 1, 0, 0, 20, 0]
+        ["odnowa", "pis", "party", "OdNowa RP", "Marcin Ociepa", "United Right", "not formed", 0, 1, 0, 0, 20, 0],
+        ["duda_movement", "pis", "party", "Duda civic vehicle", "Andrzej Duda", "Presidential milieu", "not formed", 0, 0, 0, 0, 28, 0]
     ];
     if (!Array.isArray(Q.rival_group_records)) {
         Q.rival_group_records = [];
@@ -1320,7 +2031,8 @@ if (Q.started) {
         ipl: ["ko", "ko", 0, "opposition", 1],
         greens: ["ko", "ko", 0, "opposition", 1],
         ko_party: ["ko", "ko", 0, "opposition", 1],
-        ko_splinter: ["ko", "ko", 0, "opposition", 1]
+        ko_splinter: ["ko", "ko", 0, "opposition", 1],
+        duda_movement: ["duda", "duda", 0, "opposition", 1]
     };
     const affiliationFields = [
         "list_committee", "club", "in_cabinet", "support_mode", "independent"
@@ -1342,8 +2054,76 @@ if (Q.started) {
         if (!supportModes.includes(String(record.support_mode))) {
             record.support_mode = "none";
         }
+        const contestingDefaults = {
+            pis_party: 1,
+            po: 0,
+            ko_party: 1,
+            psl_party: 1,
+            p2050_party: 0,
+            nowa_nadzieja: 0,
+            ruch_narodowy: 0,
+            kkp: 0,
+            konf_committee: 1,
+            zp_committee: 1,
+            ko_splinter: 0,
+            duda_movement: 0
+        };
+        const ideologicalDefaults = {
+            pis: [64, 82, 22],
+            ko: [58, 38, 58],
+            psl: [52, 58, 66],
+            konf: [78, 92, 8]
+        };
+        const ideology = ideologicalDefaults[record.bloc] || [50, 50, 35];
+        if (typeof record.ballot_name != "string" || !record.ballot_name) {
+            record.ballot_name = record.name;
+        }
+        if (!Number.isFinite(Number(record.contesting))) {
+            record.contesting = contestingDefaults[record.id] || 0;
+        }
+        if (!Number.isFinite(Number(record.threshold))) {
+            record.threshold = /committee$/.test(record.id) ? 8 : 5;
+        }
+        if (!Number.isFinite(Number(record.vote_intent))) {
+            record.vote_intent = 0;
+        }
+        if (!Number.isFinite(Number(record.poll_momentum))) {
+            record.poll_momentum = 0;
+        }
+        if (!Number.isFinite(Number(record.projected_seats))) {
+            record.projected_seats = 0;
+        }
+        if (!Number.isFinite(Number(record.economic_position))) {
+            record.economic_position = ideology[0];
+        }
+        if (!Number.isFinite(Number(record.cultural_position))) {
+            record.cultural_position = ideology[1];
+        }
+        if (!Number.isFinite(Number(record.coalition_openness))) {
+            record.coalition_openness = ideology[2];
+        }
+        if (!Number.isFinite(Number(record.negotiated_list_share))) {
+            record.negotiated_list_share = 0;
+        }
+        record.contesting = record.contesting ? 1 : 0;
+        record.threshold = clamp(record.threshold, 0, 20);
+        record.vote_intent = clamp(record.vote_intent, 0, 100);
+        record.poll_momentum = clamp(record.poll_momentum, -20, 20);
+        record.projected_seats = Math.round(clamp(
+            record.projected_seats,
+            0,
+            460
+        ));
+        record.economic_position = clamp(record.economic_position, 0, 100);
+        record.cultural_position = clamp(record.cultural_position, 0, 100);
+        record.coalition_openness = clamp(record.coalition_openness, 0, 100);
+        record.negotiated_list_share = clamp(
+            record.negotiated_list_share,
+            0,
+            100
+        );
     }
-    Q.rival_group_schema_version = 3;
+    Q.rival_group_schema_version = 4;
     if (typeof Q.rival_group_month_action != "string") {
         Q.rival_group_month_action =
             "No component organisation has acted yet";
@@ -1356,6 +2136,20 @@ if (Q.started) {
             return record.id == id;
         });
     };
+
+    // Saves made before the named-party seat ledger counted an independent
+    // Suwerenna caucus both under its own name and in Others.
+    if (
+        Q.suwerenna_merger_result == "Merger refused" &&
+        !Q.suwerenna_seat_ledger_corrected
+    ) {
+        Q.other_seats = Math.max(
+            0,
+            (Number(Q.other_seats) || 0) -
+                Math.max(0, Number(Q.suwerenna_seats) || 0)
+        );
+        Q.suwerenna_seat_ledger_corrected = 1;
+    }
 
     if (!Array.isArray(Q.rival_person_records)) {
         Q.rival_person_records = [];
@@ -1811,6 +2605,66 @@ if (Q.started) {
         : "No shared committee";
     Q.third_way_committee_active =
         kpCommittee.active && thirdWayFormed ? 1 : 0;
+
+    // Visible congresses may replace the default family committee with a
+    // shared dynamic list. Reapply only their recorded result here; this does
+    // not choose an outcome or dissolve a component.
+    if (String(Q.right_reunification_outcome || "").startsWith("Shared Right")) {
+        const rightIds = ["pis_party", "rozwoj_plus"].concat(
+            Q.mentzen_bosak_split == 1
+                ? ["nowa_nadzieja", "ruch_narodowy"]
+                : ["konf_committee"]
+        ).concat(["kkp"]);
+        const liveRight = rightIds.map(rivalGroup).filter(function(record) {
+            return record && record.active;
+        });
+        const totalOrganisation = liveRight.reduce(function(total, record) {
+            return total + Math.max(1, Number(record.organisation) || 0);
+        }, 0);
+        for (const record of liveRight) {
+            record.list_committee = "right_2027";
+            record.contesting = 1;
+            if (!record.negotiated_list_share) {
+                record.negotiated_list_share = Math.round(
+                    Math.max(1, Number(record.organisation) || 0) * 100 /
+                    Math.max(1, totalOrganisation)
+                );
+            }
+        }
+    }
+    if (String(Q.third_way_alternative_outcome || "").startsWith("Common-centre")) {
+        const centreIds = [
+            "ko_party", "psl_party", "p2050_party", "unia_centrum",
+            "ko_splinter"
+        ];
+        const liveCentre = centreIds.map(rivalGroup).filter(function(record) {
+            return record && record.active;
+        });
+        const totalSeats = liveCentre.reduce(function(total, record) {
+            return total + Math.max(1, Number(record.exclusive_seats) ||
+                Number(record.mp_count) || 0);
+        }, 0);
+        for (const record of liveCentre) {
+            record.list_committee = "common_centre_2027";
+            record.contesting = 1;
+            if (!record.negotiated_list_share) {
+                record.negotiated_list_share = Math.round(
+                    Math.max(1, Number(record.exclusive_seats) ||
+                        Number(record.mp_count) || 0) * 100 /
+                    Math.max(1, totalSeats)
+                );
+            }
+        }
+    }
+    if (String(Q.third_way_alternative_outcome || "").startsWith("Permanent Third Way")) {
+        for (const id of ["psl_party", "p2050_party"]) {
+            const record = rivalGroup(id);
+            if (!record || !record.active) continue;
+            record.list_committee = "third_way_2027";
+            record.contesting = 1;
+            record.negotiated_list_share = id == "psl_party" ? 55 : 45;
+        }
+    }
 
     // Read-only affiliation roll-ups. Events own the seat totals themselves —
     // this only reports who is currently attached to which committee, club and
@@ -4201,7 +5055,7 @@ if (Q.started) {
     }
 
     Q.party_unity = clamp(Q.party_unity, 0, 100);
-    Q.left_poll = Math.round(clamp(Q.left_poll, 0, 40) * 10) / 10;
+    Q.left_poll = Math.round(clamp(Q.left_poll, 0, 52) * 10) / 10;
     Q.resources = Number.isFinite(Number(Q.resources))
         ? Math.max(0, Number(Q.resources))
         : 0;
@@ -4623,6 +5477,231 @@ if (Q.started) {
     ]) {
         Q[seats] = Math.round(clamp(Q[seats], 0, 460));
     }
+
+    const auditedStringDefaults = {
+        braun_outcome: "No post-compulsion proceeding",
+        braun_evidentiary_result: "Unresolved",
+        braun_appeal_status: "No appeal projected",
+        psl_outcome: "PSL remains under its existing coalition protocol",
+        psl_support_mode: "coalition",
+        psl_leader_route: "Kosiniak-Kamysz leadership",
+        psl_congress_route: "No congress decision",
+        duda_outcome: "No third-act endorsement",
+        duda_endorsement: "None",
+        ko_alternative_2021_outcome: "Unresolved",
+        right_reunification_outcome: "No 2027 right congress",
+        third_way_alternative_outcome: "No absorption or common-list decision",
+        ambassador_outcome: "No follow-up test",
+        border_outcome: "No audited border chain outcome",
+        media_star_name: "No independent movement star",
+        media_deepfake_source: "No synthetic file stored",
+        media_charter_outcome: "No public-media charter filed",
+        covid_aftermath_outcome: "No pandemic-aftermath audit",
+        trans_candidate_name: "Maja Heban",
+        trans_candidate_role: "No national-list role",
+        hate_speech_bill_scope: "No bill",
+        hate_speech_bill_outcome: "No bill filed",
+        acting_president_name: "None",
+        acting_presidency_scope: "No temporary presidential authority",
+        presidential_incapacity_outcome: "None",
+        shock_party_leader: "None",
+        shock_violence_victim: "None",
+        shock_violence_site: "None",
+        shock_active_code: "none",
+        shock_source_ledger: "None"
+    };
+    for (const field of Object.keys(auditedStringDefaults)) {
+        if (typeof Q[field] != "string") Q[field] = auditedStringDefaults[field];
+    }
+    const auditedIntegerDefaults = {
+        braun_stage: 0, braun_due_time: -1, braun_done: 0,
+        psl_stage: 0, psl_due_time: -1, psl_done: 0,
+        psl_bridge_votes: 0,
+        duda_stage: 0, duda_due_time: -1, duda_done: 0,
+        ambassador_stage: 0, ambassador_due_time: -1, ambassador_done: 0,
+        border_stage: 0, border_due_time: -1, border_done: 0,
+        border_death_occurred: 0, ko_alternative_stage: 0,
+        mentzen_bosak_split: 0, duda_vehicle_seats: 0,
+        pis_alternative_stage: 0, pis_morawiecki_reconciled: 0,
+        third_way_alternative_stage: 0,
+        social_gap_stage: 0, media_gap_stage: 0,
+        media_charter_stage: 0, media_charter_due_time: -1,
+        public_media_funding_request: 0, media_republika_done: 0,
+        media_movement_done: 0, media_campaign_done: 0,
+        media_harassment_done: 0, media_deepfake_done: 0,
+        media_parallel_done: 0, covid_aftermath_done: 0,
+        sex_ed_panic_done: 0, sex_ed_material_authentic: 0,
+        trans_candidate_done: 0, hate_speech_stage: 0,
+        hate_speech_due_time: -1, hate_speech_done: 0,
+        acting_president_active: 0, presidential_vacancy: 0,
+        presidential_election_due_time: -1, shock_security_cursor: 0,
+        shock_domestic_cursor: 0, shock_constitutional_cursor: 0,
+        black_monday_prehistory: 1, black_friday_prehistory: 1,
+        teachers_strike_2019_prehistory: 1
+    };
+    for (const field of Object.keys(auditedIntegerDefaults)) {
+        if (!Number.isFinite(Number(Q[field]))) Q[field] = auditedIntegerDefaults[field];
+        Q[field] = Math.round(Number(Q[field]));
+    }
+    const auditedCapacityDefaults = {
+        duda_programme_reach: 0, duda_organisation: 0,
+        border_documentation: 35, border_officer_clarity: 40,
+        border_service_capacity: 38, border_force_pressure: 18,
+        border_integration_capacity: 32, border_uniform_neutrality: 55,
+        border_guard_trust: 48, public_media_security: 42,
+        media_editorial_independence: 42,
+        media_distribution_resilience: 32, media_legal_security: 38,
+        media_safety_capacity: 24, republika_soft_reach: 8,
+        election_information_integrity: 55,
+        feminist_repression_memory: 24, teacher_union_memory: 38
+    };
+    for (const field of Object.keys(auditedCapacityDefaults)) {
+        if (!Number.isFinite(Number(Q[field]))) Q[field] = auditedCapacityDefaults[field];
+        Q[field] = clamp(Q[field], 0, 100);
+    }
+    const legacyRollDefaults = {
+        braun_legal_roll: 431, border_death_roll: 719,
+        media_deepfake_roll: 257,
+        shock_04_roll: 541, shock_05_roll: 167, shock_06_roll: 613,
+        shock_13_roll: 293, shock_16_roll: 887, shock_17_roll: 341,
+        shock_19_roll: 739, shock_21_roll: 461, shock_22_roll: 821,
+        shock_24_roll: 937, shock_25_roll: 383, shock_27_roll: 677,
+        shock_28_roll: 113
+    };
+    for (const field of Object.keys(legacyRollDefaults)) {
+        if (!Number.isFinite(Number(Q[field]))) Q[field] = legacyRollDefaults[field];
+        Q[field] = Math.round(clamp(Q[field], 0, 999));
+        const done = field.replace(/_roll$/, "_done");
+        if (done.startsWith("shock_") && !Number.isFinite(Number(Q[done]))) {
+            Q[done] = 0;
+        }
+        const outcome = field.replace(/_roll$/, "_outcome");
+        if (outcome.startsWith("shock_") && typeof Q[outcome] != "string") {
+            Q[outcome] = "Not triggered";
+        }
+    }
+    const shockThreshold = function(base, risk, cap) {
+        return Math.round(Math.min(cap, Math.max(base, base + risk)));
+    };
+    Q.shock_04_threshold = shockThreshold(
+        60,
+        Number(Q.war_escalation_risk || 0) * 1.6,
+        220
+    );
+    Q.shock_05_threshold = shockThreshold(
+        120,
+        Number(Q.war_fatigue || 0) * 1.4,
+        350
+    );
+    Q.shock_06_threshold = shockThreshold(
+        120,
+        Math.max(0, 55 - Number(Q.us_alliance_reliability || 0)) * 2 +
+            Number(Q.war_fatigue || 0),
+        350
+    );
+    Q.shock_13_threshold = shockThreshold(
+        120,
+        Math.max(0, Number(Q.unemployment || 5) - 5) * 12,
+        350
+    );
+    Q.shock_16_threshold = shockThreshold(
+        60,
+        Math.max(0, 50 - Number(Q.health_capacity || 0)) * 2 +
+            Math.max(0, 45 - Number(Q.vaccination_support || 0)),
+        220
+    );
+    Q.shock_17_threshold = shockThreshold(
+        180,
+        Math.max(0, 50 - Number(Q.climate_state_capacity || 0)) * 2,
+        350
+    );
+    Q.shock_19_threshold = shockThreshold(
+        120,
+        Math.max(0, 55 - Number(Q.union_trust || 0)) * 2 +
+            Math.max(0, 50 - Number(Q.energy_security || 0)),
+        350
+    );
+    Q.shock_21_threshold = shockThreshold(
+        120,
+        Math.max(0, 55 - Number(Q.energy_security || 0)) * 2 +
+            Number(Q.war_escalation_risk || 0),
+        350
+    );
+    Q.shock_22_threshold = shockThreshold(
+        120,
+        Number(Q.war_escalation_risk || 0) * 1.5 +
+            Math.max(0, 45 - Number(Q.police_trust || 0)),
+        350
+    );
+    Q.shock_24_threshold = shockThreshold(
+        60,
+        Math.max(0, 40 - Number(Q.public_trust || 0)),
+        220
+    );
+    Q.shock_25_threshold = shockThreshold(
+        60,
+        Math.max(0, Number(Q.government_coalition_dissent || 0) - 55),
+        220
+    );
+    Q.shock_27_threshold = shockThreshold(
+        120,
+        Number(Q.far_right_fragmentation || 0) +
+            Number(Q.migration_disinformation || 0) +
+            Math.max(0, 45 - Number(Q.minority_safety || 0)),
+        350
+    );
+    const cpkProcurementExposure = Number(Q.cpk_stage || 0) >= 1 &&
+        !Number(Q.cpk_cancelled || 0)
+        ? Math.max(
+            0,
+            Number(Q.cpk_cost_pressure || 0) +
+                Number(Q.cpk_land_conflict || 0) -
+                (Number(Q.cpk_transparency || 0) ? 15 : 0) -
+                Math.max(0, Number(Q.cpk_delivery || 0)) * 0.2
+        )
+        : 0;
+    const procurementExposure = Math.max(
+        cpkProcurementExposure,
+        Number(Q.kpo_patronage_risk || 0),
+        Number(Q.flood_reconstruction_exposure || 0),
+        Number(Q.nuclear_delivery_risk || 0),
+        Number(Q.media_pluralism_pressure || 0),
+        Number(Q.procurement_scandal_pressure || 0)
+    );
+    Q.shock_28_threshold = shockThreshold(180, procurementExposure * 1.4, 350);
+    const campaignYear = Number(Q.year) || 2019;
+    const warLive = Number(Q.ukraine_invasion_event_done || 0) === 1 &&
+        !(Number(Q.shock_05_done || 0) === 1 &&
+            String(Q.shock_05_outcome || "").includes("Ceasefire"));
+    const ready = function(id, eligible) {
+        Q["shock_" + id + "_ready"] = eligible &&
+            !Number(Q["shock_" + id + "_done"]) &&
+            Number(Q["shock_" + id + "_roll"]) <
+                Number(Q["shock_" + id + "_threshold"] || 0) ? 1 : 0;
+    };
+    ready("04", campaignYear >= 2025 && campaignYear <= 2027 && warLive &&
+        Number(Q.war_escalation_risk || 0) > 0);
+    ready("05", campaignYear >= 2026 && warLive);
+    ready("06", campaignYear >= 2026 && warLive && !Number(Q.shock_05_done));
+    ready("13", campaignYear >= 2025 && campaignYear <= 2027);
+    ready("16", campaignYear >= 2025 && campaignYear <= 2027);
+    ready("17", campaignYear >= 2025 && campaignYear <= 2027 &&
+        [5, 6, 7, 8, 9].includes(Number(Q.month)) && Number(Q.odra_2022_done));
+    ready("19", campaignYear >= 2025 && campaignYear <= 2027 &&
+        (String(Q.energy_2022_stance || "") != "" ||
+            Number(Q.climate_policy_pressure || 0) > 20));
+    ready("21", campaignYear >= 2025 && campaignYear <= 2027);
+    ready("22", campaignYear >= 2025 && campaignYear <= 2027 &&
+        Number(Q.ukraine_invasion_event_done || 0) === 1);
+    ready("24", campaignYear >= 2025 && campaignYear <= 2027 &&
+        String(Q.president_name || "") != "" &&
+        String(Q.president_name || "") != "Vacant");
+    ready("25", campaignYear >= 2025 && campaignYear <= 2027);
+    ready("27", campaignYear >= 2025 && campaignYear <= 2027 &&
+        (Number(Q.media_harassment_done || 0) ||
+            Number(Q.far_right_street_capacity || 0) >= 35));
+    ready("28", campaignYear >= 2025 && campaignYear <= 2027 &&
+        procurementExposure > 0);
 
     Q.media_capacity = clamp(Q.media_capacity, 0, 100);
     Q.local_network = clamp(Q.local_network, 0, 100);
@@ -5093,6 +6172,7 @@ if (Q.started) {
             Q[quality] = clamp(Q[quality], 0, 100);
         }
     }
+    publicMoodHost.polandPublicMoodModel.normalize(Q);
 
     Q.workers_support = clamp(Q.workers_support, 0, 100);
     Q.public_sector_support = clamp(Q.public_sector_support, 0, 100);
@@ -5990,7 +7070,11 @@ if (Q.started) {
         Math.max(0, Math.round(Number(Q.pis_seats) || 0)) +
         Math.max(0, Math.round(Number(Q.konf_seats) || 0)) +
         Math.max(0, Math.round(Number(Q.rozwoj_seats) || 0)) +
-        Math.max(0, Math.round(Number(Q.korona_seats) || 0));
+        Math.max(0, Math.round(Number(Q.korona_seats) || 0)) +
+        Math.max(0, Math.round(Number(Q.new_hope_seats) || 0)) +
+        Math.max(0, Math.round(Number(Q.national_movement_seats) || 0)) +
+        Math.max(0, Math.round(Number(Q.duda_seats) || 0)) +
+        Math.max(0, Math.round(Number(Q.social_conservative_seats) || 0));
 
     const chamberNumbers = [
         "senate_total",
@@ -6601,6 +7685,43 @@ Q.ideological_path_government_open =
             Q.poland_populist_bank_timer == 0 ||
             Q.poland_populist_foreign_capital_timer == 0 ||
             Q.poland_populist_referendum_timer == 0))
+        ? 1
+        : 0;
+
+// Constituent programmes remain available whenever their own current is live
+// and strong, regardless of which leadership route controls the common party.
+// This aggregate keeps the already-large Government Affairs gate parseable.
+Q.constituent_programme_government_open =
+    (Q.continuous_campaign &&
+        !Q.left_common_party_exists &&
+        Q.barons_active && Q.barons_in_left && Q.barons_strength >= 38 &&
+        (Q.poland_sld_housebuilding_timer == 0 ||
+            Q.poland_sld_inspector_timer == 0 ||
+            Q.poland_sld_public_work_timer == 0 ||
+            Q.poland_sld_ivf_timer == 0 ||
+            Q.poland_sld_research_timer == 0)) ||
+    (Q.continuous_campaign &&
+        !Q.left_common_party_exists &&
+        Q.spring_active && Q.spring_in_left && Q.spring_strength >= 25 &&
+        (Q.poland_wiosna_powiat_train_timer == 0 ||
+            Q.poland_wiosna_specialist_timer == 0 ||
+            Q.poland_wiosna_alimony_timer == 0 ||
+            Q.poland_wiosna_assistant_timer == 0 ||
+            Q.poland_wiosna_conscience_timer == 0)) ||
+    (Q.continuous_campaign &&
+        Q.pps_active && Q.pps_in_left && Q.pps_strength >= 6 &&
+        (Q.poland_pps_six_hour_timer == 0 ||
+            Q.poland_pps_councils_timer == 0 ||
+            Q.poland_pps_maximum_wage_timer == 0 ||
+            Q.poland_pps_housing_first_timer == 0 ||
+            Q.poland_pps_public_fibre_timer == 0)) ||
+    (Q.continuous_campaign &&
+        Q.nowa_lewica_merger_agreed && Q.left_common_party_exists &&
+        (Q.poland_nowa_lewica_second_breakfast_timer == 0 ||
+            Q.poland_nowa_lewica_student_ticket_timer == 0 ||
+            Q.poland_nowa_lewica_school_health_timer == 0 ||
+            Q.poland_nowa_lewica_widow_pension_timer == 0 ||
+            Q.poland_nowa_lewica_empty_homes_timer == 0))
         ? 1
         : 0;
 !}

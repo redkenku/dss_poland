@@ -531,6 +531,14 @@ window.disableGrayMode = function() {
       ]
     },
     {
+      id: 'agrounia',
+      className: 'party-agrounia',
+      explanation: 'AgroUnia is the agrarian protest movement founded by Michał Kołodziejczak.',
+      aliases: [
+        ['AgroUnia', 'AgroUnia']
+      ]
+    },
+    {
       id: 'polish-coalition',
       className: 'party-polish-coalition',
       explanation: 'Polish Coalition (KP) — the PSL-led electoral alliance formed with Kukiz’15 and smaller centrist partners.',
@@ -766,6 +774,7 @@ window.disableGrayMode = function() {
     'zieloni': ['Zieloni', 'Partia Zieloni'],
     'pis': ['PiS', 'Prawo i Sprawiedliwość'],
     'psl': ['PSL', 'Polskie Stronnictwo Ludowe'],
+    'agrounia': ['AgroUnia', 'AgroUnia'],
     'polish-coalition': ['KP', 'Koalicja Polska'],
     'p2050': ['PL2050', 'Polska 2050'],
     'third-way': ['TD', 'Trzecia Droga'],
@@ -1045,6 +1054,18 @@ window.disableGrayMode = function() {
       aliases: ['Beata Szydlo', 'Beata Szydło', 'Szydlo', 'Szydło']
     },
     {
+      id: 'sasin',
+      className: 'party-pis',
+      explanation: 'Jacek Sasin is a senior PiS politician who served as deputy prime minister and minister responsible for state assets.',
+      aliases: ['Jacek Sasin', 'Sasin']
+    },
+    {
+      id: 'henryk_kowalczyk',
+      className: 'party-pis',
+      explanation: 'Henryk Kowalczyk is a senior PiS politician who served as deputy prime minister and led the environment and agriculture ministries.',
+      aliases: ['Henryk Kowalczyk', 'Kowalczyk']
+    },
+    {
       id: 'ziobro',
       className: 'party-sovereign-poland',
       explanation: 'Zbigniew Ziobro is a former justice minister and prosecutor general who led Solidarna Polska later renamed Suwerenna Polska.',
@@ -1156,6 +1177,17 @@ window.disableGrayMode = function() {
         'Kosiniak-Kamysz',
         'Kosiniak',
         'Kamysz'
+      ]
+    },
+    {
+      id: 'kolodziejczak',
+      className: 'party-agrounia',
+      explanation: 'Michał Kołodziejczak founded AgroUnia and became its main public voice in farmer protests and electoral negotiations.',
+      aliases: [
+        'Michał Kołodziejczak',
+        'Michal Kolodziejczak',
+        'Kołodziejczak',
+        'Kolodziejczak'
       ]
     },
     {
@@ -2202,6 +2234,7 @@ window.disableGrayMode = function() {
     'zieloni': true,
     'pis': true,
     'psl': true,
+    'agrounia': true,
     'polish-coalition': true,
     'p2050': true,
     'third-way': true,
@@ -6243,6 +6276,37 @@ window.disableGrayMode = function() {
           'Katarzyna Kotula': 'img/poland/cards/advisor-kotula.webp',
           'Magdalena Biejat': 'img/poland/cards/advisor-biejat.webp'
         };
+        var primeMinisterImages = {
+          'Adam Bodnar': 'img/poland/prime-ministers/adam-bodnar.webp',
+          'Adrian Zandberg': 'img/poland/cards/advisor-zandberg.webp',
+          'Agnieszka Dziemianowicz-Bąk': 'img/poland/cards/advisor-dziemianowicz-bak.webp',
+          'Andrzej Domański': 'img/poland/prime-ministers/andrzej-domanski.webp',
+          'Barbara Nowacka': 'img/poland/events/pres-candidate-nowacka.webp',
+          'Beata Szydło': 'img/poland/prime-ministers/beata-szydlo.webp',
+          'Borys Budka': 'img/poland/prime-ministers/borys-budka.webp',
+          'Donald Tusk': 'img/poland/events/donald-tusk-2023.webp',
+          'Henryk Kowalczyk': 'img/poland/prime-ministers/henryk-kowalczyk.webp',
+          'Jacek Sasin': 'img/poland/prime-ministers/jacek-sasin.webp',
+          'Katarzyna Kotula': 'img/poland/cards/advisor-kotula.webp',
+          'Katarzyna Pełczyńska-Nałęcz': 'img/poland/prime-ministers/katarzyna-pelczynska-nalecz.webp',
+          'Krzysztof Gawkowski': 'img/poland/cards/advisor-gawkowski.webp',
+          'Krzysztof Hetman': 'img/poland/prime-ministers/krzysztof-hetman.webp',
+          'Magdalena Biejat': 'img/poland/cards/advisor-biejat.webp',
+          'Marcelina Zawisza': 'img/poland/cards/advisor-zawisza.webp',
+          'Marcin Kierwiński': 'img/poland/prime-ministers/marcin-kierwinski.webp',
+          'Mateusz Morawiecki': 'img/poland/events/mateusz-morawiecki-2023.webp',
+          'Monika Rosa': 'img/poland/prime-ministers/monika-rosa.webp',
+          'Paulina Hennig-Kloska': 'img/poland/prime-ministers/paulina-hennig-kloska.webp',
+          'Paweł Szefernaker': 'img/poland/prime-ministers/pawel-szefernaker.webp',
+          'Piotr Zgorzelski': 'img/poland/prime-ministers/piotr-zgorzelski.webp',
+          'Przemysław Czarnek': 'img/poland/events/pres-candidate-czarnek.webp',
+          'Radosław Sikorski': 'img/poland/events/pres-candidate-sikorski.webp',
+          'Rafał Trzaskowski': 'img/poland/events/pres-candidate-trzaskowski.webp',
+          'Robert Biedroń': 'img/poland/cards/advisor-biedron.webp',
+          'Urszula Pasławska': 'img/poland/prime-ministers/urszula-paslawska.webp',
+          'Władysław Kosiniak-Kamysz': 'img/poland/events/pres-candidate-kosiniak.webp',
+          'Włodzimierz Czarzasty': 'img/poland/events/wlodzimierz-czarzasty-2019.webp'
+        };
         var currentSceneId = state && state.sceneId;
         var qualities = (state && state.qualities) || {};
         var portraitSlots = content.querySelectorAll(
@@ -6259,6 +6323,29 @@ window.disableGrayMode = function() {
           ];
           if (slotSource) {
             slotImage.setAttribute('src', slotSource);
+          }
+        }
+        if (currentSceneId === 'poland_prime_minister_intro.show') {
+          var primeMinisterName = String(
+            qualities.prime_minister || 'The new Prime Minister'
+          );
+          var primeMinisterDefinition = personAliases[primeMinisterName];
+          var primeMinisterImage = content.querySelector('.face-figure img');
+          var primeMinisterBio = content.querySelector(
+            '[data-prime-minister-bio]'
+          );
+          if (primeMinisterImage) {
+            primeMinisterImage.src = primeMinisterImages[primeMinisterName] ||
+              'img/poland/events/chancellery-2022.webp';
+            primeMinisterImage.alt = primeMinisterImages[primeMinisterName]
+              ? 'Portrait of ' + primeMinisterName
+              : 'Chancellery of the Prime Minister';
+          }
+          if (primeMinisterBio) {
+            primeMinisterBio.textContent = primeMinisterDefinition
+              ? primeMinisterDefinition.explanation
+              : primeMinisterName +
+                ' has won the confidence required to lead the new cabinet.';
           }
         }
         var candidatePageNames = [

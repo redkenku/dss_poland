@@ -789,7 +789,9 @@ on-arrival: {!
 Q.budget -= 1;
 Q.annual_budget_internal_revision_used = 1;
 Q.annual_budget_public_wage_guarantee = 1;
-Q.annual_budget_market_cuts = 0;
+if (Q.annual_budget_external_deal_target != "konf") {
+    Q.annual_budget_market_cuts = 0;
+}
 Q.annual_budget_social_share = Math.round(
     (Number(Q.annual_budget_social_share) + 0.3) * 10
 ) / 10;
@@ -833,7 +835,10 @@ Q.annual_budget_deficit_share = Math.round(
     Math.max(2.5, Number(Q.annual_budget_deficit_share) - 0.3) * 10
 ) / 10;
 Q.annual_budget_social_share = Math.round(
-    Math.max(14, Number(Q.annual_budget_social_share) - 0.1) * 10
+    Math.max(
+        Q.annual_budget_external_deal_target == "razem" ? 18.5 : 14,
+        Number(Q.annual_budget_social_share) - 0.1
+    ) * 10
 ) / 10;
 Q.annual_budget_demands_text += "; binding mid-year deficit review";
 Q.news_headline = "The party accepts a deficit review before the coalition whip";
@@ -911,7 +916,9 @@ const defenceFloorBreach = Math.max(0, defenceFloor - defence);
 const deficitCeilingBreach = Math.max(0, deficit - deficitCeiling);
 
 const satisfaction = function(id) {
-    let score = 52 + (partyRelation(id) - 40) * 0.28 -
+    const relation = partyRelation(id);
+    let score = 54 + (relation - 40) * 0.30 +
+        Math.max(0, relation - 60) * 0.45 -
         Math.max(0, partyDissent(id) - 20) * 0.30;
     score -= defenceFloorBreach * (id == "pis" ? 22 : 12);
     score -= deficitCeilingBreach * (id == "ko" || id == "p2050" ? 16 : 9);
@@ -972,7 +979,7 @@ const genericStress =
     (Q.third_way_split ? 6 : 0) +
     (Q.p2050_split ? 5 : 0) +
     (Q.coalition_break_threat ? 8 : 0);
-const genericDefectors = Math.max(0, Math.round((genericStress - 38) / 9));
+const genericDefectors = Math.max(0, Math.round((genericStress - 58) / 8));
 partnerDefectors = Math.min(
     Math.max(0, governmentSeats - leftCabinetSeats),
     partnerDefectors + genericDefectors
@@ -1150,6 +1157,113 @@ go-to: coalition_whip
 title: The price of a majority
 new-page: true
 view-if: annual_budget_predicted_passed = 0 and annual_budget_external_deal_used = 0 and annual_budget_vote_round = 1
+on-arrival: {!
+const dealSeats = function(id) {
+    return Math.max(0, Math.round(Number(Q[id + "_seats"]) || 0));
+};
+const dealRelation = function(id, fallback) {
+    return Math.max(
+        0,
+        Math.min(100, Number(Q[id + "_relation"]) || fallback)
+    );
+};
+const shortfall = Math.max(
+    1,
+    Math.round(Number(Q.annual_budget_predicted_shortfall) || 1)
+);
+/* An outside MP moves from no to yes, a two-vote swing. Substantial deals
+ * cover that swing with a small buffer, but can never invent party seats. */
+const majorDealFloor = Math.max(4, Math.ceil(shortfall / 2) + 2);
+const standardDealFloor = Math.max(3, Math.ceil(shortfall / 2) + 1);
+const pslSeats = dealSeats("psl");
+const razemSeats = dealSeats("razem");
+const pisSeats = dealSeats("pis");
+const konfSeats = dealSeats("konf");
+const pslCohort = Math.max(
+    1,
+    Math.round(pslSeats * (0.35 + dealRelation("psl", 25) / 250))
+);
+const razemCooperation = Math.max(
+    0,
+    Math.min(100, Number(Q.razem_cooperation) || 35)
+);
+const razemCohort = Math.max(
+    1,
+    Math.round(razemSeats * (0.60 + razemCooperation / 300))
+);
+const koAvailable =
+    Q.government_party != "ko" && !Q.ministry_ko_in_cabinet &&
+    dealSeats("ko") > 0;
+const p2050Available =
+    Q.government_party != "p2050" && !Q.ministry_p2050_in_cabinet &&
+    dealSeats("p2050") > 0;
+const democraticTarget = p2050Available &&
+    (!koAvailable || Number(Q.p2050_relation) >= Number(Q.ko_relation))
+        ? "p2050" : "ko";
+const democraticSeats = dealSeats(democraticTarget);
+const democraticCohort = Math.max(
+    1,
+    Math.round(
+        democraticSeats *
+        (0.22 + dealRelation(
+            democraticTarget,
+            democraticTarget == "ko" ? 35 : 30
+        ) / 320)
+    )
+);
+const solidarists = Math.max(
+    20,
+    Math.min(80, Number(Q.pis_solidarist_share) || 50)
+);
+const pisCohort = Math.max(
+    1,
+    Math.round(
+        pisSeats * solidarists / 100 *
+        (0.10 + dealRelation("pis", 10) / 450)
+    )
+);
+const konfCohort = Math.max(
+    1,
+    Math.round(konfSeats * (0.14 + dealRelation("konf", 5) / 500))
+);
+Q.annual_budget_deal_coalition_votes = Math.max(
+    0,
+    Math.round(Number(Q.annual_budget_predicted_partner_defectors) || 0)
+);
+Q.annual_budget_deal_psl_votes = Math.min(
+    pslSeats,
+    Math.max(pslCohort, majorDealFloor),
+    shortfall + 4
+);
+Q.annual_budget_deal_razem_votes = Math.min(
+    razemSeats,
+    Math.max(razemCohort, majorDealFloor),
+    shortfall + 3
+);
+Q.annual_budget_deal_psl_seats = pslSeats;
+Q.annual_budget_deal_razem_seats = razemSeats;
+Q.annual_budget_deal_democratic_target = democraticTarget;
+Q.annual_budget_deal_democratic_label = democraticTarget == "p2050"
+    ? "Polska 2050" : "KO";
+Q.annual_budget_deal_democratic_votes = Math.min(
+    democraticSeats,
+    Math.max(democraticCohort, standardDealFloor),
+    shortfall + 3
+);
+Q.annual_budget_deal_democratic_seats = democraticSeats;
+Q.annual_budget_deal_pis_votes = Math.min(
+    pisSeats,
+    Math.max(pisCohort, majorDealFloor),
+    shortfall + 5
+);
+Q.annual_budget_deal_konf_votes = Math.min(
+    konfSeats,
+    Math.max(konfCohort, standardDealFloor),
+    shortfall + 2
+);
+Q.annual_budget_deal_pis_seats = pisSeats;
+Q.annual_budget_deal_konf_seats = konfSeats;
+!}
 
 = The government opens the locked rooms
 
@@ -1157,6 +1271,10 @@ The package is **[+ annual_budget_predicted_shortfall +] vote(s)** short. No
 party receives free anonymous votes. Every available bargain changes the bill,
 names a beneficiary and returns through Lewica's internal caucuses before the
 roll call.
+
+Each offer shows the MPs it commits out of that club's actual seats. An MP
+moving from **no** to **yes** creates a two-vote swing; the revised package can
+still change how many coalition rebels risk breaking ranks.
 
 A deal can be lucrative without being a suitcase of cash: ring-fenced county
 capital, funded public wages, committee control, procurement guarantees or a
@@ -1173,7 +1291,7 @@ lose if the agreement collapses.
 
 @deal_coalition_rewrite
 title: Reopen the coalition agreement around county capital and a deficit review
-subtitle: Cost: 1 governing-capacity point. Repairs governing-partner defections but adds no outside MPs.
+subtitle: Cost: 1 governing-capacity point. Targets [+ annual_budget_deal_coalition_votes +] governing-partner defector(s); adds 0 outside votes.
 view-if: annual_budget_predicted_partner_defectors > 0
 choose-if: budget >= 1
 unavailable-subtitle: The cabinet lacks capacity to rewrite appropriations and implementation schedules.
@@ -1206,22 +1324,16 @@ go-to: internal_ratification
 
 @deal_psl_counties
 title: Offer PSL a ring-fenced county capital fund and implementation board
-subtitle: Cost: 2 governing-capacity points. Buys identifiable PSL votes; local investment and deficit both rise.
+subtitle: Cost: 2 governing-capacity points. Commits [+ annual_budget_deal_psl_votes +] of [+ annual_budget_deal_psl_seats +] PSL MPs before the whip is rerun; local investment and deficit both rise.
 view-if: government_party != "psl" and not ministry_psl_in_cabinet and psl_seats > 0
 choose-if: budget >= 2
 unavailable-subtitle: The government cannot staff and finance the county compact.
 on-arrival: {!
-const seats = Math.max(0, Math.round(Number(Q.psl_seats) || 0));
-const relation = Math.max(0, Math.min(100, Number(Q.psl_relation) || 25));
-const cohort = Math.max(1, Math.round(seats * (0.35 + relation / 250)));
 Q.budget -= 2;
 Q.annual_budget_external_deal_used = 1;
 Q.annual_budget_external_deal_target = "psl";
-Q.annual_budget_external_votes_committed = Math.min(
-    seats,
-    cohort,
-    Math.max(1, Number(Q.annual_budget_predicted_shortfall) + 4)
-);
+Q.annual_budget_external_votes_committed =
+    Q.annual_budget_deal_psl_votes;
 Q.annual_budget_local_compact = 1;
 Q.annual_budget_reconstruction_fund = 1;
 Q.annual_budget_social_share = Math.round(
@@ -1241,28 +1353,24 @@ go-to: internal_ratification
 
 @deal_razem_public_services
 title: Guarantee public wages, housing and care to external Razem deputies
-subtitle: Cost: 2 governing-capacity points. Raises the social and deficit lines; the commitment is written into the bill.
+subtitle: Cost: 2 governing-capacity points. Commits [+ annual_budget_deal_razem_votes +] of [+ annual_budget_deal_razem_seats +] Razem MPs before the whip is rerun; the funded guarantee raises social spending and deficit.
 view-if: not razem_in_government and razem_seats > 0
 choose-if: budget >= 2
 unavailable-subtitle: A funded social guarantee requires two governing-capacity points.
 on-arrival: {!
-const seats = Math.max(0, Math.round(Number(Q.razem_seats) || 0));
-const cooperation = Math.max(0, Math.min(100, Number(Q.razem_cooperation) || 35));
-const cohort = Math.max(1, Math.round(seats * (0.60 + cooperation / 300)));
+const socialBefore = Number(Q.annual_budget_social_share) || 0;
+const socialCatchUp = Math.max(0, 18.1 - socialBefore);
 Q.budget -= 2;
 Q.annual_budget_external_deal_used = 1;
 Q.annual_budget_external_deal_target = "razem";
-Q.annual_budget_external_votes_committed = Math.min(
-    seats,
-    cohort,
-    Math.max(1, Number(Q.annual_budget_predicted_shortfall) + 3)
-);
+Q.annual_budget_external_votes_committed =
+    Q.annual_budget_deal_razem_votes;
 Q.annual_budget_public_wage_guarantee = 1;
 Q.annual_budget_social_share = Math.round(
-    (Number(Q.annual_budget_social_share) + 0.4) * 10
+    Math.max(18.5, socialBefore + 0.4) * 10
 ) / 10;
 Q.annual_budget_deficit_share = Math.round(
-    (Number(Q.annual_budget_deficit_share) + 0.2) * 10
+    (Number(Q.annual_budget_deficit_share) + 0.2 + socialCatchUp) * 10
 ) / 10;
 Q.annual_budget_concession =
     "Funded public-wage, housing and care guarantee";
@@ -1275,30 +1383,17 @@ go-to: internal_ratification
 
 @deal_democratic_green_register
 title: Offer the democratic centre a green fund and statutory delivery register
-subtitle: Cost: 1 party resource. Attracts KO or Polska 2050 votes without handing Lewica's ministries away.
+subtitle: Cost: 1 party resource. Commits [+ annual_budget_deal_democratic_votes +] of [+ annual_budget_deal_democratic_seats +] [+ annual_budget_deal_democratic_label +] MPs before the whip is rerun.
 view-if: (government_party != "ko" and not ministry_ko_in_cabinet and ko_seats > 0) or (government_party != "p2050" and not ministry_p2050_in_cabinet and p2050_seats > 0)
 choose-if: resources >= 1
 unavailable-subtitle: The parliamentary and legal team cannot write and police the agreement.
 on-arrival: {!
-const koSeats = Math.max(0, Math.round(Number(Q.ko_seats) || 0));
-const pSeats = Math.max(0, Math.round(Number(Q.p2050_seats) || 0));
-const koAvailable = Q.government_party != "ko" && !Q.ministry_ko_in_cabinet;
-const pAvailable = Q.government_party != "p2050" && !Q.ministry_p2050_in_cabinet;
-const target = pAvailable && (!koAvailable || Number(Q.p2050_relation) >= Number(Q.ko_relation))
-    ? "p2050" : "ko";
-const seats = target == "p2050" ? pSeats : koSeats;
-const relation = target == "p2050"
-    ? Number(Q.p2050_relation) || 30
-    : Number(Q.ko_relation) || 35;
-const cohort = Math.max(1, Math.round(seats * (0.22 + Math.max(0, relation) / 320)));
+const target = Q.annual_budget_deal_democratic_target;
 Q.resources -= 1;
 Q.annual_budget_external_deal_used = 1;
 Q.annual_budget_external_deal_target = target;
-Q.annual_budget_external_votes_committed = Math.min(
-    seats,
-    cohort,
-    Math.max(1, Number(Q.annual_budget_predicted_shortfall) + 3)
-);
+Q.annual_budget_external_votes_committed =
+    Q.annual_budget_deal_democratic_votes;
 Q.annual_budget_green_investment = 1;
 Q.annual_budget_delivery_register = 1;
 Q.annual_budget_deficit_rule = 1;
@@ -1321,26 +1416,16 @@ go-to: internal_ratification
 
 @deal_pis_family_defence
 title: Offer PiS a family-transfer and defence-procurement accord
-subtitle: Cost: 2 governing-capacity points. A solidarist PiS cohort may cross over; the economic and cultural Left will notice exactly what was bought.
+subtitle: Cost: 2 governing-capacity points. Commits [+ annual_budget_deal_pis_votes +] of [+ annual_budget_deal_pis_seats +] PiS MPs before the whip is rerun; the economic and cultural Left will notice what was bought.
 view-if: government_party != "pis" and not ministry_pis_in_cabinet and pis_seats > 0
 choose-if: budget >= 2
 unavailable-subtitle: The cabinet cannot finance the family and procurement guarantees.
 on-arrival: {!
-const seats = Math.max(0, Math.round(Number(Q.pis_seats) || 0));
-const solidarists = Math.max(20, Math.min(80, Number(Q.pis_solidarist_share) || 50));
-const relation = Math.max(0, Math.min(100, Number(Q.pis_relation) || 10));
-const cohort = Math.max(
-    1,
-    Math.round(seats * solidarists / 100 * (0.10 + relation / 450))
-);
 Q.budget -= 2;
 Q.annual_budget_external_deal_used = 1;
 Q.annual_budget_external_deal_target = "pis";
-Q.annual_budget_external_votes_committed = Math.min(
-    seats,
-    cohort,
-    Math.max(1, Number(Q.annual_budget_predicted_shortfall) + 5)
-);
+Q.annual_budget_external_votes_committed =
+    Q.annual_budget_deal_pis_votes;
 Q.annual_budget_family_defence_deal = 1;
 Q.annual_budget_right_deal = 1;
 Q.annual_budget_social_share = Math.round(
@@ -1363,22 +1448,16 @@ go-to: internal_ratification
 
 @deal_konf_market
 title: Offer Konfederacja a deregulation and tax-expenditure review
-subtitle: Cost: 1 governing-capacity point. Buys only a factional cohort and directly cuts the social frame.
+subtitle: Cost: 1 governing-capacity point. Commits [+ annual_budget_deal_konf_votes +] of [+ annual_budget_deal_konf_seats +] Konfederacja MPs before the whip is rerun and directly cuts the social frame.
 view-if: government_party != "konf" and not ministry_konf_in_cabinet and konf_seats > 0
 choose-if: budget >= 1
 unavailable-subtitle: The cabinet lacks capacity to rewrite the regulatory and tax schedules.
 on-arrival: {!
-const seats = Math.max(0, Math.round(Number(Q.konf_seats) || 0));
-const relation = Math.max(0, Math.min(100, Number(Q.konf_relation) || 5));
-const cohort = Math.max(1, Math.round(seats * (0.14 + relation / 500)));
 Q.budget -= 1;
 Q.annual_budget_external_deal_used = 1;
 Q.annual_budget_external_deal_target = "konf";
-Q.annual_budget_external_votes_committed = Math.min(
-    seats,
-    cohort,
-    Math.max(1, Number(Q.annual_budget_predicted_shortfall) + 2)
-);
+Q.annual_budget_external_votes_committed =
+    Q.annual_budget_deal_konf_votes;
 Q.annual_budget_market_cuts = 1;
 Q.annual_budget_right_deal = 1;
 Q.annual_budget_social_share = Math.round(
@@ -1397,7 +1476,7 @@ go-to: internal_ratification
 
 @deal_refuse
 title: Refuse side deals and put the coalition bill to a vote
-subtitle: The shortfall remains real; a defeat opens only one emergency revision.
+subtitle: Adds 0 votes. The shortfall remains real; a defeat opens only one emergency revision.
 on-arrival: annual_budget_external_deal_used = 1; annual_budget_external_deal_target = "None"; annual_budget_external_votes_committed = 0; annual_budget_concession = "No outside bargain"; news_headline = "The cabinet refuses to buy a majority before the vote"
 go-to: budget_vote
 
@@ -2061,6 +2140,49 @@ go-to: confidence_council
 title: Budget defeat — the locked rooms reopen
 new-page: true
 view-if: annual_budget_left_cabinet_authority = 1 and annual_budget_vote_round = 1
+on-arrival: {!
+const rescueShortfall = Math.max(
+    1,
+    Math.round(Number(Q.annual_budget_shortfall) || 1)
+);
+/* Emergency concessions use the same honest no-to-yes swing and seat cap. */
+const rescueFloor = Math.max(4, Math.ceil(rescueShortfall / 2) + 2);
+const pslSeats = Math.max(0, Math.round(Number(Q.psl_seats) || 0));
+const pslRelation = Math.max(
+    0,
+    Math.min(100, Number(Q.psl_relation) || 25)
+);
+const pslCohort = Math.max(
+    1,
+    Math.round(pslSeats * (0.40 + pslRelation / 250))
+);
+const razemSeats = Math.max(0, Math.round(Number(Q.razem_seats) || 0));
+const razemCooperation = Math.max(
+    0,
+    Math.min(100, Number(Q.razem_cooperation) || 35)
+);
+const razemCohort = Math.max(
+    1,
+    Math.round(razemSeats * (0.65 + razemCooperation / 300))
+);
+Q.annual_budget_rescue_psl_seats = pslSeats;
+Q.annual_budget_rescue_psl_votes =
+    Q.government_party != "psl" && !Q.ministry_psl_in_cabinet
+        ? Math.min(
+            pslSeats,
+            Math.max(pslCohort, rescueFloor),
+            rescueShortfall + 4
+        )
+        : 0;
+Q.annual_budget_rescue_razem_seats = razemSeats;
+Q.annual_budget_rescue_razem_votes = !Q.razem_in_government
+    ? Math.min(
+        razemSeats,
+        Math.max(razemCohort, rescueFloor),
+        rescueShortfall + 3
+    )
+    : 0;
+!}
 
 = Revision is not confidence; confidence is not dissolution
 
@@ -2081,13 +2203,11 @@ The Article 225 clock expires in **[+ budget_deadline_label +]**.
 
 @confidence_psl_deal
 title: Write the county compact into an emergency revision
-subtitle: Cost: 2 governing-capacity points. Raises local/social investment and deficit; may recover PSL or county-oriented votes.
+subtitle: Cost: 2 governing-capacity points. Commits [+ annual_budget_rescue_psl_votes +] of [+ annual_budget_rescue_psl_seats +] outside PSL MPs; if PSL governs, it repairs the internal whip instead.
 choose-if: budget >= 2
 unavailable-subtitle: The cabinet cannot finance and administer the emergency county compact.
 on-arrival: {!
 const pslOutside = Q.government_party != "psl" && !Q.ministry_psl_in_cabinet;
-const seats = Math.max(0, Math.round(Number(Q.psl_seats) || 0));
-const relation = Math.max(0, Math.min(100, Number(Q.psl_relation) || 25));
 Q.budget -= 2;
 Q.budget_rescue_attempted = 1;
 Q.annual_budget_rescue_used = 1;
@@ -2104,13 +2224,8 @@ Q.annual_budget_deficit_share = Math.round(
 ) / 10;
 if (pslOutside) {
     Q.annual_budget_external_deal_target = "psl";
-    Q.annual_budget_external_votes_committed = Math.max(
-        Number(Q.annual_budget_external_votes_committed) || 0,
-        Math.min(
-            seats,
-            Math.max(1, Math.round(seats * (0.40 + relation / 250)))
-        )
-    );
+    Q.annual_budget_external_votes_committed =
+        Q.annual_budget_rescue_psl_votes;
 }
 Q.psl_relation += 10;
 Q.government_coalition_dissent = Math.max(
@@ -2125,10 +2240,11 @@ go-to: internal_ratification
 
 @confidence_left_redline
 title: Rebuild the revision around public wages, housing and care
-subtitle: Raises social spending and deficit; external Razem or labour MPs can support what is actually written.
+subtitle: Commits [+ annual_budget_rescue_razem_votes +] of [+ annual_budget_rescue_razem_seats +] outside Razem MPs; if Razem governs, it repairs the internal whip instead.
 on-arrival: {!
 const razemOutside = !Q.razem_in_government;
-const seats = Math.max(0, Math.round(Number(Q.razem_seats) || 0));
+const socialBefore = Number(Q.annual_budget_social_share) || 0;
+const socialCatchUp = Math.max(0, 18.0 - socialBefore);
 Q.budget_rescue_attempted = 1;
 Q.annual_budget_rescue_used = 1;
 Q.annual_budget_vote_round = 2;
@@ -2137,17 +2253,15 @@ Q.annual_budget_external_deal_used = 1;
 Q.annual_budget_public_wage_guarantee = 1;
 Q.annual_budget_market_cuts = 0;
 Q.annual_budget_social_share = Math.round(
-    (Number(Q.annual_budget_social_share) + 0.5) * 10
+    Math.max(18.5, socialBefore + 0.5) * 10
 ) / 10;
 Q.annual_budget_deficit_share = Math.round(
-    (Number(Q.annual_budget_deficit_share) + 0.3) * 10
+    (Number(Q.annual_budget_deficit_share) + 0.3 + socialCatchUp) * 10
 ) / 10;
-if (razemOutside && seats > 0) {
+if (razemOutside && Q.annual_budget_rescue_razem_seats > 0) {
     Q.annual_budget_external_deal_target = "razem";
-    Q.annual_budget_external_votes_committed = Math.max(
-        Number(Q.annual_budget_external_votes_committed) || 0,
-        Math.min(seats, Math.max(1, Number(Q.annual_budget_shortfall) + 2))
-    );
+    Q.annual_budget_external_votes_committed =
+        Q.annual_budget_rescue_razem_votes;
 }
 Q.annual_budget_concession =
     "Funded public wages, housing and care in the revised text";
@@ -2161,7 +2275,7 @@ go-to: internal_ratification
 
 @confidence_technical_revision
 title: Remove disputed lines and impose a hard deficit rule
-subtitle: Cost: 1 governing-capacity point. Lowers deficit and social spending; Lewica Pracy MPs and unions will object for a stated reason.
+subtitle: Cost: 1 governing-capacity point. Adds 0 outside votes; lowers deficit and social spending to repair centrist coalition defections.
 choose-if: budget >= 1
 unavailable-subtitle: The cabinet cannot complete even the technical rewrite.
 on-arrival: {!
