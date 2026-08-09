@@ -59,6 +59,19 @@ function assertSceneNamesMiller(sceneId) {
     sceneId + ' does not name Miller in its visible event text');
 }
 
+function advanceSequence(ctx, sceneId, redirectsImmediately) {
+  const scene = game.scenes[sceneId];
+  assert.strictEqual(scene.viewIf(ctx.engine, ctx.Q), false,
+    sceneId + ' opened without waiting a month');
+  ctx.Q.time = Number(ctx.Q.sld_populist_stage_time) + 1;
+  assert.strictEqual(scene.viewIf(ctx.engine, ctx.Q), true,
+    sceneId + ' remained guarded after its month elapsed');
+  ctx.engine.goToScene('poland_caucus_dynamics.router');
+  if (!redirectsImmediately) {
+    assert.strictEqual(ctx.engine.state.sceneId, sceneId);
+  }
+}
+
 function enterRoute(orientationChoice, escalationChoice, progressiveChoice) {
   const ctx = newEngine();
   Object.assign(ctx.Q, {
@@ -75,34 +88,53 @@ function enterRoute(orientationChoice, escalationChoice, progressiveChoice) {
 
   ctx.engine.goToScene('poland_caucus_dynamics.router');
   assert.strictEqual(ctx.engine.state.sceneId, 'poland_sld_populist.entry');
-  const factionStrengthBefore = {
-    barons: ctx.Q.barons_strength,
-    labor: ctx.Q.labor_strength,
-    pps: ctx.Q.pps_strength,
-    socialPatriot: ctx.Q.social_patriot_strength,
-  };
+  const allFactionIds = [
+    'barons', 'spring', 'labor', 'progressives', 'razem', 'pps',
+    'social_patriot',
+  ];
+  const factionStrengthBefore = {};
+  allFactionIds.forEach(function(faction) {
+    factionStrengthBefore[faction] = ctx.Q[faction + '_strength'];
+  });
   const progressiveDissentBefore = ctx.Q.progressives_dissent;
   const razemDissentBefore = ctx.Q.razem_dissent;
   const unionTrustBefore = ctx.Q.union_trust;
   const matysiakPartyBefore = ctx.Q.matysiak_party;
 
   ctx.choose('poland_sld_populist.refound');
-  assert.strictEqual(ctx.engine.state.sceneId,
-    'poland_sld_populist.expel_razem');
-  assertClose(ctx.Q.barons_strength,
-    factionStrengthBefore.barons - ctx.Q.sld_populist_transfer_barons,
+  assert.strictEqual(ctx.Q.sld_populist_settlement_stage, 1);
+  assert.strictEqual(
+    game.scenes['poland_sld_populist.list_filing'].viewIf(ctx.engine, ctx.Q),
+    false,
+    'list filing opened before Miller consolidated SPS'
+  );
+  assertClose(ctx.Q.sld_populist_transfer_barons,
+    factionStrengthBefore.barons * 0.52,
     'the baron transfer must come from the existing current');
-  assertClose(ctx.Q.labor_strength,
-    factionStrengthBefore.labor - ctx.Q.sld_populist_transfer_labor,
+  assertClose(ctx.Q.sld_populist_transfer_labor,
+    factionStrengthBefore.labor * 0.18,
     'the labour transfer must come from the existing current');
-  assertClose(ctx.Q.pps_strength,
-    factionStrengthBefore.pps - ctx.Q.sld_populist_transfer_pps,
+  assertClose(ctx.Q.sld_populist_transfer_pps,
+    factionStrengthBefore.pps * 0.30,
     'the PPS transfer must come from the existing current');
-  assertClose(ctx.Q.social_patriot_strength,
-    factionStrengthBefore.socialPatriot +
-      ctx.Q.sld_populist_transfer_barons +
-      ctx.Q.sld_populist_transfer_labor + ctx.Q.sld_populist_transfer_pps,
-    'the SPS current must receive every recorded internal transfer');
+  const rawStrengthAfter = Object.assign({}, factionStrengthBefore);
+  rawStrengthAfter.barons -= ctx.Q.sld_populist_transfer_barons;
+  rawStrengthAfter.labor -= ctx.Q.sld_populist_transfer_labor;
+  rawStrengthAfter.pps -= ctx.Q.sld_populist_transfer_pps;
+  rawStrengthAfter.social_patriot +=
+    ctx.Q.sld_populist_transfer_barons +
+    ctx.Q.sld_populist_transfer_labor + ctx.Q.sld_populist_transfer_pps;
+  rawStrengthAfter.spring = 0;
+  const rawStrengthTotal = ctx.Q.factions.reduce(function(total, faction) {
+    return total + rawStrengthAfter[faction];
+  }, 0);
+  ctx.Q.factions.forEach(function(faction) {
+    assertClose(
+      ctx.Q[faction + '_strength'],
+      rawStrengthAfter[faction] * 100 / rawStrengthTotal,
+      faction + ' must retain its proper share after transfer and normalization'
+    );
+  });
   assert.strictEqual(ctx.Q.left_party_name, 'Sojusz Polski Społecznej');
   assert.strictEqual(ctx.Q.social_patriot_party_name,
     'Sojusz Polski Społecznej');
@@ -124,26 +156,22 @@ function enterRoute(orientationChoice, escalationChoice, progressiveChoice) {
     'Wiosna must be expelled from SPS');
   assert.strictEqual(ctx.Q.spring_party_formed, 1,
     'Wiosna must retain a successor party after expulsion');
+  advanceSequence(ctx, 'poland_sld_populist.expel_razem');
   ctx.choose('poland_sld_populist.resolve_razem');
-  assert.strictEqual(ctx.engine.state.sceneId,
-    'poland_sld_populist.progressives_settlement');
+  assert.strictEqual(ctx.Q.sld_populist_settlement_stage, 2);
   assert.strictEqual(ctx.Q.razem_in_left, 0,
     'Razem must be expelled from SPS');
   assert.strictEqual(ctx.Q.razem_party_formed, 1,
     'Razem must retain an independent party after expulsion');
 
+  advanceSequence(ctx, 'poland_sld_populist.progressives_settlement');
   const progressiveStrengthBefore = ctx.Q.progressives_strength;
   const socialPatriotBeforeProgressives = ctx.Q.social_patriot_strength;
   ctx.choose('poland_sld_populist.' + progressiveChoice);
-  assert.strictEqual(ctx.engine.state.sceneId,
-    'poland_sld_populist.orientation');
-  assert.strictEqual(ctx.Q.spring_joined_razem, 1);
-  assert.strictEqual(ctx.Q.spring_list_committee, 'razem');
+  assert.strictEqual(ctx.Q.sld_populist_settlement_stage, 3);
   if (progressiveChoice === 'expel_progressives') {
     assert.strictEqual(ctx.Q.progressives_in_left, 0);
     assert.strictEqual(ctx.Q.progressives_party_formed, 1);
-    assert.strictEqual(ctx.Q.progressives_joined_razem, 1);
-    assert.strictEqual(ctx.Q.progressives_list_committee, 'razem');
   } else {
     assert.strictEqual(ctx.Q.progressives_in_left, 1);
     assert.strictEqual(ctx.Q.progressives_party_formed, 0);
@@ -155,14 +183,27 @@ function enterRoute(orientationChoice, escalationChoice, progressiveChoice) {
     );
   }
 
+  advanceSequence(ctx, 'poland_sld_populist.consolidate_left', true);
+  assert.strictEqual(ctx.Q.sld_populist_settlement_stage, 4);
+  assert.strictEqual(ctx.Q.spring_joined_razem, 1);
+  assert.strictEqual(ctx.Q.spring_list_committee, 'razem');
+  if (progressiveChoice === 'expel_progressives') {
+    assert.strictEqual(ctx.Q.progressives_joined_razem, 1);
+    assert.strictEqual(ctx.Q.progressives_list_committee, 'razem');
+  }
+  advanceSequence(ctx, 'poland_sld_populist.orientation');
   ctx.choose('poland_sld_populist.' + orientationChoice);
-  assert.strictEqual(ctx.engine.state.sceneId,
-    'poland_sld_populist.escalation');
+  advanceSequence(ctx, 'poland_sld_populist.escalation');
   ctx.choose('poland_sld_populist.' + escalationChoice);
   assert.strictEqual(ctx.Q.sld_populist_route_active, 1);
   assert.strictEqual(ctx.Q.left_party_name, 'Sojusz Polski Społecznej');
   assert.strictEqual(ctx.Q.left_leader, 'Leszek Miller');
   assert(ctx.Q.sld_populist_ideology.includes('National welfare-populism'));
+  assert.strictEqual(
+    game.scenes['poland_sld_populist.list_filing'].viewIf(ctx.engine, ctx.Q),
+    true,
+    'list filing stayed guarded after consolidation and strategy choices'
+  );
   return ctx;
 }
 
@@ -324,9 +365,14 @@ function assertElectionSync(ctx, committee, outcome) {
   assert.strictEqual(ctx.Q.sld_populist_entry_pending, 1);
   ctx.engine.goToScene('poland_caucus_dynamics.router');
   ctx.choose('poland_sld_populist.refound');
+  advanceSequence(ctx, 'poland_sld_populist.expel_razem');
   ctx.choose('poland_sld_populist.resolve_razem');
+  advanceSequence(ctx, 'poland_sld_populist.progressives_settlement');
   ctx.choose('poland_sld_populist.marginalise_progressives');
+  advanceSequence(ctx, 'poland_sld_populist.consolidate_left', true);
+  advanceSequence(ctx, 'poland_sld_populist.orientation');
   ctx.choose('poland_sld_populist.orient_independent');
+  advanceSequence(ctx, 'poland_sld_populist.escalation');
   ctx.choose('poland_sld_populist.escalation_reject');
   assert.strictEqual(ctx.Q.left_party_name, 'Sojusz Polski Społecznej');
   assert.strictEqual(ctx.Q.sld_partocracy_available, 0);
@@ -398,5 +444,27 @@ function assertElectionSync(ctx, committee, outcome) {
 ].forEach(function(localId) {
   assertSceneNamesMiller('poland_sld_populist.' + localId);
 });
+
+{
+  const ctx = newEngine();
+  ctx.Q.miller_advisor = 1;
+  const scene = game.scenes['poland_advisors.miller'];
+  assert(scene && scene.isPinnedCard,
+    'Miller occupies an advisor slot without a pinned advisor card');
+  assert.strictEqual(scene.viewIf(ctx.engine, ctx.Q), true);
+  assert(ctx.engine._compileChoices(game.scenes.poland_hub).some(
+    function(choice) { return choice.id === 'poland_advisors.miller'; }
+  ), 'Miller advisor card did not appear on the leadership table');
+  ctx.engine.goToScene('poland_advisors.miller');
+  assert.deepStrictEqual(
+    ctx.engine.getCurrentChoices().map(function(choice) { return choice.id; }),
+    [
+      'poland_advisors.miller_discipline',
+      'poland_advisors.miller_counties',
+      'poland_advisors.miller_broadcast',
+      'poland_hub',
+    ]
+  );
+}
 
 console.log('sld-populist-check: all orientations and invariants OK');

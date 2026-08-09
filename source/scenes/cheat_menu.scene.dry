@@ -1,0 +1,752 @@
+title: Cheat menu
+new-page: true
+is-special: true
+call: poland_normalize
+
+= Cheat menu
+
+Changes apply immediately to this save. Polling will still move when the next
+monthly polling model runs.
+
+**Quick view:** [+ resources +] resources · [+ left_poll +]% Lewica · [+
+party_unity +]/100 unity · [+ public_trust +]/100 public trust.
+
+- @money: Resources and actions
+- @polls: Polling
+- @relations: Relationships
+- @party_state: Party and government state
+- @factions: Internal factions
+- @god_mode: Apply the everything-is-easy preset
+- @disable: Disable cheats for this save
+- @poland_hub: Back to the Leadership Table
+
+@money
+title: Resources and actions
+on-arrival: {!
+Q.resources = Math.max(0, Number(Q.resources) || 0);
+Q.budget = Number(Q.budget) || 0;
+Q.month_actions = Math.max(0, Number(Q.month_actions) || 0);
+Q.max_month_actions = Math.max(1, Number(Q.max_month_actions) || 1);
+!}
+
+= Resources and actions
+
+Party resources **[+ resources +]** · state-budget capacity **[+ budget +]** ·
+actions **[+ month_actions +]/[+ max_month_actions +]**.
+
+- @resources_up: Add 10 party resources
+- @resources_down: Remove 10 party resources
+- @resources_max: Set party resources to 99
+- @budget_up: Add 5 state-budget capacity
+- @budget_down: Remove 5 state-budget capacity
+- @action_refill: Refill this month's action
+- @actions_unlimited: Allow 99 actions per month
+- @actions_normal: Restore the normal one-action limit
+- @cheat_menu: Back to the cheat menu
+
+@resources_up
+on-arrival: resources += 10
+go-to: money
+
+@resources_down
+on-arrival: resources -= 10
+go-to: money
+
+@resources_max
+on-arrival: resources = 99
+go-to: money
+
+@budget_up
+on-arrival: budget += 5
+go-to: money
+
+@budget_down
+on-arrival: budget -= 5
+go-to: money
+
+@action_refill
+on-arrival: month_actions = 0
+go-to: money
+
+@actions_unlimited
+on-arrival: max_month_actions = 99; month_actions = 0
+go-to: money
+
+@actions_normal
+on-arrival: max_month_actions = 1; month_actions = 0
+go-to: money
+
+@polls
+title: Polling
+on-arrival: {!
+const cheatPollIds = [
+    "left", "pis", "ko", "psl", "konf", "p2050", "p0", "other",
+    "sld_breakaway", "social_patriot", "spring_breakaway", "labor_left",
+    "young_left", "razem", "pps", "left_coalition", "democratic_list",
+    "third_way", "tak_rozwoj", "centrum", "rozwoj", "korona",
+    "ko_splinter", "suwerenna", "porozumienie", "kukiz"
+];
+let cheatPollTotal = 0;
+for (const id of cheatPollIds) {
+    Q[id + "_poll"] = Math.max(0, Number(Q[id + "_poll"]) || 0);
+    cheatPollTotal += Q[id + "_poll"];
+}
+if (cheatPollTotal <= 0) {
+    Q.other_poll = 100;
+    cheatPollTotal = 100;
+}
+for (const id of cheatPollIds) {
+    Q[id + "_poll"] = Math.round(
+        Q[id + "_poll"] * 1000 / cheatPollTotal
+    ) / 10;
+}
+let cheatRoundedTotal = cheatPollIds.reduce(function(total, id) {
+    return total + Q[id + "_poll"];
+}, 0);
+const cheatResidual = Math.round((100 - cheatRoundedTotal) * 10) / 10;
+let cheatResidualParty = "other";
+if (Q.other_poll + cheatResidual < 0) {
+    cheatResidualParty = cheatPollIds.slice().sort(function(left, right) {
+        return Q[right + "_poll"] - Q[left + "_poll"];
+    })[0];
+}
+Q[cheatResidualParty + "_poll"] = Math.round((
+    Q[cheatResidualParty + "_poll"] + cheatResidual
+) * 10) / 10;
+Q.cheat_third_way_polling =
+    Q.p2050_emerged && (Q.third_way_active || Q.third_way_2023_done) &&
+    !Q.third_way_split &&
+    String(Q.sejm_list_outcome || "left_5") != "third_host_5" ? 1 : 0;
+Q.cheat_poll_total = Math.round(cheatPollIds.reduce(function(total, id) {
+    return total + Q[id + "_poll"];
+}, 0) * 10) / 10;
+Q.cheat_other_poll = Math.round((Q.cheat_poll_total - Q.left_poll - Q.pis_poll -
+    Q.ko_poll - Q.konf_poll - (Q.cheat_third_way_polling
+        ? Q.third_way_poll
+        : Q.psl_poll + Q.p2050_poll)) * 10) / 10;
+!}
+
+= Polling
+
+Lewica **[+ left_poll +]%** · PiS **[+ pis_poll +]%** · KO **[+ ko_poll +]%** ·
+[? if not cheat_third_way_polling: PSL **[+ psl_poll +]%** · Polska 2050 **[+
+p2050_poll +]%** · ?][? if cheat_third_way_polling: Third Way **[+
+third_way_poll +]%** · ?]Konfederacja **[+ konf_poll +]%** · other committees
+**[+ cheat_other_poll +]%**. **Total: [+ cheat_poll_total +]%**.
+
+- @left_poll_up: Lewica +1 point
+- @left_poll_up_ten: Lewica +10 points
+- @left_poll_down: Lewica −1 point
+- @pis_poll_up: PiS +1 point
+- @pis_poll_up_ten: PiS +10 points
+- @pis_poll_down: PiS −1 point
+- @ko_poll_up: KO +1 point
+- @ko_poll_up_ten: KO +10 points
+- @ko_poll_down: KO −1 point
+- @psl_poll_up: PSL +1 point
+- @psl_poll_up_ten: PSL +10 points
+- @psl_poll_down: PSL −1 point
+- @p2050_poll_up: Polska 2050 +1 point
+- @p2050_poll_up_ten: Polska 2050 +10 points
+- @p2050_poll_down: Polska 2050 −1 point
+- @third_way_poll_up: Third Way +1 point
+- @third_way_poll_up_ten: Third Way +10 points
+- @third_way_poll_down: Third Way −1 point
+- @konf_poll_up: Konfederacja +1 point
+- @konf_poll_up_ten: Konfederacja +10 points
+- @konf_poll_down: Konfederacja −1 point
+- @cheat_menu: Back to the cheat menu
+
+@left_poll_up
+on-arrival: cheat_poll_target = "left"; cheat_poll_delta = 1
+go-to: apply_poll
+
+@left_poll_up_ten
+on-arrival: cheat_poll_target = "left"; cheat_poll_delta = 10
+go-to: apply_poll
+
+@left_poll_down
+on-arrival: cheat_poll_target = "left"; cheat_poll_delta = -1
+go-to: apply_poll
+
+@pis_poll_up
+on-arrival: cheat_poll_target = "pis"; cheat_poll_delta = 1
+go-to: apply_poll
+
+@pis_poll_up_ten
+on-arrival: cheat_poll_target = "pis"; cheat_poll_delta = 10
+go-to: apply_poll
+
+@pis_poll_down
+on-arrival: cheat_poll_target = "pis"; cheat_poll_delta = -1
+go-to: apply_poll
+
+@ko_poll_up
+on-arrival: cheat_poll_target = "ko"; cheat_poll_delta = 1
+go-to: apply_poll
+
+@ko_poll_up_ten
+on-arrival: cheat_poll_target = "ko"; cheat_poll_delta = 10
+go-to: apply_poll
+
+@ko_poll_down
+on-arrival: cheat_poll_target = "ko"; cheat_poll_delta = -1
+go-to: apply_poll
+
+@psl_poll_up
+view-if: cheat_third_way_polling = 0
+on-arrival: cheat_poll_target = "psl"; cheat_poll_delta = 1
+go-to: apply_poll
+
+@psl_poll_up_ten
+view-if: cheat_third_way_polling = 0
+on-arrival: cheat_poll_target = "psl"; cheat_poll_delta = 10
+go-to: apply_poll
+
+@psl_poll_down
+view-if: cheat_third_way_polling = 0
+on-arrival: cheat_poll_target = "psl"; cheat_poll_delta = -1
+go-to: apply_poll
+
+@p2050_poll_up
+view-if: cheat_third_way_polling = 0
+on-arrival: cheat_poll_target = "p2050"; cheat_poll_delta = 1
+go-to: apply_poll
+
+@p2050_poll_up_ten
+view-if: cheat_third_way_polling = 0
+on-arrival: cheat_poll_target = "p2050"; cheat_poll_delta = 10
+go-to: apply_poll
+
+@p2050_poll_down
+view-if: cheat_third_way_polling = 0
+on-arrival: cheat_poll_target = "p2050"; cheat_poll_delta = -1
+go-to: apply_poll
+
+@third_way_poll_up
+view-if: cheat_third_way_polling = 1
+on-arrival: cheat_poll_target = "third_way"; cheat_poll_delta = 1
+go-to: apply_poll
+
+@third_way_poll_up_ten
+view-if: cheat_third_way_polling = 1
+on-arrival: cheat_poll_target = "third_way"; cheat_poll_delta = 10
+go-to: apply_poll
+
+@third_way_poll_down
+view-if: cheat_third_way_polling = 1
+on-arrival: cheat_poll_target = "third_way"; cheat_poll_delta = -1
+go-to: apply_poll
+
+@konf_poll_up
+on-arrival: cheat_poll_target = "konf"; cheat_poll_delta = 1
+go-to: apply_poll
+
+@konf_poll_up_ten
+on-arrival: cheat_poll_target = "konf"; cheat_poll_delta = 10
+go-to: apply_poll
+
+@konf_poll_down
+on-arrival: cheat_poll_target = "konf"; cheat_poll_delta = -1
+go-to: apply_poll
+
+@apply_poll
+on-arrival: {!
+const cheatPollIds = [
+    "left", "pis", "ko", "psl", "konf", "p2050", "p0", "other",
+    "sld_breakaway", "social_patriot", "spring_breakaway", "labor_left",
+    "young_left", "razem", "pps", "left_coalition", "democratic_list",
+    "third_way", "tak_rozwoj", "centrum", "rozwoj", "korona",
+    "ko_splinter", "suwerenna", "porozumienie", "kukiz"
+];
+const pollCaps = {
+    left: 40, pis: 60, ko: 60, psl: 40, p2050: 40, konf: 40,
+    third_way: 40
+};
+const target = Object.prototype.hasOwnProperty.call(
+    pollCaps,
+    Q.cheat_poll_target
+) ? Q.cheat_poll_target : "left";
+const targetPoll = target + "_poll";
+const requestedTarget = Math.round(Math.max(
+    0,
+    Math.min(
+        pollCaps[target],
+        (Number(Q[targetPoll]) || 0) + (Number(Q.cheat_poll_delta) || 0)
+    )
+) * 10) / 10;
+const oldRest = cheatPollIds.reduce(function(total, id) {
+    return id == target ? total : total + Math.max(
+        0,
+        Number(Q[id + "_poll"]) || 0
+    );
+}, 0);
+const desiredRest = 100 - requestedTarget;
+for (const id of cheatPollIds) {
+    if (id == target) continue;
+    const value = Math.max(0, Number(Q[id + "_poll"]) || 0);
+    Q[id + "_poll"] = Math.round((oldRest > 0
+        ? value * desiredRest / oldRest
+        : (id == "other" ? desiredRest : 0)
+    ) * 10) / 10;
+}
+Q[targetPoll] = requestedTarget;
+const roundedTotal = cheatPollIds.reduce(function(total, id) {
+    return total + Q[id + "_poll"];
+}, 0);
+const residual = Math.round((100 - roundedTotal) * 10) / 10;
+let residualParty = target == "other" ? null : "other";
+if (!residualParty || Q[residualParty + "_poll"] + residual < 0) {
+    residualParty = cheatPollIds.filter(function(id) {
+        return id != target;
+    }).sort(function(left, right) {
+        return Q[right + "_poll"] - Q[left + "_poll"];
+    })[0];
+}
+if (residualParty) {
+    Q[residualParty + "_poll"] = Math.round((
+        Q[residualParty + "_poll"] + residual
+    ) * 10) / 10;
+}
+!}
+go-to: polls
+
+@relations
+title: Relationships
+on-arrival: {!
+for (const quality of [
+    "ko_relation", "psl_relation", "p2050_relation", "pis_relation",
+    "konf_relation", "president_relation"
+]) {
+    Q[quality] = Math.max(0, Math.min(100, Number(Q[quality]) || 0));
+}
+!}
+
+= Relationships
+
+KO **[+ ko_relation +]** · PSL **[+ psl_relation +]** · Polska 2050 **[+
+p2050_relation +]** · PiS **[+ pis_relation +]** · Konfederacja **[+
+konf_relation +]** · President **[+ president_relation +]**.
+
+- @ko_relation_up: KO +10
+- @ko_relation_down: KO −10
+- @psl_relation_up: PSL +10
+- @psl_relation_down: PSL −10
+- @p2050_relation_up: Polska 2050 +10
+- @p2050_relation_down: Polska 2050 −10
+- @pis_relation_up: PiS +10
+- @pis_relation_down: PiS −10
+- @konf_relation_up: Konfederacja +10
+- @konf_relation_down: Konfederacja −10
+- @president_relation_up: President +10
+- @president_relation_down: President −10
+- @relations_max: Set every relationship to 100
+- @cheat_menu: Back to the cheat menu
+
+@ko_relation_up
+on-arrival: ko_relation += 10
+go-to: relations
+
+@ko_relation_down
+on-arrival: ko_relation -= 10
+go-to: relations
+
+@psl_relation_up
+on-arrival: psl_relation += 10
+go-to: relations
+
+@psl_relation_down
+on-arrival: psl_relation -= 10
+go-to: relations
+
+@p2050_relation_up
+on-arrival: p2050_relation += 10
+go-to: relations
+
+@p2050_relation_down
+on-arrival: p2050_relation -= 10
+go-to: relations
+
+@pis_relation_up
+on-arrival: pis_relation += 10
+go-to: relations
+
+@pis_relation_down
+on-arrival: pis_relation -= 10
+go-to: relations
+
+@konf_relation_up
+on-arrival: konf_relation += 10
+go-to: relations
+
+@konf_relation_down
+on-arrival: konf_relation -= 10
+go-to: relations
+
+@president_relation_up
+on-arrival: president_relation += 10
+go-to: relations
+
+@president_relation_down
+on-arrival: president_relation -= 10
+go-to: relations
+
+@relations_max
+on-arrival: ko_relation = 100; psl_relation = 100; p2050_relation = 100; pis_relation = 100; konf_relation = 100; president_relation = 100
+go-to: relations
+
+@factions
+title: Internal factions
+on-arrival: {!
+for (const faction of [
+    "barons", "spring", "labor", "progressives", "razem", "pps",
+    "social_patriot"
+]) {
+    Q[faction + "_strength"] = Math.max(
+        0,
+        Math.min(100, Number(Q[faction + "_strength"]) || 0)
+    );
+    Q[faction + "_dissent"] = Math.max(
+        0,
+        Math.min(100, Number(Q[faction + "_dissent"]) || 0)
+    );
+}
+!}
+
+= Internal factions
+
+Strength controls a faction's leverage. Dissent controls its willingness to
+rebel. Editing an inactive faction does not activate it or rewrite its
+story-driven membership.
+
+<div class="ledger-section">
+<div class="ledger-row"><b>[+ barons_name +]</b><span>strength [+
+barons_strength +] · dissent [+ barons_dissent +][? if not barons_active: ·
+inactive?]</span></div>
+<div class="ledger-row"><b>[+ spring_name +]</b><span>strength [+
+spring_strength +] · dissent [+ spring_dissent +][? if not spring_active: ·
+inactive?]</span></div>
+<div class="ledger-row"><b>[+ labor_name +]</b><span>strength [+ labor_strength
++] · dissent [+ labor_dissent +][? if not labor_active: · inactive?]</span></div>
+<div class="ledger-row"><b>[+ progressives_name +]</b><span>strength [+
+progressives_strength +] · dissent [+ progressives_dissent +][? if not
+progressives_active: · inactive?]</span></div>
+<div class="ledger-row"><b>[+ razem_name +]</b><span>strength [+ razem_strength
++] · dissent [+ razem_dissent +][? if not razem_active: · inactive?]</span></div>
+<div class="ledger-row"><b>[+ pps_name +]</b><span>strength [+ pps_strength +]
+· dissent [+ pps_dissent +][? if not pps_active: · inactive?]</span></div>
+<div class="ledger-row"><b>[+ social_patriot_name +]</b><span>strength [+
+social_patriot_strength +] · dissent [+ social_patriot_dissent +][? if not
+social_patriot_active: · inactive?]</span></div>
+</div>
+
+- @faction_barons: Edit the establishment faction
+- @faction_spring: Edit Wiosna
+- @faction_labor: Edit Lewica Pracy
+- @faction_progressives: Edit the younger progressives
+- @faction_razem: Edit Razem
+- @faction_pps: Edit PPS
+- @faction_social_patriot: Edit the social-patriot current
+- @all_factions_loyal: Set all faction dissent to 0
+- @all_factions_strong: Set all faction strength to 100
+- @cheat_menu: Back to the cheat menu
+
+@faction_barons
+on-arrival: cheat_faction = "barons"
+go-to: faction_edit
+
+@faction_spring
+on-arrival: cheat_faction = "spring"
+go-to: faction_edit
+
+@faction_labor
+on-arrival: cheat_faction = "labor"
+go-to: faction_edit
+
+@faction_progressives
+on-arrival: cheat_faction = "progressives"
+go-to: faction_edit
+
+@faction_razem
+on-arrival: cheat_faction = "razem"
+go-to: faction_edit
+
+@faction_pps
+on-arrival: cheat_faction = "pps"
+go-to: faction_edit
+
+@faction_social_patriot
+on-arrival: cheat_faction = "social_patriot"
+go-to: faction_edit
+
+@all_factions_loyal
+on-arrival: barons_dissent = 0; spring_dissent = 0; labor_dissent = 0; progressives_dissent = 0; razem_dissent = 0; pps_dissent = 0; social_patriot_dissent = 0
+go-to: factions
+
+@all_factions_strong
+on-arrival: barons_strength = 100; spring_strength = 100; labor_strength = 100; progressives_strength = 100; razem_strength = 100; pps_strength = 100; social_patriot_strength = 100
+go-to: factions
+
+@faction_edit
+title: Edit internal faction
+on-arrival: {!
+const allowedFactions = [
+    "barons", "spring", "labor", "progressives", "razem", "pps",
+    "social_patriot"
+];
+if (allowedFactions.indexOf(Q.cheat_faction) < 0) {
+    Q.cheat_faction = "barons";
+}
+const faction = Q.cheat_faction;
+Q[faction + "_strength"] = Math.max(
+    0,
+    Math.min(100, Number(Q[faction + "_strength"]) || 0)
+);
+Q[faction + "_dissent"] = Math.max(
+    0,
+    Math.min(100, Number(Q[faction + "_dissent"]) || 0)
+);
+if (faction == "labor") {
+    Q.labor_parliamentary_influence = Q.labor_strength;
+    Q.labor_conflict = Q.labor_dissent;
+}
+Q.cheat_faction_name = Q[faction + "_name"] || faction;
+Q.cheat_faction_strength = Q[faction + "_strength"];
+Q.cheat_faction_dissent = Q[faction + "_dissent"];
+Q.cheat_faction_status = Q[faction + "_active"] && Q[faction + "_in_left"]
+    ? "active inside Lewica"
+    : "inactive or outside Lewica";
+!}
+
+= [+ cheat_faction_name +]
+
+Strength **[+ cheat_faction_strength +]/100** · dissent **[+
+cheat_faction_dissent +]/100** · [+ cheat_faction_status +].
+
+- @faction_strength_up: Strength +10
+- @faction_strength_down: Strength −10
+- @faction_dissent_up: Dissent +10
+- @faction_dissent_down: Dissent −10
+- @faction_strength_max: Set strength to 100
+- @faction_strength_zero: Set strength to 0
+- @faction_dissent_zero: Set dissent to 0
+- @faction_dissent_max: Set dissent to 100
+- @faction_loyal_dominant: Set strength to 100 and dissent to 0
+- @factions: Back to all factions
+
+@faction_strength_up
+on-arrival: {!
+Q[Q.cheat_faction + "_strength"] =
+    Number(Q[Q.cheat_faction + "_strength"]) + 10;
+!}
+go-to: faction_edit
+
+@faction_strength_down
+on-arrival: {!
+Q[Q.cheat_faction + "_strength"] =
+    Number(Q[Q.cheat_faction + "_strength"]) - 10;
+!}
+go-to: faction_edit
+
+@faction_dissent_up
+on-arrival: {!
+Q[Q.cheat_faction + "_dissent"] =
+    Number(Q[Q.cheat_faction + "_dissent"]) + 10;
+!}
+go-to: faction_edit
+
+@faction_dissent_down
+on-arrival: {!
+Q[Q.cheat_faction + "_dissent"] =
+    Number(Q[Q.cheat_faction + "_dissent"]) - 10;
+!}
+go-to: faction_edit
+
+@faction_strength_max
+on-arrival: {!
+Q[Q.cheat_faction + "_strength"] = 100;
+!}
+go-to: faction_edit
+
+@faction_strength_zero
+on-arrival: {!
+Q[Q.cheat_faction + "_strength"] = 0;
+!}
+go-to: faction_edit
+
+@faction_dissent_zero
+on-arrival: {!
+Q[Q.cheat_faction + "_dissent"] = 0;
+!}
+go-to: faction_edit
+
+@faction_dissent_max
+on-arrival: {!
+Q[Q.cheat_faction + "_dissent"] = 100;
+!}
+go-to: faction_edit
+
+@faction_loyal_dominant
+on-arrival: {!
+Q[Q.cheat_faction + "_strength"] = 100;
+Q[Q.cheat_faction + "_dissent"] = 0;
+!}
+go-to: faction_edit
+
+@party_state
+title: Party and government state
+on-arrival: {!
+for (const quality of [
+    "party_unity", "public_trust", "media_capacity", "local_network",
+    "labor_credibility", "progressive_credibility", "organiser_energy",
+    "government_delivery", "administrative_capacity"
+]) {
+    Q[quality] = Math.max(0, Math.min(100, Number(Q[quality]) || 0));
+}
+!}
+
+= Party and government state
+
+Unity **[+ party_unity +]** · trust **[+ public_trust +]** · media **[+
+media_capacity +]** · local network **[+ local_network +]** · labour credibility
+**[+ labor_credibility +]** · progressive credibility **[+
+progressive_credibility +]** · organiser energy **[+ organiser_energy +]** ·
+government delivery **[+ government_delivery +]** · administration **[+
+administrative_capacity +]**.
+
+- @unity_up: Party unity +10
+- @unity_down: Party unity −10
+- @trust_up: Public trust +10
+- @trust_down: Public trust −10
+- @media_up: Media capacity +10
+- @media_down: Media capacity −10
+- @local_up: Local network +10
+- @local_down: Local network −10
+- @labor_up: Labour credibility +10
+- @labor_down: Labour credibility −10
+- @progressive_up: Progressive credibility +10
+- @progressive_down: Progressive credibility −10
+- @organiser_up: Organiser energy +10
+- @organiser_down: Organiser energy −10
+- @delivery_up: Government delivery +10
+- @delivery_down: Government delivery −10
+- @administration_up: Administrative capacity +10
+- @administration_down: Administrative capacity −10
+- @calm_factions: Set unity to 100 and faction dissent to 0
+- @capacity_max: Max all party and government capacities
+- @cheat_menu: Back to the cheat menu
+
+@unity_up
+on-arrival: party_unity += 10
+go-to: party_state
+
+@unity_down
+on-arrival: party_unity -= 10
+go-to: party_state
+
+@trust_up
+on-arrival: public_trust += 10
+go-to: party_state
+
+@trust_down
+on-arrival: public_trust -= 10
+go-to: party_state
+
+@media_up
+on-arrival: media_capacity += 10
+go-to: party_state
+
+@media_down
+on-arrival: media_capacity -= 10
+go-to: party_state
+
+@local_up
+on-arrival: local_network += 10
+go-to: party_state
+
+@local_down
+on-arrival: local_network -= 10
+go-to: party_state
+
+@labor_up
+on-arrival: labor_credibility += 10
+go-to: party_state
+
+@labor_down
+on-arrival: labor_credibility -= 10
+go-to: party_state
+
+@progressive_up
+on-arrival: progressive_credibility += 10
+go-to: party_state
+
+@progressive_down
+on-arrival: progressive_credibility -= 10
+go-to: party_state
+
+@organiser_up
+on-arrival: organiser_energy += 10
+go-to: party_state
+
+@organiser_down
+on-arrival: organiser_energy -= 10
+go-to: party_state
+
+@delivery_up
+on-arrival: government_delivery += 10
+go-to: party_state
+
+@delivery_down
+on-arrival: government_delivery -= 10
+go-to: party_state
+
+@administration_up
+on-arrival: administrative_capacity += 10
+go-to: party_state
+
+@administration_down
+on-arrival: administrative_capacity -= 10
+go-to: party_state
+
+@calm_factions
+on-arrival: party_unity = 100; barons_dissent = 0; spring_dissent = 0; labor_dissent = 0; progressives_dissent = 0; razem_dissent = 0; pps_dissent = 0; social_patriot_dissent = 0; government_coalition_dissent = 0
+go-to: party_state
+
+@capacity_max
+on-arrival: public_trust = 100; media_capacity = 100; local_network = 100; labor_credibility = 100; progressive_credibility = 100; feminist_trust = 100; organiser_energy = 100; government_delivery = 100; administrative_capacity = 100
+go-to: party_state
+
+@god_mode
+title: Apply the everything-is-easy preset
+on-arrival: {!
+Q.resources = 99;
+Q.budget = Math.max(25, Number(Q.budget) || 0);
+Q.month_actions = 0;
+Q.max_month_actions = 99;
+Q.left_poll = 35;
+Q.party_unity = 100;
+Q.public_trust = 100;
+for (const quality of [
+    "media_capacity", "local_network", "labor_credibility",
+    "progressive_credibility", "feminist_trust", "organiser_energy",
+    "government_delivery", "administrative_capacity", "ko_relation",
+    "psl_relation", "p2050_relation", "pis_relation", "konf_relation",
+    "president_relation"
+]) {
+    Q[quality] = 100;
+}
+for (const quality of [
+    "barons_dissent", "spring_dissent", "labor_dissent",
+    "progressives_dissent", "razem_dissent", "pps_dissent",
+    "social_patriot_dissent", "government_coalition_dissent",
+    "fiscal_stress"
+]) {
+    Q[quality] = 0;
+}
+!}
+go-to: cheat_menu
+
+@disable
+title: Disable cheats for this save
+on-arrival: cheat_enabled = 0
+go-to: poland_hub

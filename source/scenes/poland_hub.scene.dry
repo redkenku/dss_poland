@@ -3,8 +3,15 @@ new-page: true
 is-hand: true
 max-cards: 3
 call: poland_normalize
-go-to: poland_legacy_event_desk if poland_legacy_event_phase = 1; poland_caucus_dynamics.router if poland_legacy_event_phase = 0 and poland_historical_event_phase = 1 and caucus_crisis_pending = 1; poland_polling if poland_legacy_event_phase = 0 and poland_historical_event_phase = 1 and caucus_crisis_pending = 0; poland_events_2026.snap_election_2026 if poland_legacy_event_phase = 0 and poland_historical_event_phase = 0 and continuous_campaign = 1 and snap_campaign_active = 0 and year <= 2022 and snap_election_held = 0 and time > snap_event_deferred_time and (snap_election_requested = 1 or (budget_deadline_active = 1 and budget_deadline_time >= 0 and time >= budget_deadline_time))
+go-to: poland_legacy_event_desk if poland_legacy_event_phase = 1; poland_event_queue if poland_legacy_event_phase = 0 and poland_event_phase = 1; poland_polling if poland_legacy_event_phase = 0 and poland_event_phase = 0 and poland_historical_event_phase = 1; poland_events_2026.snap_election_2026 if poland_legacy_event_phase = 0 and poland_event_phase = 0 and poland_historical_event_phase = 0 and continuous_campaign = 1 and snap_campaign_active = 0 and year <= 2022 and snap_election_held = 0 and time > snap_event_deferred_time and (snap_election_requested = 1 or (budget_deadline_active = 1 and budget_deadline_time >= 0 and time >= budget_deadline_time)); poland_caucus_dynamics.router if poland_legacy_event_phase = 0 and poland_event_phase = 0 and poland_historical_event_phase = 0 and caucus_crisis_dispatchable = 1 and not (continuous_campaign = 1 and snap_campaign_active = 0 and year <= 2022 and snap_election_held = 0 and time > snap_event_deferred_time and (snap_election_requested = 1 or (budget_deadline_active = 1 and budget_deadline_time >= 0 and time >= budget_deadline_time)))
 on-arrival: {!
+if (
+    !Q.poland_legacy_event_phase &&
+    !Q.poland_event_phase &&
+    !Q.poland_historical_event_phase
+) {
+    Q.caucus_crisis_deferred = 0;
+}
 Q.deckDescription = "Bring a question to the table";
 Q.handDescription = "Open questions";
 Q.pinnedCardsDescription = "Leadership bureau and standing actions";
@@ -138,6 +145,7 @@ the consequences outside this room.?]</p>
 - #poland_advisor
 - @poland_manage_advisors
 - @poland_political_bulletin
+- @cheats
 
 @end_month
 title: End month
@@ -155,3 +163,12 @@ is-special: true
 view-if: started = 1
 card-image: img/poland/cards/polish-dossier.webp
 go-to: library
+
+@cheats
+title: Cheat menu
+subtitle: Change polls, relationships, resources and key campaign state.
+is-pinned-card: true
+is-special: true
+view-if: started = 1 and cheat_enabled = 1
+card-image: img/poland/cards/cost-programme.webp
+go-to: cheat_menu

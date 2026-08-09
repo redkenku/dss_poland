@@ -62,6 +62,17 @@ function refreshSuccessor(ctx) {
     'successor did not enter generic party AI');
 }
 
+function queuedPayoffs(ctx) {
+  return ctx.engine
+    ._compileChoices(game.scenes['poland_event_queue.all_events'])
+    .filter(function(choice) {
+      return choice.canChoose &&
+        choice.id.startsWith('poland_razem_futures.') &&
+        choice.id.endsWith('_election_payoff');
+    })
+    .map(function(choice) { return choice.id; });
+}
+
 // 1. Matysiak wins Razem without dissolving its second chair or moving seats.
 {
   const ctx = newGame('razem-future-matysiak-control');
@@ -91,6 +102,9 @@ function refreshSuccessor(ctx) {
   ctx.choose('poland_razem_futures.matysiak_labor_compact');
   Q.year = 2027;
   Q.month = 9;
+  assert.deepStrictEqual(queuedPayoffs(ctx), [
+    'poland_razem_futures.matysiak_election_payoff',
+  ]);
   ctx.engine.goToScene('poland_razem_futures.matysiak_election_payoff');
   assert.strictEqual(Q.matysiak_election_payoff_done, 1);
   assert(Q.matysiak_election_advantage > 0);
@@ -129,10 +143,12 @@ function refreshSuccessor(ctx) {
   ctx.engine.goToScene('poland_razem_futures.matysiak_strategy');
   ctx.choose('poland_razem_futures.matysiak_labor_compact');
   Q.snap_campaign_active = 1;
+  assert.deepStrictEqual(queuedPayoffs(ctx), [
+    'poland_razem_futures.zandberg_election_payoff',
+  ]);
   ctx.engine.goToScene('poland_razem_futures.zandberg_election_payoff');
-  ctx.engine.goToScene('poland_razem_futures.matysiak_election_payoff');
   assert(Q.zandberg_election_endpoint.includes('Akcja'));
-  assert(Q.matysiak_election_endpoint.includes('Razem'));
+  assert.strictEqual(Q.matysiak_election_payoff_done, 0);
 }
 
 // 3. Zandberg keeps the dual-chair Razem; Matysiak's prior organising controls
@@ -171,11 +187,12 @@ function refreshSuccessor(ctx) {
   ctx.engine.goToScene('poland_razem_futures.matysiak_strategy');
   ctx.choose('poland_razem_futures.matysiak_sovereignty');
   Q.snap_campaign_active = 1;
-  ctx.engine.goToScene('poland_razem_futures.zandberg_election_payoff');
+  assert.deepStrictEqual(queuedPayoffs(ctx), [
+    'poland_razem_futures.matysiak_election_payoff',
+  ]);
   ctx.engine.goToScene('poland_razem_futures.matysiak_election_payoff');
-  assert(Q.zandberg_election_endpoint.includes('Razem'));
   assert(Q.matysiak_election_endpoint.includes('Tak!'));
-  assert(Q.zandberg_election_advantage > 0);
+  assert.strictEqual(Q.zandberg_election_payoff_done, 0);
   assert(Q.matysiak_election_advantage > 0);
 }
 

@@ -471,6 +471,16 @@ window.disableGrayMode = function() {
       ]
     },
     {
+      id: 'nowa-platforma',
+      className: 'party-np',
+      explanation: 'Nowa Platforma (NP) — the classical-liberal breakaway that re-founds Platforma Obywatelska outside the Civic bloc, keeping the old party’s regional barons and donors under a new name and badge.',
+      aliases: [
+        ['Nowa Platforma', 'Nowa Platforma'],
+        ['New Platform', 'Nowa Platforma'],
+        ['NP', 'NP']
+      ]
+    },
+    {
       id: 'nowoczesna',
       className: 'party-nowoczesna',
       explanation: 'Modern — a liberal party within Civic Coalition.',
@@ -750,6 +760,7 @@ window.disableGrayMode = function() {
     'young-left': ['Młoda Lewica', 'Młoda Lewica'],
     'ko': ['KO', 'Koalicja Obywatelska'],
     'po': ['PO', 'Platforma Obywatelska'],
+    'nowa-platforma': ['NP', 'Nowa Platforma'],
     'nowoczesna': ['.N', 'Nowoczesna'],
     'inicjatywa-polska': ['iPL', 'Inicjatywa Polska'],
     'zieloni': ['Zieloni', 'Partia Zieloni'],
@@ -1202,7 +1213,14 @@ window.disableGrayMode = function() {
       id: 'zukowska',
       className: 'party-lewica',
       explanation: 'Anna-Maria Żukowska is a New Left parliamentarian known for combative media performances and caucus messaging discipline.',
-      aliases: ['Anna-Maria Żukowska', 'Anna-Maria Zukowska', 'Żukowska', 'Zukowska']
+      aliases: [
+        'Anna-Maria Żukowska',
+        'Anna-Maria Zukowska',
+        'Anna Maria Żukowska',
+        'Anna Maria Zukowska',
+        'Żukowska',
+        'Zukowska'
+      ]
     },
     {
       id: 'kotula',
@@ -1484,6 +1502,617 @@ window.disableGrayMode = function() {
       className: 'party-us-dem',
       explanation: 'John F. Kennedy served as the 35th president of the United States and became a lasting symbol of Cold War era liberal leadership.',
       aliases: ['John F. Kennedy', 'John Kennedy', 'Kennedy']
+    },
+
+    // Ministers and named deputies. Every roster in poland_ministries and the
+    // faction nominee pools is represented here, so a cabinet list renders in
+    // party colour with a hover line instead of as plain text.
+    {
+      id: 'czarnek',
+      className: 'party-pis',
+      explanation: 'Przemysław Czarnek was PiS education and science minister from 2020 to 2023 and is the party’s most prominent culture-war and church-schools voice.',
+      aliases: ['Przemysław Czarnek', 'Przemyslaw Czarnek', 'Czarnek']
+    },
+    {
+      id: 'cieszynski',
+      className: 'party-pis',
+      explanation: 'Janusz Cieszyński was PiS digitisation minister and earlier the health ministry deputy responsible for pandemic procurement.',
+      aliases: ['Janusz Cieszyński', 'Janusz Cieszynski', 'Cieszyński', 'Cieszynski']
+    },
+    {
+      id: 'malag',
+      className: 'party-pis',
+      explanation: 'Marlena Maląg was PiS family and social policy minister from 2019 to 2023, responsible for the cash-transfer programmes.',
+      aliases: ['Marlena Maląg', 'Marlena Malag', 'Maląg']
+    },
+    {
+      id: 'schmidt',
+      className: 'party-pis',
+      explanation: 'Anna Schmidt served as the PiS government’s plenipotentiary for equal treatment.',
+      aliases: ['Anna Schmidt']
+    },
+    {
+      id: 'uscinski',
+      className: 'party-pis',
+      explanation: 'Piotr Uściński is a PiS MP who served as deputy development minister with responsibility for housing.',
+      aliases: ['Piotr Uściński', 'Piotr Uscinski', 'Uściński']
+    },
+    {
+      id: 'niedzielski',
+      className: 'party-pis',
+      explanation: 'Adam Niedzielski was health minister through the pandemic years and resigned in 2023 over a disclosed prescription record.',
+      aliases: ['Adam Niedzielski', 'Niedzielski']
+    },
+    {
+      id: 'mariusz_kaminski',
+      className: 'party-pis',
+      explanation: 'Mariusz Kamiński was PiS interior minister and coordinator of the special services, and previously headed the Central Anti-Corruption Bureau.',
+      aliases: ['Mariusz Kamiński', 'Mariusz Kaminski']
+    },
+    {
+      id: 'koscinski',
+      className: 'party-pis',
+      explanation: 'Tadeusz Kościński served as finance minister from 2019 to 2022, through the pandemic packages and the Polish Deal tax changes.',
+      aliases: ['Tadeusz Kościński', 'Tadeusz Koscinski', 'Kościński']
+    },
+    {
+      id: 'piotr_nowak',
+      className: 'party-pis',
+      explanation: 'Piotr Nowak served as PiS development and technology minister after a career in the finance ministry.',
+      aliases: ['Piotr Nowak']
+    },
+    {
+      id: 'rau',
+      className: 'party-pis',
+      explanation: 'Zbigniew Rau was PiS foreign minister from 2020 to 2023 and chaired the OSCE during Poland’s presidency.',
+      aliases: ['Zbigniew Rau']
+    },
+    {
+      id: 'puda',
+      className: 'party-pis',
+      explanation: 'Grzegorz Puda served as PiS agriculture minister and then as minister for regional funds and policy.',
+      aliases: ['Grzegorz Puda', 'Puda']
+    },
+    {
+      id: 'semeniuk',
+      className: 'party-pis',
+      explanation: 'Olga Semeniuk-Patkowska was PiS deputy development minister for small business and is one of the named organisers of Morawiecki’s Rozwój+ current.',
+      aliases: [
+        'Olga Semeniuk-Patkowska',
+        'Olga Semeniuk',
+        'Semeniuk-Patkowska',
+        'Semeniuk'
+      ]
+    },
+    {
+      id: 'jablonski',
+      className: 'party-pis',
+      explanation: 'Paweł Jabłoński was PiS deputy foreign minister and is one of the party’s principal media performers on European affairs.',
+      aliases: ['Paweł Jabłoński', 'Pawel Jablonski', 'Jabłoński']
+    },
+    {
+      id: 'szczucki',
+      className: 'party-pis',
+      explanation: 'Krzysztof Szczucki is a PiS MP and former head of the Government Legislation Centre.',
+      aliases: ['Krzysztof Szczucki', 'Szczucki']
+    },
+    {
+      id: 'szefernaker',
+      className: 'party-pis',
+      explanation: 'Paweł Szefernaker was PiS deputy interior minister and ran the party’s presidential campaign organisation.',
+      aliases: ['Paweł Szefernaker', 'Pawel Szefernaker', 'Szefernaker']
+    },
+    {
+      id: 'szynkowski',
+      className: 'party-pis',
+      explanation: 'Szymon Szynkowski vel Sęk handled European affairs at the PiS foreign ministry and briefly led it in 2023.',
+      aliases: [
+        'Szymon Szynkowski vel Sęk',
+        'Szymon Szynkowski',
+        'Szynkowski vel Sęk',
+        'Szynkowski'
+      ]
+    },
+    {
+      id: 'gembicka',
+      className: 'party-pis',
+      explanation: 'Anna Gembicka served as PiS agriculture minister in the final months of the United Right government.',
+      aliases: ['Anna Gembicka', 'Gembicka']
+    },
+    {
+      id: 'bochenski',
+      className: 'party-pis',
+      explanation: 'Tobiasz Bocheński was PiS voivode of Łódź and then Mazovia and became one of the party’s younger big-city candidates.',
+      aliases: ['Tobiasz Bocheński', 'Tobiasz Bochenski', 'Bocheński']
+    },
+    {
+      id: 'emilewicz',
+      className: 'party-agreement',
+      explanation: 'Jadwiga Emilewicz was development minister and a Porozumienie deputy prime minister before the party broke with PiS.',
+      aliases: ['Jadwiga Emilewicz', 'Emilewicz']
+    },
+    {
+      id: 'kosztowniak',
+      className: 'party-pis',
+      explanation: 'Andrzej Kosztowniak is a PiS MP and former mayor of Radom.',
+      aliases: ['Andrzej Kosztowniak', 'Kosztowniak']
+    },
+    {
+      id: 'bojemska',
+      className: 'party-nonpartisan',
+      explanation: 'Dorota Bojemska chairs the Family Council and is a leading conservative voice in family policy consultations.',
+      aliases: ['Dorota Bojemska', 'Bojemska']
+    },
+    {
+      id: 'ewa_krajewska',
+      className: 'party-nonpartisan',
+      explanation: 'Ewa Krajewska is a pharmacist who served as Poland’s Chief Sanitary Inspector.',
+      aliases: ['Ewa Krajewska']
+    },
+
+    {
+      id: 'kierwinski',
+      className: 'party-ko',
+      explanation: 'Marcin Kierwiński is KO’s secretary-general and served as interior minister; he runs the party’s organisational apparatus and regional structures.',
+      aliases: ['Marcin Kierwiński', 'Marcin Kierwinski', 'Kierwiński', 'Kierwinski']
+    },
+    {
+      id: 'szlapka',
+      className: 'party-nowoczesna',
+      explanation: 'Adam Szłapka leads Nowoczesna inside the Civic bloc and served as minister for European Union affairs.',
+      aliases: ['Adam Szłapka', 'Adam Szlapka', 'Szłapka', 'Szlapka']
+    },
+    {
+      id: 'siemoniak',
+      className: 'party-ko',
+      explanation: 'Tomasz Siemoniak is a KO politician who served as defence minister, then interior minister and coordinator of the special services.',
+      aliases: ['Tomasz Siemoniak', 'Siemoniak']
+    },
+    {
+      id: 'bodnar',
+      className: 'party-ko',
+      explanation: 'Adam Bodnar is the justice minister and prosecutor general who previously served as Commissioner for Human Rights during the rule-of-law conflict.',
+      aliases: ['Adam Bodnar', 'Bodnar']
+    },
+    {
+      id: 'domanski',
+      className: 'party-ko',
+      explanation: 'Andrzej Domański is the KO finance minister who wrote the coalition’s first budgets.',
+      aliases: ['Andrzej Domański', 'Andrzej Domanski', 'Domański']
+    },
+    {
+      id: 'leszczyna',
+      className: 'party-ko',
+      explanation: 'Izabela Leszczyna is the KO health minister and a long-standing finance-committee figure.',
+      aliases: ['Izabela Leszczyna', 'Leszczyna']
+    },
+    {
+      id: 'grabiec',
+      className: 'party-ko',
+      explanation: 'Jan Grabiec heads the Prime Minister’s Chancellery and was previously KO’s parliamentary spokesman.',
+      aliases: ['Jan Grabiec', 'Grabiec']
+    },
+    {
+      id: 'okla_drewnowicz',
+      className: 'party-ko',
+      explanation: 'Marzena Okła-Drewnowicz is the KO minister responsible for senior policy.',
+      aliases: ['Marzena Okła-Drewnowicz', 'Marzena Okla-Drewnowicz', 'Okła-Drewnowicz']
+    },
+    {
+      id: 'sibinska',
+      className: 'party-ko',
+      explanation: 'Krystyna Sibińska is a KO MP from Gorzów who works on housing and local government.',
+      aliases: ['Krystyna Sibińska', 'Krystyna Sibinska', 'Sibińska']
+    },
+    {
+      id: 'niedziela',
+      className: 'party-ko',
+      explanation: 'Dorota Niedziela is a KO MP and veterinarian who leads the party’s agriculture and animal-welfare work.',
+      aliases: ['Dorota Niedziela']
+    },
+    {
+      id: 'tracz',
+      className: 'party-zieloni',
+      explanation: 'Małgorzata Tracz co-leads Zieloni and sits in the Sejm on the Civic list.',
+      aliases: ['Małgorzata Tracz', 'Malgorzata Tracz', 'Tracz']
+    },
+    {
+      id: 'spurek',
+      className: 'party-zieloni',
+      explanation: 'Sylwia Spurek is a Green MEP and former deputy Commissioner for Human Rights, elected originally on a Wiosna ticket.',
+      aliases: ['Sylwia Spurek', 'Spurek']
+    },
+    {
+      id: 'sroka',
+      className: 'party-agreement',
+      explanation: 'Magdalena Sroka is a former head of the Central Anti-Corruption Bureau who sat with Porozumienie and later the Civic bloc.',
+      aliases: ['Magdalena Sroka', 'Sroka']
+    },
+
+    {
+      id: 'sawicki',
+      className: 'party-psl',
+      explanation: 'Marek Sawicki is a veteran PSL agriculture minister and Sejm deputy marshal.',
+      aliases: ['Marek Sawicki', 'Sawicki']
+    },
+    {
+      id: 'siekierski',
+      className: 'party-psl',
+      explanation: 'Czesław Siekierski is the PSL agriculture minister and a former chair of the European Parliament’s agriculture committee.',
+      aliases: ['Czesław Siekierski', 'Czeslaw Siekierski', 'Siekierski']
+    },
+    {
+      id: 'hetman',
+      className: 'party-psl',
+      explanation: 'Krzysztof Hetman is a PSL deputy leader who served as development and technology minister.',
+      aliases: ['Krzysztof Hetman', 'Hetman']
+    },
+    {
+      id: 'zgorzelski',
+      className: 'party-psl',
+      explanation: 'Piotr Zgorzelski is a PSL deputy marshal of the Sejm and one of the party’s chief negotiators.',
+      aliases: ['Piotr Zgorzelski', 'Zgorzelski']
+    },
+    {
+      id: 'paslawska',
+      className: 'party-psl',
+      explanation: 'Urszula Pasławska is a PSL MP and former deputy treasury minister.',
+      aliases: ['Urszula Pasławska', 'Urszula Paslawska', 'Pasławska']
+    },
+    {
+      id: 'klopotek',
+      className: 'party-psl',
+      explanation: 'Agnieszka Kłopotek is a PSL politician with a background in social and family policy.',
+      aliases: ['Agnieszka Kłopotek', 'Agnieszka Klopotek', 'Kłopotek']
+    },
+    {
+      id: 'paszyk',
+      className: 'party-psl',
+      explanation: 'Krzysztof Paszyk is the PSL minister of development and technology.',
+      aliases: ['Krzysztof Paszyk', 'Paszyk']
+    },
+    {
+      id: 'stefan_krajewski',
+      className: 'party-psl',
+      explanation: 'Stefan Krajewski is a PSL agriculture minister and MP from Podlasie.',
+      aliases: ['Stefan Krajewski']
+    },
+    {
+      id: 'klimczak',
+      className: 'party-psl',
+      explanation: 'Dariusz Klimczak is the PSL infrastructure minister.',
+      aliases: ['Dariusz Klimczak', 'Klimczak']
+    },
+    {
+      id: 'piechocinski',
+      className: 'party-psl',
+      explanation: 'Janusz Piechociński is a former PSL leader who served as deputy prime minister and economy minister.',
+      aliases: ['Janusz Piechociński', 'Janusz Piechocinski', 'Piechociński']
+    },
+    {
+      id: 'tomczak',
+      className: 'party-psl',
+      explanation: 'Jacek Tomczak is a PSL MP from Poznań working on justice and local-government files.',
+      aliases: ['Jacek Tomczak']
+    },
+    {
+      id: 'bartoszewski',
+      className: 'party-psl',
+      explanation: 'Władysław Teofil Bartoszewski is a PSL deputy foreign minister and the son of Władysław Bartoszewski.',
+      aliases: [
+        'Władysław Teofil Bartoszewski',
+        'Wladyslaw Teofil Bartoszewski',
+        'Teofil Bartoszewski'
+      ]
+    },
+
+    {
+      id: 'petru',
+      className: 'party-p2050',
+      explanation: 'Ryszard Petru founded Nowoczesna and now sits for Poland 2050 as its principal economic-liberal voice.',
+      aliases: ['Ryszard Petru', 'Petru']
+    },
+    {
+      id: 'gramatyka',
+      className: 'party-p2050',
+      explanation: 'Michał Gramatyka is the Poland 2050 minister of digital affairs.',
+      aliases: ['Michał Gramatyka', 'Michal Gramatyka', 'Gramatyka']
+    },
+    {
+      id: 'kobosko',
+      className: 'party-p2050',
+      explanation: 'Michał Kobosko is a Poland 2050 MEP and one of the party’s founding organisers.',
+      aliases: ['Michał Kobosko', 'Michal Kobosko', 'Kobosko']
+    },
+    {
+      id: 'mucha',
+      className: 'party-p2050',
+      explanation: 'Joanna Mucha is a Poland 2050 politician and education deputy minister who came to the party from PO.',
+      aliases: ['Joanna Mucha']
+    },
+    {
+      id: 'buczynska',
+      className: 'party-p2050',
+      explanation: 'Agnieszka Buczyńska is the Poland 2050 minister for civil society.',
+      aliases: ['Agnieszka Buczyńska', 'Agnieszka Buczynska', 'Buczyńska']
+    },
+    {
+      id: 'leo',
+      className: 'party-p2050',
+      explanation: 'Aleksandra Leo is a Poland 2050 MP working on equality and culture policy.',
+      aliases: ['Aleksandra Leo']
+    },
+    {
+      id: 'cwalina',
+      className: 'party-p2050',
+      explanation: 'Żaneta Cwalina-Śliwowska is a Poland 2050 MP from Podlasie.',
+      aliases: [
+        'Żaneta Cwalina-Śliwowska',
+        'Zaneta Cwalina-Sliwowska',
+        'Cwalina-Śliwowska'
+      ]
+    },
+    {
+      id: 'suchon',
+      className: 'party-p2050',
+      explanation: 'Mirosław Suchoń is a Poland 2050 MP from Silesia.',
+      aliases: ['Mirosław Suchoń', 'Miroslaw Suchon', 'Suchoń']
+    },
+    {
+      id: 'sliz',
+      className: 'party-p2050',
+      explanation: 'Paweł Śliz chairs the Poland 2050 parliamentary club.',
+      aliases: ['Paweł Śliz', 'Pawel Sliz', 'Śliz']
+    },
+    {
+      id: 'zalewski',
+      className: 'party-p2050',
+      explanation: 'Paweł Zalewski is a Poland 2050 deputy defence minister with a long parliamentary record on foreign affairs.',
+      aliases: ['Paweł Zalewski', 'Pawel Zalewski', 'Zalewski']
+    },
+    {
+      id: 'zywno',
+      className: 'party-p2050',
+      explanation: 'Maciej Żywno is a Poland 2050 deputy marshal of the Senate and former voivode of Podlasie.',
+      aliases: ['Maciej Żywno', 'Maciej Zywno', 'Żywno']
+    },
+    {
+      id: 'pietrykowski',
+      className: 'party-p2050',
+      explanation: 'Norbert Pietrykowski is a Poland 2050 politician working on rural and agricultural policy.',
+      aliases: ['Norbert Pietrykowski', 'Pietrykowski']
+    },
+
+    {
+      id: 'trela',
+      className: 'party-lewica',
+      explanation: 'Tomasz Trela is an SLD-rooted Left MP from Łódź and one of the caucus’s parliamentary managers.',
+      aliases: ['Tomasz Trela', 'Trela']
+    },
+    {
+      id: 'ueberhan',
+      className: 'party-lewica',
+      explanation: 'Katarzyna Ueberhan is a Left MP focused on social policy, disability support and reproductive rights.',
+      aliases: ['Katarzyna Ueberhan', 'Ueberhan']
+    },
+    {
+      id: 'standerski',
+      className: 'party-lewica',
+      explanation: 'Dariusz Standerski is a Left MP and deputy minister of digital affairs who works on tax and technology regulation.',
+      aliases: ['Dariusz Standerski', 'Standerski']
+    },
+    {
+      id: 'szejna',
+      className: 'party-sld',
+      explanation: 'Andrzej Szejna is an SLD politician and deputy foreign minister with a long European parliamentary record.',
+      aliases: ['Andrzej Szejna', 'Szejna']
+    },
+    {
+      id: 'balt',
+      className: 'party-sld',
+      explanation: 'Marek Balt is an SLD member of the European Parliament from Silesia.',
+      aliases: ['Marek Balt']
+    },
+    {
+      id: 'kulasek',
+      className: 'party-lewica',
+      explanation: 'Marcin Kulasek is the New Left’s secretary-general and a deputy science minister.',
+      aliases: ['Marcin Kulasek', 'Kulasek']
+    },
+    {
+      id: 'szczepanski',
+      className: 'party-sld',
+      explanation: 'Wiesław Szczepański is an SLD-rooted Left MP who leads the caucus’s interior and administration work.',
+      aliases: ['Wiesław Szczepański', 'Wieslaw Szczepanski', 'Szczepański']
+    },
+    {
+      id: 'szymanski',
+      className: 'party-lewica',
+      explanation: 'Tomasz Szymański is a Left MP from Pomerania working on public administration.',
+      aliases: ['Tomasz Szymański', 'Tomasz Szymanski']
+    },
+    {
+      id: 'litewka',
+      className: 'party-lewica',
+      explanation: 'Łukasz Litewka is a Left MP from Sosnowiec known for constituency casework and a large online following.',
+      aliases: ['Łukasz Litewka', 'Lukasz Litewka', 'Litewka']
+    },
+    {
+      id: 'gdula',
+      className: 'party-lewica',
+      explanation: 'Maciej Gdula is a sociologist, Left MP and deputy science minister who writes on the politics of the Polish provinces.',
+      aliases: ['Maciej Gdula', 'Gdula']
+    },
+    {
+      id: 'rutka',
+      className: 'party-lewica',
+      explanation: 'Marek Rutka is a Left MP from Gdynia working on health and sport policy.',
+      aliases: ['Marek Rutka', 'Rutka']
+    },
+    {
+      id: 'buz',
+      className: 'party-sld',
+      explanation: 'Wiesław Buż is an SLD-rooted Left MP from Rzeszów.',
+      aliases: ['Wiesław Buż', 'Wieslaw Buz']
+    },
+    {
+      id: 'wolski',
+      className: 'party-sld',
+      explanation: 'Zdzisław Wolski is an SLD politician active in rural and regional organisation.',
+      aliases: ['Zdzisław Wolski', 'Zdzislaw Wolski']
+    },
+    {
+      id: 'kucharska_dziedzic',
+      className: 'party-lewica',
+      explanation: 'Anita Kucharska-Dziedzic is a Left MP and founder of a women’s-rights organisation in Zielona Góra.',
+      aliases: [
+        'Anita Kucharska-Dziedzic',
+        'Kucharska-Dziedzic'
+      ]
+    },
+
+    {
+      id: 'gertruda_uscinska',
+      className: 'party-nonpartisan',
+      explanation: 'Gertruda Uścińska is a social-insurance scholar and former president of the social insurance institution ZUS.',
+      aliases: ['Gertruda Uścińska', 'Gertruda Uscinska', 'Uścińska']
+    },
+    {
+      id: 'rudzinska_bluszcz',
+      className: 'party-nonpartisan',
+      explanation: 'Zuzanna Rudzińska-Bluszcz is a lawyer and civil-rights litigator serving as a deputy justice minister.',
+      aliases: [
+        'Zuzanna Rudzińska-Bluszcz',
+        'Zuzanna Rudzinska-Bluszcz',
+        'Rudzińska-Bluszcz'
+      ]
+    },
+    {
+      id: 'erbel',
+      className: 'party-nonpartisan',
+      explanation: 'Joanna Erbel is a housing and urban-policy researcher associated with tenant and public-housing campaigns.',
+      aliases: ['Joanna Erbel', 'Erbel']
+    },
+    {
+      id: 'libura',
+      className: 'party-nonpartisan',
+      explanation: 'Maria Libura is a health-policy expert who writes on the organisation and financing of public health care.',
+      aliases: ['Maria Libura', 'Libura']
+    },
+    {
+      id: 'tarkowski',
+      className: 'party-nonpartisan',
+      explanation: 'Alek Tarkowski is a digital-policy researcher and co-founder of Poland’s open-knowledge movement.',
+      aliases: ['Alek Tarkowski', 'Tarkowski']
+    },
+    {
+      id: 'kleiber',
+      className: 'party-nonpartisan',
+      explanation: 'Michał Kleiber is a former science minister and president of the Polish Academy of Sciences.',
+      aliases: ['Michał Kleiber', 'Michal Kleiber', 'Kleiber']
+    },
+    {
+      id: 'biernacki',
+      className: 'party-polish-coalition',
+      explanation: 'Marek Biernacki is a former interior and justice minister who sits with the Polish Coalition.',
+      aliases: ['Marek Biernacki', 'Biernacki']
+    },
+    {
+      id: 'pawel_wojciechowski',
+      className: 'party-nonpartisan',
+      explanation: 'Paweł Wojciechowski is an economist and former finance minister and chief economist of the social insurance institution.',
+      aliases: ['Paweł Wojciechowski', 'Pawel Wojciechowski']
+    },
+    {
+      id: 'hausner',
+      className: 'party-nonpartisan',
+      explanation: 'Jerzy Hausner is an economist and former deputy prime minister who authored the mid-2000s public-finance reform plan.',
+      aliases: ['Jerzy Hausner', 'Hausner']
+    },
+    {
+      id: 'letowska',
+      className: 'party-nonpartisan',
+      explanation: 'Ewa Łętowska is a jurist who was Poland’s first Commissioner for Human Rights and later a Constitutional Tribunal judge.',
+      aliases: ['Ewa Łętowska', 'Ewa Letowska', 'Łętowska']
+    },
+    {
+      id: 'czaputowicz',
+      className: 'party-nonpartisan',
+      explanation: 'Jacek Czaputowicz is a political scientist who served as foreign minister from 2018 to 2020.',
+      aliases: ['Jacek Czaputowicz', 'Czaputowicz']
+    },
+    {
+      id: 'stanny',
+      className: 'party-nonpartisan',
+      explanation: 'Monika Stanny is a rural-development scholar who directs research on the social geography of the Polish countryside.',
+      aliases: ['Monika Stanny']
+    },
+    {
+      id: 'koziej',
+      className: 'party-nonpartisan',
+      explanation: 'Stanisław Koziej is a retired general and former head of the National Security Bureau.',
+      aliases: ['Stanisław Koziej', 'Stanislaw Koziej', 'Koziej']
+    },
+
+    {
+      id: 'pawel_kukiz',
+      className: 'party-kukiz',
+      explanation: 'Paweł Kukiz is a rock musician turned politician who leads Kukiz’15 and trades parliamentary support for institutional demands rather than ministries.',
+      aliases: ['Paweł Kukiz', 'Pawel Kukiz']
+    },
+    {
+      id: 'lempart',
+      className: 'party-progressive',
+      explanation: 'Marta Lempart co-founded the All-Poland Women’s Strike and leads its street mobilisation against the abortion ruling.',
+      aliases: ['Marta Lempart', 'Lempart']
+    },
+    {
+      id: 'karczewski',
+      className: 'party-pis',
+      explanation: 'Stanisław Karczewski is a PiS senator and former marshal of the Senate.',
+      aliases: ['Stanisław Karczewski', 'Stanislaw Karczewski', 'Karczewski']
+    },
+    {
+      id: 'wasik',
+      className: 'party-pis',
+      explanation: 'Maciej Wąsik was PiS deputy interior minister and Mariusz Kamiński’s long-standing deputy at the Central Anti-Corruption Bureau.',
+      aliases: ['Maciej Wąsik', 'Maciej Wasik', 'Wąsik']
+    },
+    {
+      id: 'ociepa',
+      className: 'party-odnowa',
+      explanation: 'Marcin Ociepa leads OdNowa RP, the small conservative party that stayed with PiS after the Porozumienie split.',
+      aliases: ['Marcin Ociepa', 'Ociepa']
+    },
+    {
+      id: 'bortniczuk',
+      className: 'party-republicans',
+      explanation: 'Kamil Bortniczuk is a Republican Party politician who served as sport and tourism minister in the United Right government.',
+      aliases: ['Kamil Bortniczuk', 'Bortniczuk']
+    },
+    {
+      id: 'horala',
+      className: 'party-pis',
+      explanation: 'Marcin Horała is the PiS MP who served as government plenipotentiary for the Central Communications Port.',
+      aliases: ['Marcin Horała', 'Marcin Horala', 'Horała']
+    },
+    {
+      id: 'pawlowska',
+      className: 'party-pis',
+      explanation: 'Monika Pawłowska is an MP who left the Left for Porozumienie and then PiS, and became the standing example of a mandate changing camp without an election.',
+      aliases: ['Monika Pawłowska', 'Monika Pawlowska', 'Pawłowska']
+    },
+    {
+      id: 'przylebska',
+      className: 'party-nonpartisan',
+      explanation: 'Julia Przyłębska presided over the Constitutional Tribunal through the 2020 abortion ruling and the disputes over the court’s own composition.',
+      aliases: ['Julia Przyłębska', 'Julia Przylebska', 'Przyłębska']
+    },
+    {
+      id: 'banas',
+      className: 'party-nonpartisan',
+      explanation: 'Marian Banaś is the president of the Supreme Audit Office, appointed by PiS and then in open conflict with it.',
+      aliases: ['Marian Banaś', 'Marian Banas', 'Banaś']
     }
   ];
 
@@ -1516,7 +2145,7 @@ window.disableGrayMode = function() {
     var name = qualities && qualities.left_party_name;
     return typeof name === 'string' && name.trim()
       ? name
-      : 'Zjednoczona Lewica';
+      : 'Lewica';
   };
   var partyNamesForDefinition = function(definition) {
     if (definition.id !== 'lewica') {
@@ -1754,6 +2383,29 @@ window.disableGrayMode = function() {
       };
     }
 
+    // The classical-liberal walkout is a party, not a caucus: whoever leads it
+    // stops being rendered in KO's colour the day Nowa Platforma registers.
+    var npLeaders = {
+      sikorski: 'Radosław Sikorski',
+      szlapka: 'Adam Szłapka',
+      kierwinski: 'Marcin Kierwiński',
+      trzaskowski: 'Rafał Trzaskowski'
+    };
+    if (
+      npLeaders[definition.id] &&
+      Number(qualities && qualities.ko_splinter_active) > 0 &&
+      String(qualities && qualities.ko_splinter_type) === 'Classical-liberal' &&
+      String(qualities && qualities.ko_break_leader) === npLeaders[definition.id]
+    ) {
+      return {
+        id: definition.id,
+        className: 'party-np',
+        explanation: npLeaders[definition.id] +
+          ' leads Nowa Platforma, the classical-liberal breakaway that re-founded Platforma Obywatelska outside the Civic bloc.',
+        aliases: definition.aliases
+      };
+    }
+
     if (definition.id === 'nowacka') {
       var nowackaLeadsIpl =
         Number(qualities && qualities.ipl_joined_left) > 0 ||
@@ -1777,7 +2429,6 @@ window.disableGrayMode = function() {
     if (
       mergedLeft &&
       (
-        definition.id === 'miller' ||
         definition.id === 'wieczorek' ||
         definition.id === 'czarzasty' ||
         definition.id === 'biedron' ||
@@ -2397,11 +3048,11 @@ window.disableGrayMode = function() {
   };
 
   var moodBackgroundStops = [
-    [20, [113, 118, 124]], // Dark gray at the most hostile extreme.
-    [35, [211, 220, 232]], // Konfederacja blue, softened for a large surface.
+    [35, [113, 118, 124]], // Dark gray at the most hostile extreme.
+    [45, [211, 220, 232]], // Konfederacja blue, softened for a large surface.
     [50, [243, 243, 227]], // The original beige-yellow neutral.
-    [65, [239, 211, 215]], // The Left's red, kept pastel.
-    [80, [228, 204, 224]]  // Razem purple at the most favourable end.
+    [55, [239, 211, 215]], // The Left's red, kept pastel.
+    [65, [228, 204, 224]]  // Razem purple at the most favourable end.
   ];
 
   window.moodBackgroundColor = function(value) {

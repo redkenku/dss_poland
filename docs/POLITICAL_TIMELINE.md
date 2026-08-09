@@ -686,6 +686,38 @@ removed the dual structure in 2025.
   ([European Commission payment decision](https://commission.europa.eu/document/download/993e281e-4ab7-4d08-8278-71fdb9e3d48a_en?filename=C_2024_2369_1_EN_ACT_part1_v5.pdf);
   [Council Article 7 timeline](https://www.consilium.europa.eu/en/policies/article-7-procedures/timeline-the-story-of-article-7/))
 
+- **December 2023–June 2024 — the new government audits and then confirms the
+  Central Communications Port.** Maciej Lasek was appointed government
+  plenipotentiary for the project in December 2023 and opened a review of the
+  land purchases, cost estimates, traffic forecasts and schedule inherited from
+  the PiS plenipotentiary Marcin Horała. In June 2024 the government confirmed
+  that the programme would continue in modified form: the hub airport at
+  Baranów moved towards the 2030s while the high-speed "spokes", including the
+  Łódź tunnel and the Warsaw–Łódź–Poznań/Wrocław line, kept investment
+  priority.
+  **Adaptation value:** a mega-project is three separable decisions — an
+  airport, a railway and a compulsory land programme — and a Left can support,
+  reorder or cancel them independently. Ownership, procurement labour standards
+  and the villages bought out under the special act are the parts a left party
+  can actually change; the announcement is not the delivery.
+  ([Government CPK page](https://www.gov.pl/web/cpk);
+  [CPK company](https://www.cpk.pl/))
+
+- **2024 — the nuclear programme becomes a financing question.** The government
+  kept the Westinghouse–Bechtel contract for three AP1000 reactors at
+  Lubiatowo-Kopalino in the Choczewo commune, signed by the previous government
+  in September 2023, and worked on a financing model combining a large state
+  capital injection into the wholly state-owned Polskie Elektrownie Jądrowe
+  with a long-term price contract requiring European Commission state-aid
+  clearance. The second plant at Pątnów–Konin with a Korean partner, and the
+  small modular reactor projects, remained undecided.
+  **Adaptation value:** for the Left the atom is not primarily a
+  for-or-against question. Ownership, who carries the construction cost in
+  household tariffs, the site's labour regime, the Polish supply chain and the
+  lignite regions that close before the reactor opens are all separable
+  decisions with different constituencies.
+  ([Polish nuclear programme](https://www.gov.pl/web/polski-atom))
+
 - **1 June — the public IVF programme begins.** The government restored state
   funding, with PLN 2.5 billion planned through 2028.
   **Adaptation value:** a tangible progressive achievement the Left can claim
@@ -1026,6 +1058,23 @@ removed the dual structure in 2025.
   competitor with a clearer identity and a donation-supported base.
   ([Nielsen](https://www.nielsen.com/pl/news-center/2026/nielsens-all-screens-video-landscape-report-reveals-shift-in-polish-media-rankings-and-deeper-audience-engagement/);
   [Reuters Institute, Digital News Report 2026](https://reutersinstitute.politics.ox.ac.uk/digital-news-report/2026/poland))
+
+- **Throughout 2025 — both capital programmes move from decision to
+  construction and financing.** Site and enabling works proceeded at the
+  Choczewo nuclear site and on the CPK rail component, including the Łódź
+  tunnel, while the compulsory-acquisition programme around the airport site
+  continued. The nuclear financing package — a state capital injection reported
+  at roughly PLN 60 billion together with a long-term price contract — was
+  prepared for European Commission state-aid assessment. Precise figures and
+  dates in this entry are approximate and should be checked against primary
+  documents before being treated as sourced history.
+  **Adaptation value:** the political content of a capital programme changes
+  once it is under construction. The live questions become expropriation
+  compensation, wages and subcontracting on site, host-community payments,
+  cost overruns and who is entitled to claim credit — all of which produce
+  recurring events rather than one decision.
+  ([Government CPK page](https://www.gov.pl/web/cpk);
+  [Polish nuclear programme](https://www.gov.pl/web/polski-atom))
 
 ### 2026 — fragmentation before the next parliamentary election
 

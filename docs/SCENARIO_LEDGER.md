@@ -374,6 +374,18 @@ apparatus, former Sovereign Poland figures and President Nawrocki.
 | **PIS-13 — Right reunification list** | **P** | Fear of wasted votes produces a list spanning PiS, Rozwój Plus and Konfederacja, but excluding or including KKP is a separate decision. | Candidate allocation and prime-minister choice can destroy the list before voting. Inclusion of Braun carries international and coalition costs. |
 | **PIS-14 — Post-PiS social conservatives** | **P/E** | Szydło and parts of PSL build a welfare-conservative, less confrontational party. | Creates a real competitor for older and rural Left voters; opens issue deals on benefits while freezing equality reform. |
 
+Two of these are implemented as separate chains and should not be confused.
+PIS-11 is the Rozwój Plus rupture: the 2026 association, ultimatum, hearings,
+club and party-registration sequence in `poland_events_2026`, gated on the
+calendar. PIS-01/02/04/05/12 are the succession itself, in
+`poland_pis_collapse`: an undated congress gated on `pis_collapse_pressure`,
+which normalise derives from cohesion, polling, completed Rozwój Plus
+departures, a Konfederacja that has drawn level, a lost presidency and a
+leadership question left open past 2026. It fires whenever that number crosses
+68, splits the caucus between the rump, a sovereigntist committee and Rozwój
+Plus, and leaves PiS holding the name rather than the project. Neither chain
+lets Lewica cause or prevent the break.
+
 ## Konfederacja, KKP and the radical-right market
 
 Braun's January 2025 presidential challenge and exclusion from Konfederacja are
@@ -950,6 +962,75 @@ does not imply consent to dismantling judicial arrangements he helped create.
    partial delivery, capture and fracture it, or leave office with credibility
    but no law.
 
+### 11. The Central Communications Port — implemented
+
+Implemented in `poland_cpk_2024_2027.scene.dry` as five dated events plus a
+cancellation branch, routed through the `#poland_event` queue.
+
+| ID | Label | Decision points | Follow-ups |
+| --- | --- | --- | --- |
+| **CPK-01 — The audit** | **H/N** | Rail-first review, conditional rescue with public ownership and a site agreement, full disclosure of the land register, committee scrutiny or an outside defence of the railway. | Sets rail priority, ownership, land grievance and whether the Left has a position at all before the programme decision. |
+| **CPK-02 — The programme decision** | **H/N** | Hub and rail together, rail first with a staged airport, outright cancellation under a Left prime minister, coalition silence, or published opposition terms. | Cancellation opens its own branch; the other routes set scope, cost pressure and coalition relations for the rest of the campaign. |
+| **CPK-03 — The villages** | **H/P** | Replacement homes and a commune fund, a freeze pending independent review, completion on the special-act timetable, or party lawyers beside the households that refused. | Land grievance is the one CPK variable that can turn a delivered project into a permanent regional loss. |
+| **CPK-03b — After cancellation** | **P** | Restitution to bought-out families, a public construction company on the site, a rail pivot with published dates, or silence. | Ensures the cancellation route has consequences of its own rather than removing the storyline. |
+| **CPK-04 — Financing and ownership** | **P** | State bonds, a foreign state minority partner, a private concession, procurement conditioned on collective agreements, or an opposition roll call on the sale. | Ownership and labour standards outlive the cabinet; the roll call is reusable campaign material. |
+| **CPK-05 — Delivery test (scenario horizon)** | **P** | Campaign on the timetable, publish the full cost record, promise a permanent public construction capacity, or keep it out of the campaign. | Converts the ledger into election-year credit, grievance or absence. |
+
+Constraints: only a Lewica-led cabinet may cancel the hub; opposition routes
+never move delivery or state capacity; the land programme is a moral debt that
+survives every scope decision.
+
+### 12. The atom — Lubiatowo, the bill and the grid — implemented
+
+Implemented in `poland_nuclear_2024_2027.scene.dry` as five dated events plus a
+shelving branch.
+
+| ID | Label | Decision points | Follow-ups |
+| --- | --- | --- | --- |
+| **ATOM-01 — The inherited contract** | **H/N** | Statutory public ownership, a household price shield, a Polish supply chain and site agreement, grid-and-storage sequencing, or a cross-party guarantee from opposition. | Establishes whether the Left owns the programme's terms before the money is voted. |
+| **ATOM-02 — Sixty billion and a signature** | **H/N** | Full state financing, shared capital with export credit and a foreign shareholder, a combined nuclear/grid/tariff/just-transition statute, an opposition ownership amendment, or a Left-led shelving. | Sejm arithmetic, Commission state-aid clearance and the presidential signature stay separate gates; shelving opens its own branch. |
+| **ATOM-03 — The second plant** | **P** | Pątnów–Konin with a Korean partner under public majority, a private small-reactor fleet, no second plant, or an opposition just-transition campaign. | Decides whether the lignite regions get replacement industry or a training voucher. |
+| **ATOM-03b — After shelving** | **P** | Deliver the network programme visibly, give Choczewo an offshore manufacturing base, reverse the decision, or defend it in public. | Keeps the cancellation route politically alive and expensive. |
+| **ATOM-04 — Eight thousand workers** | **P** | Permanent on-site labour inspection, a host-community and fisheries package, schedule-first delivery, or outside union organising. | Wage differentials, rents and the exclusion zone decide whether the site builds Left credibility or destroys it. |
+| **ATOM-05 — What it costs on a bill (scenario horizon)** | **P** | Campaign on the tariff, on ownership, on the industrial settlement, or stay silent. | Converts ownership, tariffs and jobs into the campaign's economic argument. |
+
+Constraints: only a Lewica-led cabinet may shelve the programme, and doing so
+costs alliance reliability and industrial-wing loyalty rather than being a free
+green choice. The pre-existing `matysiak_nuclear_program` current makes the
+internal fight a real one on both sides.
+
+### 13. The second war at the top — implemented
+
+Implemented in `poland_war_on_top.scene.dry` as one relative-timed chain with
+two entries: a May 2024 KO restoration quarrel under President Trzaskowski, or
+the June 2026 Tribunal ruling for any eligible KO, Lewica or non-Duda PiS pair.
+The divergence is **P**. It partly implements **PRE-11** and **PRE-21**: a
+president builds authority inside the camp, while the party and cabinet decide
+whether to discipline, accommodate or follow him.
+
+The factual baseline is Kwaśniewski against Miller and the SLD government in
+2003–04. Marek Borowski's group broke from SLD to found SdPl on 26 March 2004.
+Kwaśniewski then appointed Marek Belka under Article 154 on 2 May. The Sejm
+rejected that cabinet's confidence request on 14 May by 188 votes to 262; after
+the parliamentary formation step produced no alternative, Kwaśniewski
+appointed Belka again under Article 155 on 11 June, and the Sejm confirmed the
+government on 24 June by 236 votes to 215. The game borrows the sequence—not a
+claim that a modern president may dismiss a prime minister—and makes the
+resignation, nomination and confidence vote separate stages.
+([PAP party chronology for the SdPl split](https://www.pap.pl/kraje-swiata/polska.html);
+[Presidency archive on the first Article 154 appointment](https://www.prezydent.pl/archiwalne-aktualnosci/aktualnosci-rok-2004/uroczytsosc-powolania-rady-ministrow%2C29531%2Carchive);
+[Sejm record of the failed 14 May vote](https://orka2.sejm.gov.pl/Debata4.nsf/main/7F4EEACD);
+[Presidency archive on the Article 155 appointment](https://www.prezydent.pl/kancelaria/archiwum/archiwum-aleksandra-kwasniewskiego/aktualnosci/rok-2004/uroczystosc-powolania-rady-ministrow%2C29622%2Carchive);
+[Sejm resolution of 24 June](https://isap.sejm.gov.pl/isap.nsf/download.xsp/WMP20040280470/O/M20040470.pdf))
+
+| ID | Label | Decision points | Follow-ups |
+| --- | --- | --- | --- |
+| **TOP-01 — One camp, two mandates** | **P** | Same-camp Palace and Chancellery compete over restoration, appointments and public credit. Lewica can bind the offices to a procedure, side with one, price neutrality or publish the constitutional record. | Pair-specific heat decides whether the quarrel can cool; Zandberg–Biejat is deliberately softer than Zandberg–Gawkowski or Dziemianowicz-Bąk. |
+| **TOP-02 — The Palace acts alone** | **P** | The president uses a personal prerogative and briefs that the cabinet is exhausted. | Cabinet, Palace, protocol, price and opposition routes move the Palace bloc without inventing a new party organisation. |
+| **TOP-03 — Declarations** | **P** | Deputies, ministers and regions are asked which leader they serve. | A real rupture feeds each camp's existing collapse or dissent machinery; mediation can still prevent an organisational split. |
+| **TOP-04 — The Belka manoeuvre** | **P** | After a resignation, the president nominates Domański, Zawisza or Szefernaker; Bodnar is the truce and eligibility fallback. | The roll call can install the nominee, fail like 14 May 2004, isolate the Palace or carry two organisations into 2027. |
+| **TOP-05 — Electoral inheritance** | **P** | The settlement and Lewica's recorded side are read when the 2027 campaign closes. | The campaign modifier reaches the filed-list threshold count; the same record appears in the final assessment. |
+
 ## Guardrails for later writing
 
 - Do not portray PSL as “secretly PiS.” Give it material rural interests,
@@ -1008,8 +1089,9 @@ and `poland_porozumienie_after`, plus five orthogonal affiliation fields on
 
 * **Act I–II (2020).** Gowin's postal-election rebellion, his 6 April
   resignation — which leaves Porozumienie in the cabinet, the club and the PiS
-  list — four May outcomes (6 May compromise, clean postponement, forced postal
-  vote, constitutional extension), Emilewicz's September defection and the
+  list — five May outcomes (6 May compromise, clean postponement, forced postal
+  vote, a resource-funded general protest that voids it, constitutional
+  extension), Emilewicz's September defection and the
   autumn reconstruction. Replaces the single `poland_events.postal` popup.
 * **Act III–IV (2021 H1).** The Bielan leadership dispute, Partia Republikańska
   generated out of named Porozumienie deputies, the Koalicja Polska rupture, and

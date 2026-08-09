@@ -234,4 +234,32 @@ engine.goToScene('poland_normalize');
 console.log('  pressure loose/consolidated:', looseP, q.ko_collapse_pressure);
 assert(q.ko_collapse_pressure < looseP);
 
+// 11. The classical-liberal walkout registers a party rather than a wing name.
+q = start('ko-nowa-platforma');
+q.continuous_campaign = 1;
+q.year = 2026;
+q.month = 6;
+q.ko_collapse_pressure = 80;
+q.ko_social_liberal_share = 62;
+q.ko_classical_liberal_share = 38;
+engine.goToScene('poland_ko_collapse.ko_collapse');
+assert.strictEqual(q.ko_break_wing, 'Classical-liberal');
+choose('poland_ko_collapse.ko_collapse_ground');
+choose('poland_ko_collapse.ko_collapse_result');
+assert.strictEqual(q.ko_splinter_name, 'Nowa Platforma');
+assert.strictEqual(q.ko_splinter_class, 'party-np');
+assert.strictEqual(group(q, 'ko_splinter').name, 'Nowa Platforma');
+assert.strictEqual(
+  group(q, 'ko_splinter').legal_status,
+  'registered party re-founding Platforma Obywatelska'
+);
+// The name and colour must survive the monthly normalise pass.
+engine.goToScene('poland_normalize');
+assert.strictEqual(q.ko_splinter_name, 'Nowa Platforma');
+assert.strictEqual(q.ko_splinter_class, 'party-np');
+assert(fs.existsSync(path.join(root, 'out/html/img/partylogo/np.png')),
+  'Nowa Platforma badge asset is missing');
+console.log('  breakaway:', q.ko_splinter_name, '·', q.ko_break_leader,
+  '·', q.ko_splinter_seats, 'MPs');
+
 console.log('KO chain checks passed');

@@ -71,11 +71,23 @@ mechanics without replaying the earlier campaign.
   files as it is cleared. Resolving one event cannot discard the rest, and the
   next leadership card is unavailable until every pending issue is addressed.
 - Five contextual decks feed one persistent three-card agenda: Party Affairs;
-  the sixteen-card Government Affairs deck while Lewica holds office in a
+  the forty-one-card Government Affairs deck while Lewica holds office in a
   functioning cabinet; Pressure & Negotiate while Lewica is outside cabinet;
   Major Reforms; and Foreign Affairs throughout the campaign. Government
   Affairs has one card for each of thirteen portfolios plus Cabinet Reshuffle,
-  Coalition Council and Social Welfare.
+  Coalition Council, Social Welfare, five socialist-turn cards and twenty
+  cards tied to the SLD partocracy, Wiosna social-liberal, Market Left and SLD
+  social-populist paths. Each of those four paths also adds five matching Party
+  Affairs cards. Adopting either substantive outcome permanently resolves that
+  ideological card; refusing it starts a route-specific cooldown and allows
+  the unresolved demand to return later.
+  The five socialist-turn government cards and five matching Party Affairs
+  cards gain a slight draw weight only when Razem and the younger progressives
+  are ascendant, Wiosna does not own the party and organised labour is
+  cooperative. They offer an openly socialist programme for regional
+  reconstruction, decommunisation, public ownership, wealth and monetary
+  policy, with polling, liberal-centre relations and any unlawful route's
+  constitutional exposure kept visible.
   Under PiS, TVP appearances, public hearings and party channels first build
   visible bargaining capital. Oversight, crisis and presidential deals then
   spend that capital on bounded concessions instead of assuming either side
@@ -165,6 +177,21 @@ mechanics without replaying the earlier campaign.
   condition or delay money, while government choices convert ready projects
   into budget capacity and the 2026 Labour Inspection milestone tests paper
   compliance against funded enforcement.
+- The two national capital programmes run as separate multi-event storylines
+  from 2024 to the 2027 campaign. **CPK** moves through the plenipotentiary's
+  audit, the scope decision, the expropriated villages, the financing and
+  ownership choice and an election-year delivery test; **the nuclear
+  programme** moves through the inherited Westinghouse contract, the capital
+  injection and price contract, the second plant or small-reactor decision, the
+  construction workforce on the Baltic coast and the electricity bill before
+  the election. Each keeps its own ledger of scope, public ownership, labour
+  standard, local grievance, cost and Left credit, so a rail-first
+  reorientation, a private concession, a shelved reactor fleet or an outright
+  cancellation all continue into different later events. Only a Lewica-led
+  cabinet can cancel the hub or shelve the atom, and both cancellations open
+  their own consequences rather than ending the storyline; opposition routes
+  bargain, scrutinise, litigate and organise without exercising executive
+  authority.
 - The 2019 opposition Senate majority and budget-amendment procedure remain
   playable. In 2023 the three Sejm lists separately decide whether to share a
   Senate Pact, after which all 100 single-member districts are counted by

@@ -633,6 +633,24 @@ if (votedOut) {
         " postpones the next structural argument rather than resolving it.";
 }
 
+const warTopRecorded = Number(Q.war_top_stage) >= 5 &&
+    String(Q.war_top_settlement || "Unresolved") != "Unresolved";
+const endingWarSide = {
+    institutions: "Lewica left a protocol and a rule for the offices",
+    exploit: "Lewica amplified the rupture from opposition",
+    cabinet: "Lewica defended the sitting cabinet",
+    palace: "Lewica chose the Palace",
+    price: "Lewica traded neutrality for concessions",
+    undeclared: "Lewica declined responsibility for either claimant"
+}[String(Q.war_top_left_side || "undeclared")] ||
+    "Lewica declined responsibility for either claimant";
+Q.ending_war_top_legacy = warTopRecorded
+    ? String(Q.war_top_settlement) + ". " + endingWarSide +
+        (Q.war_top_split
+            ? "; the split survived into the electoral field."
+            : "; the camp reached the election as one organisation.")
+    : "No settled war at the top";
+
 const achievements = [];
 const leftPresidentialWin = Q.pres_2025_round_one_done &&
     Q.pres_2025_winner == Q.pres_2025_left_candidate;
@@ -668,6 +686,11 @@ if (endingNumber(Q.labor_reform_stage, 0) >= 1) {
 }
 if (endingNumber(Q.media_capacity, 0) + endingNumber(Q.local_network, 0) >= 110) {
     achievements.push("a durable local and media organisation outlived the campaign cycle");
+}
+if (warTopRecorded && Q.war_top_left_side == "institutions") {
+    achievements.push(
+        "the second war at the top left a constitutional protocol instead of another unwritten prerogative"
+    );
 }
 if (!achievements.length) {
     achievements.push("the Left remained an organised national tradition through years that could have dissolved it");
@@ -705,6 +728,16 @@ if (endingNumber(Q.organised_left_splits, 0) >= 2) {
 if (Number(Q.pres_2025_oath_crisis) == 3) {
     failures.push(
         "the Hołownia oath delay collapsed only after a constitutional and foreign-policy crisis"
+    );
+}
+if (warTopRecorded && Q.war_top_split && Q.war_top_camp == "lewica") {
+    failures.push(
+        "the second war at the top carried a Left split into the electoral field"
+    );
+}
+if (warTopRecorded && Q.war_top_left_side == "price") {
+    failures.push(
+        "concessions taken during the war at the top left no constitutional position to defend"
     );
 }
 if (!failures.length) {
@@ -847,6 +880,9 @@ call: poland_ending.prepare_epilogue
 ending_signature_achievement +]
 
 [+ ending_public_memory +]
+
+[? if war_top_stage >= 5: **Second War at the Top:** [+
+ending_war_top_legacy +]?]
 
 The fuller record is mixed. **What endured:** [+ ending_achievements +]
 **What failed:** [+ ending_failures +]

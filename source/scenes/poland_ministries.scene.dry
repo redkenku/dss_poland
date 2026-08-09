@@ -112,6 +112,7 @@ const selectedFormationMembers = {
     ko_p2050_left: ["ko", "p2050"],
     third_left_pis: ["p2050", "psl"],
     ko_left: ["ko"],
+    left_only: [],
     pis_konf_third: ["p2050", "psl"],
     pis_konf_psl: ["psl"],
     ko_third: ["ko", "p2050", "psl"],
@@ -168,11 +169,19 @@ const leftCommitted =
     Boolean(Q.left_cabinet_committed) &&
     (!Boolean(Q.caretaker_government) ||
         Q.ministry_allocation_mode == "formation");
+// A Lewica-only cabinet has no partner to be a delegation to: the whole Left
+// caucus, splitter toleration included, is the government.
+const soleLeftCabinet =
+    String(Q.formation_coalition_code || "").replace(/_tolerated$/, "") ==
+        "left_only";
 let leftCabinetSeats = preserveExisting || sameGovernmentRoster
     ? finiteMinistry(Q.left_cabinet_delegation_seats, -1)
     : -1;
 if (leftCabinetSeats < 0) {
-    if (wholeLeftMandate || maximalMandate || Boolean(Q.razem_in_government)) {
+    if (
+        soleLeftCabinet || wholeLeftMandate || maximalMandate ||
+        Boolean(Q.razem_in_government)
+    ) {
         leftCabinetSeats = finiteMinistry(
             Q.left_committed_seats,
             finiteMinistry(Q.left_seats, 0)
@@ -686,6 +695,51 @@ Q.psl_coalition_dissent = Math.max(
 );
 Q.news_headline =
     "PSL accepts compensation for releasing its Agriculture claim";
+!}
+go-to: menu
+
+@take_all_left
+title: Fill every remaining ministry from the Lewica bench
+subtitle: One signature instead of thirteen. Available only when no other party sits in the cabinet.
+tags: poland_ministry_take
+view-if: ministry_cabinet_leader_code = "lewica" and ministry_pis_in_cabinet = 0 and ministry_ko_in_cabinet = 0 and ministry_p2050_in_cabinet = 0 and ministry_psl_in_cabinet = 0 and ministry_count < 13
+choose-if: ministry_leverage_debt = 0
+unavailable-subtitle: Clear the leverage debt before claiming the rest of the cabinet.
+on-arrival: {!
+const finiteMinistry = function(value, fallback) {
+    return Number.isFinite(Number(value)) ? Number(value) : fallback;
+};
+const allCosts = {
+    labor: 5, equality: 3, housing: 6, health: 7, digital: 4,
+    science: 4, interior: 5, finance: 10, economy: 10,
+    justice: 10, foreign: 10, agriculture: 10, defence: 15
+};
+for (const portfolio of Object.keys(allCosts)) {
+    if (String(Q[portfolio + "_minister_party"] || "") == "Lewica") continue;
+    const owner = String(
+        Q["ministry_" + portfolio + "_current_owner_code"] ||
+        Q["ministry_" + portfolio + "_baseline_owner_code"] || "cabinet"
+    );
+    Q["ministry_" + portfolio + "_taken_from_code"] = owner;
+    Q["ministry_" + portfolio + "_penalty_active"] = 0;
+    Q["ministry_" + portfolio + "_penalty_relation"] = 0;
+    Q["ministry_" + portfolio + "_penalty_partner_dissent"] = 0;
+    Q["ministry_" + portfolio + "_penalty_general_dissent"] = 0;
+    Q.ministry_leverage = Math.max(
+        0,
+        finiteMinistry(Q.ministry_leverage, 0) - allCosts[portfolio]
+    );
+    Q.ministry_count = finiteMinistry(Q.ministry_count, 0) + 1;
+    Q.ministry_reshuffle_changes =
+        finiteMinistry(Q.ministry_reshuffle_changes, 0) + 1;
+    Q[portfolio + "_minister_party"] = "Lewica";
+    Q[portfolio + "_minister"] = Q["ministry_" + portfolio + "_nominee"];
+    Q["ministry_" + portfolio + "_current_owner_code"] = "lewica";
+    Q["ministry_" + portfolio + "_source_party_code"] = owner;
+}
+Q.family_minister_party = Q.labor_minister_party;
+Q.family_minister = Q.labor_minister;
+Q.news_headline = "Lewica names a full thirteen-portfolio cabinet of its own";
 !}
 go-to: menu
 

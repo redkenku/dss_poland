@@ -60,6 +60,7 @@ Q.sld_populist_ideology =
     "National welfare-populism · sovereignty and anti-establishment left";
 Q.sld_populist_escalation = "unsettled";
 Q.sld_populist_settlement_stage = 0;
+Q.sld_populist_stage_time = Number(Q.time) || 0;
 Q.sld_populist_progressive_settlement = "unsettled";
 Q.left_party_name = "Sojusz Polski Społecznej";
 Q.social_patriot_party_name = "Sojusz Polski Społecznej";
@@ -120,14 +121,15 @@ Q.news_headline =
 go-to: expel_wiosna
 
 @expel_wiosna
-on-arrival: caucus_exit_target = "spring"; caucus_exit_mode = "punitive"; sld_populist_settlement_stage = 1
+on-arrival: caucus_exit_target = "spring"; caucus_exit_mode = "punitive"; sld_populist_settlement_stage = 1; sld_populist_stage_time = time
 go-to: poland_caucus_dynamics.resolve_exit
 
 @expel_razem
 title: Miller expels Wiosna; Razem refuses his SPS refoundation
 subtitle: Complete the organisational rupture before deciding the fate of the progressive current.
 new-page: true
-on-arrival: razem_breakaway_protected = 0; caucus_exit_target = "razem"; caucus_exit_mode = "punitive"; sld_populist_settlement_stage = 2
+view-if: sld_populist_route_active = 1 and sld_populist_settlement_stage = 1 and time >= sld_populist_stage_time + 1
+on-arrival: razem_breakaway_protected = 0; caucus_exit_target = "razem"; caucus_exit_mode = "punitive"; sld_populist_settlement_stage = 2; sld_populist_stage_time = time
 
 Miller has stripped the Wiosna organisation of SPS nominations, forcing it to
 restore an outside party. Razem's council now rejects his welfare-nationalist
@@ -143,7 +145,17 @@ go-to: poland_caucus_dynamics.resolve_exit
 title: Miller decides whether the progressive current may remain
 subtitle: Keep a stripped internal minority, or expel it to the democratic-left opposition.
 new-page: true
-go-to: consolidate_left if progressives_in_left = 0
+view-if: sld_populist_route_active = 1 and sld_populist_settlement_stage = 2 and time >= sld_populist_stage_time + 1
+on-arrival: {!
+if (!Q.progressives_in_left) {
+    Q.sld_populist_progressive_settlement = "already outside SPS";
+    Q.sld_populist_settlement_stage = 3;
+    Q.sld_populist_stage_time = Number(Q.time) || 0;
+    Q.news_headline =
+        "Miller proceeds after the progressive current's earlier departure";
+}
+!}
+go-to: return if sld_populist_settlement_stage = 3
 
 Miller has expelled Wiosna and Razem from the SPS organisation. Their MPs and
 registrations survive outside it. He can leave the progressive current as a
@@ -163,6 +175,8 @@ Q.social_patriot_strength =
     (Number(Q.social_patriot_strength) || 0) + transfer;
 Q.sld_populist_transfer_progressives = transfer;
 Q.sld_populist_progressive_settlement = "marginalised inside SPS";
+Q.sld_populist_settlement_stage = 3;
+Q.sld_populist_stage_time = Number(Q.time) || 0;
 Q.progressives_dissent = Math.max(72, Number(Q.progressives_dissent) || 0);
 Q.progressives_demand_answered = 1;
 Q.progressives_escalation_stage = 3;
@@ -175,17 +189,19 @@ for (const adviser of ["zukowska", "kotula", "gawkowski", "nowicka"]) {
 Q.news_headline =
     "Miller strips the progressive current of nominations but stops short of expulsion";
 !}
-go-to: consolidate_left
+go-to: return
 
 @expel_progressives
 title: Have Miller expel the progressive current with Wiosna and Razem
 subtitle: Clarify the SPS capture; strengthen a consolidated democratic-left opposition.
-on-arrival: sld_populist_progressive_settlement = "expelled to democratic-left opposition"; caucus_exit_target = "progressives"; caucus_exit_mode = "punitive"; sld_populist_settlement_stage = 3
+on-arrival: sld_populist_progressive_settlement = "expelled to democratic-left opposition"; caucus_exit_target = "progressives"; caucus_exit_mode = "punitive"; sld_populist_settlement_stage = 3; sld_populist_stage_time = time
 go-to: poland_caucus_dynamics.resolve_exit
 
 @consolidate_left
+view-if: sld_populist_route_active = 1 and sld_populist_settlement_stage = 3 and time >= sld_populist_stage_time + 1
 on-arrival: {!
 Q.sld_populist_settlement_stage = 4;
+Q.sld_populist_stage_time = Number(Q.time) || 0;
 if (Q.razem_party_formed) {
     Q.razem_list_committee = "razem";
     Q.razem_electoral_strategy =
@@ -216,7 +232,7 @@ Q.news_headline = Q.progressives_party_formed
     ? "Razem, Wiosna and Young Left consolidate electorally against Miller's SPS"
     : "Razem and Wiosna consolidate electorally against Miller's SPS";
 !}
-go-to: orientation
+go-to: return
 
 @stay_conventional
 title: Have Miller keep the restored apparatus in a conventional New Left strategy
@@ -228,7 +244,7 @@ go-to: return
 title: Miller chooses one of three roads out of the old Left
 subtitle: A host list buys reach at the price of dependence; independence preserves control and carries the threshold risk.
 new-page: true
-view-if: sld_populist_route_active = 1 and sld_populist_orientation = "unsettled"
+view-if: sld_populist_route_active = 1 and sld_populist_settlement_stage = 4 and sld_populist_orientation = "unsettled" and time >= sld_populist_stage_time + 1
 
 = The new name needs an electoral answer
 
@@ -246,29 +262,30 @@ title: Have Miller accept the radical Konfederacja wing's conditions
 subtitle: Cost: 1 resource. A Konfederacja host list, sovereignty plank and local autonomy; no guaranteed cabinet and no progressive candidates in protected places.
 choose-if: resources >= 1
 unavailable-subtitle: The regional liaison and joint-list negotiation require one resource.
-on-arrival: resources -= 1; sld_populist_orientation = "konfederacja"; sld_populist_planned_committee = "konf"; sld_populist_alliance_partner = "Konfederacja"; sld_populist_alliance_state = "conditional pact"; social_patriot_list_committee = "konf"; social_patriot_electoral_strategy = "Conditional places on the Konfederacja party list"; konf_relation += 8; rural_support += 5; workers_support += 2; anti_establishment_youth_left_affinity += 5; social_patriot_local_organisation += 5; media_capacity += 4; sld_populist_media_salience += 12; sld_populist_factional_capture += 14; sld_populist_international_isolation += 16; progressive_credibility -= 8; union_trust -= 4; progressives_dissent += 10; razem_dissent += 11; pps_dissent += 6; public_trust -= 3; party_unity -= 5; news_headline = "Miller accepts the radical right's conditions for a conditional Konfederacja pact"
-go-to: escalation
+on-arrival: resources -= 1; sld_populist_orientation = "konfederacja"; sld_populist_stage_time = time; sld_populist_planned_committee = "konf"; sld_populist_alliance_partner = "Konfederacja"; sld_populist_alliance_state = "conditional pact"; social_patriot_list_committee = "konf"; social_patriot_electoral_strategy = "Conditional places on the Konfederacja party list"; konf_relation += 8; rural_support += 5; workers_support += 2; anti_establishment_youth_left_affinity += 5; social_patriot_local_organisation += 5; media_capacity += 4; sld_populist_media_salience += 12; sld_populist_factional_capture += 14; sld_populist_international_isolation += 16; progressive_credibility -= 8; union_trust -= 4; progressives_dissent += 10; razem_dissent += 11; pps_dissent += 6; public_trust -= 3; party_unity -= 5; news_headline = "Miller accepts the radical right's conditions for a conditional Konfederacja pact"
+go-to: return
 
 @orient_pis
 title: Have Miller trade tactical support for a PiS host-list pact
 subtitle: Cost: 1 resource. PiS keeps nomination and subsidy control; SPS promises no anti-PiS campaign in exchange for welfare commitments and protected places.
 choose-if: resources >= 1
 unavailable-subtitle: The parliamentary and district negotiation require one resource.
-on-arrival: resources -= 1; sld_populist_orientation = "pis"; sld_populist_planned_committee = "pis"; sld_populist_alliance_partner = "Prawo i Sprawiedliwość"; sld_populist_alliance_state = "conditional pact"; social_patriot_list_committee = "pis"; social_patriot_electoral_strategy = "Conditional protected places on the PiS party list"; pis_relation += 10; rural_support += 4; pensioner_support += 5; workers_support += 3; social_patriot_local_organisation += 3; sld_populist_media_salience += 7; sld_populist_factional_capture += 8; sld_populist_international_isolation += 9; coalition_blur += 8; progressive_credibility -= 9; urban_progressive_support -= 5; progressives_dissent += 12; razem_dissent += 13; pps_dissent += 5; labor_dissent += 4; party_unity -= 6; news_headline = "Miller offers PiS tactical support for welfare pledges and conditional list places"
-go-to: escalation
+on-arrival: resources -= 1; sld_populist_orientation = "pis"; sld_populist_stage_time = time; sld_populist_planned_committee = "pis"; sld_populist_alliance_partner = "Prawo i Sprawiedliwość"; sld_populist_alliance_state = "conditional pact"; social_patriot_list_committee = "pis"; social_patriot_electoral_strategy = "Conditional protected places on the PiS party list"; pis_relation += 10; rural_support += 4; pensioner_support += 5; workers_support += 3; social_patriot_local_organisation += 3; sld_populist_media_salience += 7; sld_populist_factional_capture += 8; sld_populist_international_isolation += 9; coalition_blur += 8; progressive_credibility -= 9; urban_progressive_support -= 5; progressives_dissent += 12; razem_dissent += 13; pps_dissent += 5; labor_dissent += 4; party_unity -= 6; news_headline = "Miller offers PiS tactical support for welfare pledges and conditional list places"
+go-to: return
 
 @orient_independent
 title: Have Miller build an independent Samoobrona-style campaign
 subtitle: Cost: 1 resource. Keep the list and subsidy; organise markets, former industrial towns and county protest committees without a host's protection.
 choose-if: resources >= 1
 unavailable-subtitle: An independent rural and deindustrialised campaign requires one resource.
-on-arrival: resources -= 1; sld_populist_orientation = "independent"; sld_populist_planned_committee = "left"; sld_populist_alliance_partner = "none"; sld_populist_alliance_state = "independent"; social_patriot_list_committee = "left"; social_patriot_electoral_strategy = "Independent SPS party list"; rural_support += 8; workers_support += 5; pensioner_support += 3; anti_establishment_youth_left_affinity += 3; local_network += 6; social_patriot_local_organisation += 10; media_capacity += 3; sld_populist_media_salience += 9; sld_populist_factional_capture += 4; progressive_credibility -= 6; urban_progressive_support -= 4; progressives_dissent += 7; razem_dissent += 8; pps_dissent += 3; party_unity -= 3; public_trust += 1; news_headline = "Miller prepares an independent rural and deindustrialised protest campaign"
-go-to: escalation
+on-arrival: resources -= 1; sld_populist_orientation = "independent"; sld_populist_stage_time = time; sld_populist_planned_committee = "left"; sld_populist_alliance_partner = "none"; sld_populist_alliance_state = "independent"; social_patriot_list_committee = "left"; social_patriot_electoral_strategy = "Independent SPS party list"; rural_support += 8; workers_support += 5; pensioner_support += 3; anti_establishment_youth_left_affinity += 3; local_network += 6; social_patriot_local_organisation += 10; media_capacity += 3; sld_populist_media_salience += 9; sld_populist_factional_capture += 4; progressive_credibility -= 6; urban_progressive_support -= 4; progressives_dissent += 7; razem_dissent += 8; pps_dissent += 3; party_unity -= 3; public_trust += 1; news_headline = "Miller prepares an independent rural and deindustrialised protest campaign"
+go-to: return
 
 @escalation
 title: Miller decides how far the anger should go
 subtitle: Keep welfare populism inside verifiable politics, or turn pandemic grievance and conspiracy into an organising weapon.
 new-page: true
+view-if: sld_populist_route_active = 1 and sld_populist_settlement_stage = 4 and sld_populist_orientation != "unsettled" and sld_populist_escalation = "unsettled" and time >= sld_populist_stage_time + 1
 
 = A choice the route does not make for us
 
@@ -298,7 +315,7 @@ go-to: return
 title: Miller brings his conditional pact to the ballot deadline
 subtitle: PiS or Konfederacja can still refuse Miller; he can reject dependence and file alone.
 new-page: true
-view-if: sld_populist_route_active = 1
+view-if: sld_populist_route_active = 1 and sld_populist_settlement_stage = 4 and sld_populist_orientation != "unsettled" and sld_populist_escalation != "unsettled" and sejm_list_negotiation_done = 0
 on-arrival: {!
 function finite(value, fallback) {
     return Number.isFinite(Number(value)) ? Number(value) : fallback;

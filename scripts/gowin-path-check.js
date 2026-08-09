@@ -323,14 +323,16 @@ assert.strictEqual(
   'A collapsed count should let PiS force the postal election through'
 );
 
-// If Gowin loses, the May ballot elects Duda. The scheduler must not launch a
-// contradictory KO replacement, June election or July runoff afterward.
+// If Gowin loses and the opposition does not mobilise, the May ballot elects
+// Duda. The scheduler must not launch a contradictory KO replacement, June
+// election or July runoff afterward.
 {
-  const { engine, Q } = newEngine();
+  const { engine, choose, Q } = newEngine();
   Q.postal_election_stance = 'Boycott';
   Q.postal_resistance = 22;
   Q.gowin_standing = 40;
   engine.goToScene('poland_gowin_crisis.postal_resolution');
+  choose('poland_gowin_crisis.postal_result_stands');
   const resolutionText = JSON.stringify(engine.state.currentContent || '');
   assert.strictEqual(Q.postal_outcome, 'forced');
   assert.strictEqual(Q.pres_runoff_winner_key, 'duda');
@@ -349,6 +351,56 @@ assert.strictEqual(
     'poland_presidential_election.setup',
     'The forced May result still launched the June presidential election'
   );
+}
+
+// Two resources buy one last general opposition mobilisation. It voids the
+// postal result and leaves the ordinary June election route open.
+{
+  const { engine, choose, Q } = newEngine();
+  Q.resources = 3;
+  Q.postal_election_stance = 'Boycott';
+  Q.postal_resistance = 22;
+  Q.gowin_standing = 40;
+  engine.goToScene('poland_gowin_crisis.postal_resolution');
+
+  const protest = engine.getCurrentChoices().find(function(choice) {
+    return choice.id === 'poland_gowin_crisis.postal_general_protest';
+  });
+  assert(protest && protest.canChoose,
+    'The two-resource general protest must be available after a forced vote');
+  choose('poland_gowin_crisis.postal_general_protest');
+
+  assert.strictEqual(Q.resources, 1);
+  assert.strictEqual(Q.postal_outcome, 'protested');
+  assert.strictEqual(Q.postal_election_stance, 'General opposition protest');
+  assert.strictEqual(Q.pres_postal_forced_2020, 0);
+  assert.strictEqual(Q.ko_candidate_replacement_2020_done, 0);
+  assert.strictEqual(Q.election_event_done, 0);
+  assert.strictEqual(Q.reckoning_event_done, 0);
+
+  Q.year = 2020;
+  Q.month = 6;
+  Q.last_pride_year = 2020;
+  engine.goToScene('poland_polling');
+  assert.strictEqual(
+    engine.state.sceneId,
+    'poland_presidential_election.setup',
+    'The successful protest did not restore the June presidential election'
+  );
+}
+
+// The rollback is visible but unavailable if the party cannot pay for it.
+{
+  const { engine, Q } = newEngine();
+  Q.resources = 1;
+  Q.postal_resistance = 22;
+  Q.gowin_standing = 40;
+  engine.goToScene('poland_gowin_crisis.postal_resolution');
+  const protest = engine.getCurrentChoices().find(function(choice) {
+    return choice.id === 'poland_gowin_crisis.postal_general_protest';
+  });
+  assert(protest && !protest.canChoose,
+    'The general protest must require two resources');
 }
 
 assert.strictEqual(
@@ -1048,13 +1100,14 @@ console.log('gowin-path-check: Konfederacja family OK');
   assert.strictEqual(group(Q, 'republikanie').short_name, 'PR');
   assert.strictEqual(group(Q, 'odnowa').short_name, 'OdNowa RP');
   assert.strictEqual(group(Q, 'kp_partners').short_name, 'UED');
-  assert.strictEqual(Q.left_party_short_name, 'ZL');
-  assert.strictEqual(Q.left_party_long_name, 'Zjednoczona Lewica');
+  assert.strictEqual(Q.left_party_name, 'Lewica');
+  assert.strictEqual(Q.left_party_short_name, 'Lewica');
+  assert.strictEqual(Q.left_party_long_name, 'Lewica');
   const playerVariants = new Map(Q.player_party_name_variants.map(function(record) {
     return [record.name, record];
   }));
   [
-    ['Zjednoczona Lewica', 'ZL'], ['Lewica', 'Lewica'],
+    ['Lewica', 'Lewica'],
     ['Nowa Lewica', 'NL'], ['Lewica Razem', 'LR'],
     ['Lewica w Rozsypce', 'LwR'], ['Porozumienie Lewicy', 'PL'],
     ['Federacja Lewicy', 'FL'], ['Wspólne Jutro', 'WJ'],

@@ -3,7 +3,13 @@ on-arrival: {!
 const budgetHost = typeof window !== "undefined"
     ? window
     : (typeof globalThis !== "undefined" ? globalThis : this);
-if (!Number.isFinite(Number(Q.poland_historical_event_phase))) {
+const july2021ChainPending =
+    Q.year == 2021 && Q.month == 7 &&
+    (!Q.tusk_return_2021_done || !Q.left_revolt_event_done ||
+        !Q.kukiz_negotiation_done);
+if (july2021ChainPending) {
+    Q.poland_historical_event_phase = 1;
+} else if (!Number.isFinite(Number(Q.poland_historical_event_phase))) {
     const historicalCalendar =
         Q.year < 2023 || (Q.year == 2023 && Q.month <= 7);
     Q.poland_historical_event_phase =
@@ -883,6 +889,13 @@ if (Q.started) {
         rozwoj_split_blocked: 0,
         rozwoj_early_route: 0,
         rozwoj_internal_pis: 0,
+        pis_collapse_pressure: 0,
+        pis_collapsed: 0,
+        pis_collapse_time: -1,
+        pis_collapse_defectors: 0,
+        pis_collapse_government_shock: 0,
+        pis_successor_seats: 0,
+        pis_sovereigntist_seats: 0,
         left_realign_formed: 0,
         left_realign_invite_p2050: 0,
         left_realign_invite_greens: 0,
@@ -980,9 +993,14 @@ if (Q.started) {
             Q.ko_break_leader == "Barbara Nowacka" &&
             Q.ko_splinter_type == "Progressive"
                 ? "Inicjatywa Polska"
-                : Q.ko_splinter_type != "None"
-                    ? Q.ko_splinter_type + " KO splinter"
-                    : "KO breakaway";
+                : Q.ko_splinter_type == "Classical-liberal"
+                    ? "Nowa Platforma"
+                    : Q.ko_splinter_type != "None"
+                        ? Q.ko_splinter_type + " KO splinter"
+                        : "KO breakaway";
+    }
+    if (typeof Q.ko_splinter_class != "string") {
+        Q.ko_splinter_class = "party-ko";
     }
     Q.snap_progressive_ko_candidate =
         Q.ipl_joined_left || (
@@ -1526,9 +1544,20 @@ if (Q.started) {
         : koSplinterRecord;
     koSplinterRecord.active = Q.ko_splinter_active && !iplSplinter ? 1 : 0;
     if (Q.ko_splinter_active) {
+        // A breakaway registers under a name, not under the name of the wing
+        // it belonged to. The classical-liberal walkout re-founds Platforma
+        // Obywatelska outside the bloc as Nowa Platforma, with its own
+        // registration, colour and badge.
         Q.ko_splinter_name = iplSplinter
             ? "Inicjatywa Polska"
-            : Q.ko_splinter_type + " KO splinter";
+            : Q.ko_splinter_type == "Classical-liberal"
+                ? "Nowa Platforma"
+                : Q.ko_splinter_type + " KO splinter";
+        Q.ko_splinter_class = iplSplinter
+            ? "party-inicjatywa-polska"
+            : Q.ko_splinter_type == "Classical-liberal"
+                ? "party-np"
+                : "party-ko";
         activeSplinterRecord.active = 1;
         activeSplinterRecord.name = Q.ko_splinter_name;
         activeSplinterRecord.leader = Q.ko_break_leader;
@@ -2198,6 +2227,39 @@ if (Q.started) {
                 : Q.ko_collapse_pressure >= 28
                     ? "strained but holding"
                     : "in working order";
+    // PiS's structural health, on the same principle as KO's: one derived
+    // number, every term a failure the player can already see. A party held
+    // together by one man's authority does not break because a die was rolled,
+    // it breaks when the succession is overdue, the mandates have started
+    // leaving individually, the presidency is gone and Konfederacja is
+    // outbidding it for the same voters.
+    const pisCollapsePressure =
+        Math.max(0, 55 - (Number(Q.united_right_cohesion) || 72)) * 1.1 +
+        Math.max(0, 30 - (Number(Q.pis_poll) || 30)) * 2.2 +
+        Math.max(0, Number(Q.rozwoj_definitive_departures) || 0) * 1.2 +
+        (Q.pis_split ? 14 : 0) +
+        (Q.suwerenna_walkout ? 8 : 0) +
+        ((Number(Q.konf_poll) || 0) >= (Number(Q.pis_poll) || 0) ? 12 : 0) +
+        (Q.pis_leader == "Jarosław Kaczyński" && Number(Q.year) >= 2026
+            ? 10
+            : 0) +
+        (Q.pres_2025_winner_key != "" && Q.pres_2025_winner_key != "right"
+            ? 8
+            : 0) -
+        (Q.government_party == "pis" && Q.government_has_confidence ? 18 : 0) -
+        (Q.rozwoj_internal_pis ? 12 : 0);
+    Q.pis_collapse_pressure = Q.pis_collapsed
+        ? 0
+        : clamp(Math.round(pisCollapsePressure), 0, 100);
+    Q.pis_condition_label = Q.pis_collapsed
+        ? "broken into rival right-wing parties"
+        : Q.pis_collapse_pressure >= 68
+            ? "at breaking point"
+            : Q.pis_collapse_pressure >= 48
+                ? "openly contesting the succession"
+                : Q.pis_collapse_pressure >= 28
+                    ? "strained but holding"
+                    : "in working order";
     if (Q.greens_joined_left) {
         const greensRecord = rivalGroup("greens");
         if (greensRecord) {
@@ -2766,6 +2828,19 @@ if (Q.started) {
                 "Razem's two chairs jointly lead the unified Left";
         }
     }
+    // One place decides which Lewica figure carries the Marshal claim. A
+    // Razem-controlled party does not send the SLD founder to the chair, and
+    // a Czarzasty already removed from the leadership centre is not restored
+    // by the rotation agreement either.
+    Q.left_marshal_nominee =
+        (Q.left_dominant_current == "razem" ||
+            Q.merger_leader == "Razem" ||
+            Q.left_party_name == "Lewica Razem")
+            ? "Marta Stożek"
+            : (!Q.advisor_reshuffle_removed_czarzasty && Q.barons_active
+                ? "Włodzimierz Czarzasty"
+                : "Agnieszka Dziemianowicz-Bąk");
+
     Q.razem_in_left_club = Q.razem_active ? 1 : 0;
     Q.matysiak_caucus_actions = Math.max(
         0,
@@ -2900,7 +2975,7 @@ if (Q.started) {
         } else if (Q.rename_event_done || Q.spring_merged) {
             Q.left_party_name = "Nowa Lewica";
         } else {
-            Q.left_party_name = "Zjednoczona Lewica";
+            Q.left_party_name = "Lewica";
         }
     }
     Q.sld_partocracy_stage = clamp(
@@ -5080,6 +5155,79 @@ if (Q.started) {
             Q[quality] = foreignNumericDefaults[quality];
         }
     }
+
+    // CPK and the nuclear programme are long capital projects rather than
+    // single votes: scope, ownership, labour standards, local grievance and
+    // cost run for years across separate dated events, so they need a stable
+    // ledger instead of one "infrastructure" score.
+    const infrastructureNumericDefaults = {
+        cpk_stage: 0,
+        cpk_audit_open: 0,
+        cpk_audit_scrutiny_done: 0,
+        cpk_transparency: 0,
+        cpk_opposition_terms: 0,
+        cpk_ownership_rollcall: 0,
+        cpk_public_works: 0,
+        cpk_cancelled: 0,
+        cpk_rail_priority: 20,
+        cpk_public_ownership: 40,
+        cpk_labour_standard: 10,
+        cpk_land_conflict: 12,
+        cpk_delivery: 0,
+        cpk_cost_pressure: 10,
+        cpk_left_credit: 0,
+        nuclear_stage: 0,
+        nuclear_shelved: 0,
+        nuclear_priority: 50,
+        nuclear_public_ownership: 50,
+        nuclear_price_shield: 0,
+        nuclear_labour_standard: 10,
+        nuclear_just_transition: 0,
+        nuclear_site_conflict: 10,
+        nuclear_delivery: 0,
+        nuclear_cost_pressure: 10,
+        nuclear_left_credit: 0,
+        nuclear_ownership_rollcall: 0
+    };
+    for (const quality of Object.keys(infrastructureNumericDefaults)) {
+        if (!Number.isFinite(Number(Q[quality]))) {
+            Q[quality] = infrastructureNumericDefaults[quality];
+        }
+    }
+    Q.cpk_rail_priority = clamp(Q.cpk_rail_priority, 0, 100);
+    Q.cpk_public_ownership = clamp(Q.cpk_public_ownership, 0, 100);
+    Q.cpk_labour_standard = clamp(Q.cpk_labour_standard, 0, 100);
+    Q.cpk_land_conflict = clamp(Q.cpk_land_conflict, 0, 100);
+    Q.cpk_delivery = clamp(Q.cpk_delivery, 0, 100);
+    Q.cpk_cost_pressure = clamp(Q.cpk_cost_pressure, 0, 100);
+    Q.cpk_left_credit = clamp(Q.cpk_left_credit, -30, 60);
+    Q.nuclear_priority = clamp(Q.nuclear_priority, 0, 100);
+    Q.nuclear_public_ownership = clamp(Q.nuclear_public_ownership, 0, 100);
+    Q.nuclear_price_shield = clamp(Q.nuclear_price_shield, 0, 100);
+    Q.nuclear_labour_standard = clamp(Q.nuclear_labour_standard, 0, 100);
+    Q.nuclear_just_transition = clamp(Q.nuclear_just_transition, 0, 100);
+    Q.nuclear_site_conflict = clamp(Q.nuclear_site_conflict, 0, 100);
+    Q.nuclear_delivery = clamp(Q.nuclear_delivery, 0, 100);
+    Q.nuclear_cost_pressure = clamp(Q.nuclear_cost_pressure, 0, 100);
+    Q.nuclear_left_credit = clamp(Q.nuclear_left_credit, -30, 60);
+    const infrastructureStringDefaults = {
+        cpk_scope: "Programme inherited from the previous government",
+        cpk_left_position: "No settled Lewica line on the hub programme",
+        cpk_compensation_model: "Statutory valuations under the special act",
+        cpk_financing_model: "No settled financing model",
+        cpk_settlement: "The programme has not yet met an electorate",
+        cpk_public_verdict: "No settled public verdict on the site",
+        nuclear_position: "No settled Lewica line on the nuclear programme",
+        nuclear_financing_model: "No settled financing model",
+        nuclear_second_plant: "No decision on a second plant",
+        nuclear_settlement: "The programme has not yet met an electorate",
+        nuclear_bill_verdict: "No settled tariff outcome"
+    };
+    for (const quality of Object.keys(infrastructureStringDefaults)) {
+        if (typeof Q[quality] != "string" || !Q[quality]) {
+            Q[quality] = infrastructureStringDefaults[quality];
+        }
+    }
     Q.ziobro_whereabouts_stage = Math.round(clamp(
         Q.ziobro_whereabouts_stage, 0, 6
     ));
@@ -5454,6 +5602,10 @@ if (Q.started) {
         0,
         4
     );
+    Q.sld_populist_stage_time = Number.isFinite(
+        Number(Q.sld_populist_stage_time)
+    ) ? Number(Q.sld_populist_stage_time) :
+        (Q.sld_populist_route_active ? (Number(Q.time) || 0) - 1 : -99);
     if (typeof Q.sld_populist_progressive_settlement != "string") {
         Q.sld_populist_progressive_settlement = "none";
     }
@@ -5666,7 +5818,25 @@ if (Q.started) {
         return Number(Q[caucus + "_escalation_stage"]) >= 7 &&
             !(caucus == "razem" && Q.razem_breakaway_protected);
     }) || authoredLaborSplitPending ? 1 : 0;
-    Q.caucus_crisis_pending = Q.sld_populist_entry_pending ? 1 :
+    const sldPopulistSequencePending =
+        Q.sld_populist_route_active &&
+        Number(Q.time) >= Number(Q.sld_populist_stage_time) + 1 &&
+        (
+            (
+                Q.sld_populist_settlement_stage >= 1 &&
+                Q.sld_populist_settlement_stage <= 3
+            ) ||
+            (
+                Q.sld_populist_settlement_stage == 4 &&
+                (
+                    Q.sld_populist_orientation == "unsettled" ||
+                    Q.sld_populist_orientation != "unsettled" &&
+                    Q.sld_populist_escalation == "unsettled"
+                )
+            )
+        );
+    const caucusCrisisReady =
+        Q.sld_populist_entry_pending || sldPopulistSequencePending ? 1 :
         (Q.social_patriot_launch_pending ? 1 :
         (Q.factions.some(function(caucus) {
         if (caucus == "razem" && Q.razem_breakaway_protected) {
@@ -5682,6 +5852,9 @@ if (Q.started) {
             Number(Q.time) >= Number(Q[caucus + "_demand_deadline"])
         ) || stage >= 7;
     }) || authoredLaborCrisisPending ? 1 : 0));
+    Q.caucus_crisis_pending = caucusCrisisReady;
+    Q.caucus_crisis_dispatchable =
+        caucusCrisisReady && !Q.caucus_crisis_deferred ? 1 : 0;
     Q.faction_stage_highwater = caucusIds.reduce(
         function(highest, caucus) {
             return Math.max(
@@ -6011,7 +6184,6 @@ if (Q.started) {
     // compact label carried beside them. `name` remains the live display brand
     // for compatibility with older saves and authored scenes.
     const playerPartyNameVariants = [
-        ["Zjednoczona Lewica", "Zjednoczona Lewica", "ZL"],
         ["Lewica", "Lewica", "Lewica"],
         ["Nowa Lewica", "Nowa Lewica", "NL"],
         ["Lewica Razem", "Lewica Razem", "LR"],
@@ -6222,9 +6394,213 @@ if (Q.started) {
     // The values clause PSL bought at formation is a real veto, not a memory.
     Q.coalition_values_veto = Q.coalition_conscience_clause ? 1 : 0;
 }
+// --- The Second War at the Top ---------------------------------------------
+// One camp holding both the Palace and the cabinet is not peace. Eligibility,
+// camp identity and the heat of the personal rivalry are computed once a month
+// here, so every stage of the chain in poland_war_on_top reads the same
+// numbers and a camp that stops being one camp ends the war immediately.
+{
+    const warPresident = String(Q.president_name || "");
+    const warPm = String(Q.prime_minister || "");
+    const vacantOffice = function(name) {
+        return !name.length ||
+            name.indexOf("acting") >= 0 ||
+            name.indexOf("disputed") >= 0 ||
+            name.indexOf("Vacant") >= 0 ||
+            name.indexOf("pending") >= 0;
+    };
+    const leftPalace = Boolean(
+        Q.left_president ||
+        Q.president_party == "lewica" ||
+        [
+            "Adrian Zandberg",
+            "Magdalena Biejat",
+            "Agnieszka Dziemianowicz-Bąk"
+        ].includes(warPresident)
+    );
+    const liberalPalace =
+        warPresident == "Rafał Trzaskowski" ||
+        warPresident == "Szymon Hołownia";
+    const rightPalace =
+        warPresident == "Karol Nawrocki" ||
+        warPresident == String(Q.pres_2025_right_candidate || " ") ||
+        [
+            "Mateusz Morawiecki",
+            "Beata Szydło",
+            "Przemysław Czarnek"
+        ].includes(warPresident);
+    let sameCamp = "none";
+    if (!vacantOffice(warPresident) && !vacantOffice(warPm)) {
+        if (Q.government_party == "lewica" && leftPalace) {
+            sameCamp = "lewica";
+        } else if (Q.government_party == "ko" && liberalPalace && !leftPalace) {
+            sameCamp = "ko";
+        } else if (
+            Q.government_party == "pis" &&
+            rightPalace &&
+            !leftPalace &&
+            // Duda's own PiS cohabitation is the united-right period the
+            // Gowin crisis already covers; it is not this chain.
+            warPresident != "Andrzej Duda"
+        ) {
+            sameCamp = "pis";
+        }
+    }
+    const warEligible =
+        sameCamp != "none" &&
+        Q.continuous_campaign &&
+        Q.government_has_confidence &&
+        !Q.caretaker_government &&
+        !Q.formation_in_progress ? 1 : 0;
+    // Named pairs, because "the president against the prime minister" is a
+    // different fight depending on which two people it is. Zandberg against
+    // the apparatus is the 2003 pattern; Zandberg against a Razem co-founder
+    // in the cabinet keeps a channel open that the ruling cannot close.
+    const heatPairs = {
+        "Adrian Zandberg|Włodzimierz Czarzasty": 80,
+        "Adrian Zandberg|Leszek Miller": 80,
+        "Adrian Zandberg|Krzysztof Gawkowski": 70,
+        "Adrian Zandberg|Agnieszka Dziemianowicz-Bąk": 65,
+        "Adrian Zandberg|Magdalena Biejat": 35,
+        "Magdalena Biejat|Włodzimierz Czarzasty": 45,
+        "Agnieszka Dziemianowicz-Bąk|Włodzimierz Czarzasty": 45,
+        "Rafał Trzaskowski|Donald Tusk": 60,
+        "Rafał Trzaskowski|Radosław Sikorski": 55,
+        "Karol Nawrocki|Przemysław Czarnek": 65,
+        "Karol Nawrocki|Mateusz Morawiecki": 55,
+        "Karol Nawrocki|Beata Szydło": 45
+    };
+    const campDefaultHeat = { lewica: 45, ko: 45, pis: 50, none: 0 };
+    Q.war_top_eligible = warEligible;
+    Q.war_top_camp_live = warEligible ? sameCamp : "none";
+    Q.war_top_heat_live = warEligible
+        ? (heatPairs[warPresident + "|" + warPm] ||
+            campDefaultHeat[sameCamp])
+        : 0;
+    Q.war_top_stage = Math.max(
+        0,
+        Math.min(5, Math.round(Number(Q.war_top_stage) || 0))
+    );
+    Q.war_top_palace_bloc = Math.max(
+        0,
+        Math.min(100, Math.round(Number(Q.war_top_palace_bloc) || 0))
+    );
+    Q.war_top_heat = Math.max(
+        0,
+        Math.min(100, Math.round(Number(Q.war_top_heat) || 0))
+    );
+    // A war inside one camp cannot continue once the camp has lost the
+    // cabinet, the Palace or its majority. It stays on the record instead.
+    Q.war_top_suspended =
+        Q.war_top_stage >= 1 && Q.war_top_stage < 5 && !warEligible ? 1 : 0;
+    Q.war_top_state = Q.war_top_stage < 1
+        ? (warEligible
+            ? "One camp holds the Palace and the cabinet"
+            : "No single-camp Palace and cabinet")
+        : (Q.war_top_suspended
+            ? "Suspended — the camp no longer holds both offices"
+            : (Q.war_top_stage >= 5
+                ? String(Q.war_top_settlement || "Settled")
+                : "Stage " + Q.war_top_stage + " — Palace bloc " +
+                    Q.war_top_palace_bloc + "/100, heat " +
+                    Q.war_top_heat + "/100"));
+}
+
     Q.third_way_display_name = !Q.p2050_emerged
         ? "PSL"
         : ((Q.third_way_active || Q.third_way_2023_done) && !Q.third_way_split
             ? "Trzecia Droga"
             : "PSL and Poland 2050");
+
+// The explicit socialist turn. The hard programme reaches the leadership table
+// only when the socialist current is actually large inside the alliance, the
+// party is not being run as a Wiosna project, Razem is still working with the
+// leadership rather than shouting at it, and the unions are cooperating rather
+// than being managed. None of those are permanent, so the opening can close
+// again while the line and the legal exposure it produced stay on the record.
+{
+    const hardNumber = function(value, fallback) {
+        return Number.isFinite(Number(value)) ? Number(value) : fallback;
+    };
+    const hardClamp = function(value) {
+        return Math.max(0, Math.min(100, Math.round(hardNumber(value, 0))));
+    };
+    const socialistStrength =
+        Math.max(0, hardNumber(Q.razem_strength, 0)) +
+        Math.max(0, hardNumber(Q.progressives_strength, 0)) +
+        Math.max(0, hardNumber(Q.pps_strength, 0));
+    const totalStrength = [
+        "barons", "spring", "labor", "progressives", "razem", "pps",
+        "social_patriot", "market_liberal"
+    ].reduce(function(total, faction) {
+        return total + Math.max(0, hardNumber(Q[faction + "_strength"], 0));
+    }, 0);
+    Q.hard_left_current_share = totalStrength > 0
+        ? Math.round((socialistStrength / totalStrength) * 100)
+        : 0;
+    // Cooperativeness is a relationship, not a mood: the confederation has to
+    // trust the party, OPZZ has to be working with it, and the labour caucus
+    // has to not be in open conflict at the same time.
+    const labourCooperative =
+        hardNumber(Q.opzz_cooperation, 0) >= 55 &&
+        hardNumber(Q.union_trust, 0) >= 55 &&
+        hardNumber(Q.labor_dissent, 100) <= 45;
+    const razemInside =
+        Q.razem_active && Q.razem_in_left && !Q.razem_party_formed;
+    const progressivesInside =
+        Q.progressives_active && Q.progressives_in_left;
+    Q.hard_left_turn_open =
+        Q.continuous_campaign &&
+        razemInside &&
+        progressivesInside &&
+        hardNumber(Q.spring_path_stage, 0) < 2 &&
+        Q.spring_path_route != "market_liberal" &&
+        Q.hard_left_current_share >= 22 &&
+        hardNumber(Q.razem_cooperation, 0) >= 45 &&
+        labourCooperative
+            ? 1
+            : 0;
+    Q.hard_left_line = hardClamp(Q.hard_left_line);
+    Q.hard_left_exposure = hardClamp(Q.hard_left_exposure);
+    Q.hard_left_refusals = Math.max(0, Math.round(
+        hardNumber(Q.hard_left_refusals, 0)
+    ));
+    Q.hard_left_line_label = Q.hard_left_line >= 70
+        ? "An openly socialist party programme"
+        : (Q.hard_left_line >= 45
+            ? "A hardened programme the centre can no longer read as social democracy"
+            : (Q.hard_left_line >= 20
+                ? "A sharpened line with the old formulations still attached"
+                : "No explicit socialist programme"));
+}
+
+Q.ideological_path_government_open =
+    (Q.sld_partocracy_stage >= 3 &&
+        (Q.poland_sld_public_boards_timer == 0 ||
+            Q.poland_sld_mayors_timer == 0 ||
+            Q.poland_sld_pension_guarantee_timer == 0 ||
+            Q.poland_sld_national_champions_timer == 0 ||
+            Q.poland_sld_administrative_republic_timer == 0)) ||
+    (Q.spring_path_stage >= 3 &&
+        Q.spring_path_route == "social_liberal" &&
+        (Q.poland_wiosna_equal_citizenship_timer == 0 ||
+            Q.poland_wiosna_secular_state_timer == 0 ||
+            Q.poland_wiosna_reproductive_timer == 0 ||
+            Q.poland_wiosna_rainbow_school_timer == 0 ||
+            Q.poland_wiosna_open_republic_timer == 0)) ||
+    (Q.market_liberal_active &&
+        (Q.poland_market_social_budget_timer == 0 ||
+            Q.poland_market_competition_timer == 0 ||
+            Q.poland_market_one_rate_timer == 0 ||
+            Q.poland_market_private_supply_timer == 0 ||
+            Q.poland_market_fiscal_council_timer == 0)) ||
+    (Q.sld_populist_route_active &&
+        Q.sld_populist_settlement_stage >= 4 &&
+        (Q.poland_populist_tariff_timer == 0 ||
+            Q.poland_populist_welfare_timer == 0 ||
+            Q.poland_populist_bank_timer == 0 ||
+            Q.poland_populist_foreign_capital_timer == 0 ||
+            Q.poland_populist_referendum_timer == 0))
+        ? 1
+        : 0;
 !}

@@ -2375,6 +2375,11 @@ Q.formation_option_ko_p2050_left = ko + p2050 + left + Math.min(6, psl);
 Q.formation_option_third_left_pis = p2050 + psl + left + Math.min(20, pis);
 Q.formation_option_left_pis = pis + left;
 Q.formation_option_ko_left = ko + left + Math.min(10, p2050 + psl);
+// The anomaly. left_committed_seats already folds in every splitter club whose
+// relation clears the toleration threshold, so one number covers both "Lewica
+// alone" and "Lewica plus the clubs that walked out of it".
+Q.formation_option_left_only = left;
+Q.formation_left_splitter_votes = Math.max(0, left - seatsOf("left_seats"));
 !}
 
 = Coalition arithmetic first
@@ -2398,8 +2403,10 @@ seat blocks</div>
 <div class="ledger-row"><span>KO + Poland 2050 + Lewica</span><b>[+ formation_option_ko_p2050_left +] yes with PSL toleration; [+ psl_seats +] outside</b></div>
 <div class="ledger-row"><span>Poland 2050 + PSL + Lewica + PiS</span><b>[+ formation_option_third_left_pis +] yes; hostile majority parties must tolerate</b></div>
 <div class="ledger-row"><span>PiS + Lewica</span><b>[+ formation_option_left_pis +] yes; no KO votes</b></div>
-<div class="ledger-row"><span>KO + Lewica</span><b>[+ formation_option_ko_left +] yes; Third Way toleration required</b></div></div>
+<div class="ledger-row"><span>KO + Lewica</span><b>[+ formation_option_ko_left +] yes; Third Way toleration required</b></div>
+<div class="ledger-row"><span>Lewica alone</span><b>[+ formation_option_left_only +] yes; [+ formation_left_splitter_votes +] of them tolerating Left splitter votes</b></div></div>
 
+- @formation_pick_left_only
 - @formation_pick_democratic
 - @formation_pick_ko_psl_left
 - @formation_pick_ko_p2050_left
@@ -2416,9 +2423,61 @@ subtitle: Every arrangement on offer, including the fallback cabinets, fails on 
 # The compatibility half of every option above. When none of these holds, the
 # whole menu and both fallback menus are grey, so the chamber needs the
 # constitutional ladder rather than another look at the same arithmetic.
-view-if: not (coalition_viable_left_ko = 1 or coalition_viable_left_pis = 1 or (coalition_viable_left_psl = 1 and coalition_viable_left_p2050 = 1) or coalition_viable_pis_konf = 1 or coalition_viable_ko_konf = 1 or (coalition_viable_ko_psl = 1 and coalition_viable_ko_p2050 = 1))
+view-if: formation_option_left_only < formation_majority_needed and not (coalition_viable_left_ko = 1 or coalition_viable_left_pis = 1 or (coalition_viable_left_psl = 1 and coalition_viable_left_p2050 = 1) or coalition_viable_pis_konf = 1 or coalition_viable_ko_konf = 1 or (coalition_viable_ko_psl = 1 and coalition_viable_ko_p2050 = 1))
 on-arrival: coalition_status = "No coalition contract available in this Sejm"; news_headline = "No bloc in the new Sejm can sign a governing contract"
 go-to: presidential_first_fails if presidential_majority_designation = 1; third_marshal_gate
+
+@formation_pick_left_only
+title: [? if formation_left_splitter_votes > 0: Govern alone on Left splitter toleration?][? if formation_left_splitter_votes = 0: Govern alone?]
+subtitle: Every ministry is Lewica's. The splitter clubs stay outside and sign a toleration protocol instead of taking offices.
+choose-if: formation_option_left_only >= formation_majority_needed
+unavailable-subtitle: Lewica and the Left clubs that would tolerate it hold [+ formation_option_left_only +] seats — short of the [+ formation_majority_needed +] a cabinet needs.
+on-arrival: {!
+const leftOnlySeats = Math.max(
+    0,
+    Math.round(Number(Q.left_committed_seats) || 0)
+);
+Q.formation_coalition_selected = 1;
+Q.formation_coalition_code = "left_only";
+Q.formation_coalition_label = Q.formation_left_splitter_votes > 0
+    ? "Lewica, tolerated by the Left splitter clubs"
+    : "Lewica";
+// The splitter clubs are formally outside the cabinet, but a chamber that has
+// just produced this result has no other Left arithmetic to defect to. They
+// are counted as government seats for the rest of the term rather than
+// re-negotiated bill by bill.
+Q.formation_coalition_seats = leftOnlySeats;
+Q.formation_coalition_support_seats = leftOnlySeats;
+Q.formation_government_party = "lewica";
+Q.formation_pm_default = Q.left_leader || "Lewica nominee";
+Q.formation_player_in_government = 1;
+Q.formation_player_toleration = 0;
+Q.coalition_status = "Single-party Lewica cabinet";
+Q.candidate_ko_votes = 0;
+Q.candidate_p2050_votes = 0;
+Q.candidate_psl_cap = 0;
+Q.candidate_psl_votes = 0;
+Q.candidate_left_votes = leftOnlySeats;
+// A signed protocol is what keeps those clubs above the relation threshold
+// that puts their seats inside left_committed_seats every time the state is
+// normalised. Without it the majority evaporates on the first bad month.
+for (const relation of [
+    "barons_party_relation", "social_patriot_party_relation",
+    "spring_party_relation", "labor_party_relation",
+    "progressives_party_relation", "razem_party_relation",
+    "pps_party_relation", "tak_rozwoj_parent_relation"
+]) {
+    if (Number(Q[relation]) >= 45) {
+        Q[relation] = Math.max(60, Number(Q[relation]));
+    }
+}
+Q.party_unity = (Number(Q.party_unity) || 50) + 6;
+Q.ko_relation -= 4;
+Q.news_headline = Q.formation_left_splitter_votes > 0
+    ? "The Left reunites on paper for one vote and forms a government"
+    : "Lewica forms a government without a single centrist minister";
+!}
+go-to: formation_marshal_ballot
 
 @formation_pick_democratic
 title: Build a democratic coalition (KO + Third Way + Lewica)
@@ -3069,9 +3128,11 @@ Q.formation_pm_loss_partner = 0;
 Q.formation_pm_loss_trzaskowski = 2;
 Q.formation_pm_loss_nowacka = 4;
 Q.formation_pm_loss_sikorski = 3;
-Q.formation_pm_loss_left = code == "left_pis"
-    ? 8
-    : Math.max(4, Math.round(koSeats * 0.08));
+// A Left premier costs the contract the deputies who signed for arithmetic
+// rather than for a Left cabinet. A Lewica-only contract has none of those.
+Q.formation_pm_loss_left = code == "left_only"
+    ? 0
+    : (code == "left_pis" ? 8 : Math.max(4, Math.round(koSeats * 0.08)));
 Q.formation_pm_designee =
     String(Q.formation_president_nominee || "");
 Q.formation_pm_designee_available =
@@ -3932,7 +3993,7 @@ budget and receives no governing-spend actions. ?]
 title: Tusk starts wearing the suit
 new-page: true
 view-if: formation_tusk_suit_done = 0 and president_name = "Andrzej Duda" and democratic_candidate = "Donald Tusk" and candidate_psl_votes > 0 and democratic_votes < 276
-face-image: https://commons.wikimedia.org/wiki/Special:FilePath/Donald_Tusk_(6165309851).jpg
+face-image: img/poland/events/donald-tusk-2023.webp
 on-arrival: {!
 Q.formation_tusk_suit_done = 1;
 Q.ko_relation += 4;
@@ -3957,7 +4018,7 @@ wearing the smell of PSL's bargaining power and the Palace's patience.
 title: The hundred-days programme is rationed before it begins
 new-page: true
 view-if: formation_tusk_suit_done = 1 and formation_hundred_days_done = 0 and president_name = "Andrzej Duda" and democratic_candidate = "Donald Tusk" and candidate_psl_votes > 0 and democratic_votes < 276
-face-image: https://commons.wikimedia.org/wiki/Special:FilePath/Donald_Tusk_(6165309851).jpg
+face-image: img/poland/events/donald-tusk-2023.webp
 on-arrival: {!
 Q.formation_hundred_days_done = 1;
 Q.ko_poll_momentum -= 0.2;
@@ -4671,6 +4732,7 @@ go-to: campaign_return if formation_continuous = 1; assessment if formation_cont
 @governing_agreement
 # prose-audit: Grade C — The premise is strong and states the real trap: PSL's annual-budget confidence principle is permanent leverage, and the other three parties cannot reach 231 without it. All three responses to that trap are then title, subtitle and a jump, with no aftermath prose.
 title: Write rules for an impossible coalition
+face-image: img/poland/events/chancellery-2022.webp
 new-page: true
 view-if: left_in_government = 1
 
@@ -4723,6 +4785,7 @@ go-to: annual_budget if left_in_government = 1; opposition_assessment if left_in
 @annual_budget
 # prose-audit: Grade C — The three-stage passage rule (four Left caucuses, then partners, then the chamber) is exactly right. The scene speaks in currency, though — "[+ budget +] shares of cabinet bargaining room", "Spend 4 governing capacity" — and none of the four packages carries a line of prose before the internal roll.
 title: The 2025 state budget
+face-image: img/poland/events/sejm-chamber.webp
 new-page: true
 view-if: left_in_government = 1
 
@@ -5034,6 +5097,7 @@ go-to: budget_sejm_roll
 @budget_sejm_roll
 # prose-audit: Grade B — Reports only the constitutionally meaningful counts and names the coalition consequence either way, which is the right discipline for a roll call; it remains a results screen rather than a scene.
 title: The annual budget vote
+face-image: img/poland/events/sejm-chamber.webp
 new-page: true
 view-if: left_in_government = 1
 on-arrival: {!

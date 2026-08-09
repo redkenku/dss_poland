@@ -304,6 +304,67 @@ function recordRoute(endpoint, entry, via) {
     'poland_merger_events.merger_all', 'monthly router, September 2020');
 }
 
+// A result above seven percent gives Zandberg one final claim after the 2023
+// election. It replaces a non-federal settlement with the original Razem-led
+// merger outcome, while a federal route never receives the event.
+{
+  const claimId = 'poland_merger_events.post_election_razem_claim';
+  const ctx = start('route-post-election-razem-claim');
+  continuous(ctx.Q, 2023, 12, 50);
+  Object.assign(ctx.Q, {
+    election_2023_certified: 1,
+    presidential_candidate: 'Adrian Zandberg',
+    presidential_result: 7.01,
+    merger_event_done: 1,
+    merger_leader: 'Dual chairs',
+    left_project: 'Nowa Lewica with SLD–Wiosna parity',
+    left_merger_structure: 'dual_party',
+    razem_merged: 0,
+    razem_active: 1,
+    federation_sequence_stage: 0,
+    historical_peaceful_unification: 1,
+    left_structural_endpoint: 'Historical peaceful Nowa Lewica unification',
+  });
+  assert(queuedEventIds(ctx.engine).includes(claimId),
+    'Zandberg\'s post-election leadership claim does not reach the desk');
+  ctx.engine.goToScene(claimId);
+  ctx.choose('poland_merger_events.post_election_razem_accept');
+  assert.strictEqual(ctx.Q.left_merger_structure, 'unified_party');
+  assert.strictEqual(ctx.Q.razem_merged, 1);
+  assert.strictEqual(ctx.Q.merger_leader, 'Razem');
+  assert.strictEqual(ctx.Q.left_dominant_current, 'razem');
+  assert.strictEqual(ctx.Q.left_party_name, 'Lewica Razem');
+  assert.strictEqual(ctx.Q.left_constitution, 'razem_dual_chairs');
+  assert.strictEqual(ctx.Q.historical_peaceful_unification, 0);
+  assert.strictEqual(ctx.Q.left_structural_endpoint,
+    'Razem-led unified Left after the 2023 election');
+
+  for (const blocked of [
+    { presidential_result: 7 },
+    { left_merger_structure: 'federation', federation_sequence_stage: 1 },
+    { razem_merged: 1, merger_leader: 'Razem' },
+  ]) {
+    const gated = start('route-post-election-razem-gate-' +
+      JSON.stringify(blocked));
+    continuous(gated.Q, 2023, 12, 50);
+    Object.assign(gated.Q, {
+      election_2023_certified: 1,
+      presidential_candidate: 'Adrian Zandberg',
+      presidential_result: 7.01,
+      merger_event_done: 1,
+      merger_leader: 'Dual chairs',
+      left_merger_structure: 'dual_party',
+      razem_merged: 0,
+      razem_active: 1,
+      federation_sequence_stage: 0,
+    }, blocked);
+    assert(!queuedEventIds(gated.engine).includes(claimId),
+      'Razem leadership claim ignored its gate: ' + JSON.stringify(blocked));
+  }
+  recordRoute('5. Razem-led unified Left (post-election claim)', claimId,
+    'dated-event desk, December 2023');
+}
+
 // July 2021 must route through Tusk before the merger revolt. Dendry chooses
 // randomly when two go-to conditions match, so this seed reproduces the old
 // race: it used to enter the federation crisis and strand Tusk in July.

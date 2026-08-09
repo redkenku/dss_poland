@@ -106,7 +106,7 @@ function baselineFor(section) {
   let prose = section.source
     .replace(/\{![\s\S]*?!\}/g, ' ')
     .replace(/^@[A-Za-z0-9_]+\s*$/gm, ' ')
-    .replace(/^(title|subtitle|new-page|tags|priority|order|max-visits|view-if|choose-if|unavailable-subtitle|on-arrival|go-to|call):.*$/gm, ' ')
+    .replace(/^(title|subtitle|new-page|tags|priority|order|max-visits|view-if|choose-if|unavailable-subtitle|on-arrival|go-to|call|face-image|wide-image):.*$/gm, ' ')
     .replace(/^# prose-audit:.*$/gm, ' ')
     .replace(/^=\s+.*$/gm, ' ')
     .replace(/^-\s+[@#].*$/gm, ' ')
