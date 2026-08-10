@@ -30,7 +30,7 @@ The active scene flow is:
 root
   -> poland_intro
   -> poland_hub
-       -> draw from Party, Government, Negotiation, Major Reform or Foreign Affairs
+       -> draw from Party, Government, Negotiation or Major Reform
        -> persistent three-card agenda
        -> optional advisor portrait / leadership reshuffle
        -> play one dilemma -> poland_card_finish -> poland_advance
@@ -165,7 +165,7 @@ cooldown.
 
 ### Foreign affairs
 
-The recurring deck has four country-level files: the EU, Hungary, the United
+Party Affairs includes four country-level cards: the EU, Hungary, the United
 States and Ukraine after Russia's full-scale invasion. Elections and shocks
 change who is available abroad and what that relationship can achieve.
 
@@ -306,17 +306,17 @@ The inherited currencies are now separated by political role.
 | June 2023 | News desk: the 4 June march and renewed “Not one more” protests |
 | July 2023 | Konfederacja's summer surge, competing PiS solidarism and the election-readiness projection |
 | August–September 2023 | Three Sejm lists versus a shared Senate Pact, five-current guarantees and the visa scandal |
-| October–December 2023 | Parliamentary result, Morawiecki's presidential nomination, investiture, Sejm-led cabinet attempt, ministries, transfer of power, Braun's menorah attack, public media, Independence Day and the inherited budget |
-| January–March 2024 | Competing prosecutor commands, Kamiński/Wąsik warrants and pardons, Republika's advertiser crisis, farmers, Kanał Zero, the KRS action plan and the Sejm's Tribunal resolution |
+| October–December 2023 | Parliamentary result, Morawiecki's presidential nomination, investiture, Sejm-led cabinet attempt, ministries, transfer of power, a conditional PSL succession and right realignment after exclusion, or Hołownia's anti-PiS/anti-KO Poland 2050 relaunch when his party is excluded, Braun's menorah attack, public media, Independence Day and the inherited budget |
+| January–March 2024 | Competing prosecutor commands, Kamiński/Wąsik warrants and pardons, Republika's advertiser crisis, farmers, Kanał Zero, the KRS action plan and the Sejm's Tribunal resolution; on Hołownia's relaunch route, Zieloni dissolve, guarantee their first three MPs to Poland 2050 and split any larger delegation with Nowoczesna, strengthening both his 2025 presidential campaign and later leadership retention |
 | April–May 2024 | Local and abortion votes, first KPO payment, Article 7 closure and the coalition fight over European credit |
 | June–July 2024 | IVF delivery, the Belarus-border soldier's death, European elections and PSL's defeat of abortion decriminalisation |
 | August–October 2024 | Widow's pension, movement reckoning, flood reconstruction, migration, Razem's possible exit, Tribunal repair and a negotiated Suwerenna Polska vote that can produce absorption, federation, refusal or individual accessions |
 | November–December 2024 | Variable US presidential election, Independence Day, KO and Left presidential nominations, Christmas Eve labour reform, KPO co-financing and the first full coalition budget |
 | January–March 2025 | Separate Left presidential campaigns, Braun's Konfederacja rupture, religion and health education, asylum suspension, gender-recognition procedure and the spring audit of the movement settlement |
 | April–June 2025 | Braun's Oleśnica hospital confrontation, shorter-working-time pilot, presidential election, cabinet confidence and a gameplay-driven Third Way survival test |
-| July–September 2025 | Hołownia's PiS talks under either a surviving joint council or two separate parties, Braun's separate seven-count indictment, a cabinet reshuffle or post-confidence formation branch, a conditional Nawrocki oath crisis and compulsory inauguration, Russian drone incursion and Hołownia's announced departure |
+| July–September 2025 | Hołownia's PiS talks unless his anti-duopoly relaunch foreclosed them, Braun's separate seven-count indictment, a cabinet reshuffle or post-confidence formation branch, a conditional Nawrocki oath crisis and compulsory inauguration, Russian drone incursion and a Hołownia succession only if the comeback's retention test fails or presidential office forces it |
 | October–December 2025 | A six-file KO consolidation convention with persistent component parties and multiple outcomes, KPO review, Marshal rotation, Independence Day, EU marriage recognition, collective bargaining, Left leadership, CJEU–Tribunal collision and the post-presidential budget |
-| January–March 2026 | Poland 2050 chooses Hołownia's successor; a surviving Third Way faces a second gameplay-driven test, while a separated Poland 2050 can itself split; a Trump-dependent ambassador–Marshal crisis or alternate Washington review, competing KRS bills, the de-personalised centrist party and six Tribunal vacancies |
+| January–March 2026 | Poland 2050 chooses Hołownia's successor only when the 2025 succession opened; otherwise the comeback leaves him in charge. A surviving Third Way faces a second gameplay-driven test, while a separated Poland 2050 can itself split; a Trump-dependent ambassador–Marshal crisis or alternate Washington review, competing KRS bills, the de-personalised centrist party and six Tribunal vacancies |
 | April–July 2026 | KO component representation, Rozwój+ association-building and PiS's individual loyalty ultimatum, PIP/KPO enforcement, Kanał Zero television, partnership legislation and veto, Tribunal competence, Braun procedure, centrist rupture, hate crime, appointments and the final KPO window |
 | August–October 2026 | Individual Rozwój+ hearings followed by a conditional club and possible party; **Scenario horizon:** 2027 budget red lines and a possible judicial-status bill at the Palace |
 | November–December 2026 | **Scenario horizon:** Independence Day, a conditional constructive no-confidence motion, final budget, and a conditional snap election followed by presidential and Sejm cabinet attempts |
@@ -580,14 +580,14 @@ choice.
 The coloured percentages are no longer independent counters. Eight mutually
 exclusive blocs sum to the electorate:
 
-1. metropolitan liberals;
-2. liberal professionals;
+1. the urban middle class;
+2. professionals and academics;
 3. public-service families;
 4. industrial and logistics voters;
 5. provincial welfare voters;
 6. rural localists;
 7. older welfare households;
-8. anti-establishment youth.
+8. young adults and students.
 
 Each bloc has an electorate share, likely turnout, economic and cultural
 preferences, and a score for every active party. Organisation, issue

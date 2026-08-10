@@ -582,86 +582,491 @@ Organisation and delegate arithmetic are unchanged.
 
 @right_reunification_2027
 # scenario-ledger: PIS-13, PIS-14
-# prose-audit: Grade A — Live organisations negotiate one committee without silently dissolving their parties; a welfare-conservative vehicle activates only from an independent current and real PSL cooperation.
-title: The right attempts a 2027 reunification congress
-subtitle: PiS, Rozwój+, Konfederacja and Korona bargain over one committee, list shares and a named premiership
+# prose-audit: Grade A — Duda's completed third act, live fragmentation, a seeded attempt and separately recorded party votes decide whether Prawica forms; a failed congress mutates no affiliation.
+title: Andrzej Duda calls the founding congress of Prawica
+subtitle: [? if sejm_electoral_system = "mixed_230" or sejm_electoral_system = "fptp_460": With Korona already expelled, Duda warns that divided right-wing candidates will simply hand their districts to the opposition?][? if sejm_electoral_system = "proportional": Every surviving centre-right organisation votes separately on Duda's coalition offer?]
 new-page: true
 tags: poland_event
 priority: 38
 order: 48
 max-visits: 1
-view-if: continuous_campaign = 1 and year = 2027 and month >= 5 and pis_alternative_stage >= 1 and election_2027_terminal = 0
+view-if: continuous_campaign = 1 and ((year = 2026 and month >= 11) or (year = 2027 and month <= 9)) and prawica_stage = 0 and (prawica_fragmentation_score >= 55 or sejm_electoral_system = "mixed_230" or sejm_electoral_system = "fptp_460") and prawica_attempt_roll < prawica_attempt_threshold and duda_stage >= 1 and duda_programme_reach >= 40 and duda_organisation >= 25 and president_name != "Andrzej Duda" and prime_minister != "Andrzej Duda" and prawica_pis_government_block = 0 and election_2027_terminal = 0
 on-arrival: {!
 const groups = Q.rival_group_records || [];
 const get = function(id) { return groups.find(function(record) { return record.id == id; }); };
-const rightCongressIds = ["pis_party", "rozwoj_plus"].concat(
-    Q.mentzen_bosak_split == 1
-        ? ["nowa_nadzieja", "ruch_narodowy"]
-        : ["konf_committee"]
-).concat(["kkp"]);
-const liveIds = rightCongressIds.filter(function(id) {
-    const record = get(id);
-    return record && record.active;
-});
-const namedPremier = [Q.pis_leader, "Mateusz Morawiecki", "Beata Szydło"].find(function(name) {
-    return name && name != Q.president_name && name != Q.prime_minister &&
-        !["Jarosław Kaczyński", "Zbigniew Ziobro", "Przemysław Czarnek"].includes(name);
-}) || "Mariusz Błaszczak";
-const organisation = liveIds.reduce(function(total, id) {
-    return total + Number(get(id).organisation || 0);
-}, 0);
-const succeeds = liveIds.length >= 2 && organisation >= 95 &&
-    Number(Q.far_right_fragmentation || 0) < 85;
-if (succeeds) {
-    for (const id of liveIds) {
-        const record = get(id);
-        record.list_committee = "right_2027";
-        record.contesting = 1;
-        record.projected_seats = 0;
-        record.negotiated_list_share = Math.round(
-            Math.max(1, Number(record.organisation) || 0) * 100 /
-            Math.max(1, organisation)
+const decisions = [];
+const jowActive = ["mixed_230", "fptp_460"].includes(Q.sejm_electoral_system);
+const fragmentBonus = Math.min(12, Math.max(0,
+    Math.floor((Number(Q.prawica_fragmentation_score || 0) - 55) / 3)));
+const organisationBonus = Math.min(10, Math.max(0,
+    Math.floor((Number(Q.duda_organisation || 0) - 25) / 5)));
+const pollFor = function(sourceId, record) {
+    const value = Number(Q[sourceId + "_poll"]);
+    if (Number.isFinite(value) && value > 0) return Math.round(value * 10) / 10;
+    const recordValue = Number(record && record.vote_intent);
+    return Number.isFinite(recordValue) ? Math.round(recordValue * 10) / 10 : 0;
+};
+const vote = function(spec) {
+    const record = spec.recordId ? get(spec.recordId) : null;
+    const poll = spec.poll === undefined
+        ? pollFor(spec.sourceId, record)
+        : Math.max(0, Math.round(Number(spec.poll || 0) * 10) / 10);
+    let score = 20;
+    const positive = [];
+    const negative = [];
+    if (poll < 5) {
+        score += 32;
+        positive.push("below 5% and needs threshold protection (+32)");
+    } else if (poll <= 8) {
+        score += 14;
+        positive.push("polling between 5% and 8% favours a shared list (+14)");
+    } else if (poll >= 12) {
+        score -= 15;
+        negative.push("polling at 12% or more supports an independent campaign (-15)");
+    }
+    if (fragmentBonus) {
+        score += fragmentBonus;
+        positive.push("fragmentation makes reunification valuable (+" + fragmentBonus + ")");
+    }
+    if (organisationBonus) {
+        score += organisationBonus;
+        positive.push("Duda has a usable national organisation (+" + organisationBonus + ")");
+    }
+    for (const modifier of spec.modifiers || []) {
+        score += modifier.value;
+        (modifier.value >= 0 ? positive : negative).push(
+            modifier.reason + " (" + (modifier.value >= 0 ? "+" : "") +
+                modifier.value + ")"
         );
     }
-    Q.right_reunification_outcome = "Shared Right 2027 committee under premier nominee " + namedPremier;
-} else {
-    for (const id of liveIds) {
-        const record = get(id);
-        record.list_committee = id;
-        record.contesting = 1;
+    if (jowActive && spec.eligible) {
+        score = Math.max(50, score);
+        positive.push("Duda's JOW warning—one shared district candidate or hand the seat to the opposition—makes refusal impractical");
     }
-    Q.right_reunification_outcome = "Reunification fails over list places and the premiership";
+    if (!spec.eligible && spec.ineligibleReason) {
+        negative.push(spec.ineligibleReason);
+    }
+    const accepts = Boolean(spec.eligible) && score >= 50;
+    const decision = {
+        id: spec.id,
+        record_id: spec.recordId || "",
+        source_id: spec.sourceId || "",
+        party_key: spec.partyKey || "",
+        name: spec.name,
+        eligible: spec.eligible ? 1 : 0,
+        poll_estimate: poll,
+        score: score,
+        accepted: accepts ? 1 : 0,
+        positive_reasons: positive,
+        negative_reasons: negative,
+        organisation: Math.max(1, Number(spec.organisation ||
+            record && record.organisation || 1))
+    };
+    decisions.push(decision);
+    return decision;
+};
+const pis = get("pis_party");
+const pisLeader = String(Q.pis_leader || pis && pis.leader || "");
+const pisModifiers = [];
+if (Q.pis_collapsed) pisModifiers.push({value: 14, reason: "PiS has collapsed as the right's sole vehicle"});
+if (Q.pis_split) pisModifiers.push({value: 8, reason: "a PiS split rewards reunification"});
+const collapseModifier = Math.min(14, Math.max(0,
+    Math.round(Number(Q.pis_collapse_pressure || 0) / 6)));
+if (collapseModifier) pisModifiers.push({value: collapseModifier, reason: "PiS collapse pressure favours a common list"});
+if (["Mateusz Morawiecki", "Beata Szydło"].includes(pisLeader)) {
+    pisModifiers.push({value: 8, reason: "moderate successor leadership accepts Duda's arbitration"});
 }
-const welfare = get("pis_welfare");
-if (welfare && welfare.independent && Number(Q.psl_relation || 0) >= 60) {
-    welfare.kind = "party";
-    welfare.active = 1;
-    welfare.contesting = 1;
-    welfare.ballot_name = "Solidarna Polska Społeczna";
-    welfare.list_committee = "social_conservative_2027";
-    welfare.coalition_openness = 58;
-    welfare.exclusive_seats = Math.min(3, Number(welfare.exclusive_seats || 0));
+if (pisLeader.includes("Kaczyński")) {
+    pisModifiers.push({value: -18, reason: "Kaczyński leadership rejects an outside arbiter"});
 }
-Q.pis_alternative_stage = 2;
+if (["Przemysław Czarnek", "Patryk Jaki", "Zbigniew Ziobro"].includes(pisLeader)) {
+    pisModifiers.push({value: -12, reason: "hard-line leadership rejects the centre-right charter"});
+}
+if (Number(Q.pis_poll || 0) >= 25) {
+    pisModifiers.push({value: -8, reason: "PiS still polls strongly enough to defend its own list"});
+}
+vote({
+    id: "pis_party", recordId: "pis_party", sourceId: "pis",
+    partyKey: "pis", name: "Prawo i Sprawiedliwość",
+    eligible: Boolean(pis && pis.active), modifiers: pisModifiers,
+    ineligibleReason: "PiS no longer has a live organisation"
+});
+const rozwoj = get("rozwoj_plus");
+const rozwojModifiers = [
+    {value: 15, reason: "developmental policy is compatible with Prawica"}
+];
+if (String(Q.duda_endorsement || "").includes("Morawiecki")) {
+    rozwojModifiers.push({value: 10, reason: "Duda previously endorsed its leader"});
+}
+vote({
+    id: "rozwoj_plus", recordId: "rozwoj_plus", sourceId: "rozwoj",
+    partyKey: "rozwoj-plus", name: "Rozwój+",
+    eligible: Boolean(rozwoj && rozwoj.active), modifiers: rozwojModifiers,
+    ineligibleReason: "Rozwój+ does not exist as a live organisation"
+});
+const konfModifiers = function() {
+    const modifiers = [];
+    if (Q.far_right_split) modifiers.push({value: 8, reason: "Korona has already left the federation"});
+    const charterPenalty = Math.min(12, Math.max(0,
+        Math.round((Number(Q.far_right_agenda || 0) - 30) / 5)));
+    if (charterPenalty) modifiers.push({value: -charterPenalty, reason: "hostility to Duda's moderate constitutional charter"});
+    return modifiers;
+};
+if (Q.mentzen_bosak_split == 1) {
+    const newHope = get("nowa_nadzieja");
+    const national = get("ruch_narodowy");
+    vote({
+        id: "nowa_nadzieja", recordId: "nowa_nadzieja",
+        sourceId: "new_hope", partyKey: "new-hope", name: "Nowa Nadzieja",
+        eligible: Boolean(newHope && newHope.active),
+        modifiers: konfModifiers().concat([{value: 4, reason: "the split federation needs a viable ballot line"}]),
+        ineligibleReason: "Nowa Nadzieja has no live successor organisation"
+    });
+    vote({
+        id: "ruch_narodowy", recordId: "ruch_narodowy",
+        sourceId: "national_movement", partyKey: "national-movement", name: "Ruch Narodowy",
+        eligible: Boolean(national && national.active),
+        modifiers: konfModifiers().concat([{value: 2, reason: "the split federation needs a viable ballot line"}]),
+        ineligibleReason: "Ruch Narodowy has no live successor organisation"
+    });
+} else {
+    const konf = get("konf_committee");
+    vote({
+        id: "konf_committee", recordId: "konf_committee", sourceId: "konf",
+        partyKey: "konf", name: "Konfederacja",
+        eligible: Boolean(konf && konf.active),
+        modifiers: konfModifiers().concat([{value: -5, reason: "the intact federation resists a moderate umbrella"}]),
+        ineligibleReason: "Konfederacja has no live federation"
+    });
+}
+vote({
+    id: "kkp", recordId: "kkp", sourceId: "korona",
+    partyKey: "korona", name: "Korona / KKP", eligible: false, modifiers: [],
+    ineligibleReason: jowActive
+        ? "Korona / KKP was expelled before Duda offered the JOW district pact"
+        : "Korona / KKP is never invited to Prawica"
+});
+const psl = get("psl_party");
+const pslOutside = Q.government_party != "psl" && !Q.ministry_psl_in_cabinet;
+const pslModifiers = [];
+if (Q.third_way_split) pslModifiers.push({value: 6, reason: "the Third Way settlement has collapsed"});
+if (String(Q.psl_leader_route || "").includes("Zgorzelski")) {
+    pslModifiers.push({value: 12, reason: "the Zgorzelski conservative route favours entry"});
+}
+if (Q.third_way_active && !Q.third_way_split && Number(Q.third_way_cohesion || 0) >= 65) {
+    pslModifiers.push({value: -22, reason: "a durable Third Way settlement remains available"});
+}
+vote({
+    id: "psl_party", recordId: "psl_party", sourceId: "psl",
+    partyKey: "psl", name: "Polskie Stronnictwo Ludowe",
+    eligible: Boolean(psl && psl.active && pslOutside), modifiers: pslModifiers,
+    ineligibleReason: "PSL is eligible only while fully outside government"
+});
+vote({
+    id: "tak_rozwoj_party", recordId: "tak_rozwoj_party", sourceId: "tak_rozwoj", partyKey: "tak-dla-rozwoju",
+    name: Q.tak_rozwoj_party_name || "Tak! Dla Rozwoju",
+    eligible: Boolean(Q.tak_dla_rozwoju_legal_party_formed &&
+        Q.tak_rozwoj_party_name != "Akcja Socjalistyczna"),
+    organisation: Math.max(1, Number(Q.tak_rozwoj_activists || 0)),
+    modifiers: [
+        {value: 14, reason: "development credentials fit the common charter"},
+        {value: Math.min(8, Math.max(0, Math.floor(Number(Q.tak_rozwoj_development_credibility || 0) / 10))), reason: "its public-investment credibility strengthens the bargain"}
+    ],
+    ineligibleReason: Q.tak_rozwoj_party_name == "Akcja Socjalistyczna"
+        ? "the Akcja Socjalistyczna successor is ineligible"
+        : "Tak! Dla Rozwoju is not a legal party"
+});
+vote({
+    id: "p0_party", recordId: "p0_party", sourceId: "p0", partyKey: "partia-zero",
+    name: Q.p0_name || "Partia Zero", eligible: Boolean(Q.p0_formed),
+    organisation: Math.max(1, Number(Q.p0_organisation || 20)),
+    modifiers: Number(Q.p0_poll || 0) >= 8
+        ? [{value: -10, reason: "strong independent polling rewards staying outside"}]
+        : [],
+    ineligibleReason: "P0 has not formed"
+});
+const kukiz = get("kukiz15");
+vote({
+    id: "kukiz15", recordId: "kukiz15", sourceId: "kukiz",
+    partyKey: "kukiz", name: "Kukiz'15",
+    eligible: Boolean(Q.kukiz_active && kukiz && kukiz.active),
+    modifiers: [{value: 12, reason: "the charter protects its direct-democracy commitments"}],
+    ineligibleReason: "Kukiz'15 no longer exists as an organisation"
+});
+const solidarna = get("solidarna");
+const solidarnaLeader = String(solidarna && solidarna.leader || Q.pis_sovereigntist_leader || "");
+const solidarnaModifiers = [{value: 4, reason: "a common list offers threshold survival"}];
+if (["Zbigniew Ziobro", "Patryk Jaki"].includes(solidarnaLeader) ||
+    Number(Q.cultural_issue_salience || 0) >= 70) {
+    solidarnaModifiers.push({value: -30, reason: "hard-line leadership rejects Duda's centre-right charter"});
+}
+vote({
+    id: "solidarna", recordId: "solidarna", sourceId: "suwerenna",
+    partyKey: "solidary-poland", name: solidarna && solidarna.name || "Solidarna Polska",
+    eligible: Boolean(solidarna && solidarna.active && !Q.suwerenna_merged),
+    modifiers: solidarnaModifiers,
+    ineligibleReason: "Solidarna / Suwerenna Polska no longer exists independently"
+});
+const porozumienie = get("porozumienie");
+vote({
+    id: "porozumienie", recordId: "porozumienie", sourceId: "porozumienie",
+    partyKey: "agreement", name: "Porozumienie",
+    eligible: Boolean(Q.porozumienie_active && porozumienie && porozumienie.active),
+    modifiers: [{value: 18, reason: "centre-right compatibility and weak independent prospects favour entry"}],
+    ineligibleReason: "Porozumienie no longer exists"
+});
+const republikanie = get("republikanie");
+vote({
+    id: "republikanie", recordId: "republikanie", sourceId: "republikanie", partyKey: "republicans",
+    name: "Partia Republikańska",
+    eligible: Boolean(Q.republikanie_formed && republikanie && republikanie.active),
+    modifiers: [{value: 18, reason: "centre-right compatibility and weak independent prospects favour entry"}],
+    ineligibleReason: "Partia Republikańska no longer exists"
+});
+const odnowa = get("odnowa");
+vote({
+    id: "odnowa", recordId: "odnowa", sourceId: "odnowa", partyKey: "odnowa",
+    name: "OdNowa RP", eligible: Boolean(Q.odnowa_formed && odnowa && odnowa.active),
+    modifiers: [{value: 18, reason: "centre-right compatibility and weak independent prospects favour entry"}],
+    ineligibleReason: "OdNowa RP no longer exists"
+});
+const sikorski = get("ko_splinter");
+const sikorskiIndependent = Boolean(Q.ko_splinter_active && sikorski &&
+    sikorski.active && sikorski.independent &&
+    sikorski.leader == "Radosław Sikorski");
+const sikorskiModifiers = [
+    {value: 12, reason: "Atlanticist security policy fits Duda's pro-NATO charter"}
+];
+if (sikorski && sikorski.list_committee == "common_centre_2027") {
+    sikorskiModifiers.push({value: -18, reason: "an existing common-centre pact offers another viable list"});
+}
+vote({
+    id: "ko_splinter", recordId: "ko_splinter", sourceId: "ko_splinter",
+    partyKey: "nowa-platforma", name: sikorski && sikorski.name || "Sikorski breakaway",
+    eligible: sikorskiIndependent, modifiers: sikorskiModifiers,
+    ineligibleReason: "only an independent KO splinter led by Radosław Sikorski is eligible"
+});
+
+// All votes are final before any affiliation is touched.
+const accepted = decisions.filter(function(decision) { return decision.accepted; });
+const pisAccepted = accepted.some(function(decision) { return decision.id == "pis_party"; });
+const otherAcceptors = accepted.filter(function(decision) {
+    return decision.id != "pis_party" && decision.id != "kkp";
+});
+const succeeds = pisAccepted && otherAcceptors.length >= 2;
+Q.prawica_decision_records = decisions;
+Q.prawica_vote_table = decisions.map(function(decision) {
+    const positives = decision.positive_reasons.length
+        ? "yes: " + decision.positive_reasons.join("; ")
+        : "yes: none";
+    const negatives = decision.negative_reasons.length
+        ? "no: " + decision.negative_reasons.join("; ")
+        : "no: none";
+    return decision.name + " — " + (decision.eligible ? "eligible" : "ineligible") +
+        ", " + decision.poll_estimate.toFixed(1) + "%, score " + decision.score +
+        ", " + (decision.accepted ? "YES" : "NO") + " (" +
+        positives + "; " + negatives + ")";
+}).join("<br>");
+if (succeeds) {
+    Q.prawica_formed = 1;
+    Q.prawica_leader = "Andrzej Duda";
+    Q.prawica_pm_candidate = "Andrzej Duda";
+    Q.prawica_platform = "Centre-right, pro-NATO and reformist rather than anti-EU; protective of family benefits and public investment; committed to constitutional parliamentary methods and component autonomy";
+    Q.prawica_member_ids = accepted.map(function(decision) {
+        return decision.record_id;
+    }).filter(Boolean).concat(["duda_movement"]);
+    Q.prawica_member_source_ids = accepted.map(function(decision) {
+        return decision.source_id;
+    }).filter(Boolean).concat(["duda"]);
+    Q.prawica_member_source_ids = Array.from(new Set(Q.prawica_member_source_ids));
+    Q.prawica_member_party_keys = accepted.map(function(decision) {
+        return decision.party_key;
+    }).filter(Boolean).concat(["duda", "prawica"]);
+    if (accepted.some(function(decision) {
+        return decision.id == "konf_committee";
+    })) {
+        for (const component of [
+            {id: "nowa_nadzieja", key: "new-hope"},
+            {id: "ruch_narodowy", key: "national-movement"}
+        ]) {
+            const record = get(component.id);
+            if (!record || !record.active) continue;
+            Q.prawica_member_ids.push(component.id);
+            Q.prawica_member_party_keys.push(component.key);
+        }
+    }
+    if (accepted.some(function(decision) { return decision.id == "solidarna"; })) {
+        Q.prawica_member_party_keys.push("sovereign-poland");
+    }
+    Q.prawica_member_party_keys = Array.from(new Set(Q.prawica_member_party_keys));
+    Q.prawica_member_ids = Array.from(new Set(Q.prawica_member_ids));
+    const totalWeight = accepted.reduce(function(total, decision) {
+        return total + decision.organisation;
+    }, 0) + Math.max(1, Number(Q.duda_organisation || 1));
+    const shares = accepted.map(function(decision) {
+        const exact = decision.organisation * 100 / Math.max(1, totalWeight);
+        return {decision: decision, share: Math.floor(exact), remainder: exact % 1};
+    });
+    const dudaExact = Math.max(1, Number(Q.duda_organisation || 1)) * 100 /
+        Math.max(1, totalWeight);
+    shares.push({
+        decision: {id: "duda_movement", record_id: "duda_movement", source_id: "duda"},
+        share: Math.floor(dudaExact), remainder: dudaExact % 1
+    });
+    let allocated = shares.reduce(function(total, entry) { return total + entry.share; }, 0);
+    shares.sort(function(a, b) { return b.remainder - a.remainder; });
+    for (let point = allocated; point < 100; point += 1) {
+        shares[(point - allocated) % shares.length].share += 1;
+    }
+    Q.prawica_member_shares = {};
+    for (const entry of shares) {
+        const decision = entry.decision;
+        decision.negotiated_share = entry.share;
+        Q.prawica_member_shares[decision.source_id || decision.id] = entry.share;
+        const record = decision.record_id ? get(decision.record_id) : null;
+        if (!record) continue;
+        record.list_committee = "right_2027";
+        record.club = "prawica";
+        record.parent = "Prawica";
+        record.contesting = 1;
+        record.in_cabinet = 0;
+        record.support_mode = "opposition";
+        record.prawica_member = 1;
+        record.legal_status = decision.id == "duda_movement"
+            ? "founding vehicle of Prawica"
+            : "founding organisation of Prawica";
+        record.negotiated_list_share = entry.share;
+    }
+    Q.prawica_vote_table += "<br>Prawica negotiated shares: " +
+        shares.map(function(entry) {
+            const name = entry.decision.name || "Duda civic vehicle";
+            return name + " " + entry.share + "%";
+        }).join(" · ");
+    for (const id of Q.prawica_member_ids) {
+        const record = get(id);
+        if (!record || id == "kkp") continue;
+        record.list_committee = "right_2027";
+        record.club = "prawica";
+        record.parent = "Prawica";
+        record.contesting = 1;
+        record.in_cabinet = 0;
+        record.support_mode = "opposition";
+        record.prawica_member = 1;
+        record.legal_status = id == "duda_movement"
+            ? "founding vehicle of Prawica"
+            : "founding organisation of Prawica";
+    }
+    const committee = get("prawica_committee");
+    if (committee) {
+        committee.active = 1;
+        committee.contesting = 1;
+        committee.name = "Prawica";
+        committee.leader = "Andrzej Duda";
+        committee.parent = "Prawica";
+        committee.legal_status = "electoral coalition and parliamentary club";
+        committee.list_committee = "right_2027";
+        committee.club = "prawica";
+    }
+    const oldZp = get("zp_committee");
+    if (oldZp) {
+        oldZp.active = 0;
+        oldZp.contesting = 0;
+        oldZp.legal_status = "replaced by Prawica";
+    }
+    if (Q.prawica_member_source_ids.includes("psl")) {
+        Q.third_way_active = 0;
+        Q.third_way_split = 1;
+        Q.psl_support_mode = "opposition";
+    }
+    if (Q.prawica_member_source_ids.includes("kukiz")) {
+        Q.kukiz_left_kp = 1;
+        Q.kukiz_list_committee = "right_2027";
+    }
+    if (Q.prawica_member_source_ids.includes("tak_rozwoj")) {
+        Q.tak_rozwoj_list_committee = "right_2027";
+    }
+    if (Q.prawica_member_source_ids.includes("porozumienie")) {
+        Q.porozumienie_list_committee = "right_2027";
+    }
+    if (Q.prawica_member_source_ids.includes("suwerenna")) {
+        Q.suwerenna_own_list = 0;
+    }
+    if (["konf", "new_hope", "national_movement"].some(function(id) {
+        return Q.prawica_member_source_ids.includes(id);
+    }) && !Q.far_right_split) {
+        const kkp = get("kkp");
+        const declared = Math.max(0, Math.round(Number(kkp &&
+            kkp.exclusive_seats || 0)));
+        const moved = Math.min(Math.max(0, Number(Q.konf_seats || 0)), declared);
+        Q.konf_seats = Math.max(0, Number(Q.konf_seats || 0) - moved);
+        Q.korona_seats = Math.max(0, Number(Q.korona_seats || 0) + moved);
+        Q.far_right_split = 1;
+        if (kkp) {
+            kkp.list_committee = "korona";
+            kkp.club = "korona";
+            kkp.parent = "Korona";
+            kkp.contesting = 1;
+            kkp.exclusive_seats = declared;
+            kkp.mp_count = declared;
+            kkp.sejm_mps = declared;
+        }
+    }
+    Q.right_reunification_outcome = jowActive
+        ? "Duda's one-candidate JOW argument wins every invited party and founds Prawica"
+        : "Prawica founded under Andrzej Duda, its leader and prime-ministerial nominee";
+} else {
+    Q.prawica_formed = 0;
+    Q.prawica_member_ids = [];
+    Q.prawica_member_source_ids = [];
+    Q.prawica_member_party_keys = [];
+    Q.prawica_member_shares = {};
+    Q.right_reunification_outcome = "Prawica founding congress fails: PiS and two other organisations did not all accept";
+}
+Q.prawica_stage = 1;
+Q.pis_alternative_stage = Math.max(2, Number(Q.pis_alternative_stage || 0));
 Q.news_headline = Q.right_reunification_outcome;
 !}
 
-= [+ date_label +] — One list is not one party
+= [+ date_label +] — The Prawica vote
 
-**[+ right_reunification_outcome +].** Shared `list_committee` membership is
-counted once in polling and elections, then divided by the negotiated component
-shares. No club or legal organisation disappears unless the congress actually
-succeeds on those terms.
+**[+ right_reunification_outcome +].** [? if prawica_formed: Prawica is one
+electoral alliance and parliamentary club under **Andrzej Duda**, who is also
+its prime-ministerial nominee. Its component parties keep their legal
+identities, leaders, MPs and internal policy autonomy.?][? if not prawica_formed: Every list,
+club, colour and logo remains as it was before the vote. Duda's existing personal
+movement, if any, is not dissolved by the failed congress.?]
+
+[? if sejm_electoral_system = "mixed_230" or sejm_electoral_system = "fptp_460":
+Duda makes no appeal to sentiment. He puts the new electoral map on the screen:
+two right-wing candidates in one winner-take-all district hand that seat to their
+opponent, while one shared candidate lets every component survive inside a
+competitive national bloc. That arithmetic buys over every invited organisation.
+PSL hears the offer only if it is outside government. Korona/KKP, expelled before
+the congress, remains outside the pact.?][? if sejm_electoral_system = "proportional":
+The congress records every requested organisation's eligibility, polling
+estimate, score, yes/no result and positive and negative reasons before any
+affiliation changes. Korona/KKP remains excluded.?]
+
+**Founding roll:** [+ prawica_attempt_roll +] / [+ prawica_attempt_threshold +]
+· **fragmentation:** [+ prawica_fragmentation_score +]/100.
+
+[+ prawica_vote_table +]
 
 - @right_reunion_record
 - @right_reunion_social
 
 @right_reunion_record
-title: Publish the list shares and premiership bargain
-subtitle: Make the common committee's internal allocation visible before election day.
-on-arrival: election_information_integrity += 5; media_capacity += 3; public_trust += 2; news_headline = "The right's committee shares and premier bargain become public"
+title: Publish the candidate map, shares and premiership bargain
+subtitle: Show each signatory exactly how Duda's common ballot line preserves its place.
+on-arrival: election_information_integrity += 5; media_capacity += 3; public_trust += 2; news_headline = "Prawica publishes its candidate map, internal shares and premier bargain"
 
-The election engine can now count one committee and preserve its components.
+[? if sejm_electoral_system = "mixed_230" or sejm_electoral_system = "fptp_460":
+The published map makes Duda's argument concrete: one Prawica nominee contests
+each JOW, and each signatory receives districts through the negotiated allocation.
+They banded together because competing right-wing nominees would cancel each
+other out.?][? if sejm_electoral_system = "proportional": The election engine
+counts Prawica once at the coalition threshold and preserves the negotiated
+component allocation.?]
 
 - @poland_event_queue: Return to the list model
 
@@ -670,8 +1075,8 @@ title: Contest the welfare-conservative route on material guarantees
 subtitle: Protect welfare voters from culture-war capture while accepting that equality bargaining becomes harder.
 on-arrival: labor_credibility += 3; rural_support += 3; minority_safety -= 2; far_right_agenda += 2; news_headline = "Lewica contests the post-PiS welfare route"
 
-The social-conservative outside option feeds rural affinity and coalition red
-lines rather than inheriting all PiS voters.
+Any ineligible organisation remains outside Prawica with its own organisation
+and branding.
 
 - @poland_event_queue: Return to the list model
 
@@ -716,7 +1121,8 @@ if (Q.third_way_active && Number(Q.third_way_cohesion || 0) >= 65 && psl && p205
     }
     const centreRecords = [psl, p2050, ko, get("unia_centrum"),
         get("ko_splinter")].filter(function(record) {
-        return record && record.active;
+        return record && record.active &&
+            !(Q.prawica_member_ids || []).includes(record.id);
     });
     const centreSeats = centreRecords.reduce(function(total, record) {
         return total + Math.max(1, Number(record.exclusive_seats) ||

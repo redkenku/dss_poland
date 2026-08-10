@@ -73,7 +73,7 @@ The GitHub workflow performs the same broad operation and publishes
 | `source/info.dry` | Game title, author, IFID, and top-level metadata | Yes |
 | `source/scenes/root.scene.dry` | Entry menu and initial state | Yes, carefully |
 | `source/scenes/poland_hub.scene.dry` | Active Polish hand and pinned system cards | Yes |
-| `source/scenes/cards/` | Contextual Party, Government, Negotiation, Major Reform and Foreign cards | Yes |
+| `source/scenes/cards/` | Contextual Party, Government, Negotiation and Major Reform cards | Yes |
 | `source/scenes/poland_advisors.scene.dry` | Twelve directly rendered Polish adviser cards | Yes |
 | `source/scenes/poland_advisor_groups.scene.dry` | Compatibility menus for older saves | Yes, carefully |
 | `source/scenes/poland_advance.scene.dry` | Polish monthly update and dated router | Yes |
@@ -353,9 +353,17 @@ main hand: party/government/adviser actions ◄─────────┘
 
 This is the system that must be converted, not just the opening scene.
 
-The active Polish hand has five contextual live decks:
+The active Polish hand has four contextual live decks:
 
-- **Party Affairs** is always available and draws one of nineteen party cards.
+- **Party Affairs** is always available. Its political and organisational
+  cards also include four foreign-relationship files: the EU, Hungary, the
+  United States and wartime Ukraine. Opposition builds democratic,
+  parliamentary and party channels without implementing state policy;
+  government can negotiate, fund and deliver national policy. Hungarian and
+  US election results change the available partners. A rightward European
+  Parliament adds a visible headwind to progressive-reform passage, while
+  persistently weak EU and US access produces an explicit growth and
+  employment shock.
 - **Government Affairs** requires government participation, Sejm confidence,
   no caretaker cabinet and at least one Lewica-held ministry. A portfolio
   opportunity must be useful and off cooldown. Its sixteen cards comprise one
@@ -378,15 +386,6 @@ The active Polish hand has five contextual live decks:
   Government Affairs in office and Pressure & Negotiate in opposition. Their
   135 weight makes them slightly more likely than an ordinary 100-weight card
   without duplicating tags or permanent hand slots.
-- **Foreign Affairs** remains available in and out of government through four
-  files: the EU, Hungary, the United States and wartime Ukraine. Opposition
-  builds democratic, parliamentary and party channels without implementing
-  state policy; government can negotiate, fund and deliver national policy.
-  Hungarian and US election results change the available partners. A rightward
-  European Parliament adds a visible headwind to progressive-reform passage,
-  while persistently weak EU and US access produces an explicit growth and
-  employment shock.
-
 Major Reform passage scores combine accumulated preparation, public and Left
 poll strength, partner relations and internal rival currents. Holding Labour,
 Equality, Health or Justice, as appropriate, lowers the political threshold;
@@ -494,7 +493,7 @@ As of 30 July 2026:
 | Local HTTP launch | Working through `npm start` |
 | Opening date and Polish caucus qualities | Converted |
 | Status display and interface labels | Converted for the active slice |
-| Native contextual hand and time advancement | Converted; Party, ministry-bound Government, opposition Negotiation, recurring Major Reform and Foreign decks share one three-card hand with state-neutral held-card discard |
+| Native contextual hand and time advancement | Converted; Party, ministry-bound Government, opposition Negotiation and recurring Major Reform decks share one three-card hand with state-neutral held-card discard |
 | Factional advisor bureau and reshuffling | Converted; twelve advisors in five political caucuses, three active cards and a full-slate editor |
 | Dense party/institution/economy/voter ledger | Converted, including Senate, ideologies and voter blocs |
 | Dated events | Continuous October 2019–July 2023 campaign; 45 monthly leadership turns |

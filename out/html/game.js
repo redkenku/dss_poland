@@ -12,17 +12,199 @@
   var main = function(dendryUI) {
     ui = dendryUI;
     game = ui.game;
+    var achievementEngine = ui.dendryEngine;
+    var engineAchieve = achievementEngine.achieve.bind(achievementEngine);
+    achievementEngine.achieve = function(achievementName) {
+      var alreadyEarned = this.state.qualities[
+        'game_achievement_' + achievementName
+      ] === 1;
+      var result = engineAchieve(achievementName);
+      if (!alreadyEarned) {
+        window.showAchievementToast(achievementName);
+      }
+      return result;
+    };
     var engineAudio = ui.audio.bind(ui);
     ui.audio = function(audio) {
       var startScene = game.scenes['root.new_game'];
+      if (startScene && audio === startScene.audio) {
+        radioTracks = radioAudioTracks(audio);
+      }
       if (ui.currentAudio && startScene && audio === startScene.audio) {
         return;
       }
-      engineAudio(audio);
+      var enabledAudio = radioFilteredAudio(audio, startScene);
+      if (enabledAudio) {
+        engineAudio(enabledAudio);
+      } else {
+        ui.audioPlaylist = [];
+      }
     };
   };
 
   var TITLE = "Polish Red Autumn" + '_' + "redkenku";
+
+  var achievementDefinitions = {
+    game_completed: {name: "Red Autumn", image: "img/poland/cards/campaigning.webp"},
+    left_eight_percent_2020: {name: "Eight Is Enough", image: "img/poland/events/presidential-ballot-2020.webp"},
+    biedron_below_historical_2020: {name: "Jeszcze Mniej", image: "img/poland/events/pres-candidate-biedron-2020.webp"},
+    biedron_beats_bosak_2020: {name: "Wiosna Przyszła", image: "img/poland/events/pres-candidate-biedron-2020.webp"},
+    trzaskowski_president_2020: {name: "CZASKOSKI", image: "img/poland/events/pres-candidate-trzaskowski.webp"},
+    left_president_2025: {name: "Pałac dla Lewicy", image: "img/poland/events/presidential-ballot-2025.webp"},
+    first_round_president_2025: {name: "Kwaśniewski Numbers", image: "img/poland/events/presidential-ballot-2025.webp"},
+    impossible_majority: {name: "The Impossible Majority", image: "img/poland/cards/campaigning.webp"},
+    red_tide: {name: "Red Tide", image: "img/poland/cards/campaigning.webp"},
+    below_threshold: {name: "2015, Again", image: "img/poland/cards/campaigning.webp"},
+    back_in_the_ring: {name: "Back in the Ring"},
+    ill_be_back: {name: "I'll be back", image: "img/poland/events/pres-candidate-holownia-2025.webp"},
+    enter_government: {name: "Stołki i koryto", image: "img/poland/cards/coalition-council.webp"},
+    left_prime_minister: {name: "Premier Lewicy", image: "img/poland/cards/coalition-council.webp"},
+    left_only_government: {name: "Tym razem bez PSLu", image: "img/poland/cards/coalition-council.webp"},
+    democratic_coalition: {name: "Trzynastego Grudnia", image: "img/poland/cards/coalition-council.webp"},
+    wina_tuska: {name: "Wina Tuska", image: "img/poland/cards/coalition-council.webp"},
+    split_third_way_coalition: {name: "Trzecia Droga, Two Exits", image: "img/poland/cards/coalition-council.webp"},
+    left_pis_coalition: {name: "Lewica Razem z PiS", image: "img/poland/cards/coalition-council.webp"},
+    five_party_coalition: {name: "Byle nie Tusk", image: "img/poland/cards/coalition-council.webp"},
+    third_way_left_pis: {name: "The Enemy of My Confidence Vote", image: "img/poland/cards/coalition-council.webp"},
+    borrowed_left_pm: {name: "The Borrowed Throne", image: "img/poland/cards/coalition-council.webp"},
+    confidence_and_supply: {name: "Nie Chcem, Ale Muszem", image: "img/poland/cards/coalition-council.webp"},
+    no_third_way: {name: "Nie Ma Trzeciej Drogi", image: "img/poland/events/pres-candidate-kosiniak.webp"},
+    budget_concession: {name: "Trzeba anulować, bo przegramy"},
+    marshal_rotation: {name: "Marszałek Rotacyjny", image: "img/poland/events/sejm-chamber.webp"},
+    sejmflix: {name: "Sejmflix", image: "img/poland/events/sejm-chamber.webp"},
+    german_agent: {name: "Pan Jest Niemieckim Agentem"},
+    power_holding_group: {name: "Grupa Trzymająca Władzę"},
+    nocna_zmiana: {name: "Nocna Zmiana"},
+    sejm_freezer: {name: "Zamrażarka Sejmowa", image: "img/poland/events/sejm-chamber.webp"},
+    full_abortion_reform: {name: "O Canada", image: "img/poland/cards/equality-bill.webp"},
+    full_marriage_reform: {name: "Love Wins", image: "img/poland/cards/equality-bill.webp"},
+    full_church_reform: {name: "2137", image: "img/poland/cards/group-equality.webp"},
+    full_asylum_reform: {name: "No Human Is Illegal", image: "img/poland/cards/crisis-compact.webp"},
+    full_border_reform: {name: "The Thin Red Line", image: "img/poland/cards/oversight-delivery.webp"},
+    full_defence_reform: {name: "Europe Has an Army?", image: "img/poland/cards/polish-dossier.webp"},
+    full_labor_reform: {name: "Ciężka praca popłaca", image: "img/poland/cards/labour-inspection.webp"},
+    full_health_reform: {name: "The Queue Ends Here", image: "img/poland/cards/health-compact.webp"},
+    full_courts_reform: {name: "Koniec Magdalenki", image: "img/poland/cards/group-institutional.webp"},
+    three_max_reforms: {name: "Trzy Razy Tak"},
+    referendum_reform: {name: "Vox Populi"},
+    trzaskowski_freebie: {name: "The Trzaskowski Freebie", image: "img/poland/events/pres-candidate-trzaskowski.webp"},
+    nuclear_complete: {name: "Żarnowiec 2: Electric Boogaloo", image: "img/poland/events/lubiatowo-kopalino-2025.webp"},
+    peoples_atom: {name: "Turbo Polska Odjebana", image: "img/poland/events/lubiatowo-kopalino-2025.webp"},
+    second_nuclear_plant: {name: "The People’s Atom", image: "img/poland/events/lubiatowo-kopalino-2025.webp"},
+    nuclear_shelved: {name: "Atom? Nie, Dziękuję", image: "img/poland/events/lubiatowo-kopalino-2025.webp"},
+    cpk_complete: {name: "Lasek pokonany", image: "img/poland/events/cpk-baranow-2017.webp"},
+    peoples_cpk: {name: "The People’s Airport", image: "img/poland/events/cpk-baranow-2017.webp"},
+    rail_first: {name: "Railways Before Runways", image: "img/poland/events/cpk-baranow-2017.webp"},
+    cpk_public_works: {name: "CPKn’t", image: "img/poland/events/cpk-baranow-2017.webp"},
+    compensated_nationalisation: {name: "Compensation Included", image: "img/poland/cards/workers-public-services.webp"},
+    unlawful_nationalisation: {name: "Article 21 Has Left the Chat", image: "img/poland/cards/workers-public-services.webp"},
+    ownership_doctrine: {name: "Balcerowicz Musi Odejść", image: "img/poland/cards/government-affairs.webp"},
+    five_nationalisations: {name: "Jezu, kominizm"},
+    mmt_doctrine: {name: "Money Printer Goes Brrr", image: "img/poland/cards/government-affairs.webp"},
+    developmental_state: {name: "Polska w Budowie"},
+    bez_zadnego_trybu: {name: "Bez żadnego trybu", image: "img/poland/cards/cost-programme.webp"},
+    unified_left_party: {name: "All Together Now"},
+    member_led_unification: {name: "Power to the Members"},
+    binding_federation: {name: "United We Stand, Separately"},
+    razem_leaves: {name: "Osobno", image: "img/poland/events/adrian-zandberg-2020.webp"},
+    razem_leadership: {name: "Duńsko się czuję", image: "img/poland/events/left-congress.webp"},
+    miller_restoration: {name: "SLD Nie Lewica"},
+    miller_akcja: {name: "Znajdzie Się Cela dla Leszka Millera"},
+    tak_dla_rozwoju: {name: "Tak! Dla Rozwoju", image: "img/poland/events/paulina-matysiak-2019.webp"},
+    biggest_tent: {name: "The Biggest Tent"},
+    ground_game: {name: "Ground Game", image: "img/poland/cards/campaigning.webp"},
+    miller_imprisoned: {name: "Znalazła Się Cela dla Leszka Millera", image: "img/poland/events/supreme-court.webp"},
+    pps_circle: {name: "Trzech To Już Koło"},
+    club_collapse: {name: "Klub Był, Koło Zostało"},
+    rownosc_founded: {name: "Lub Czasopisma"},
+    ja_panu_nie_przerywalem: {name: "Ja Panu Nie Przerywałem", image: "img/poland/cards/hostile-interview.webp"},
+    jest_pan_zerem: {name: "Jest Pan Zerem, Panie Ziobro", image: "img/poland/events/zbigniew-ziobro-2015.webp"},
+    kurica_nie_ptica: {name: "Kurica Nie Ptica", image: "img/poland/events/ukraine-refugees-2022.webp"},
+    ten_defections: {name: "Wolny Mandat"},
+    three_left_splits: {name: "Judean People’s Front"},
+    three_right_splits: {name: "People's Front of Judea"},
+    cabinet_collapse: {name: "This Is Fine", image: "img/poland/cards/coalition-council.webp"},
+    piwo_z_mentzenem: {name: "Piwo z Mentzenem", image: "img/poland/events/pres-candidate-mentzen-2025.webp"},
+    bedziesz_siedzial: {name: "Będziesz Siedział!", image: "img/poland/events/marian-banas-2019.webp"},
+    szczesc_boze: {name: "Szczęść Boże i Ratuj Się Kto Może", image: "img/poland/events/grzegorz-braun-2025.webp"},
+    wniosek_formalny: {name: "Wniosek formalny", image: "img/poland/events/sejm-chamber.webp"},
+    mokry_sen_kukiza: {name: "Mokry sen Kukiza", image: "img/poland/events/sejm-chamber.webp"},
+  };
+  var achievementToastQueue = [];
+  var achievementToastVisible = false;
+
+  var achievementDetails = function(achievementName) {
+    var definition = achievementDefinitions[achievementName] || {};
+    var fallbackName = String(achievementName)
+      .replace(/^achievement_/, '')
+      .split('_')
+      .map(function(word) {
+        return word.charAt(0).toUpperCase() + word.slice(1);
+      })
+      .join(' ');
+    return {
+      name: definition.name || fallbackName,
+      image: definition.image ||
+        'img/achievement/' + achievementName + '.png',
+    };
+  };
+
+  var showNextAchievementToast = function() {
+    if (achievementToastVisible || !achievementToastQueue.length) {
+      return;
+    }
+    achievementToastVisible = true;
+    var details = achievementDetails(achievementToastQueue.shift());
+    var toast = document.getElementById('achievement-toast');
+    if (!toast) {
+      toast = document.createElement('div');
+      toast.id = 'achievement-toast';
+      toast.className = 'achievement-toast';
+      toast.setAttribute('role', 'status');
+      toast.setAttribute('aria-live', 'polite');
+      toast.setAttribute('aria-atomic', 'true');
+      document.body.appendChild(toast);
+    }
+    toast.textContent = '';
+
+    var image = document.createElement('img');
+    image.alt = '';
+    image.hidden = true;
+    image.onload = function() {
+      image.hidden = false;
+    };
+    image.onerror = function() {
+      image.remove();
+    };
+    image.src = details.image;
+
+    var copy = document.createElement('span');
+    copy.className = 'achievement-toast-copy';
+    var label = document.createElement('small');
+    label.textContent = 'Achievement:';
+    var name = document.createElement('strong');
+    name.textContent = details.name;
+    copy.appendChild(label);
+    copy.appendChild(name);
+    toast.appendChild(image);
+    toast.appendChild(copy);
+
+    window.requestAnimationFrame(function() {
+      toast.classList.add('is-visible');
+    });
+    window.setTimeout(function() {
+      toast.classList.remove('is-visible');
+      window.setTimeout(function() {
+        achievementToastVisible = false;
+        showNextAchievementToast();
+      }, 250);
+    }, 3600);
+  };
+
+  window.showAchievementToast = function(achievementName) {
+    achievementToastQueue.push(achievementName);
+    showNextAchievementToast();
+  };
 
   // the url is a link to game.json
   // test url: https://aucchen.github.io/social_democracy_mods/v0.1.json
@@ -119,6 +301,15 @@
 
   var observedRadioAudio = null;
   var radioVolume = 0.2;
+  var radioTracks = [];
+  var radioDisabledTracks = {};
+  var radioAudioCommands = {
+    clear: true,
+    loop: true,
+    nofade: true,
+    queue: true,
+    shuffle: true,
+  };
 
   try {
     var savedRadioVolume = window.localStorage.getItem(
@@ -131,6 +322,40 @@
   } catch (_error) {
     // Storage can be unavailable for local files or locked-down browsers.
   }
+
+  try {
+    JSON.parse(window.localStorage.getItem(
+      TITLE + '_radio_disabled_tracks'
+    ) || '[]').forEach(function(track) {
+      radioDisabledTracks[track] = true;
+    });
+  } catch (_error) {
+    // Invalid or unavailable storage falls back to every song enabled.
+  }
+
+  var radioAudioTracks = function(audio) {
+    return String(audio || '').split(/\s+/).filter(function(token) {
+      return token && !radioAudioCommands[token];
+    });
+  };
+
+  var enabledRadioTracks = function() {
+    return radioTracks.filter(function(track) {
+      return !radioDisabledTracks[track];
+    });
+  };
+
+  var radioFilteredAudio = function(audio, startScene) {
+    if (!startScene || audio !== startScene.audio) {
+      return audio;
+    }
+    if (!enabledRadioTracks().length) {
+      return '';
+    }
+    return audio.split(/\s+/).filter(function(token) {
+      return radioTracks.indexOf(token) === -1 || !radioDisabledTracks[token];
+    }).join(' ');
+  };
 
   var applyRadioVolume = function(audio) {
     if (!audio) {
@@ -159,14 +384,120 @@
       .replace(/[_-]+/g, ' ');
   };
 
+  var currentRadioTrack = function(audio) {
+    var current = window.dendryUI.currentAudioURL ||
+      (audio && (audio.getAttribute('src') || audio.currentSrc)) || '';
+    return radioTracks.find(function(track) {
+      return current === track || current.endsWith('/' + track);
+    });
+  };
+
+  var renderRadioTracks = function() {
+    var list = document.getElementById('radio-song-list');
+    var summary = document.getElementById('radio-songs-summary');
+    if (!list || !summary) {
+      return;
+    }
+    if (list.children.length !== radioTracks.length) {
+      list.textContent = '';
+      radioTracks.forEach(function(track) {
+        var label = document.createElement('label');
+        var input = document.createElement('input');
+        var title = document.createElement('span');
+        label.className = 'radio-song';
+        input.type = 'checkbox';
+        input.value = track;
+        input.addEventListener('change', function() {
+          window.setRadioTrackEnabled(track, input.checked);
+        });
+        title.textContent = radioTrackTitle(track);
+        title.title = title.textContent;
+        label.appendChild(input);
+        label.appendChild(title);
+        list.appendChild(label);
+      });
+    }
+    Array.prototype.forEach.call(
+      list.querySelectorAll('input'),
+      function(input) {
+        input.checked = !radioDisabledTracks[input.value];
+      }
+    );
+    summary.textContent = 'Songs ' + enabledRadioTracks().length +
+      '/' + radioTracks.length;
+  };
+
+  var playRadioTrack = function(audio, track) {
+    audio.pause();
+    audio.src = track;
+    window.dendryUI.currentAudioURL = track;
+    window.dendryUI.disable_audio = false;
+    audio.play();
+    window.dendryUI.saveSettings();
+  };
+
+  var nextEnabledRadioTrack = function(current) {
+    var index = radioTracks.indexOf(current);
+    for (var offset = 1; offset <= radioTracks.length; offset += 1) {
+      var track = radioTracks[(index + offset) % radioTracks.length];
+      if (!radioDisabledTracks[track]) {
+        return track;
+      }
+    }
+  };
+
+  window.setRadioTrackEnabled = function(track, enabled) {
+    if (radioTracks.indexOf(track) === -1) {
+      return;
+    }
+    if (enabled) {
+      delete radioDisabledTracks[track];
+    } else {
+      radioDisabledTracks[track] = true;
+    }
+    try {
+      window.localStorage.setItem(
+        TITLE + '_radio_disabled_tracks',
+        JSON.stringify(Object.keys(radioDisabledTracks))
+      );
+    } catch (_error) {
+      // The selection still works for this session when storage is unavailable.
+    }
+    var audio = window.dendryUI.currentAudio;
+    var playlist = window.dendryUI.audioPlaylist || [];
+    var playlistIndex = playlist.indexOf(track);
+    if (!enabled && playlistIndex !== -1) {
+      playlist.splice(playlistIndex, 1);
+    } else if (enabled && playlistIndex === -1 &&
+        (!playlist.length || playlist.some(function(item) {
+          return radioTracks.indexOf(item) !== -1;
+        }))) {
+      playlist.push(track);
+    }
+    if (!enabled && audio && currentRadioTrack(audio) === track) {
+      var next = nextEnabledRadioTrack(track);
+      if (next) {
+        playRadioTrack(audio, next);
+      } else {
+        audio.pause();
+      }
+    }
+    renderRadioTracks();
+    window.updateRadio();
+  };
+
   window.updateRadio = function() {
     var radio = document.getElementById('radio');
     if (!radio || !window.dendryUI) {
       return;
     }
     var audio = window.dendryUI.currentAudio;
-    var playlist = window.dendryUI.audioPlaylist || [];
     var startScene = window.dendryUI.game.scenes['root.new_game'];
+    if (!radioTracks.length && startScene && startScene.audio) {
+      radioTracks = radioAudioTracks(startScene.audio);
+    }
+    var enabledTracks = enabledRadioTracks();
+    renderRadioTracks();
     document.getElementById('radio-volume').value =
       Math.round(radioVolume * 100);
     document.getElementById('radio-volume-value').textContent =
@@ -174,6 +505,7 @@
     radio.hidden = !audio && !(startScene && startScene.audio);
     if (!audio) {
       document.getElementById('radio-toggle').textContent = 'Play';
+      document.getElementById('radio-toggle').disabled = !enabledTracks.length;
       document.getElementById('radio-next').disabled = true;
       document.getElementById('radio-track').textContent = 'Radio ready';
       return;
@@ -193,7 +525,9 @@
     applyRadioVolume(audio);
     document.getElementById('radio-toggle').textContent =
       audio.paused ? 'Play' : 'Pause';
-    document.getElementById('radio-next').disabled = playlist.length < 2;
+    document.getElementById('radio-toggle').disabled =
+      Boolean(currentRadioTrack(audio)) && !enabledTracks.length;
+    document.getElementById('radio-next').disabled = enabledTracks.length < 2;
     document.getElementById('radio-track').textContent =
       radioTrackTitle(window.dendryUI.currentAudioURL || audio.currentSrc);
   };
@@ -204,6 +538,15 @@
       window.enableAudio();
       return;
     }
+    var current = currentRadioTrack(audio);
+    if (audio.paused && current && radioDisabledTracks[current]) {
+      var next = nextEnabledRadioTrack(current);
+      if (next) {
+        playRadioTrack(audio, next);
+      }
+      window.updateRadio();
+      return;
+    }
     window.dendryUI.toggle_audio(audio.paused);
     window.dendryUI.saveSettings();
     window.updateRadio();
@@ -211,22 +554,11 @@
 
   window.nextRadioTrack = function() {
     var audio = window.dendryUI.currentAudio;
-    var playlist = window.dendryUI.audioPlaylist || [];
-    if (!audio || playlist.length < 2) {
+    var enabledTracks = enabledRadioTracks();
+    if (!audio || enabledTracks.length < 2) {
       return;
     }
-    var current = window.dendryUI.currentAudioURL ||
-      audio.getAttribute('src') || audio.currentSrc;
-    var index = playlist.findIndex(function(track) {
-      return current === track || current.endsWith('/' + track);
-    });
-    var next = playlist[(index + 1) % playlist.length];
-    audio.pause();
-    audio.src = next;
-    window.dendryUI.currentAudioURL = next;
-    window.dendryUI.disable_audio = false;
-    audio.play();
-    window.dendryUI.saveSettings();
+    playRadioTrack(audio, nextEnabledRadioTrack(currentRadioTrack(audio)));
     window.updateRadio();
   };
 
@@ -588,6 +920,12 @@ window.disableGrayMode = function() {
       ]
     },
     {
+      id: 'prawica',
+      className: 'party-prawica',
+      explanation: 'Prawica — Andrzej Duda’s centre-right electoral coalition and parliamentary club for the 2027 election.',
+      aliases: [['Prawica', 'Prawica']]
+    },
+    {
       id: 'sovereign-poland',
       className: 'party-sovereign-poland',
       explanation: 'Sovereign Poland — a right-wing party allied with Law and Justice.',
@@ -780,6 +1118,7 @@ window.disableGrayMode = function() {
     'third-way': ['TD', 'Trzecia Droga'],
     'konf': ['Konf.', 'Konfederacja Wolność i Niepodległość'],
     'united-right': ['ZP', 'Zjednoczona Prawica'],
+    'prawica': ['Prawica', 'Prawica'],
     'sovereign-poland': ['SP', 'Suwerenna Polska'],
     'solidary-poland': ['SP', 'Solidarna Polska'],
     'agreement': ['Porozumienie', 'Porozumienie'],
@@ -2240,6 +2579,7 @@ window.disableGrayMode = function() {
     'third-way': true,
     'konf': true,
     'united-right': true,
+    'prawica': true,
     'kkp': true,
     'national-movement': true,
     'new-hope': true,
@@ -2258,19 +2598,64 @@ window.disableGrayMode = function() {
     'knp': true
   };
 
+  var currentGameQualities = function() {
+    var engine = window.dendryUI && window.dendryUI.dendryEngine;
+    return engine && engine.state && engine.state.qualities
+      ? engine.state.qualities
+      : {};
+  };
+
+  var isPrawicaPresentationMember = function(definition) {
+    var qualities = currentGameQualities();
+    return !!(
+      definition &&
+      definition.id !== 'kkp' &&
+      Number(qualities.prawica_formed) === 1 &&
+      Array.isArray(qualities.prawica_member_party_keys) &&
+      qualities.prawica_member_party_keys.indexOf(definition.id) !== -1
+    );
+  };
+
+  var syncPrawicaPresentationState = function() {
+    if (!document.body) {
+      return;
+    }
+    Array.prototype.slice.call(document.body.classList).forEach(function(name) {
+      if (name === 'prawica-formed' || name.indexOf('prawica-member-') === 0) {
+        document.body.classList.remove(name);
+      }
+    });
+    var qualities = currentGameQualities();
+    if (Number(qualities.prawica_formed) !== 1) {
+      return;
+    }
+    document.body.classList.add('prawica-formed');
+    (qualities.prawica_member_source_ids || []).forEach(function(id) {
+      document.body.classList.add(
+        'prawica-member-' + String(id).replace(/[^a-z0-9_-]+/gi, '-').toLowerCase()
+      );
+    });
+  };
+
   var partyMarkup = function(alias) {
     var match = partyAliases[alias];
     if (!match) {
       return alias;
     }
-    var logoId = partyLogoIdForAlias(match, alias);
+    var prawicaMember = isPrawicaPresentationMember(match.definition);
+    var logoId = prawicaMember
+      ? 'prawica'
+      : partyLogoIdForAlias(match, alias);
     var canonicalNames = partyNamesForDefinition(match.definition);
     var logoMarkup = partyLogoIds[logoId]
       ? '<span class="party-name-logo" aria-hidden="true"></span>'
       : '';
     return '<span class="party party-name ' + match.definition.className +
-      '" title="' + escapeAttribute(match.definition.explanation) +
+      (prawicaMember ? ' party-prawica' : '') +
+      '" title="' + escapeAttribute(match.definition.explanation +
+        (prawicaMember ? ' Founding member of Prawica.' : '')) +
       '" data-party="' + match.definition.id +
+      (prawicaMember ? '" data-party-presentation="prawica' : '') +
       '" data-party-logo="' + logoId +
       '" data-party-short-name="' +
         escapeAttribute(canonicalNames.shortName) +
@@ -2674,6 +3059,7 @@ window.disableGrayMode = function() {
     if (!root || !root.querySelectorAll) {
       return;
     }
+    syncPrawicaPresentationState();
     var candidates = root.querySelectorAll('[class], .party');
     var elements = Array.prototype.filter.call(candidates, function(element) {
       if (element.classList.contains('party')) {
@@ -2723,15 +3109,22 @@ window.disableGrayMode = function() {
         element.classList.add('person-name');
       }
       if (definition) {
+        var prawicaMember = isPrawicaPresentationMember(definition);
         var canonicalNames = partyNamesForDefinition(definition);
         element.classList.add('party');
         if (!personDefinition) {
           element.title = definition.explanation;
         }
         element.setAttribute('data-party', definition.id);
+        if (prawicaMember) {
+          element.classList.add('party-prawica');
+          element.setAttribute('data-party-presentation', 'prawica');
+          element.setAttribute('data-party-logo', 'prawica');
+          element.title = definition.explanation + ' Founding member of Prawica.';
+        }
         element.setAttribute('data-party-short-name', canonicalNames.shortName);
         element.setAttribute('data-party-long-name', canonicalNames.longName);
-        if (exactAlias) {
+        if (exactAlias && !prawicaMember) {
           var logoOverride = partyLogoIdForAlias(exactAlias, text);
           if (logoOverride) {
             element.setAttribute('data-party-logo', logoOverride);

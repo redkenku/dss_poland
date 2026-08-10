@@ -18,6 +18,9 @@ const CASES = [
   ['democratic_2023', 'ko', 'post_presidential_democratic_2023'],
   ['ko_psl_left', 'psl', 'post_presidential_ko_psl_left'],
   ['ko_p2050_left', 'ko', 'post_presidential_ko_p2050_left'],
+  ['left_p2050', 'lewica', 'post_presidential_left_p2050'],
+  ['left_psl', 'lewica', 'post_presidential_left_psl'],
+  ['left_third', 'lewica', 'post_presidential_left_third'],
   ['third_left_pis', 'lewica', 'post_presidential_third_left_pis'],
   ['left_pis', 'pis', 'post_presidential_left_pis'],
   ['ko_left', 'ko', 'post_presidential_ko_left'],
@@ -60,6 +63,8 @@ function runChecks(parsed) {
   ).filter(function(code) {
     return code !== 'none';
   });
+  // The basic PiS-Lewica route is selected through formation_pending_pis_code.
+  authoredFormationCodes.push('left_pis');
   const coveredFormationCodes = CASES.map(function(entry) {
     return entry[0].replace(/_tolerated$/, '');
   });

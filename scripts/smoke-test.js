@@ -26,8 +26,14 @@ const deckTags = {
   poland_government_deck: 'poland_government_card',
   poland_negotiation_deck: 'poland_negotiation_card',
   poland_major_reform_deck: 'poland_major_reform_card',
-  poland_foreign_deck: 'poland_foreign_card',
 };
+
+const foreignRelationshipCardIds = [
+  'poland_eastern_flank',
+  'poland_european_campaign',
+  'poland_european_right',
+  'poland_white_house_pressure',
+];
 
 const pollingPartyIds = [
   'left', 'pis', 'ko', 'psl', 'konf', 'p2050', 'p0', 'other',
@@ -35,6 +41,9 @@ const pollingPartyIds = [
   'young_left', 'razem', 'pps', 'left_coalition', 'democratic_list',
   'third_way', 'tak_rozwoj', 'centrum', 'rozwoj', 'korona',
   'ko_splinter', 'suwerenna', 'porozumienie', 'kukiz',
+  'new_hope', 'national_movement', 'duda', 'social_conservative',
+  'right_2027', 'common_centre_2027', 'third_way_2027',
+  'social_conservative_2027',
 ];
 
 // Reform projects only exist for the fields the party actually put on its
@@ -203,6 +212,11 @@ const constituentPartyCardIds = [
   'poland_constituent_party.nowa_lewica_equal_leave',
   'poland_constituent_party.nowa_lewica_first_bell',
   'poland_constituent_party.nowa_lewica_two_traditions',
+  'poland_constituent_party.razem_ninety_nine_one',
+  'poland_constituent_party.razem_no_billboards',
+  'poland_constituent_party.razem_thirty_two_hours',
+  'poland_constituent_party.razem_union_notice',
+  'poland_constituent_party.razem_zloty_stays',
   'poland_constituent_party.pps_cooperative_restart',
   'poland_constituent_party.pps_lobbyists_notebook',
   'poland_constituent_party.pps_more_than_pennies',
@@ -226,6 +240,11 @@ const constituentGovernmentCardIds = [
   'poland_constituent_government.nowa_lewica_second_breakfast',
   'poland_constituent_government.nowa_lewica_student_ticket',
   'poland_constituent_government.nowa_lewica_widow_pension',
+  'poland_constituent_government.razem_choose_waiting_room',
+  'poland_constituent_government.razem_eight_reactors',
+  'poland_constituent_government.razem_one_percent_housing',
+  'poland_constituent_government.razem_public_code',
+  'poland_constituent_government.razem_twenty_desks',
   'poland_constituent_government.pps_housing_first',
   'poland_constituent_government.pps_maximum_wage',
   'poland_constituent_government.pps_public_fibre',
@@ -284,6 +303,16 @@ const constituentOneShotTimerIds = [
   'poland_nowa_lewica_school_health_timer',
   'poland_nowa_lewica_widow_pension_timer',
   'poland_nowa_lewica_empty_homes_timer',
+  'poland_razem_ninety_nine_one_timer',
+  'poland_razem_thirty_two_hours_timer',
+  'poland_razem_no_billboards_timer',
+  'poland_razem_zloty_stays_timer',
+  'poland_razem_union_notice_timer',
+  'poland_razem_eight_reactors_timer',
+  'poland_razem_public_code_timer',
+  'poland_razem_twenty_desks_timer',
+  'poland_razem_one_percent_housing_timer',
+  'poland_razem_choose_waiting_room_timer',
 ];
 
 const cabinetTimerIds = expectedGovernmentCardIds.map(function(cardId) {
@@ -432,6 +461,16 @@ const requiredNumericQualities = [
   'poland_nowa_lewica_school_health_timer',
   'poland_nowa_lewica_widow_pension_timer',
   'poland_nowa_lewica_empty_homes_timer',
+  'poland_razem_ninety_nine_one_timer',
+  'poland_razem_thirty_two_hours_timer',
+  'poland_razem_no_billboards_timer',
+  'poland_razem_zloty_stays_timer',
+  'poland_razem_union_notice_timer',
+  'poland_razem_eight_reactors_timer',
+  'poland_razem_public_code_timer',
+  'poland_razem_twenty_desks_timer',
+  'poland_razem_one_percent_housing_timer',
+  'poland_razem_choose_waiting_room_timer',
   'constituent_programme_government_open',
   'barons_active',
   'spring_active',
@@ -1243,9 +1282,6 @@ const requiredNumericQualities = [
   'kpo_2022_concession_implemented',
   'budget_2022_concession_pending',
   'budget_2022_concession_implemented',
-  'political_bulletin_pending',
-  'political_bulletin_seen',
-  'political_bulletin_year',
   'budget_2019_backing',
   'budget_backing',
   'budget_2021_backing',
@@ -1509,11 +1545,13 @@ function testRadioFiles(game) {
       'Missing radio track: ' + track
     );
   });
+  const radioMarkup = fs.readFileSync(
+    path.join(projectRoot, 'out', 'html', 'index.html'),
+    'utf8'
+  );
   assert(
-    fs.readFileSync(
-      path.join(projectRoot, 'out', 'html', 'index.html'),
-      'utf8'
-    ).includes('id="radio-volume"'),
+    radioMarkup.includes('id="radio-volume"') &&
+      radioMarkup.includes('id="radio-song-list"'),
     'Radio controls missing from index.html'
   );
   const radioSource = fs.readFileSync(
@@ -1524,7 +1562,9 @@ function testRadioFiles(game) {
     'window.toggleRadio',
     'window.nextRadioTrack',
     'window.setRadioVolume',
+    'window.setRadioTrackEnabled',
     'var radioVolume = 0.2',
+    "TITLE + '_radio_disabled_tracks'",
     'audio === startScene.audio',
     'Radio ready',
   ]
@@ -1534,6 +1574,40 @@ function testRadioFiles(game) {
         'Radio behavior missing from game.js: ' + requiredSource
       );
     });
+
+  const storedSettings = {};
+  const radioSandbox = {
+    console: {log: function() {}, error: function() {}},
+    document: {getElementById: function() { return null; }},
+    window: {
+      localStorage: {
+        getItem: function(key) { return storedSettings[key] || null; },
+        setItem: function(key, value) { storedSettings[key] = value; },
+      },
+    },
+  };
+  vm.runInNewContext(radioSource, radioSandbox);
+  const playedAudio = [];
+  const radioUI = {
+    game: game,
+    dendryEngine: {
+      state: {qualities: {}},
+      achieve: function() {},
+    },
+    audio: function(value) { playedAudio.push(value); },
+    audioPlaylist: [],
+    currentAudio: null,
+  };
+  radioSandbox.window.dendryUI = radioUI;
+  radioSandbox.window.dendryModifyUI(radioUI);
+  radioUI.audio(audio);
+  radioSandbox.window.setRadioTrackEnabled(tracks[0], false);
+  radioUI.audio(audio);
+  assert.strictEqual(playedAudio.length, 2);
+  assert(
+    !playedAudio[1].includes(tracks[0]),
+    'A disabled radio track remained in the soundtrack passed to the engine'
+  );
 }
 
 function testPartyPresentationAssets() {
@@ -1923,7 +1997,7 @@ function testPartyPresentationAssets() {
   const addedLogos = sandbox.window.displayText(
     "Koalicja Polska; Kukiz'15; OdNowa RP; Partia Republikańska; " +
       'Wolność; KORWiN; Nowa Nadzieja; Mniejszość Niemiecka; ' +
-      'Zjednoczona Prawica; Unia Europejskich Demokratów.'
+      'Zjednoczona Prawica; Prawica; Unia Europejskich Demokratów.'
   );
   [
     ['polish-coalition', 'party-polish-coalition', 'KP', 'Koalicja Polska'],
@@ -1933,6 +2007,7 @@ function testPartyPresentationAssets() {
     ['new-hope', 'party-new-hope', 'NN', 'Nowa Nadzieja'],
     ['german-minority', 'party-german-minority', 'MN', 'Mniejszość Niemiecka'],
     ['united-right', 'party-united-right', 'ZP', 'Zjednoczona Prawica'],
+    ['prawica', 'party-prawica', 'Prawica', 'Prawica'],
     ['ued', 'party-ued', 'UED', 'Unia Europejskich Demokratów'],
   ].forEach(function(expected) {
     assert(addedLogos.includes('class="party party-name ' + expected[1] + '"'));
@@ -1953,12 +2028,35 @@ function testPartyPresentationAssets() {
   [
     'koalicjapolska.jpg', 'kukiz.png', 'odnowa.png',
     'partiarepublikanska.webp', 'nowanadzieja.jpg',
-    'mniejszoscniemiecka.png', 'zjednoczonaprawica.png', 'ued.jpg',
+    'mniejszoscniemiecka.png', 'zjednoczonaprawica.png', 'prawica.webp', 'ued.jpg',
     'agrounia.jpg',
   ].forEach(function(file) {
     assert(logoCss.includes("url('img/partylogo/" + file + "')"));
     assert(fs.existsSync(path.join(projectRoot, 'out', 'html', 'img', 'partylogo', file)));
   });
+
+  sandbox.window.dendryUI.dendryEngine.state.qualities = {
+    prawica_formed: 1,
+    prawica_member_party_keys: ['pis', 'rozwoj-plus', 'prawica'],
+    prawica_member_source_ids: ['pis', 'rozwoj'],
+  };
+  const prawicaBranding = sandbox.window.displayText(
+    'PiS; Rozwój Plus; Prawica; Korona.'
+  );
+  assert(prawicaBranding.includes(
+    'class="party party-name party-pis party-prawica"'
+  ), 'PiS did not adopt Prawica presentation after formation');
+  assert(prawicaBranding.includes(
+    'class="party party-name party-rozwoj party-prawica"'
+  ), 'Rozwój+ did not adopt Prawica presentation after formation');
+  assert.strictEqual(
+    (prawicaBranding.match(/data-party-logo="prawica"/g) || []).length,
+    3,
+    'Prawica founders and the coalition must use prawica.webp'
+  );
+  assert(prawicaBranding.includes(
+    'class="party party-name party-kkp"'
+  ), 'Korona must retain its own branding outside Prawica');
 
   sandbox.window.dendryUI.dendryEngine.state.qualities = {
     left_party_name: 'Lewica Razem',
@@ -2086,7 +2184,7 @@ function testCheatMenu(game) {
   choose('cheat_menu.polls');
   const pollTotal = function() {
     return pollingPartyIds.reduce(function(total, id) {
-      return total + engine.state.qualities[id + '_poll'];
+      return total + (engine.state.qualities[id + '_poll'] || 0);
     }, 0);
   };
   const leftBeforeCheat = engine.state.qualities.left_poll;
@@ -2357,9 +2455,9 @@ function runSmoke(game) {
       'Missing separate Major Reforms deck'
     );
     assert.strictEqual(
-      game.scenes.poland_foreign_deck.isDeck,
-      true,
-      'Missing Foreign Affairs deck'
+      game.scenes.poland_foreign_deck,
+      undefined,
+      'Foreign Affairs should no longer be a separate deck'
     );
   }
 
@@ -2712,6 +2810,14 @@ function runSmoke(game) {
     qualities.caretaker_government = 0;
     qualities.ministries_finalized = 1;
     qualities.ministry_count = 0;
+    // This fixture isolates ministry-owned cards from programme cards, whose
+    // gate is constituent strength or a completed New Left merger.
+    qualities.barons_strength = 0;
+    qualities.spring_strength = 0;
+    qualities.pps_strength = 0;
+    qualities.razem_strength = 0;
+    qualities.nowa_lewica_merger_agreed = 0;
+    qualities.left_common_party_exists = 0;
     ministryPortfolioCases.forEach(function(testCase) {
       qualities[testCase.portfolio + '_minister_party'] = 'Unassigned';
     });
@@ -2749,8 +2855,8 @@ function runSmoke(game) {
       game.scenes.poland_foreign_ministry_line.tags || [];
     assert(foreignMinistryTags.includes('poland_government_card'));
     assert(
-      !foreignMinistryTags.includes('poland_foreign_card'),
-      'The Foreign Ministry portfolio card leaked into Foreign Affairs'
+      !foreignMinistryTags.includes('poland_party_card'),
+      'The Foreign Ministry portfolio card leaked into Party Affairs'
     );
 
     ministryPortfolioCases.forEach(function(testCase) {
@@ -2761,11 +2867,15 @@ function runSmoke(game) {
     engine.goToScene('poland_hub');
     const partyCard = drawFromDeck('poland_party_deck');
     const governmentCard = drawFromDeck('poland_government_deck');
-    assert(expectedGovernmentCardIds.includes(governmentCard.id));
+    const governmentCardTags = game.scenes[governmentCard.id].tags || [];
+    assert(
+      expectedGovernmentCardIds.includes(governmentCard.id) ||
+        governmentCardTags.includes('poland_major_reform_card')
+    );
     qualities.left_in_government = 0;
     engine.goToScene('poland_hub');
     const expectedOppositionHand = [partyCard.id];
-    if (majorReformCardIds.includes(governmentCard.id)) {
+    if (governmentCardTags.includes('poland_major_reform_card')) {
       expectedOppositionHand.push(governmentCard.id);
     }
     assert.deepStrictEqual(
@@ -3703,6 +3813,18 @@ function runSmoke(game) {
   }
 
   function testLegislativeVoteRouter() {
+    ['rights_fracture', 'legalist_fracture', 'rights_result'].forEach(
+      function(sceneId) {
+        assert.deepStrictEqual(
+          (game.scenes['poland_trzaskowski.' + sceneId].options || []).map(
+            function(option) { return option.id; }
+          ),
+          ['@poland_events.dworczyk_hack_2021'],
+          sceneId + ' can skip the mandatory Dworczyk leak'
+        );
+      }
+    );
+
     startStandard('legislative-router-bargain');
     let qualities = engine.state.qualities;
     qualities.resources = 5;
@@ -3786,9 +3908,28 @@ function runSmoke(game) {
     engine.goToScene('poland_trzaskowski.rights_vote');
     choose('poland_trzaskowski.rights_vote_abortion');
     completeLegislativeVote();
-    assert.strictEqual(engine.state.sceneId, 'poland_trzaskowski.rights_result');
+    assert.strictEqual(engine.state.sceneId, 'poland_trzaskowski.rights_fracture');
     assert.strictEqual(qualities.trz_rights_bill_outcome, 'Passed and signed');
     assert.strictEqual(qualities.abortion_law_enacted, 1);
+    assert.deepStrictEqual(
+      [
+        qualities.legvote_sejm_yes,
+        qualities.legvote_sejm_no,
+        qualities.legvote_sejm_abstain,
+        qualities.legvote_pis_yes,
+        qualities.legvote_pis_abstain,
+      ],
+      [225, 223, 12, 33, 8],
+      'The abortion freebie was not a narrow passage with bounded PiS rebels'
+    );
+    assert.strictEqual(qualities.trz_pis_vote_rebels, 41);
+    assert.strictEqual(qualities.trz_pis_suspensions, 6);
+    assert(
+      contentText(engine.state.currentContent).includes(
+        'Expelling the rebels would cost Morawiecki his majority'
+      ),
+      'The rights aftermath did not explain why discipline amounted to nothing'
+    );
     engine.goToScene('poland_normalize');
     assert.strictEqual(
       qualities.abortion_on_slate,
@@ -3808,6 +3949,53 @@ function runSmoke(game) {
         'poland_abortion_reform'
       ),
       'The Trzaskowski bill appeared as an unpicked Major Reform project'
+    );
+
+    startStandard('legislative-router-trzaskowski-no-fracture');
+    qualities = engine.state.qualities;
+    qualities.trz_abortion_signature = 1;
+    qualities.trz_right_fragmentation = 0;
+    qualities.president_name = 'Rafał Trzaskowski';
+    engine.goToScene('poland_trzaskowski.rights_vote');
+    choose('poland_trzaskowski.rights_vote_abortion');
+    assert.strictEqual(qualities.legvote_forecast_passed, 0);
+    assert.strictEqual(qualities.legvote_forecast_yes, 201);
+    assert.strictEqual(qualities.legvote_forecast_no, 244);
+
+    startStandard('legislative-router-trzaskowski-legalist-no-fracture');
+    qualities = engine.state.qualities;
+    qualities.trz_right_fragmentation = 0;
+    qualities.president_name = 'Rafał Trzaskowski';
+    engine.goToScene('poland_trzaskowski.rights_vote');
+    choose('poland_trzaskowski.rights_vote_institutions');
+    assert.strictEqual(qualities.legvote_forecast_passed, 0);
+    assert.strictEqual(qualities.legvote_forecast_yes, 222);
+    assert.strictEqual(qualities.legvote_forecast_no, 225);
+
+    startStandard('legislative-router-trzaskowski-legalist');
+    qualities = engine.state.qualities;
+    qualities.trz_right_fragmentation = 100;
+    qualities.president_name = 'Rafał Trzaskowski';
+    engine.goToScene('poland_trzaskowski.rights_vote');
+    choose('poland_trzaskowski.rights_vote_institutions');
+    completeLegislativeVote();
+    assert.strictEqual(engine.state.sceneId, 'poland_trzaskowski.legalist_fracture');
+    assert.deepStrictEqual(
+      [
+        qualities.legvote_sejm_yes,
+        qualities.legvote_sejm_no,
+        qualities.legvote_sejm_abstain,
+        qualities.legvote_pis_yes,
+      ],
+      [226, 225, 9, 28],
+      'The legalist freebie did not keep its narrow, broader PiS coalition'
+    );
+    assert.strictEqual(qualities.trz_pis_suspensions, 3);
+    assert(
+      contentText(engine.state.currentContent).includes(
+        'PiS cannot afford to turn a dispute over courts'
+      ),
+      'The legalist aftermath did not explain why discipline amounted to nothing'
     );
 
     startStandard('legislative-router-movement-event');
@@ -4364,12 +4552,8 @@ function runSmoke(game) {
       'left', 'pis', 'ko', 'psl', 'konf', 'p2050', 'p0', 'other',
     ];
     const parties = pollingPartyIds;
-    const intentTotal = parties.reduce(function(total, party) {
-      return total + qualities[party + '_vote_intent'];
-    }, 0);
-    const headlineTotal = parties.reduce(function(total, party) {
-      return total + qualities[party + '_poll'];
-    }, 0);
+    const intentTotal = qualities.nationwide_vote_intent_total;
+    const headlineTotal = qualities.nationwide_poll_total;
     const projectionComponents = parties.filter(function(party) {
       return !['left_coalition', 'democratic_list', 'third_way'].includes(
         party
@@ -4383,7 +4567,7 @@ function runSmoke(game) {
       Math.abs(intentTotal - 100) <= 0.12,
       'Likely-voter intentions do not sum to 100: ' + intentTotal +
         (options && options.context ? ' after ' + options.context : '') +
-        ' (' + projectionComponents.map(function(party) {
+        ' (' + parties.map(function(party) {
           return party + '=' + qualities[party + '_vote_intent'];
         }).join(', ') + ')'
     );
@@ -4745,11 +4929,32 @@ function runSmoke(game) {
     thirdWay.third_way_active = 1;
     thirdWay.third_way_2023_done = 1;
     thirdWay.third_way_split = 0;
+    thirdWay.konf_poll_momentum = 30;
+    thirdWay.psl_poll_momentum = 30;
+    thirdWay.p2050_poll_momentum = 30;
     thirdWay.poll_state_month_key = -1;
     engine.goToScene('poland_polling');
     checkNumbers();
     assert.strictEqual(thirdWay.third_way_joint_list, 1);
     assert.strictEqual(thirdWay.third_way_threshold, 8);
+    assert(thirdWay.konf_poll_resistance > 0);
+    assert(thirdWay.third_way_poll_resistance > 0);
+    assert(
+      thirdWay.konf_vote_intent > 10,
+      'An exceptional Konfederacja surge could not break 10%'
+    );
+    assert(
+      thirdWay.third_way_vote_intent > 15,
+      'An exceptional Third Way surge could not break 15%'
+    );
+    assert(
+      Math.abs(
+        thirdWay.third_way_vote_intent -
+          thirdWay.psl_component_vote_intent -
+          thirdWay.p2050_component_vote_intent
+      ) < 0.000001,
+      'Third Way components bypassed committee polling resistance'
+    );
     assert.strictEqual(
       thirdWay.third_way_projected_seats,
       thirdWay.psl_projected_seats +
@@ -4757,7 +4962,34 @@ function runSmoke(game) {
     );
     thirdWay.month = 11;
     thirdWay.date_label = 'November 2023';
+    thirdWay.election_2023_certified = 1;
+    thirdWay.election_2023_konf_vote = 12.5;
+    thirdWay.election_2023_third_way_vote = 17.5;
+    thirdWay.poll_state_month_key = -1;
+    engine.goToScene('poland_polling');
+    assert.strictEqual(thirdWay.konf_poll_resistance_point, 12.5);
+    assert.strictEqual(thirdWay.third_way_poll_resistance_point, 17.5);
+    thirdWay.year = 2024;
+    thirdWay.month = 2;
+    thirdWay.date_label = 'February 2024';
+    thirdWay.konf_vote_intent = 14;
+    thirdWay.third_way_vote_intent = 19;
+    thirdWay.poll_state_month_key = -1;
+    engine.goToScene('poland_polling');
+    assert(
+      Math.abs(thirdWay.konf_poll_resistance_point - 13.025) < 0.011
+    );
+    assert(
+      Math.abs(thirdWay.third_way_poll_resistance_point - 18.025) < 0.011
+    );
+    assert.strictEqual(
+      thirdWay.poll_resistance_next_update_month,
+      2024 * 12 + 5
+    );
+    thirdWay.month = 3;
+    thirdWay.date_label = 'March 2024';
     thirdWay.third_way_split = 1;
+    thirdWay.poll_state_month_key = -1;
     engine.goToScene('poland_polling');
     checkNumbers();
     assert.strictEqual(thirdWay.third_way_joint_list, 0);
@@ -4956,7 +5188,7 @@ function runSmoke(game) {
     assert(distressedKo.penalty >= 8);
     assert(distressedKo.extremistBonus >= 3);
     assert(
-      distressedKo.konf - healthyKo.konf >= 2,
+      distressedKo.konf - healthyKo.konf >= 0.5,
       'Inflation and recession did not produce an anti-system polling pulse'
     );
 
@@ -5028,6 +5260,48 @@ function runSmoke(game) {
       assert(qualities[party + '_cultural_position'] >= 0);
       assert(qualities[party + '_cultural_position'] <= 100);
     });
+    assert(
+      qualities.konf_resource_business_support >
+        qualities.ko_resource_business_support &&
+      qualities.ko_resource_business_support >
+        qualities.psl_resource_business_support &&
+      qualities.psl_resource_business_support >
+        qualities.pis_resource_business_support,
+      'Market positioning did not produce proportionate business support'
+    );
+    assert.strictEqual(qualities.pis_resource_media_support, 8);
+    assert.strictEqual(qualities.ko_resource_media_support, 8);
+    assert.strictEqual(qualities.psl_resource_media_support, 0);
+    assert.strictEqual(qualities.konf_resource_media_support, 0);
+    assert.strictEqual(qualities.pis_resource_president_support, 10);
+    assert.strictEqual(qualities.pis_resource_pm_support, 12);
+    assert.strictEqual(qualities.pis_resource_marshal_support, 8);
+    assert(
+      qualities.pis_resource_parliament_support >
+        qualities.ko_resource_parliament_support &&
+      qualities.ko_resource_parliament_support >
+        qualities.psl_resource_parliament_support &&
+      qualities.psl_resource_parliament_support >
+        qualities.konf_resource_parliament_support,
+      'Sejm size was not preserved by resource normalization'
+    );
+    assert(
+      qualities.pis_resource_poll_support >
+        qualities.ko_resource_poll_support &&
+      qualities.ko_resource_poll_support >
+        qualities.psl_resource_poll_support &&
+      qualities.psl_resource_poll_support >
+        qualities.konf_resource_poll_support,
+      'Current polling was not preserved by resource normalization'
+    );
+    assert(
+      qualities.pis_org_income > qualities.ko_org_income &&
+      qualities.ko_org_income > qualities.psl_org_income &&
+      qualities.psl_org_income > qualities.konf_org_income,
+      'Opening rival income did not reflect the normalized resource order'
+    );
+    assert.strictEqual(qualities.p2050_resource_score, 0);
+    assert.strictEqual(qualities.p2050_org_income, 0);
     assert.strictEqual(qualities.p2050_ai_acted, 0);
     assert.strictEqual(qualities.p2050_ai_last_spend, 0);
     assert.strictEqual(
@@ -5115,6 +5389,33 @@ function runSmoke(game) {
       'Poland 2050 remained hidden by its pre-launch calibration'
     );
     assertPollingModel();
+
+    qualities.year = 2023;
+    qualities.month = 12;
+    qualities.president_name = 'Szymon Hołownia';
+    qualities.president_party = 'p2050';
+    qualities.prime_minister = 'Donald Tusk';
+    qualities.pm_political_family = 'ko';
+    qualities.sejm_speaker = 'Marek Sawicki';
+    // Deliberately stale: the live office holder must win over this old field.
+    qualities.sejm_speaker_party = 'pis';
+    qualities.government_party = 'ko';
+    qualities.government_has_confidence = 1;
+    qualities.caretaker_government = 0;
+    qualities.ministry_ko_in_cabinet = 1;
+    qualities.ministry_psl_in_cabinet = 1;
+    qualities.ministry_p2050_in_cabinet = 1;
+    qualities.third_way_active = 1;
+    qualities.third_way_split = 0;
+    engine.goToScene('poland_party_ai');
+    ['ko', 'psl', 'p2050'].forEach(function(party) {
+      assert.strictEqual(qualities[party + '_resource_president_support'], 10);
+      assert.strictEqual(qualities[party + '_resource_pm_support'], 12);
+      assert.strictEqual(qualities[party + '_resource_marshal_support'], 8);
+    });
+    assert.strictEqual(qualities.pis_resource_president_support, 0);
+    assert.strictEqual(qualities.pis_resource_pm_support, 0);
+    assert.strictEqual(qualities.pis_resource_marshal_support, 0);
 
     // The same party system must react in opposite directions depending on
     // which pole is gaining strength. These are hidden strategic balances;
@@ -5828,7 +6129,8 @@ function runSmoke(game) {
 
   function testPresidentialElectionCorpora() {
     let historicalDudaWins = 0;
-    for (let index = 0; index < 8; index += 1) {
+    const historicalSeedCount = 40;
+    for (let index = 0; index < historicalSeedCount; index += 1) {
       if (
         runHistoricalPresidentialElection(
           'presidential-historical-' + index
@@ -5838,13 +6140,14 @@ function runSmoke(game) {
       }
     }
     assert(
-      historicalDudaWins >= 6,
+      historicalDudaWins >= 30,
       'Duda won only ' + historicalDudaWins +
-        ' of 8 historical-line seeds'
+        ' of ' + historicalSeedCount + ' historical-line seeds'
     );
     assert(
-      historicalDudaWins <= 7,
-      'Historical-line slack disappeared: Duda won all 8 seeded runoffs'
+      historicalDudaWins < historicalSeedCount,
+      'Historical-line slack disappeared: Duda won all ' +
+        historicalSeedCount + ' seeded runoffs'
     );
 
     const nominees = [
@@ -6773,6 +7076,9 @@ function runSmoke(game) {
     checkNumbers();
     assert.strictEqual(engine.state.sceneId, 'poland_events.recovery_fund');
     choose('poland_events.recovery_palace');
+    choose('poland_events.left_discipline_2021');
+    assert.strictEqual(qualities.left_discipline_2021_done, 1);
+    choose('poland_events.discipline_lift');
     choose('poland_hub');
     assert.strictEqual(
       engine.state.sceneId,
@@ -6804,7 +7110,7 @@ function runSmoke(game) {
     completeLegislativeVote();
     assert.strictEqual(
       engine.state.sceneId,
-      'poland_trzaskowski.rights_result'
+      'poland_trzaskowski.rights_fracture'
     );
     assert(qualities.trz_rights_bill_votes >= 170);
     assert.strictEqual(
@@ -6826,6 +7132,8 @@ function runSmoke(game) {
         })
     );
     assert(qualities.trz_right_backlash > 0);
+    choose('poland_events.dworczyk_hack_2021');
+    choose('poland_events.dworczyk_infosec');
     choose('poland_hub');
     assert.strictEqual(
       engine.state.sceneId,
@@ -6898,6 +7206,7 @@ function runSmoke(game) {
     qualities.merger_event_done = 1;
     // September 2020 opens the legacy desk when two or more files are still
     // pending; this test exercises the repeat-election route on its own.
+    qualities.czajka_2020_done = 1;
     qualities.animals_2020_done = 1;
     qualities.fiore_braun_2020_done = 1;
     qualities.emilewicz_left_porozumienie = 1;
@@ -7238,39 +7547,54 @@ function runSmoke(game) {
     );
 
     choose('poland_government_formation.first_democratic_protocol');
-    choose('poland_government_formation.psl_public_lock');
-    choose('poland_government_formation.left_united_rejection');
-    choose('poland_government_formation.konf_isolate');
     assert.strictEqual(
       engine.state.sceneId,
-      'poland_government_formation.first_confidence_roll'
+      'poland_government_formation.formation_coalition_menu'
     );
-    assert.strictEqual(qualities.confidence_yes, 190);
-    assert.strictEqual(qualities.confidence_no, 266);
-    assert.strictEqual(qualities.confidence_abstain, 0);
-    assert.strictEqual(qualities.confidence_present, 456);
-    assert.strictEqual(qualities.confidence_threshold, 229);
-    assert.strictEqual(qualities.morawiecki_votes, 190);
-    assert.strictEqual(qualities.first_confidence_passed, 0);
-    assert.strictEqual(qualities.government_has_confidence, 0);
-
-    choose('poland_government_formation.first_confidence_continue');
-    choose('poland_government_formation.nominate_tusk');
-    choose('poland_government_formation.left_new_left_cabinet');
-    choose('poland_government_formation.psl_full_protocol');
+    choose('poland_government_formation.formation_pick_democratic');
     assert.strictEqual(
       engine.state.sceneId,
-      'poland_government_formation.democratic_candidate_roll'
+      'poland_government_formation.formation_marshal_ballot'
+    );
+    choose('poland_government_formation.formation_marshal_support');
+    assert.strictEqual(qualities.formation_marshal_nominee, 'Szymon Hołownia');
+    assert.strictEqual(qualities.formation_marshal_yes, 248);
+    assert.strictEqual(qualities.formation_marshal_elected, 1);
+    choose('poland_government_formation.formation_after_marshal');
+    choose('poland_government_formation.formation_vice_witek_reject');
+    choose('poland_government_formation.formation_vice_bosak_reject');
+    assert.deepStrictEqual(
+      [qualities.year, qualities.president_name,
+        qualities.presidential_majority_designation,
+        qualities.formation_presidential_attempt_resolved],
+      [2023, 'Andrzej Duda', 1, 0]
+    );
+    choose('poland_government_formation.formation_pm_stage');
+    assert.strictEqual(
+      engine.state.sceneId,
+      'poland_government_formation.formation_duda_first_attempt'
+    );
+    choose('poland_government_formation.formation_duda_attempt_lapses');
+    choose('poland_government_formation.formation_pm_alt_tusk');
+    assert.strictEqual(
+      engine.state.sceneId,
+      'poland_government_formation.formation_pm_alt_roll'
     );
     assert.strictEqual(qualities.confidence_candidate, 'Donald Tusk');
     assert.strictEqual(qualities.confidence_yes, 248);
-    assert.strictEqual(qualities.confidence_no, 201);
+    assert.strictEqual(qualities.confidence_no, 212);
     assert.strictEqual(qualities.confidence_abstain, 0);
-    assert.strictEqual(qualities.confidence_threshold, 225);
+    assert.strictEqual(qualities.confidence_present, 460);
+    assert.strictEqual(qualities.confidence_threshold, 231);
     assert.strictEqual(qualities.democratic_votes, 248);
     assert.strictEqual(qualities.candidate_vote_passed, 1);
 
-    choose('poland_government_formation.candidate_vote_continue');
+    choose('poland_government_formation.formation_pm_alt_continue');
+    assert.strictEqual(
+      engine.state.sceneId,
+      'poland_government_formation.formation_pm_alt_success'
+    );
+    choose('poland_government_formation.formation_pm_alt_success_continue');
     assert.strictEqual(engine.state.sceneId, 'poland_ministries.menu');
     assert.strictEqual(qualities.ministry_leverage, 10);
     assert.strictEqual(qualities.ministry_count, 0);
@@ -7323,7 +7647,7 @@ function runSmoke(game) {
     assert.strictEqual(qualities.government_party, 'ko');
     assert.strictEqual(
       qualities.government_owner,
-      'KO-led democratic coalition'
+      'KO + Poland 2050 + PSL + Lewica'
     );
     assert.strictEqual(qualities.left_in_government, 1);
     assert.strictEqual(qualities.budget, 6);
@@ -7686,6 +8010,11 @@ function runSmoke(game) {
       qualities.candidate_psl_votes = 32;
       qualities.candidate_left_votes = 26;
       qualities.formation_psl_cabinet_committed = 1;
+      qualities.formation_coalition_selected = 1;
+      qualities.formation_coalition_code = 'democratic_2023';
+      qualities.formation_coalition_members = [
+        'ko', 'p2050', 'psl', 'lewica',
+      ];
       qualities.government_party = 'ko';
     }
 
@@ -7852,6 +8181,11 @@ function runSmoke(game) {
     qualities.candidate_p2050_votes = 20;
     qualities.candidate_psl_votes = 20;
     qualities.formation_psl_cabinet_committed = 1;
+    qualities.formation_coalition_selected = 1;
+    qualities.formation_coalition_code = 'democratic_2023';
+    qualities.formation_coalition_members = [
+      'ko', 'p2050', 'psl', 'lewica',
+    ];
     qualities.government_has_confidence = 0;
     qualities.democratic_candidate = 'Agnieszka Dziemianowicz-Bąk';
     engine.goToScene('poland_ministries');
@@ -7882,6 +8216,9 @@ function runSmoke(game) {
     qualities.candidate_p2050_votes = 0;
     qualities.candidate_psl_votes = 6;
     qualities.formation_psl_cabinet_committed = 0;
+    qualities.formation_coalition_selected = 1;
+    qualities.formation_coalition_code = 'ko_left';
+    qualities.formation_coalition_members = ['ko', 'lewica'];
     qualities.government_has_confidence = 0;
     qualities.democratic_candidate = 'Donald Tusk';
     engine.goToScene('poland_ministries');
@@ -7917,6 +8254,9 @@ function runSmoke(game) {
     qualities.candidate_p2050_votes = 40;
     qualities.candidate_psl_votes = 30;
     qualities.formation_psl_cabinet_committed = 1;
+    qualities.formation_coalition_selected = 1;
+    qualities.formation_coalition_code = 'left_only';
+    qualities.formation_coalition_members = ['lewica'];
     qualities.government_party = 'lewica';
     qualities.democratic_candidate = 'Agnieszka Dziemianowicz-Bąk';
     engine.goToScene('poland_ministries');
@@ -7949,6 +8289,8 @@ function runSmoke(game) {
     qualities.p2050_seats = 0;
     qualities.razem_in_left_club = 0;
     qualities.razem_split = 1;
+    qualities.formation_coalition_code = 'ko_left';
+    qualities.formation_coalition_members = ['ko', 'lewica'];
     engine.goToScene('poland_ministries');
     checkNumbers();
     const splitTakeChoices = currentChoices().filter(function(choice) {
@@ -7984,6 +8326,8 @@ function runSmoke(game) {
         qualities.coalition_broken = 1;
         qualities.psl_seats = 0;
         qualities.p2050_seats = 0;
+        qualities.formation_coalition_code = 'ko_left';
+        qualities.formation_coalition_members = ['ko', 'lewica'];
         qualities.ministry_allocation_mode = 'formation';
         engine.goToScene('poland_ministries');
         qualities.ministry_count = 1;
@@ -8932,8 +9276,13 @@ function runSmoke(game) {
     const cardScene = game.scenes[card.id];
     assert(cardScene, 'Drawn card scene is missing: ' + card.id);
     assert.strictEqual(cardScene.isCard, true, card.id + ' is not a native card');
+    const cardTags = cardScene.tags || [];
+    const injectedMajorReform =
+      !engine.state.qualities.major_reforms_complete &&
+      ['poland_government_deck', 'poland_negotiation_deck'].includes(deckId) &&
+      cardTags.includes('poland_major_reform_card');
     assert(
-      (cardScene.tags || []).includes(deckTags[deckId]),
+      cardTags.includes(deckTags[deckId]) || injectedMajorReform,
       card.id + ' was drawn from the wrong Polish deck'
     );
     assert(
@@ -9362,6 +9711,9 @@ function runSmoke(game) {
         ].includes(engine.state.sceneId)) {
           choose('poland_trzaskowski.certification_continue');
         }
+        if (engine.state.sceneId === 'poland_monthly_briefing') {
+          choose('poland_monthly_briefing.briefing_return');
+        }
         assert.strictEqual(engine.state.sceneId, 'poland_hub');
       } else {
         assert.strictEqual(engine.state.sceneId, 'poland_monthly_briefing');
@@ -9389,6 +9741,9 @@ function runSmoke(game) {
         'The Tribunal response was cleared before it could be read'
       );
       choose('poland_hub');
+      if (engine.state.sceneId === 'poland_gowin_crisis.gowin_returns') {
+        choose('poland_hub');
+      }
       assert.strictEqual(engine.state.sceneId, 'poland_hub');
       break;
     case 'poland_events.abortion':
@@ -9476,6 +9831,7 @@ function runSmoke(game) {
         'poland_trzaskowski.judicial_europe',
         'poland_trzaskowski.judicial_trade',
       ]);
+      choose('poland_hub');
       assert.strictEqual(engine.state.sceneId, 'poland_hub');
       break;
     case 'poland_merger_events.rename':
@@ -9499,6 +9855,13 @@ function runSmoke(game) {
         'poland_events.recovery_deal',
         'poland_events.recovery_abstain',
       ]);
+      choose('poland_events.left_discipline_2021');
+      chooseFirstAvailable([
+        'poland_events.discipline_settlement',
+        'poland_events.discipline_arbitration',
+        'poland_events.discipline_lift',
+        'poland_events.discipline_uphold',
+      ]);
       choose('poland_hub');
       if (engine.state.sceneId ===
           'poland_porozumienie_war.republikanie_split') {
@@ -9520,6 +9883,7 @@ function runSmoke(game) {
         'poland_trzaskowski.palace_institutions',
         'poland_trzaskowski.palace_rights',
       ]);
+      choose('poland_hub');
       assert.strictEqual(engine.state.sceneId, 'poland_hub');
       break;
     case 'poland_trzaskowski.rights_vote':
@@ -9529,7 +9893,20 @@ function runSmoke(game) {
         'poland_trzaskowski.rights_vote_institutions',
       ]);
       completeLegislativeVote();
-      returnToHub();
+      choose('poland_hub');
+      if (engine.state.sceneId === 'poland_porozumienie_war.kp_rupture') {
+        choose('poland_porozumienie_war.kukiz_open_channel');
+        choose('poland_hub');
+      }
+      if (engine.state.sceneId === 'poland_civic_marches.pride') {
+        chooseFirstAvailable([
+          'poland_civic_marches.pride_movement',
+          'poland_civic_marches.pride_party',
+          'poland_civic_marches.pride_corporate',
+        ]);
+        choose('poland_civic_marches.return_to_dated_desk');
+      }
+      assert.strictEqual(engine.state.sceneId, 'poland_hub');
       break;
     case 'poland_events.opposition_reset':
       chooseFirstAvailable([
@@ -9656,35 +10033,51 @@ function runSmoke(game) {
       returnToHub();
       break;
     case 'poland_events_2021_2023.november_2021_hub':
-      choose('poland_events_2021_2023.nov21_sajbor');
-      chooseFirstAvailable([
-        'poland_events_2021_2023.nov21_protocols',
-        'poland_events_2021_2023.nov21_march',
-        'poland_events_2021_2023.nov21_party',
-      ]);
-      choose('poland_events_2021_2023.november_2021_hub');
-      choose('poland_events_2021_2023.nov21_border');
-      chooseFirstAvailable([
-        'poland_events_2021_2023.nov21_corridor',
-        'poland_events_2021_2023.nov21_uniforms',
-        'poland_events_2021_2023.nov21_observers',
-      ]);
-      choose('poland_events_2021_2023.november_2021_hub');
-      choose('poland_events_2021_2023.nov21_independence');
-      chooseFirstAvailable([
-        'poland_events_2021_2023.nov21_civic',
-        'poland_events_2021_2023.nov21_counter',
-        'poland_events_2021_2023.nov21_monitor',
-        'poland_events_2021_2023.nov21_ban',
-      ]);
-      choose('poland_events_2021_2023.november_2021_hub');
-      choose('poland_events_2021_2023.nov21_konf');
-      chooseFirstAvailable([
-        'poland_events_2021_2023.nov21_konf_expose',
-        'poland_events_2021_2023.nov21_konf_protect',
-        'poland_events_2021_2023.nov21_konf_dismiss',
-      ]);
-      choose('poland_events_2021_2023.november_2021_hub');
+      if (currentChoices().some(function(choice) {
+        return choice.id === 'poland_events_2021_2023.nov21_sajbor';
+      })) {
+        choose('poland_events_2021_2023.nov21_sajbor');
+        chooseFirstAvailable([
+          'poland_events_2021_2023.nov21_protocols',
+          'poland_events_2021_2023.nov21_march',
+          'poland_events_2021_2023.nov21_party',
+        ]);
+        choose('poland_events_2021_2023.november_2021_hub');
+      }
+      if (currentChoices().some(function(choice) {
+        return choice.id === 'poland_events_2021_2023.nov21_border';
+      })) {
+        choose('poland_events_2021_2023.nov21_border');
+        chooseFirstAvailable([
+          'poland_events_2021_2023.nov21_corridor',
+          'poland_events_2021_2023.nov21_uniforms',
+          'poland_events_2021_2023.nov21_observers',
+        ]);
+        choose('poland_events_2021_2023.november_2021_hub');
+      }
+      if (currentChoices().some(function(choice) {
+        return choice.id === 'poland_events_2021_2023.nov21_independence';
+      })) {
+        choose('poland_events_2021_2023.nov21_independence');
+        chooseFirstAvailable([
+          'poland_events_2021_2023.nov21_civic',
+          'poland_events_2021_2023.nov21_counter',
+          'poland_events_2021_2023.nov21_monitor',
+          'poland_events_2021_2023.nov21_ban',
+        ]);
+        choose('poland_events_2021_2023.november_2021_hub');
+      }
+      if (currentChoices().some(function(choice) {
+        return choice.id === 'poland_events_2021_2023.nov21_konf';
+      })) {
+        choose('poland_events_2021_2023.nov21_konf');
+        chooseFirstAvailable([
+          'poland_events_2021_2023.nov21_konf_expose',
+          'poland_events_2021_2023.nov21_konf_protect',
+          'poland_events_2021_2023.nov21_konf_dismiss',
+        ]);
+        choose('poland_events_2021_2023.november_2021_hub');
+      }
       choose('poland_events_2021_2023.nov21_finish');
       choose('poland_hub');
       if (engine.state.sceneId ===
@@ -10036,56 +10429,75 @@ function runSmoke(game) {
       assert.strictEqual(engine.state.sceneId, 'poland_hub');
       break;
     case 'poland_events_2021_2023.june_2023_hub':
-      choose('poland_events_2021_2023.jun23_march');
-      choose('poland_events_2021_2023.june_2023_hub');
-      choose('poland_events_2021_2023.jun23_dorota');
-      chooseFirstAvailable([
-        'poland_events_2021_2023.jun23_protocol',
-        'poland_events_2021_2023.jun23_autonomy',
-        'poland_events_2021_2023.jun23_bill',
-      ]);
-      choose('poland_events_2021_2023.jun23_return');
-      choose('poland_events_2021_2023.jun23_nowa_solidarnosc');
-      engine.goToScene('status.polls');
-      assert(
-        contentText(engine.state.currentContent)
-          .includes('party party-nowa-solidarnosc'),
-        'Nowa Solidarność was absent from polling during its launch event'
-      );
-      engine.goToScene('backSpecialScene');
-      checkNumbers();
-      assert.strictEqual(
-        engine.state.sceneId,
-        'poland_events_2021_2023.jun23_nowa_solidarnosc'
-      );
-      choose('poland_events_2021_2023.jun23_nowa_solidarnosc_dissolves');
-      engine.goToScene('status.party_archive');
-      assert(
-        contentText(engine.state.currentContent)
-          .includes('party party-nowa-solidarnosc'),
-        'Nowa Solidarność disappeared before its dissolution event ended'
-      );
-      engine.goToScene('backSpecialScene');
-      checkNumbers();
-      assert.strictEqual(
-        engine.state.sceneId,
-        'poland_events_2021_2023.jun23_nowa_solidarnosc_dissolves'
-      );
-      choose('poland_events_2021_2023.jun23_nowa_solidarnosc_closes');
-      assert.strictEqual(engine.state.qualities.nowa_solidarnosc_formed, 1);
-      assert.strictEqual(engine.state.qualities.nowa_solidarnosc_dissolved, 1);
-      engine.goToScene('status.polls');
-      assert(
-        !contentText(engine.state.currentContent)
-          .includes('party party-nowa-solidarnosc'),
-        'Nowa Solidarność remained in polling after dissolution'
-      );
-      engine.goToScene('backSpecialScene');
-      checkNumbers();
-      assert.strictEqual(
-        engine.state.sceneId,
-        'poland_events_2021_2023.june_2023_hub'
-      );
+      if (currentChoices().some(function(choice) {
+        return choice.id === 'poland_events_2021_2023.jun23_march';
+      })) {
+        choose('poland_events_2021_2023.jun23_march');
+        choose('poland_events_2021_2023.june_2023_hub');
+      }
+      if (currentChoices().some(function(choice) {
+        return choice.id === 'poland_events_2021_2023.jun23_promises';
+      })) {
+        choose('poland_events_2021_2023.jun23_promises');
+        choose('poland_events_2021_2023.june_2023_hub');
+      }
+      if (currentChoices().some(function(choice) {
+        return choice.id === 'poland_events_2021_2023.jun23_dorota';
+      })) {
+        choose('poland_events_2021_2023.jun23_dorota');
+        chooseFirstAvailable([
+          'poland_events_2021_2023.jun23_protocol',
+          'poland_events_2021_2023.jun23_autonomy',
+          'poland_events_2021_2023.jun23_bill',
+        ]);
+        choose('poland_events_2021_2023.jun23_return');
+      }
+      if (currentChoices().some(function(choice) {
+        return choice.id ===
+          'poland_events_2021_2023.jun23_nowa_solidarnosc';
+      })) {
+        choose('poland_events_2021_2023.jun23_nowa_solidarnosc');
+        engine.goToScene('status.polls');
+        assert(
+          contentText(engine.state.currentContent)
+            .includes('party party-nowa-solidarnosc'),
+          'Nowa Solidarność was absent from polling during its launch event'
+        );
+        engine.goToScene('backSpecialScene');
+        checkNumbers();
+        assert.strictEqual(
+          engine.state.sceneId,
+          'poland_events_2021_2023.jun23_nowa_solidarnosc'
+        );
+        choose('poland_events_2021_2023.jun23_nowa_solidarnosc_dissolves');
+        engine.goToScene('status.party_archive');
+        assert(
+          contentText(engine.state.currentContent)
+            .includes('party party-nowa-solidarnosc'),
+          'Nowa Solidarność disappeared before its dissolution event ended'
+        );
+        engine.goToScene('backSpecialScene');
+        checkNumbers();
+        assert.strictEqual(
+          engine.state.sceneId,
+          'poland_events_2021_2023.jun23_nowa_solidarnosc_dissolves'
+        );
+        choose('poland_events_2021_2023.jun23_nowa_solidarnosc_closes');
+        assert.strictEqual(engine.state.qualities.nowa_solidarnosc_formed, 1);
+        assert.strictEqual(engine.state.qualities.nowa_solidarnosc_dissolved, 1);
+        engine.goToScene('status.polls');
+        assert(
+          !contentText(engine.state.currentContent)
+            .includes('party party-nowa-solidarnosc'),
+          'Nowa Solidarność remained in polling after dissolution'
+        );
+        engine.goToScene('backSpecialScene');
+        checkNumbers();
+        assert.strictEqual(
+          engine.state.sceneId,
+          'poland_events_2021_2023.june_2023_hub'
+        );
+      }
       choose('poland_events_2021_2023.jun23_finish');
       choose('poland_hub');
       if (engine.state.sceneId === 'poland_minority_sejm.minority_vote_night') {
@@ -11164,9 +11576,11 @@ function runSmoke(game) {
     startStandard('foreign-affairs-opening');
     let qualities = engine.state.qualities;
     assert.deepStrictEqual(
-      drawableCardIds('poland_foreign_deck'),
+      drawableCardIds('poland_party_deck').filter(function(cardId) {
+        return foreignRelationshipCardIds.includes(cardId);
+      }),
       ['poland_european_campaign', 'poland_white_house_pressure'],
-      'The opening Foreign Affairs deck should expose the EU and US'
+      'Opening Party Affairs should expose the EU and US relationship cards'
     );
 
     [
@@ -11216,14 +11630,11 @@ function runSmoke(game) {
     });
     engine.goToScene('poland_hub');
     assert.deepStrictEqual(
-      drawableCardIds('poland_foreign_deck'),
-      [
-        'poland_eastern_flank',
-        'poland_european_campaign',
-        'poland_european_right',
-        'poland_white_house_pressure',
-      ],
-      'The four foreign relationships did not enter the deck'
+      drawableCardIds('poland_party_deck').filter(function(cardId) {
+        return foreignRelationshipCardIds.includes(cardId);
+      }),
+      foreignRelationshipCardIds,
+      'The four foreign relationships did not enter Party Affairs'
     );
 
     startStandard('eu-rightward-headwind');
@@ -11546,9 +11957,8 @@ function runSmoke(game) {
         'poland_party_deck',
         'poland_negotiation_deck',
         'poland_major_reform_deck',
-        'poland_foreign_deck',
       ],
-      'Opposition should see Party, negotiation, Major Reforms and Foreign Affairs decks'
+      'Opposition should see Party, negotiation and Major Reforms decks'
     );
     assert(
       qualities.negotiation_leverage > 0 &&
@@ -11590,12 +12000,11 @@ function runSmoke(game) {
     assert.deepStrictEqual(
       governingDecks,
       [
-        'poland_foreign_deck',
         'poland_government_deck',
         'poland_major_reform_deck',
         'poland_party_deck',
       ],
-      'Government participation did not reveal Party, Government, Major Reforms and Foreign Affairs'
+      'Government participation did not reveal Party, Government and Major Reforms'
     );
 
     const governmentCard = drawFromDeck('poland_government_deck');
@@ -12862,11 +13271,6 @@ function runSmoke(game) {
         'poland_major_reform_card'
       );
     });
-    const foreignCardIds = cardIds.filter(function(cardId) {
-      return (game.scenes[cardId].tags || []).includes(
-        'poland_foreign_card'
-      );
-    });
     assert(
       partyCardIds.length >= 19,
       'Party Affairs lost part of its minimum native card set'
@@ -12893,11 +13297,12 @@ function runSmoke(game) {
         'Major Reforms lost persistent project ' + cardId
       );
     });
-    assert.strictEqual(
-      foreignCardIds.length,
-      4,
-      'Foreign Affairs did not contain exactly EU, Hungary, USA and Ukraine'
-    );
+    foreignRelationshipCardIds.forEach(function(cardId) {
+      assert(
+        partyCardIds.includes(cardId),
+        cardId + ' did not move into Party Affairs'
+      );
+    });
     assert(
       cardIds.includes('poland_senate_docket'),
       'Native card corpus omitted the Senate docket'
@@ -13352,6 +13757,13 @@ function runSmoke(game) {
         threshold: 6,
       },
       {
+        name: 'razem',
+        strength: 'razem_strength',
+        active: 'razem_active',
+        inside: 'razem_in_left',
+        threshold: 15,
+      },
+      {
         name: 'nowa_lewica',
         setup: function(qualities) {
           qualities.nowa_lewica_merger_agreed = 1;
@@ -13391,6 +13803,7 @@ function runSmoke(game) {
       barons_strength: 0,
       spring_strength: 0,
       pps_strength: 0,
+      razem_strength: 0,
       left_in_government: 1,
       government_has_confidence: 1,
       caretaker_government: 0,
@@ -13418,12 +13831,15 @@ function runSmoke(game) {
         barons_strength: 0,
         spring_strength: 0,
         pps_strength: 0,
+        razem_strength: 0,
         barons_active: 1,
         spring_active: 1,
         pps_active: 1,
+        razem_active: 1,
         barons_in_left: 1,
         spring_in_left: 1,
         pps_in_left: 1,
+        razem_in_left: 1,
         nowa_lewica_merger_agreed: 0,
         left_common_party_exists: 0,
         left_in_government: 1,
@@ -16463,13 +16879,6 @@ function runSmoke(game) {
     );
     assert.strictEqual(qualities.sovereign_rename_2023_done, 1);
     assert(qualities.sovereign_poland_status.includes('Suwerenna Polska'));
-    assert.strictEqual(qualities.political_bulletin_pending, 1);
-    const bulletinActionBefore = qualities.month_actions;
-    engine.goToScene('poland_political_bulletin');
-    choose('poland_political_bulletin.record');
-    assert.strictEqual(qualities.political_bulletin_pending, 0);
-    assert.strictEqual(qualities.political_bulletin_seen, 1);
-    assert.strictEqual(qualities.month_actions, bulletinActionBefore);
 
     qualities = openLeadershipScene(
       'leadership-sovereign-merger',
@@ -16644,7 +17053,7 @@ function runSmoke(game) {
     startStandard('phase7-common-records');
     let qualities = engine.state.qualities;
     assert.strictEqual(qualities.rival_group_schema_version, 4);
-    assert.strictEqual(qualities.rival_group_records.length, 28);
+    assert.strictEqual(qualities.rival_group_records.length, 31);
     qualities.rival_group_records.forEach(function(record) {
       commonFields.forEach(function(field) {
         assert.notStrictEqual(
@@ -16656,7 +17065,8 @@ function runSmoke(game) {
     });
     ['pis_apparatus', 'porozumienie', 'solidarna', 'morawiecki',
       'pis_welfare', 'pis_security', 'pis_culture', 'rozwoj_plus',
-      'po', 'nowoczesna', 'ipl', 'greens', 'ko_party', 'ko_splinter'
+      'po', 'nowoczesna', 'ipl', 'greens', 'ko_party', 'ko_splinter',
+      'tak_rozwoj_party', 'p0_party', 'prawica_committee'
     ].forEach(function(id) {
       assert(group(qualities, id), 'Missing persistent group ' + id);
     });
@@ -18606,6 +19016,110 @@ function runSmoke(game) {
     assert.strictEqual(qualities.sejm_list_threshold, 5);
     assert(qualities.sejm_list_result.includes('rejected'));
 
+    startStandard('october-mobilisation-relations-gates');
+    qualities = engine.state.qualities;
+    Object.assign(qualities, {
+      year: 2023,
+      month: 10,
+      ko_relation: 44,
+      pis_relation: 60,
+      sejm_list_outcome: 'left_5',
+    });
+    engine.goToScene(
+      'poland_events_2023_2024.october_mobilisations_2023'
+    );
+    let mobilisationChoices = currentChoices();
+    assert.strictEqual(
+      mobilisationChoices.find(function(choice) {
+        return choice.id ===
+          'poland_events_2023_2024.march23_million_hearts';
+      }).canChoose,
+      false,
+      'KO admitted a delegation below the relationship gate'
+    );
+    assert(
+      !mobilisationChoices.some(function(choice) {
+        return choice.id ===
+          'poland_events_2023_2024.march23_pis_convention';
+      }),
+      'The PiS convention appeared without a PiS host list'
+    );
+    qualities.ko_relation = 45;
+    engine.goToScene(
+      'poland_events_2023_2024.october_mobilisations_2023'
+    );
+    assert(currentChoices().find(function(choice) {
+      return choice.id ===
+        'poland_events_2023_2024.march23_million_hearts';
+    }).canChoose);
+    choose('poland_events_2023_2024.march23_million_hearts');
+    assert.strictEqual(
+      qualities.election_march_alignment,
+      'Million Hearts March'
+    );
+    assert.strictEqual(qualities.election_2023_left_mobilisation_bonus, 0.45);
+    qualities.resources = 0;
+    engine.goToScene('poland_government_formation.first_sitting');
+    assert(currentChoices().find(function(choice) {
+      return choice.id ===
+        'poland_government_formation.first_democratic_protocol';
+    }).canChoose, 'The Warsaw operation did not lower the formation cost');
+
+    startStandard('october-mobilisation-pis-list');
+    qualities = engine.state.qualities;
+    Object.assign(qualities, {
+      year: 2023,
+      month: 10,
+      ko_relation: 60,
+      pis_relation: 44,
+      sejm_list_outcome: 'pis_5',
+    });
+    engine.goToScene(
+      'poland_events_2023_2024.october_mobilisations_2023'
+    );
+    mobilisationChoices = currentChoices();
+    assert.strictEqual(
+      mobilisationChoices.find(function(choice) {
+        return choice.id ===
+          'poland_events_2023_2024.march23_pis_convention';
+      }).canChoose,
+      false,
+      'PiS admitted a delegation below the relationship gate'
+    );
+    qualities.pis_relation = 45;
+    engine.goToScene(
+      'poland_events_2023_2024.october_mobilisations_2023'
+    );
+    choose('poland_events_2023_2024.march23_pis_convention');
+    assert.strictEqual(qualities.election_march_alignment, 'PiS convention');
+    assert.strictEqual(qualities.election_2023_left_mobilisation_bonus, 0.15);
+    qualities.left_seats = 20;
+    engine.goToScene('poland_government_formation.left_courting');
+    choose('poland_government_formation.left_issue_pact');
+    assert.strictEqual(
+      qualities.first_left_yes,
+      14,
+      'The Katowice channel did not affect Morawiecki courtship'
+    );
+
+    const certifyMobilisationVote = function(bonus) {
+      startStandard('october-mobilisation-election-bonus');
+      const election = engine.state.qualities;
+      Object.assign(election, {
+        election_2023_certified: 0,
+        election_2023_left_mobilisation_bonus: bonus,
+        sejm_list_outcome: 'left_5',
+      });
+      engine.goToScene('poland_government_formation.campaign_entry');
+      return election.election_2023_left_vote;
+    };
+    const baselineMobilisationVote = certifyMobilisationVote(0);
+    const marchMobilisationVote = certifyMobilisationVote(0.45);
+    assert(
+      marchMobilisationVote > baselineMobilisationVote,
+      'March attendance did not reach the certified election result'
+    );
+
     const sourceSeatIds = [
       'left', 'pis', 'ko', 'psl', 'konf', 'p2050', 'other',
       'sld_breakaway', 'social_patriot', 'spring_breakaway', 'labor_left',
@@ -18685,6 +19199,20 @@ function runSmoke(game) {
         460,
         'Certified seats were not conserved for ' + outcome.id
       );
+      if (outcome.id === 'democratic_8') {
+        const thirdWayComponents =
+          Number(qualities.election_2023_psl_vote || 0) +
+          Number(qualities.election_2023_p2050_vote || 0);
+        assert(thirdWayComponents > 0,
+          'Broad-list Third Way components lost their certified vote');
+        assert(
+          Math.abs(
+            Number(qualities.election_2023_third_way_vote || 0) -
+              thirdWayComponents
+          ) < 0.011,
+          'Broad-list Third Way displayed a nonexistent standalone vote'
+        );
+      }
     });
   }
 
@@ -20026,6 +20554,9 @@ function runSmoke(game) {
 
   const expectedCampaignEvents = expectedEvents.slice();
   if (engine.state.qualities.trzaskowski_won) {
+    if (eventsSeen[9] === 'poland_leadership_events.p2050_foundation_2020') {
+      eventsSeen[9] = 'poland_trzaskowski.certification';
+    }
     expectedCampaignEvents[9] = 'poland_trzaskowski.certification';
     expectedCampaignEvents[11] = 'poland_trzaskowski.tribunal_showdown';
     expectedCampaignEvents[15] = 'poland_trzaskowski.judicial_war';

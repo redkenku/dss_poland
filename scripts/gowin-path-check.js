@@ -1008,6 +1008,7 @@ console.log('gowin-path-check: Koalicja Polska / Trzecia Droga committee OK');
   Q.month = 9;
   Q.trz_repeat_election_pending = 0;
   Q.merger_event_done = 1;
+  Q.czajka_2020_done = 1;
   Q.animals_2020_done = 1;
   Q.emilewicz_left_porozumienie = 1;
   Q.caucus_crisis_pending = 0;
@@ -1063,12 +1064,81 @@ console.log('gowin-path-check: Koalicja Polska / Trzecia Droga committee OK');
   Q.month = 9;
   Q.trz_repeat_election_pending = 0;
   Q.merger_event_done = 1;
+  Q.czajka_2020_done = 1;
   Q.animals_2020_done = 0;
   Q.emilewicz_left_porozumienie = 1;
   Q.caucus_crisis_pending = 0;
   engine.goToScene('poland_polling');
   assert.strictEqual(Q.legacy_congestion_pending, 1);
   assert.strictEqual(Q.poland_legacy_event_queue_count, 2);
+  assert(String(Q.poland_legacy_event_queue_titles)
+    .includes('A guest from Forza Nuova'));
+}
+
+{
+  // Czajka is independently routable when it is the final September file,
+  // and a Trzaskowski presidency makes the unavoidable KO hit larger.
+  const { engine, choose, Q } = newEngine();
+  Object.assign(Q, {
+    year: 2020,
+    month: 9,
+    trz_inaugurated: 1,
+    president_name: 'Rafał Trzaskowski',
+    trz_repeat_election_pending: 0,
+    merger_event_done: 1,
+    animals_2020_done: 1,
+    fiore_braun_2020_done: 1,
+    emilewicz_left_porozumienie: 1,
+    caucus_crisis_pending: 0,
+  });
+  const koBefore = Q.ko_poll_momentum;
+  const backlashBefore = Q.trz_right_backlash;
+  engine.goToScene('poland_polling');
+  assert.strictEqual(engine.state.sceneId, 'poland_events.czajka_2020');
+  assert.strictEqual(Q.czajka_2020_done, 1);
+  assert.strictEqual(Q.ko_poll_momentum, koBefore - 1);
+  assert.strictEqual(Q.trz_right_backlash, backlashBefore + 4);
+  assert(JSON.stringify(engine.state.currentContent)
+    .includes('Presidential Palace'));
+  const momentumAfterArrival = Q.ko_poll_momentum;
+  choose('poland_events.czajka_meme');
+  assert.strictEqual(Q.czajka_2020_stance, 'Weaponise the sewage meme');
+  assert.strictEqual(Q.ko_poll_momentum, momentumAfterArrival - 0.5);
+}
+
+{
+  // In the crowded September month, resolving Czajka must retain its result
+  // until Continue and then return to a desk that still lists the other files.
+  const { engine, choose, Q } = newEngine();
+  Object.assign(Q, {
+    year: 2020,
+    month: 9,
+    trz_inaugurated: 1,
+    president_name: 'Rafał Trzaskowski',
+    trz_repeat_election_pending: 0,
+    merger_event_done: 1,
+    animals_2020_done: 0,
+    fiore_braun_2020_done: 0,
+    emilewicz_left_porozumienie: 1,
+    caucus_crisis_pending: 0,
+  });
+  engine.goToScene('poland_polling');
+  assert.strictEqual(engine.state.sceneId,
+    'poland_legacy_event_desk.events_choice');
+  assert.strictEqual(Q.poland_legacy_event_queue_count, 3);
+  choose('poland_legacy_event_desk.czajka_2020');
+  choose('poland_events.czajka_defend');
+  assert.strictEqual(engine.state.sceneId, 'poland_events.czajka_defend');
+  assert(JSON.stringify(engine.state.currentContent)
+    .includes('same critical route failed twice'));
+  choose('poland_hub');
+  assert.strictEqual(engine.state.sceneId,
+    'poland_legacy_event_desk.events_choice');
+  assert.strictEqual(Q.poland_legacy_event_queue_count, 2);
+  assert(!String(Q.poland_legacy_event_queue_titles)
+    .includes('Trzaskowski shits into the river'));
+  assert(String(Q.poland_legacy_event_queue_titles)
+    .includes('Five for the animals'));
   assert(String(Q.poland_legacy_event_queue_titles)
     .includes('A guest from Forza Nuova'));
 }

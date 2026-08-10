@@ -329,6 +329,360 @@ if (!budgetHost.polandBudgetModel) {
     };
 }
 const publicMoodHost = budgetHost;
+if (!budgetHost.polandElectionModel) {
+    const finiteElection = function(value, fallback) {
+        const number = Number(value);
+        return Number.isFinite(number) ? number : fallback;
+    };
+    const clampElection = function(value, low, high) {
+        return Math.max(low, Math.min(high, finiteElection(value, low)));
+    };
+    const apportionElection = function(total, ids, weightFor) {
+        const result = {};
+        const safeTotal = Math.max(0, Math.round(finiteElection(total, 0)));
+        if (!ids.length || safeTotal == 0) return result;
+        const weightTotal = ids.reduce(function(sum, id) {
+            return sum + Math.max(0, finiteElection(weightFor(id), 0));
+        }, 0);
+        const divisor = Math.max(0.01, weightTotal);
+        const rows = ids.map(function(id) {
+            const exact = safeTotal * Math.max(
+                0,
+                finiteElection(weightFor(id), 0)
+            ) / divisor;
+            return {
+                id: id,
+                seats: Math.floor(exact),
+                remainder: exact - Math.floor(exact)
+            };
+        });
+        let allocated = rows.reduce(function(sum, row) {
+            return sum + row.seats;
+        }, 0);
+        rows.sort(function(a, b) {
+            return b.remainder - a.remainder;
+        });
+        let remainderIndex = 0;
+        while (allocated < safeTotal) {
+            rows[remainderIndex % rows.length].seats += 1;
+            remainderIndex += 1;
+            allocated += 1;
+        }
+        for (const row of rows) result[row.id] = row.seats;
+        return result;
+    };
+    const dhondtElection = function(votes, qualified, seatCount) {
+        const result = {};
+        for (const id of Object.keys(votes)) result[id] = 0;
+        for (let seat = 0; seat < seatCount; seat += 1) {
+            let winner = qualified[0];
+            let best = -1;
+            for (const id of qualified) {
+                const quotient = finiteElection(votes[id], 0) /
+                    ((result[id] || 0) + 1);
+                if (quotient > best) {
+                    best = quotient;
+                    winner = id;
+                }
+            }
+            result[winner] = (result[winner] || 0) + 1;
+        }
+        return result;
+    };
+    const groupIds = [
+        "metropolitan_liberals", "liberal_professionals",
+        "public_service_families", "industrial_logistics",
+        "provincial_welfare", "rural_localists",
+        "older_welfare_households", "anti_establishment_youth"
+    ];
+    const nationalWeights = [12, 11, 12, 13, 15, 15, 12, 10];
+    const urbanProfiles = [
+        [34, 24, 16, 8, 4, 2, 4, 8],
+        [18, 16, 22, 24, 7, 2, 6, 5],
+        [12, 10, 18, 34, 10, 3, 8, 5],
+        [22, 20, 12, 12, 12, 5, 9, 8]
+    ];
+    const ruralProfiles = [
+        [2, 3, 5, 8, 22, 38, 18, 4],
+        [5, 6, 10, 19, 30, 15, 11, 4],
+        [3, 4, 10, 31, 28, 9, 11, 4],
+        [8, 10, 9, 18, 22, 18, 10, 5]
+    ];
+    const familyFor = function(id) {
+        if ([
+            "left", "sld_breakaway", "social_patriot", "spring_breakaway",
+            "labor_left", "young_left", "razem", "pps", "tak_rozwoj"
+        ].includes(id)) return "left";
+        if (["ko", "ko_splinter", "centrum"].includes(id)) return "ko";
+        if ([
+            "pis", "rozwoj", "suwerenna", "republikanie", "odnowa",
+            "duda", "social_conservative"
+        ].includes(id)) return "pis";
+        if (["konf", "korona", "new_hope", "national_movement"].includes(id)) {
+            return "konf";
+        }
+        if (["porozumienie", "kukiz"].includes(id)) return "psl";
+        return id;
+    };
+    const weightedShare = function(state, family, weights) {
+        let total = 0;
+        let weightTotal = 0;
+        for (let index = 0; index < groupIds.length; index += 1) {
+            const share = Number(state[groupIds[index] + "_" + family]);
+            if (!Number.isFinite(share)) continue;
+            total += share * weights[index];
+            weightTotal += weights[index];
+        }
+        return weightTotal > 0 ? total / weightTotal : 0;
+    };
+    const staticGeography = {
+        left: [1.30, 0.52], ko: [1.28, 0.58], p2050: [1.12, 0.78],
+        pis: [0.68, 1.35], psl: [0.54, 1.55], konf: [1.02, 0.96],
+        p0: [1.10, 0.82], other: [1, 1]
+    };
+    const geographyFactor = function(state, id, pool, index) {
+        const family = familyFor(id);
+        const profiles = pool == "urban" ? urbanProfiles : ruralProfiles;
+        const local = weightedShare(
+            state,
+            family,
+            profiles[index % profiles.length]
+        );
+        const national = weightedShare(state, family, nationalWeights);
+        const fallback = staticGeography[family] || [1, 1];
+        let factor = national > 0
+            ? clampElection(local / national, 0.42, 1.8)
+            : fallback[pool == "urban" ? 0 : 1];
+        let hash = pool == "urban" ? 17 : 31;
+        for (let cursor = 0; cursor < id.length; cursor += 1) {
+            hash = (hash * 33 + id.charCodeAt(cursor)) % 997;
+        }
+        hash = (hash + index * 37) % 17;
+        factor *= 1 + (hash - 8) / 100;
+        return factor;
+    };
+    const allocateSejm = function(options) {
+        const state = options.state || {};
+        const system = ["mixed_230", "fptp_460"].includes(options.system)
+            ? options.system
+            : "proportional";
+        const partyIds = (options.partyIds || []).slice();
+        const committeeFor = options.committeeFor || {};
+        const componentVotes = options.componentVotes || {};
+        const committeeVotes = options.committeeVotes || {};
+        const negotiatedShares = options.negotiatedShares || {};
+        const committees = Object.keys(committeeVotes).filter(function(id) {
+            return finiteElection(committeeVotes[id], 0) > 0;
+        });
+        let qualified = (options.qualifiedCommittees || []).filter(function(id) {
+            return committees.includes(id);
+        });
+        if (!qualified.length && committees.length) {
+            qualified = committees.slice().sort(function(a, b) {
+                return committeeVotes[b] - committeeVotes[a];
+            }).slice(0, 1);
+        }
+        const membersFor = function(committee) {
+            return partyIds.filter(function(id) {
+                return finiteElection(componentVotes[id], 0) > 0 &&
+                    (committeeFor[id] || id) == committee;
+            });
+        };
+        const weightsFor = function(members) {
+            const useNegotiated = members.length > 1 && members.every(function(id) {
+                return finiteElection(negotiatedShares[id], 0) > 0;
+            });
+            const weights = {};
+            for (const id of members) {
+                weights[id] = useNegotiated
+                    ? finiteElection(negotiatedShares[id], 0)
+                    : finiteElection(componentVotes[id], 0);
+            }
+            return weights;
+        };
+        const emptySeats = function() {
+            const result = {};
+            for (const id of partyIds) result[id] = 0;
+            return result;
+        };
+        const listPartySeats = emptySeats();
+        const urbanPartySeats = emptySeats();
+        const ruralPartySeats = emptySeats();
+        const listCount = system == "proportional" ? 460 :
+            (system == "mixed_230" ? 230 : 0);
+        const listCommitteeSeats = listCount > 0
+            ? dhondtElection(committeeVotes, qualified, listCount)
+            : {};
+        for (const committee of committees) {
+            const members = membersFor(committee);
+            if (!members.length) continue;
+            const weights = weightsFor(members);
+            const apportioned = apportionElection(
+                listCommitteeSeats[committee] || 0,
+                members,
+                function(id) { return weights[id]; }
+            );
+            for (const id of members) listPartySeats[id] = apportioned[id] || 0;
+        }
+        const districtCommitteeSeats = {};
+        for (const committee of committees) {
+            districtCommitteeSeats[committee] = {urban: 0, rural: 0};
+        }
+        const leftStrongholdCount = clampElection(Math.round(
+            6 + (finiteElection(state.local_network, 42) - 42) / 4 +
+            (finiteElection(state.urban_progressive_support, 27) - 27) / 5
+        ), 6, 15);
+        const countDistricts = function(pool, count, partySeats) {
+            if (count <= 0 || !committees.length) return;
+            const rankedCommittees = committees.slice().sort(function(a, b) {
+                return finiteElection(committeeVotes[b], 0) -
+                    finiteElection(committeeVotes[a], 0);
+            });
+            const pollingLeader = rankedCommittees[0];
+            const leaderMargin = Math.max(
+                0,
+                finiteElection(committeeVotes[pollingLeader], 0) -
+                    finiteElection(committeeVotes[rankedCommittees[1]], 0)
+            );
+            const playerLeads = membersFor(pollingLeader).includes("left");
+            const leaderMultiplier = leaderMargin > 0
+                ? (playerLeads
+                    ? 2.4 + Math.min(0.6, leaderMargin * 0.025)
+                    : 1.08 + Math.min(0.37, leaderMargin * 0.025))
+                : 1;
+            const baseScore = function(committee, index) {
+                const members = membersFor(committee);
+                const transfer = members.length > 1 ? 0.94 : 1;
+                const localScore = members.reduce(function(total, id) {
+                    return total + finiteElection(componentVotes[id], 0) *
+                        geographyFactor(state, id, pool, index);
+                }, 0) * transfer;
+                const memberNational = members.reduce(function(total, id) {
+                    return total + finiteElection(componentVotes[id], 0);
+                }, 0);
+                const committeeScale = finiteElection(
+                    committeeVotes[committee],
+                    memberNational
+                ) / Math.max(0.01, memberNational);
+                return localScore * committeeScale *
+                    (committee == pollingLeader ? leaderMultiplier : 1);
+            };
+            const leftCommittee = committeeFor.left || "left";
+            const strongholdRanks = {};
+            if (pool == "urban" && committees.includes(leftCommittee) &&
+                membersFor(leftCommittee).includes("left")) {
+                const ranked = [];
+                for (let index = 0; index < count; index += 1) {
+                    let rival = 0;
+                    for (const committee of committees) {
+                        if (committee != leftCommittee) {
+                            rival = Math.max(rival, baseScore(committee, index));
+                        }
+                    }
+                    ranked.push({
+                        index: index,
+                        margin: baseScore(leftCommittee, index) - rival
+                    });
+                }
+                ranked.sort(function(a, b) {
+                    return b.margin - a.margin || a.index - b.index;
+                });
+                ranked.slice(0, Math.min(count, leftStrongholdCount)).forEach(
+                    function(entry, rank) { strongholdRanks[entry.index] = rank; }
+                );
+            }
+            const nomineeByCommittee = {};
+            for (const committee of committees) {
+                const members = membersFor(committee);
+                nomineeByCommittee[committee] = [];
+                if (!members.length) continue;
+                const weights = weightsFor(members);
+                const targets = {};
+                const assigned = {};
+                const weightTotal = members.reduce(function(sum, id) {
+                    return sum + weights[id];
+                }, 0);
+                for (const id of members) {
+                    targets[id] = count * weights[id] / Math.max(0.01, weightTotal);
+                    assigned[id] = 0;
+                }
+                for (let index = 0; index < count; index += 1) {
+                    let nominee = null;
+                    if (pool == "urban" && strongholdRanks[index] !== undefined &&
+                        members.includes("left")) {
+                        nominee = "left";
+                    } else {
+                        nominee = members.slice().sort(function(a, b) {
+                            return (targets[b] - assigned[b]) -
+                                (targets[a] - assigned[a]) || a.localeCompare(b);
+                        })[0];
+                    }
+                    nomineeByCommittee[committee][index] = nominee;
+                    assigned[nominee] += 1;
+                }
+            }
+            for (let index = 0; index < count; index += 1) {
+                let winner = committees[0];
+                let best = -1;
+                for (const committee of committees) {
+                    let score = baseScore(committee, index);
+                    const nominee = nomineeByCommittee[committee][index];
+                    if (pool == "urban" && nominee == "left" &&
+                        strongholdRanks[index] !== undefined) {
+                        const rank = strongholdRanks[index];
+                        const leftViability = clampElection(
+                            (finiteElection(committeeVotes[leftCommittee], 0) - 3) / 9,
+                            0,
+                            1
+                        );
+                        score += (32 - 8 * rank /
+                            Math.max(1, leftStrongholdCount - 1)) *
+                            leftViability;
+                    }
+                    if (score > best) {
+                        best = score;
+                        winner = committee;
+                    }
+                }
+                districtCommitteeSeats[winner][pool] += 1;
+                const nominee = nomineeByCommittee[winner][index];
+                if (nominee) partySeats[nominee] = (partySeats[nominee] || 0) + 1;
+            }
+        };
+        const urbanCount = system == "mixed_230" ? 138 :
+            (system == "fptp_460" ? 276 : 0);
+        const ruralCount = system == "mixed_230" ? 92 :
+            (system == "fptp_460" ? 184 : 0);
+        countDistricts("urban", urbanCount, urbanPartySeats);
+        countDistricts("rural", ruralCount, ruralPartySeats);
+        const partySeats = emptySeats();
+        const committeeSeats = {};
+        for (const id of partyIds) {
+            partySeats[id] = (listPartySeats[id] || 0) +
+                (urbanPartySeats[id] || 0) + (ruralPartySeats[id] || 0);
+        }
+        for (const committee of committees) {
+            committeeSeats[committee] = (listCommitteeSeats[committee] || 0) +
+                districtCommitteeSeats[committee].urban +
+                districtCommitteeSeats[committee].rural;
+        }
+        return {
+            system: system,
+            partySeats: partySeats,
+            committeeSeats: committeeSeats,
+            listPartySeats: listPartySeats,
+            urbanPartySeats: urbanPartySeats,
+            ruralPartySeats: ruralPartySeats,
+            listCommitteeSeats: listCommitteeSeats,
+            districtCommitteeSeats: districtCommitteeSeats,
+            listSeatCount: listCount,
+            urbanSeatCount: urbanCount,
+            ruralSeatCount: ruralCount,
+            leftStrongholdCount: leftStrongholdCount
+        };
+    };
+    budgetHost.polandElectionModel = {allocateSejm: allocateSejm};
+}
 if (!publicMoodHost.polandPublicMoodModel) {
     const clampMood = function(value, low, high) {
         const number = Number(value);
@@ -1921,7 +2275,10 @@ if (Q.started) {
         ["zp_committee", "pis", "party", "Zjednoczona Prawica", "Jarosław Kaczyński", "Zjednoczona Prawica", "electoral alliance", 1, 1, 70, 66, 8, 0],
         ["republikanie", "pis", "party", "Partia Republikańska", "Adam Bielan", "United Right", "not formed", 0, 1, 0, 0, 18, 0],
         ["odnowa", "pis", "party", "OdNowa RP", "Marcin Ociepa", "United Right", "not formed", 0, 1, 0, 0, 20, 0],
-        ["duda_movement", "pis", "party", "Duda civic vehicle", "Andrzej Duda", "Presidential milieu", "not formed", 0, 0, 0, 0, 28, 0]
+        ["duda_movement", "pis", "party", "Duda civic vehicle", "Andrzej Duda", "Presidential milieu", "not formed", 0, 0, 0, 0, 28, 0],
+        ["tak_rozwoj_party", "left", "party", "Tak! Dla Rozwoju", "Paulina Matysiak", "Tak! Dla Rozwoju", "not formed", 0, 0, 0, 0, 22, 0],
+        ["p0_party", "p0", "party", "Partia Zero", "Krzysztof Stanowski", "Partia Zero", "not formed", 0, 0, 0, 0, 20, 0],
+        ["prawica_committee", "pis", "committee", "Prawica", "Andrzej Duda", "Prawica", "not formed", 0, 0, 0, 0, 30, 0]
     ];
     if (!Array.isArray(Q.rival_group_records)) {
         Q.rival_group_records = [];
@@ -2309,6 +2666,36 @@ if (Q.started) {
         rozwojRecord.list_committee = "rozwoj";
         rozwojRecord.club = "rozwoj";
     }
+    const takRozwojRecord = rivalGroup("tak_rozwoj_party");
+    takRozwojRecord.active = Q.tak_dla_rozwoju_legal_party_formed ? 1 : 0;
+    takRozwojRecord.name = Q.tak_rozwoj_party_name || "Tak! Dla Rozwoju";
+    takRozwojRecord.leader = Q.tak_rozwoj_leader || "Paulina Matysiak";
+    takRozwojRecord.parent = takRozwojRecord.name;
+    takRozwojRecord.legal_status = Q.tak_rozwoj_legal_status;
+    takRozwojRecord.list_committee = Q.tak_rozwoj_list_committee || "tak_rozwoj";
+    takRozwojRecord.club = "tak_rozwoj";
+    takRozwojRecord.contesting = takRozwojRecord.active;
+    takRozwojRecord.exclusive_seats = Math.max(
+        0, Math.round(Number(Q.tak_rozwoj_seats) || 0)
+    );
+    takRozwojRecord.mp_count = takRozwojRecord.exclusive_seats;
+    takRozwojRecord.sejm_mps = takRozwojRecord.exclusive_seats;
+    const p0Record = rivalGroup("p0_party");
+    p0Record.active = Q.p0_formed ? 1 : 0;
+    p0Record.name = Q.p0_name || "Partia Zero";
+    p0Record.leader = Q.p0_leader || "Krzysztof Stanowski";
+    p0Record.parent = p0Record.name;
+    p0Record.legal_status = p0Record.active
+        ? "registered political party"
+        : "not formed";
+    p0Record.list_committee = "p0";
+    p0Record.club = "p0";
+    p0Record.contesting = p0Record.active;
+    p0Record.exclusive_seats = Math.max(
+        0, Math.round(Number(Q.p0_seats) || 0)
+    );
+    p0Record.mp_count = p0Record.exclusive_seats;
+    p0Record.sejm_mps = p0Record.exclusive_seats;
     const koPartyRecord = rivalGroup("ko_party");
     if (Q.ko_consolidated) {
         koPartyRecord.active = 1;
@@ -2382,7 +2769,8 @@ if (Q.started) {
             "Krzysztof Gawkowski", "Włodzimierz Czarzasty",
             "Robert Biedroń", "Adrian Zandberg", "Anna Maria Żukowska",
             "Tomasz Trela", "Joanna Senyszyn", "Marcelina Zawisza",
-            "Dariusz Wieczorek", "Katarzyna Kotula"
+            "Dariusz Wieczorek", "Katarzyna Kotula", "Leszek Miller",
+            "Monika Jaruzelska"
         ]],
         ["ko", [
             "Donald Tusk", "Rafał Trzaskowski", "Radosław Sikorski",
@@ -2399,7 +2787,7 @@ if (Q.started) {
         ]],
         ["pis", [
             "Mateusz Morawiecki", "Beata Szydło", "Przemysław Czarnek",
-            "Jarosław Kaczyński", "Mariusz Błaszczak", "Piotr Müller",
+            "Henryk Kowalczyk", "Jarosław Kaczyński", "Mariusz Błaszczak", "Piotr Müller",
             "Tobiasz Bocheński", Q.pres_2025_right_candidate, "Zbigniew Ziobro"
         ]],
         ["konf", [
@@ -2441,9 +2829,11 @@ if (Q.started) {
     // cabinet is a different asset from one it holds because the larger
     // partners could not agree on anybody else. The second is borrowed.
     const cabinetPartnerSeats = [
+        Q.ministry_pis_in_cabinet ? Number(Q.pis_seats) || 0 : 0,
         Q.ministry_ko_in_cabinet ? Number(Q.ko_seats) || 0 : 0,
         Q.ministry_psl_in_cabinet ? Number(Q.psl_seats) || 0 : 0,
-        Q.ministry_p2050_in_cabinet ? Number(Q.p2050_seats) || 0 : 0
+        Q.ministry_p2050_in_cabinet ? Number(Q.p2050_seats) || 0 : 0,
+        Q.ministry_konf_in_cabinet ? Number(Q.konf_seats) || 0 : 0
     ];
     const largestPartnerSeats = cabinetPartnerSeats.reduce(
         function(best, seats) { return Math.max(best, seats); }, 0
@@ -2583,6 +2973,31 @@ if (Q.started) {
         p2050Party.club = "p2050";
         p2050Party.parent = "Polska 2050";
     }
+    if (Q.p2050_greens_absorbed) {
+        const greensRecord = rivalGroup("greens");
+        greensRecord.active = 0;
+        greensRecord.allied = 0;
+        greensRecord.bloc = "p2050";
+        greensRecord.kind = "former party";
+        greensRecord.parent = "Polska 2050";
+        greensRecord.legal_status = "dissolved into Polska 2050";
+        greensRecord.list_committee = "p2050";
+        greensRecord.club = "p2050";
+        greensRecord.in_cabinet = 0;
+        greensRecord.independent = 0;
+        greensRecord.mp_count = 0;
+        greensRecord.sejm_mps = 0;
+        greensRecord.exclusive_seats = 0;
+        Q.left_realign_invite_greens = 0;
+        Q.left_realign_greens_accepted = 0;
+        Q.greens_joined_left = 0;
+        Q.left_green_current_seats = 0;
+        p2050Party.mp_count = Math.max(
+            0,
+            Math.round(Number(Q.p2050_seats) || 0)
+        );
+        p2050Party.sejm_mps = p2050Party.mp_count;
+    }
     const kpMembers = Q.rival_group_records.filter(function(record) {
         return record.active && record.id != "kp_committee" &&
             record.list_committee == kpCommitteeId;
@@ -2606,39 +3021,131 @@ if (Q.started) {
     Q.third_way_committee_active =
         kpCommittee.active && thirdWayFormed ? 1 : 0;
 
-    // Visible congresses may replace the default family committee with a
-    // shared dynamic list. Reapply only their recorded result here; this does
-    // not choose an outcome or dissolve a component.
-    if (String(Q.right_reunification_outcome || "").startsWith("Shared Right")) {
-        const rightIds = ["pis_party", "rozwoj_plus"].concat(
-            Q.mentzen_bosak_split == 1
-                ? ["nowa_nadzieja", "ruch_narodowy"]
-                : ["konf_committee"]
-        ).concat(["kkp"]);
-        const liveRight = rightIds.map(rivalGroup).filter(function(record) {
-            return record && record.active;
-        });
-        const totalOrganisation = liveRight.reduce(function(total, record) {
-            return total + Math.max(1, Number(record.organisation) || 0);
-        }, 0);
-        for (const record of liveRight) {
-            record.list_committee = "right_2027";
-            record.contesting = 1;
-            if (!record.negotiated_list_share) {
-                record.negotiated_list_share = Math.round(
-                    Math.max(1, Number(record.organisation) || 0) * 100 /
-                    Math.max(1, totalOrganisation)
-                );
-            }
-        }
+    // Duda's congress becomes possible only when several genuinely distinct
+    // right-wing ballot lines exist. This is derived state: the congress event
+    // owns the seeded roll and every membership decision.
+    const prawicaEligibleCommittees = [];
+    const prawicaIndependentPolls = [];
+    Q.prawica_pis_government_block =
+        Q.government_party == "pis" || Q.ministry_pis_in_cabinet ? 1 : 0;
+    const addPrawicaFragment = function(eligible, committee, poll) {
+        if (!eligible) return;
+        prawicaEligibleCommittees.push(String(committee));
+        prawicaIndependentPolls.push(Math.max(0, Number(poll) || 0));
+    };
+    addPrawicaFragment(true, "pis", Q.pis_poll);
+    const prawicaRozwoj = rivalGroup("rozwoj_plus");
+    addPrawicaFragment(
+        prawicaRozwoj && prawicaRozwoj.active,
+        prawicaRozwoj && prawicaRozwoj.list_committee || "rozwoj",
+        Q.rozwoj_poll
+    );
+    if (Q.mentzen_bosak_split == 1) {
+        const prawicaNewHope = rivalGroup("nowa_nadzieja");
+        const prawicaNational = rivalGroup("ruch_narodowy");
+        addPrawicaFragment(
+            prawicaNewHope && prawicaNewHope.active,
+            prawicaNewHope && prawicaNewHope.list_committee || "new_hope",
+            Q.new_hope_poll
+        );
+        addPrawicaFragment(
+            prawicaNational && prawicaNational.active,
+            prawicaNational && prawicaNational.list_committee || "national_movement",
+            Q.national_movement_poll
+        );
+    } else {
+        const prawicaKonf = rivalGroup("konf_committee");
+        addPrawicaFragment(
+            prawicaKonf && prawicaKonf.active,
+            prawicaKonf && prawicaKonf.list_committee || "konf",
+            Q.konf_poll
+        );
     }
+    const prawicaPslOutside = Q.government_party != "psl" &&
+        !Q.ministry_psl_in_cabinet;
+    addPrawicaFragment(
+        prawicaPslOutside && rivalGroup("psl_party") &&
+            rivalGroup("psl_party").active,
+        rivalGroup("psl_party") && rivalGroup("psl_party").list_committee || "psl",
+        Q.psl_poll
+    );
+    addPrawicaFragment(
+        Q.tak_dla_rozwoju_legal_party_formed &&
+            Q.tak_rozwoj_party_name != "Akcja Socjalistyczna",
+        Q.tak_rozwoj_list_committee || "tak_rozwoj",
+        Q.tak_rozwoj_poll
+    );
+    addPrawicaFragment(Q.p0_formed, "p0", Q.p0_poll);
+    addPrawicaFragment(
+        Q.kukiz_active && rivalGroup("kukiz15") && rivalGroup("kukiz15").active,
+        Q.kukiz_list_committee || "kukiz",
+        Q.kukiz_poll
+    );
+    const prawicaSolidarna = rivalGroup("solidarna");
+    addPrawicaFragment(
+        prawicaSolidarna && prawicaSolidarna.active && !Q.suwerenna_merged,
+        prawicaSolidarna && prawicaSolidarna.list_committee || "suwerenna",
+        Q.suwerenna_poll
+    );
+    const prawicaPorozumienie = rivalGroup("porozumienie");
+    addPrawicaFragment(
+        Q.porozumienie_active && prawicaPorozumienie &&
+            prawicaPorozumienie.active,
+        Q.porozumienie_list_committee || "porozumienie",
+        Q.porozumienie_poll
+    );
+    const prawicaRepublikanie = rivalGroup("republikanie");
+    addPrawicaFragment(
+        Q.republikanie_formed && prawicaRepublikanie &&
+            prawicaRepublikanie.active,
+        prawicaRepublikanie && prawicaRepublikanie.list_committee || "republikanie",
+        0
+    );
+    const prawicaOdnowa = rivalGroup("odnowa");
+    addPrawicaFragment(
+        Q.odnowa_formed && prawicaOdnowa && prawicaOdnowa.active,
+        prawicaOdnowa && prawicaOdnowa.list_committee || "odnowa",
+        0
+    );
+    const prawicaSikorski = rivalGroup("ko_splinter");
+    addPrawicaFragment(
+        Q.ko_splinter_active && prawicaSikorski && prawicaSikorski.active &&
+            prawicaSikorski.independent &&
+            prawicaSikorski.leader == "Radosław Sikorski",
+        prawicaSikorski && prawicaSikorski.list_committee || "ko_splinter",
+        Q.ko_splinter_poll
+    );
+    const prawicaDistinct = Array.from(new Set(prawicaEligibleCommittees)).length;
+    const prawicaBelowThreshold = prawicaIndependentPolls.slice(1).filter(
+        function(poll) { return poll < 5; }
+    ).length;
+    Q.prawica_fragmentation_score = Math.max(0, Math.min(100, Math.round(
+        10 * Math.max(0, prawicaDistinct - 2) +
+        (Q.pis_collapsed ? 18 : 0) +
+        (Q.pis_split ? 12 : 0) +
+        (Q.far_right_split ? 8 : 0) +
+        (Q.mentzen_bosak_split ? 8 : 0) +
+        (Q.third_way_split ? 6 : 0) +
+        Math.min(18, Math.max(0,
+            Math.round((Number(Q.pis_collapse_pressure) || 0) * 0.18))) +
+        4 * prawicaBelowThreshold
+    )));
+    const prawicaJowActive = Q.electoral_reform_stage == "enacted" &&
+        ["mixed_230", "fptp_460"].includes(Q.sejm_electoral_system);
+    Q.prawica_attempt_threshold = prawicaJowActive
+        ? 950
+        : (Q.prawica_fragmentation_score < 55
+            ? 0
+            : 400 + Math.min(200,
+                (Q.prawica_fragmentation_score - 55) * 10));
     if (String(Q.third_way_alternative_outcome || "").startsWith("Common-centre")) {
         const centreIds = [
             "ko_party", "psl_party", "p2050_party", "unia_centrum",
             "ko_splinter"
         ];
         const liveCentre = centreIds.map(rivalGroup).filter(function(record) {
-            return record && record.active;
+            return record && record.active &&
+                !Q.prawica_member_ids.includes(record.id);
         });
         const totalSeats = liveCentre.reduce(function(total, record) {
             return total + Math.max(1, Number(record.exclusive_seats) ||
@@ -2659,10 +3166,83 @@ if (Q.started) {
     if (String(Q.third_way_alternative_outcome || "").startsWith("Permanent Third Way")) {
         for (const id of ["psl_party", "p2050_party"]) {
             const record = rivalGroup(id);
-            if (!record || !record.active) continue;
+            if (!record || !record.active ||
+                Q.prawica_member_ids.includes(record.id)) continue;
             record.list_committee = "third_way_2027";
             record.contesting = 1;
             record.negotiated_list_share = id == "psl_party" ? 55 : 45;
+        }
+    }
+
+    // Prawica is applied last. Member parties remain legal organisations, but
+    // no later ZP, Third Way or common-centre repair may reclaim their list or
+    // parliamentary-club affiliation.
+    if (Q.prawica_formed) {
+        const prawicaCommittee = rivalGroup("prawica_committee");
+        if (prawicaCommittee) {
+            prawicaCommittee.active = 1;
+            prawicaCommittee.contesting = 1;
+            prawicaCommittee.name = "Prawica";
+            prawicaCommittee.leader = "Andrzej Duda";
+            prawicaCommittee.parent = "Prawica";
+            prawicaCommittee.legal_status = "electoral coalition and parliamentary club";
+            prawicaCommittee.list_committee = "right_2027";
+            prawicaCommittee.club = "prawica";
+            prawicaCommittee.mp_count = Q.prawica_member_ids.reduce(
+                function(total, id) {
+                    const member = rivalGroup(id);
+                    return total + Math.max(0, Number(member &&
+                        member.exclusive_seats) || 0);
+                }, 0
+            );
+            prawicaCommittee.sejm_mps = prawicaCommittee.mp_count;
+        }
+        const replacedZp = rivalGroup("zp_committee");
+        if (replacedZp) {
+            replacedZp.active = 0;
+            replacedZp.contesting = 0;
+            replacedZp.legal_status = "replaced by Prawica";
+        }
+        for (const id of Q.prawica_member_ids) {
+            const record = rivalGroup(id);
+            if (!record || id == "kkp") continue;
+            record.list_committee = "right_2027";
+            record.club = "prawica";
+            record.parent = "Prawica";
+            record.contesting = 1;
+            record.in_cabinet = 0;
+            record.support_mode = "opposition";
+            record.prawica_member = 1;
+            record.legal_status = "founding organisation of Prawica";
+        }
+        if (Q.prawica_member_source_ids.includes("psl")) {
+            Q.third_way_active = 0;
+            Q.third_way_split = 1;
+            Q.psl_support_mode = "opposition";
+            kpCommittee.active = 0;
+        }
+        if (Q.prawica_member_source_ids.includes("kukiz")) {
+            Q.kukiz_left_kp = 1;
+            Q.kukiz_list_committee = "right_2027";
+        }
+        if (Q.prawica_member_source_ids.includes("tak_rozwoj")) {
+            Q.tak_rozwoj_list_committee = "right_2027";
+        }
+        if (Q.prawica_member_source_ids.includes("porozumienie")) {
+            Q.porozumienie_list_committee = "right_2027";
+        }
+        if (Q.prawica_member_source_ids.includes("suwerenna")) {
+            Q.suwerenna_own_list = 0;
+        }
+        const prawicaDuda = rivalGroup("duda_movement");
+        if (prawicaDuda) {
+            prawicaDuda.active = 1;
+            prawicaDuda.contesting = 1;
+            prawicaDuda.list_committee = "right_2027";
+            prawicaDuda.club = "prawica";
+            prawicaDuda.parent = "Prawica";
+            prawicaDuda.prawica_member = 1;
+            prawicaDuda.legal_status = "founding vehicle of Prawica";
         }
     }
 
@@ -2713,7 +3293,9 @@ if (Q.started) {
     Q.kp_coalition_active = kpListRecords.length > 1 ? 1 : 0;
     // Anything outside the four rival electoral families still exists and
     // still has to be visible somewhere, including the player's breakaways.
-    const sharedCommittees = ["pis", "psl", "ko", "konf", "third_way"];
+    const sharedCommittees = [
+        "pis", "psl", "ko", "konf", "third_way", "right_2027"
+    ];
     const isolatedRecords = Q.rival_group_records.filter(function(record) {
         return record.active && record.kind == "party" &&
             !String(record.id).endsWith("_committee") &&
@@ -2737,13 +3319,8 @@ if (Q.started) {
             Q.razem_party_seats, "razem_party"],
         [Q.pps_party_formed, Q.pps_party_name || "PPS",
             Q.pps_party_seats, "pps_party"],
-        [Q.tak_dla_rozwoju_party_formed,
-            Q.tak_rozwoj_party_name || "Tak! Dla Rozwoju",
-            Q.tak_rozwoj_seats, "tak_rozwoj_party"],
         [Q.unia_centrum_formed, "Unia Centrum", Q.centrum_seats,
             "unia_centrum"],
-        [Q.p0_formed, Q.p0_name || "Partia Zero", Q.p0_seats,
-            "p0_party"],
         [Number(Q.other_seats) > 0,
             Number(Q.year) <= 2023
                 ? "German Minority"
@@ -3049,6 +3626,25 @@ if (Q.started) {
     });
     Q.parliamentary_party_records = parliamentaryParties;
     Q.parliamentary_family_records = parliamentaryFamilies;
+    const resultMemberIds = [
+        "pis_party", "porozumienie", "solidarna", "republikanie", "odnowa",
+        "po", "nowoczesna", "ipl", "greens", "ko_party",
+        "ko_independent_parliamentarians", "psl_party", "p2050_party",
+        "kukiz15", "kp_partners", "kp_independent_parliamentarians",
+        "nowa_nadzieja", "ruch_narodowy", "kkp"
+    ];
+    for (const id of resultMemberIds) {
+        const party = parliamentaryParties.find(function(record) {
+            return record.id == id;
+        }) || {};
+        Q["result_member_" + id + "_name"] = String(party.name || id);
+        Q["result_member_" + id + "_sejm"] = Math.max(
+            0, Math.round(Number(party.sejm_mps) || 0)
+        );
+        Q["result_member_" + id + "_senate"] = Math.max(
+            0, Math.round(Number(party.senators) || 0)
+        );
+    }
     Q.porozumienie_relation = porozumienieRecord.relation;
     Q.kukiz_relation = rivalGroup("kukiz15").relation;
 
@@ -3140,6 +3736,66 @@ if (Q.started) {
             " in " + (Q.left_party_name || "Lewica");
     }
 
+    if (!["proportional", "mixed_230", "fptp_460"].includes(
+        String(Q.sejm_electoral_system || "")
+    )) {
+        Q.sejm_electoral_system = "proportional";
+    }
+    if (!["none", "kukiz_pact", "ko_compromise", "referendum_won",
+        "enacted", "failed"].includes(String(Q.electoral_reform_stage || ""))) {
+        Q.electoral_reform_stage = "none";
+    }
+    if (!["none", "mixed_230", "fptp_460"].includes(
+        String(Q.electoral_reform_proposal || "")
+    )) {
+        Q.electoral_reform_proposal = "none";
+    }
+    if (Q.electoral_reform_stage != "enacted") {
+        Q.sejm_electoral_system = "proportional";
+    }
+    for (const quality of [
+        "electoral_reform_ko_support", "electoral_reform_boundary_safeguards",
+        "electoral_reform_opposition_pact_channel",
+        "electoral_reform_ko_talks_done", "electoral_reform_referendum_done",
+        "electoral_reform_referendum_turnout", "electoral_reform_referendum_yes",
+        "electoral_reform_constitution_done", "electoral_reform_sejm_yes",
+        "electoral_reform_senate_yes",
+        "electoral_reform_constitution_passed",
+        "electoral_reform_president_signed", "electoral_reform_code_enacted"
+    ]) {
+        if (!Number.isFinite(Number(Q[quality]))) Q[quality] = 0;
+    }
+    if (typeof Q.electoral_reform_result != "string") {
+        Q.electoral_reform_result = "No Sejm electoral reform proposed";
+    }
+    Q.sejm_electoral_system_label = Q.sejm_electoral_system == "mixed_230"
+        ? "230 list MPs plus 230 single-member districts"
+        : (Q.sejm_electoral_system == "fptp_460"
+            ? "460 single-member plurality districts"
+            : "460 proportional-list MPs");
+    Q.sejm_electoral_system_summary = Q.sejm_electoral_system == "mixed_230"
+        ? "230 list · 138 urban JOW · 92 rural JOW"
+        : (Q.sejm_electoral_system == "fptp_460"
+            ? "276 urban JOW · 184 rural JOW"
+            : "460 proportional seats");
+    const electoralSeatParties = [
+        "pis", "ko", "p2050", "psl", "left", "konf", "p0", "other",
+        "sld_breakaway", "social_patriot", "spring_breakaway", "labor_left",
+        "young_left", "razem", "pps", "tak_rozwoj", "centrum", "rozwoj",
+        "korona", "ko_splinter", "suwerenna", "porozumienie", "republikanie",
+        "odnowa", "kukiz", "new_hope", "national_movement", "duda",
+        "social_conservative"
+    ];
+    for (const id of electoralSeatParties) {
+        for (const suffix of [
+            "list_seats", "urban_seats", "rural_seats",
+            "projected_list_seats", "projected_urban_seats",
+            "projected_rural_seats"
+        ]) {
+            const quality = id + "_" + suffix;
+            if (!Number.isFinite(Number(Q[quality]))) Q[quality] = 0;
+        }
+    }
     const sejmListTextDefaults = {
         sejm_list_target: "Left host list",
         sejm_list_outcome: "left_5",
@@ -4272,25 +4928,148 @@ if (Q.started) {
         Q.office_incompatibility_pending = 1;
         Q.office_incompatibility_kind = "Cabinet portfolio";
     }
+    // Formation saves made before coalition membership became canonical kept
+    // only a route code and a handful of party-specific flags. Rebuild that
+    // one source of truth once, then mirror the compatibility fields from it.
+    const formationCode = String(Q.formation_coalition_code || "none")
+        .replace(/_tolerated$/, "");
+    const formationMembersByCode = {
+        democratic_2023: ["ko", "p2050", "psl", "lewica"],
+        ko_psl_left: ["ko", "psl", "lewica"],
+        ko_p2050_left: ["ko", "p2050", "lewica"],
+        left_p2050: ["p2050", "lewica"],
+        left_psl: ["psl", "lewica"],
+        left_third: ["p2050", "psl", "lewica"],
+        third_left_pis: ["p2050", "psl", "lewica"],
+        ko_left: ["ko", "lewica"],
+        left_only: ["lewica"],
+        left_pis: ["pis", "lewica"],
+        left_pis_psl: ["pis", "lewica", "psl"],
+        left_pis_p2050: ["pis", "lewica", "p2050"],
+        left_pis_third: ["pis", "lewica", "psl", "p2050"],
+        left_pis_konf: ["pis", "lewica", "konf"],
+        left_pis_konf_psl: ["pis", "lewica", "konf", "psl"],
+        left_pis_konf_p2050: ["pis", "lewica", "konf", "p2050"],
+        left_pis_konf_third: ["pis", "lewica", "konf", "psl", "p2050"],
+        pis_psl: ["pis", "psl"],
+        pis_third: ["pis", "psl", "p2050"],
+        pis_psl_konf: ["pis", "psl", "konf"],
+        pis_third_konf: ["pis", "psl", "p2050", "konf"],
+        pis_konf: ["pis", "konf"],
+        pis_konf_third: ["pis", "konf", "p2050", "psl"],
+        pis_konf_psl: ["pis", "konf", "psl"],
+        ko_third: ["ko", "p2050", "psl"],
+        ko_konf: ["ko", "konf"]
+    };
+    const knownFormationParties = [
+        "pis", "ko", "psl", "p2050", "konf", "lewica"
+    ];
+    let canonicalFormationMembers = Array.isArray(Q.formation_coalition_members)
+        ? Q.formation_coalition_members.filter(function(code, index, members) {
+            return knownFormationParties.includes(code) &&
+                members.indexOf(code) == index;
+        })
+        : [];
+    if (
+        Q.formation_coalition_selected &&
+        !canonicalFormationMembers.length &&
+        formationMembersByCode[formationCode]
+    ) {
+        canonicalFormationMembers = formationMembersByCode[formationCode].slice();
+    }
+    Q.formation_coalition_members = canonicalFormationMembers;
+    const formationHas = function(code) {
+        return canonicalFormationMembers.includes(code);
+    };
+    if (Q.formation_coalition_selected && canonicalFormationMembers.length) {
+        Q.formation_pis_cabinet_committed = formationHas("pis") ? 1 : 0;
+        Q.formation_ko_cabinet_committed = formationHas("ko") ? 1 : 0;
+        Q.formation_psl_cabinet_committed = formationHas("psl") ? 1 : 0;
+        Q.formation_p2050_cabinet_committed = formationHas("p2050") ? 1 : 0;
+        Q.formation_konf_cabinet_committed = formationHas("konf") ? 1 : 0;
+    }
+    for (const code of ["pis", "ko", "psl", "p2050", "konf"]) {
+        const key = "formation_" + code + "_cabinet_committed";
+        Q[key] = Number.isFinite(Number(Q[key]))
+            ? Math.max(-1, Math.min(1, Math.round(Number(Q[key]))))
+            : -1;
+    }
+    Q.formation_pis_left_safeguards = Math.max(
+        0,
+        Math.min(3, Math.round(Number(Q.formation_pis_left_safeguards) || 0))
+    );
+    Q.formation_pis_rival_code = typeof Q.formation_pis_rival_code == "string"
+        ? Q.formation_pis_rival_code : "none";
+    Q.formation_pis_rival_pressure = Math.max(
+        0,
+        Math.min(2, Math.round(Number(Q.formation_pis_rival_pressure) || 0))
+    );
+    Q.formation_miller_konf_exception =
+        Number(Q.sld_populist_route_active) == 1 &&
+        String(Q.sld_populist_orientation || "") == "konfederacja" &&
+        String(Q.sld_populist_alliance_state || "") == "accepted" &&
+        String(Q.sejm_list_outcome || "") == "konf_5" ? 1 : 0;
+    Q.formation_pm_candidate_party =
+        typeof Q.formation_pm_candidate_party == "string" &&
+        Q.formation_pm_candidate_party.length
+            ? Q.formation_pm_candidate_party
+            : String(Q.pm_political_family || "");
+    Q.formation_solpol_exit_seats = Math.max(
+        0,
+        Math.round(Number(Q.formation_solpol_exit_seats) || 0)
+    );
+    Q.formation_solpol_exit_triggered = Q.formation_solpol_exit_triggered ? 1 : 0;
+    const legacyEarlyPiSLeftEntry = Boolean(Q.pis_left_coalition_2021) ||
+        String(Q.government_name || "").includes("Third Morawiecki Cabinet") ||
+        String(Q.coalition_status || "").includes("PiS–New Left");
+    Q.formation_pis_left_taboo_broken =
+        Q.formation_pis_left_taboo_broken || legacyEarlyPiSLeftEntry ? 1 : 0;
+    if (
+        Q.formation_pis_left_taboo_broken &&
+        (typeof Q.formation_pis_left_taboo_origin != "string" ||
+            !Q.formation_pis_left_taboo_origin.length)
+    ) {
+        Q.formation_pis_left_taboo_origin = legacyEarlyPiSLeftEntry
+            ? "Joined PiS after Gowin's exit in 2021"
+            : "Earlier PiS–Lewica governing agreement";
+    }
+    Q.formation_pis_rival_process_started =
+        Q.formation_pis_rival_process_started ? 1 : 0;
+    Q.formation_pis_rival_process_resolved =
+        Q.formation_pis_rival_process_resolved ? 1 : 0;
+    Q.formation_pis_rival_skip_reason =
+        typeof Q.formation_pis_rival_skip_reason == "string"
+            ? Q.formation_pis_rival_skip_reason : "Not evaluated";
+    Q.cabinet_pis_loss = Math.max(0, Math.round(Number(Q.cabinet_pis_loss) || 0));
+    Q.cabinet_konf_loss = Math.max(0, Math.round(Number(Q.cabinet_konf_loss) || 0));
+
     // The active Polish cabinet uses one complete roster for formation,
     // recurring policy cards and later reshuffles. Migrate older saves, clear
     // stale Lewica ownership after an exit, and derive the count from the
     // roster rather than trusting incremental bookkeeping.
     const snapRosterRecorded = Boolean(Q.snap_cabinet_commitments_recorded);
+    const formationRosterRecorded = Boolean(Q.formation_coalition_selected) &&
+        canonicalFormationMembers.length > 0;
     const p2050CabinetEligible = Number(Q.p2050_seats) > 0 &&
-        (
+        (formationRosterRecorded ? formationHas("p2050") : (
+            Boolean(Q.ministry_p2050_in_cabinet) ||
             !snapRosterRecorded ||
             Q.government_party == "p2050" ||
             Boolean(Q.snap_p2050_cabinet_committed)
-        );
+        ));
     const pslCabinetEligible = Number(Q.psl_seats) > 0 &&
         !Q.coalition_broken &&
-        (
+        (formationRosterRecorded ? formationHas("psl") : (
+            Boolean(Q.ministry_psl_in_cabinet) ||
             !snapRosterRecorded ||
             Q.government_party == "psl" ||
             Boolean(Q.snap_psl_cabinet_committed)
-        );
-    const konfCabinetEligible = Boolean(Q.sikorski_konf_cabinet) &&
+        ));
+    const konfCabinetEligible =
+        (formationRosterRecorded
+            ? formationHas("konf")
+            : (Boolean(Q.ministry_konf_in_cabinet) ||
+                Boolean(Q.sikorski_konf_cabinet))) &&
         Number(Q.konf_seats) > 0;
     const democraticCabinetDefaults = {
         labor: ["KO", "Marzena Okła-Drewnowicz"],
@@ -4337,6 +5116,7 @@ if (Q.started) {
             pis: "PiS",
             psl: "PSL",
             p2050: "Poland 2050",
+            konf: "Konfederacja",
             lewica: "Lewica",
             other: "Cabinet"
         };
@@ -4352,7 +5132,7 @@ if (Q.started) {
             interior: "Paweł Szefernaker",
             finance: "Andrzej Kosztowniak",
             economy: "Marlena Maląg",
-            justice: "Marcin Warchoł",
+            justice: "Paweł Jabłoński",
             foreign: "Szymon Szynkowski vel Sęk",
             agriculture: "Anna Gembicka",
             defence: "Mariusz Błaszczak"
@@ -4422,6 +5202,21 @@ if (Q.started) {
             ];
         }
         cabinetAllowedParties = [cabinetParty];
+        if (Q.government_party == "pis") {
+            if (p2050CabinetEligible) {
+                cabinetDefaults.digital = ["Poland 2050", "Michał Gramatyka"];
+                cabinetAllowedParties.push("Poland 2050");
+            }
+            if (pslCabinetEligible) {
+                cabinetDefaults.agriculture = ["PSL", "Czesław Siekierski"];
+                cabinetAllowedParties.push("PSL");
+            }
+            if (konfCabinetEligible) {
+                cabinetDefaults.finance = ["Konfederacja", "Sławomir Mentzen"];
+                cabinetDefaults.economy = ["Konfederacja", "Konrad Berkowicz"];
+                cabinetAllowedParties.push("Konfederacja");
+            }
+        }
     }
     const cabinetGovernmentChanged =
         Q.year >= 2023 &&
@@ -4568,10 +5363,11 @@ if (Q.started) {
     }
     if (!Q.caretaker_government && !cabinetGovernmentChanged) {
         const recordedCabinetMembership = [
+            ["PiS", Q.ministry_pis_in_cabinet, Q.pis_seats],
             ["KO", Q.ministry_ko_in_cabinet, Q.ko_seats],
             ["Poland 2050", Q.ministry_p2050_in_cabinet, Q.p2050_seats],
             ["PSL", Q.ministry_psl_in_cabinet, Q.psl_seats],
-            ["Konfederacja", Q.sikorski_konf_cabinet, Q.konf_seats],
+            ["Konfederacja", Q.ministry_konf_in_cabinet || Q.sikorski_konf_cabinet, Q.konf_seats],
             ["Lewica", Q.left_in_government, recordedLeftCabinetSeats]
         ];
         for (const membership of recordedCabinetMembership) {
@@ -4618,9 +5414,11 @@ if (Q.started) {
     } else if (Q.caretaker_government) {
         Q.coalition_seats = 0;
         Q.government_support_seats = 0;
+        Q.ministry_pis_in_cabinet = 0;
         Q.ministry_ko_in_cabinet = 0;
         Q.ministry_p2050_in_cabinet = 0;
         Q.ministry_psl_in_cabinet = 0;
+        Q.ministry_konf_in_cabinet = 0;
         Q.sikorski_konf_cabinet = 0;
     }
     Q.coalition_seats_basis =
@@ -4660,10 +5458,13 @@ if (Q.started) {
         0,
         Number(Q.ministry_coalition_seats) || 0
     );
+    Q.ministry_pis_in_cabinet = Q.ministry_pis_in_cabinet ? 1 : 0;
     Q.ministry_ko_in_cabinet = Q.ministry_ko_in_cabinet ? 1 : 0;
     Q.ministry_p2050_in_cabinet =
         Q.ministry_p2050_in_cabinet ? 1 : 0;
     Q.ministry_psl_in_cabinet = Q.ministry_psl_in_cabinet ? 1 : 0;
+    Q.ministry_konf_in_cabinet =
+        Q.ministry_konf_in_cabinet || Q.sikorski_konf_cabinet ? 1 : 0;
     Q.formation_psl_cabinet_committed = Number.isFinite(
         Number(Q.formation_psl_cabinet_committed)
     )
@@ -5432,6 +6233,121 @@ if (Q.started) {
                     : 0;
         });
     });
+    if (Q.psl_right_alignment_locked) {
+        for (const pair of ["left_psl", "ko_psl", "psl_p2050"]) {
+            Q["coalition_viable_" + pair] = 0;
+        }
+    }
+    // The formation menu calculates its seat totals before calling this
+    // normaliser. Publish the table colors here, after the live compatibility
+    // gates above, so the table and its choices cannot disagree.
+    const canContract = function() {
+        return Array.from(arguments).every(function(pair) {
+            return Number(Q["coalition_viable_" + pair]) == 1;
+        });
+    };
+    const coalitionTableStatus = function(ready, needsSupport) {
+        return ready
+            ? (needsSupport ? "Needs support" : "Passes")
+            : "No path";
+    };
+    const is2023Formation = Number(Q.year) == 2023;
+    Q.formation_status_democratic = coalitionTableStatus(
+        Q.formation_option_democratic >= Q.formation_majority_needed &&
+            canContract(
+                "left_ko", "left_psl", "left_p2050", "ko_psl", "ko_p2050"
+            )
+    );
+    Q.formation_status_ko_psl_left = coalitionTableStatus(
+        Q.formation_option_ko_psl_left >= Q.formation_majority_needed &&
+            canContract("left_ko", "left_psl", "ko_psl"),
+        Q.formation_option_ko_psl_left_outside > 0
+    );
+    Q.formation_status_ko_p2050_left = coalitionTableStatus(
+        Q.formation_option_ko_p2050_left >= Q.formation_majority_needed &&
+            canContract("left_ko", "left_p2050", "ko_p2050"),
+        Q.formation_option_ko_p2050_left_outside > 0
+    );
+    Q.formation_status_left_p2050 = coalitionTableStatus(
+        Q.formation_option_left_p2050 >= Q.formation_majority_needed &&
+            canContract("left_p2050")
+    );
+    Q.formation_status_left_psl = coalitionTableStatus(
+        Q.formation_option_left_psl >= Q.formation_majority_needed &&
+            canContract("left_psl")
+    );
+    Q.formation_status_left_third = coalitionTableStatus(
+        Q.formation_option_left_third >= Q.formation_majority_needed &&
+            canContract("left_psl", "left_p2050", "psl_p2050")
+    );
+    Q.formation_status_third_left_pis = coalitionTableStatus(
+        Q.formation_option_left_third < Q.formation_majority_needed &&
+            Q.formation_option_third_left_pis >=
+                Q.formation_majority_needed &&
+            Q.formation_option_third_left_pis_outside > 0 &&
+            canContract("left_psl", "left_p2050", "psl_p2050", "left_pis"),
+        true
+    );
+    Q.formation_status_left_pis = coalitionTableStatus(
+        Q.formation_option_left_pis >= Q.formation_majority_needed &&
+            (is2023Formation || canContract("left_pis"))
+    );
+    Q.formation_status_left_pis_psl = coalitionTableStatus(
+        is2023Formation &&
+            Q.formation_option_left_pis_psl >= Q.formation_majority_needed &&
+            canContract("left_psl", "pis_psl")
+    );
+    Q.formation_status_left_pis_p2050 = coalitionTableStatus(
+        is2023Formation &&
+            Q.formation_option_left_pis_p2050 >= Q.formation_majority_needed &&
+            canContract("left_p2050", "pis_p2050")
+    );
+    Q.formation_status_left_pis_third = coalitionTableStatus(
+        is2023Formation &&
+            Q.formation_option_left_pis_third >= Q.formation_majority_needed &&
+            canContract(
+                "left_psl", "left_p2050", "pis_psl", "pis_p2050",
+                "psl_p2050"
+            )
+    );
+    Q.formation_status_left_pis_konf = coalitionTableStatus(
+        is2023Formation && Q.formation_miller_konf_exception &&
+            Q.formation_option_left_pis_konf >= Q.formation_majority_needed &&
+            canContract("pis_konf")
+    );
+    Q.formation_status_left_pis_konf_psl = coalitionTableStatus(
+        is2023Formation && Q.formation_miller_konf_exception &&
+            Q.formation_option_left_pis_konf_psl >=
+                Q.formation_majority_needed &&
+            canContract("pis_konf", "left_psl", "pis_psl", "psl_konf")
+    );
+    Q.formation_status_left_pis_konf_p2050 = coalitionTableStatus(
+        is2023Formation && Q.formation_miller_konf_exception &&
+            Q.formation_option_left_pis_konf_p2050 >=
+                Q.formation_majority_needed &&
+            canContract(
+                "pis_konf", "left_p2050", "pis_p2050", "konf_p2050"
+            )
+    );
+    Q.formation_status_left_pis_konf_third = coalitionTableStatus(
+        is2023Formation && Q.formation_miller_konf_exception &&
+            Q.formation_option_left_pis_konf_third >=
+                Q.formation_majority_needed &&
+            canContract(
+                "pis_konf", "left_psl", "left_p2050", "pis_psl",
+                "pis_p2050", "psl_p2050", "psl_konf", "konf_p2050"
+            )
+    );
+    Q.formation_status_ko_left = coalitionTableStatus(
+        Q.formation_option_ko_left >= Q.formation_majority_needed &&
+            canContract("left_ko"),
+        Q.formation_option_ko_left_outside > 0
+    );
+    Q.formation_status_left_only = coalitionTableStatus(
+        Q.formation_option_left_only >= Q.formation_majority_needed,
+        (Number(Q.left_seats) || 0) < Q.formation_majority_needed &&
+            Q.formation_left_splitter_votes > 0
+    );
     const issueSalienceDefaults = {
         national_turnout_climate: 61,
         economic_issue_salience: 38,
@@ -5486,10 +6402,16 @@ if (Q.started) {
         psl_support_mode: "coalition",
         psl_leader_route: "Kosiniak-Kamysz leadership",
         psl_congress_route: "No congress decision",
+        psl_2023_exclusion_successor: "No exclusion succession",
+        p2050_comeback_status: "No post-Third Way relaunch",
         duda_outcome: "No third-act endorsement",
         duda_endorsement: "None",
         ko_alternative_2021_outcome: "Unresolved",
         right_reunification_outcome: "No 2027 right congress",
+        prawica_leader: "Andrzej Duda",
+        prawica_pm_candidate: "Andrzej Duda",
+        prawica_platform: "Centre-right, pro-NATO and reformist; family benefits, public investment, constitutional parliamentary methods and component autonomy",
+        prawica_vote_table: "No founding votes recorded",
         third_way_alternative_outcome: "No absorption or common-list decision",
         ambassador_outcome: "No follow-up test",
         border_outcome: "No audited border chain outcome",
@@ -5516,8 +6438,22 @@ if (Q.started) {
     const auditedIntegerDefaults = {
         braun_stage: 0, braun_due_time: -1, braun_done: 0,
         psl_stage: 0, psl_due_time: -1, psl_done: 0,
+        psl_2023_exclusion_crisis_done: 0,
+        psl_right_alignment_locked: 0,
+        p2050_2023_exclusion_comeback_done: 0,
+        p2050_comeback_stage: 0,
+        p2050_greens_absorbed: 0,
+        p2050_greens_transferred_mps: 0,
+        greens_nowoczesna_transferred_mps: 0,
+        p2050_holownia_presidential_bonus: 0,
+        p2050_holownia_retention_roll: 500,
+        p2050_holownia_retention_ceiling: 0,
+        p2050_succession_opened: 0,
         psl_bridge_votes: 0,
         duda_stage: 0, duda_due_time: -1, duda_done: 0,
+        prawica_stage: 0, prawica_formed: 0,
+        prawica_fragmentation_score: 0, prawica_attempt_threshold: 0,
+        prawica_pis_government_block: 0,
         ambassador_stage: 0, ambassador_due_time: -1, ambassador_done: 0,
         border_stage: 0, border_due_time: -1, border_done: 0,
         border_death_occurred: 0, ko_alternative_stage: 0,
@@ -5539,6 +6475,32 @@ if (Q.started) {
         black_monday_prehistory: 1, black_friday_prehistory: 1,
         teachers_strike_2019_prehistory: 1
     };
+    if (!Number.isFinite(Number(Q.prawica_attempt_roll))) {
+        Q.prawica_attempt_roll = 1000;
+    }
+    Q.prawica_attempt_roll = Math.max(
+        0,
+        Math.min(999, Math.round(Number(Q.prawica_attempt_roll)))
+    );
+    for (const field of [
+        "prawica_member_ids", "prawica_member_source_ids",
+        "prawica_member_party_keys", "prawica_decision_records"
+    ]) {
+        if (!Array.isArray(Q[field])) Q[field] = [];
+    }
+    if (!Q.prawica_member_shares ||
+        typeof Q.prawica_member_shares != "object" ||
+        Array.isArray(Q.prawica_member_shares)) {
+        Q.prawica_member_shares = {};
+    }
+    for (const source of [
+        "pis", "rozwoj", "konf", "new_hope", "national_movement",
+        "psl", "tak_rozwoj", "p0", "kukiz", "suwerenna",
+        "porozumienie", "republikanie", "odnowa", "ko_splinter", "duda"
+    ]) {
+        Q["prawica_member_" + source] = Q.prawica_formed &&
+            Q.prawica_member_source_ids.includes(source) ? 1 : 0;
+    }
     for (const field of Object.keys(auditedIntegerDefaults)) {
         if (!Number.isFinite(Number(Q[field]))) Q[field] = auditedIntegerDefaults[field];
         Q[field] = Math.round(Number(Q[field]));
@@ -6968,6 +7930,17 @@ if (Q.started) {
     Q.organised_left_splits = caucusIds.reduce(function(total, caucus) {
         return total + (Q[caucus + "_party_formed"] ? 1 : 0);
     }, 0);
+    Q.left_club_high_water = Math.max(
+        Number(Q.left_club_high_water) || 0,
+        Number(Q.left_seats) || 0
+    );
+    if (
+        Q.left_club_high_water >= 15 &&
+        Number(Q.left_seats) >= 3 &&
+        Number(Q.left_seats) < 15
+    ) {
+        Q.left_club_collapsed = 1;
+    }
     Q.contradictory_media_appearances = caucusIds.reduce(
         function(total, caucus) {
             return total + Math.max(
@@ -7111,10 +8084,12 @@ if (Q.started) {
     Q.third_way_cohesion = clamp(Q.third_way_cohesion, 0, 100);
     Q.government_coalition_dissent =
         clamp(Q.government_coalition_dissent, 0, 100);
+    Q.pis_coalition_dissent = clamp(Q.pis_coalition_dissent, 0, 100);
     Q.ko_coalition_dissent = clamp(Q.ko_coalition_dissent, 0, 100);
     Q.psl_coalition_dissent = clamp(Q.psl_coalition_dissent, 0, 100);
     Q.p2050_coalition_dissent =
         clamp(Q.p2050_coalition_dissent, 0, 100);
+    Q.konf_coalition_dissent = clamp(Q.konf_coalition_dissent, 0, 100);
     Q.left_coalition_dissent =
         clamp(Q.left_coalition_dissent, 0, 100);
 
@@ -7721,7 +8696,295 @@ Q.constituent_programme_government_open =
             Q.poland_nowa_lewica_student_ticket_timer == 0 ||
             Q.poland_nowa_lewica_school_health_timer == 0 ||
             Q.poland_nowa_lewica_widow_pension_timer == 0 ||
-            Q.poland_nowa_lewica_empty_homes_timer == 0))
+            Q.poland_nowa_lewica_empty_homes_timer == 0)) ||
+    (Q.continuous_campaign &&
+        Q.razem_active && Q.razem_in_left && Q.razem_strength >= 15 &&
+        (Q.poland_razem_eight_reactors_timer == 0 ||
+            Q.poland_razem_public_code_timer == 0 ||
+            Q.poland_razem_twenty_desks_timer == 0 ||
+            Q.poland_razem_one_percent_housing_timer == 0 ||
+            Q.poland_razem_choose_waiting_room_timer == 0))
         ? 1
         : 0;
+
+// Achievements use Dendry's native persistent and per-run qualities. Keep the
+// predicates in one callable table so the normal monthly path and the final
+// epilogue evaluate exactly the same rules.
+if (!budgetHost.polandAchievementEvaluator) {
+    budgetHost.polandAchievementEvaluator = function(engine, q) {
+        if (!q.started || q.scenario_mode != "campaign_2019") {
+            return [];
+        }
+        const number = function(value) {
+            return Number.isFinite(Number(value)) ? Number(value) : 0;
+        };
+        const coalitionCode = String(q.formation_coalition_code || "none")
+            .replace(/_tolerated$/, "");
+        const cabinetLive = Boolean(
+            q.government_has_confidence && !q.caretaker_government
+        );
+        const nuclearComplete =
+            number(q.nuclear_stage) >= 5 &&
+            !q.nuclear_shelved &&
+            number(q.nuclear_delivery) >= 15;
+        const cpkComplete =
+            number(q.cpk_stage) >= 5 &&
+            !q.cpk_cancelled &&
+            number(q.cpk_delivery) >= 15;
+        const peoplesAtom =
+            nuclearComplete &&
+            number(q.nuclear_public_ownership) >= 20 &&
+            number(q.nuclear_price_shield) >= 15 &&
+            number(q.nuclear_labour_standard) >= 25 &&
+            number(q.nuclear_just_transition) >= 20;
+        const secondNuclear =
+            !q.nuclear_shelved &&
+            q.nuclear_second_plant ==
+                "Pątnów–Konin with a Korean partner and a public majority";
+        const peoplesCpk =
+            cpkComplete &&
+            q.cpk_scope ==
+                "Hub airport and high-speed rail, publicly owned" &&
+            number(q.cpk_public_ownership) >= 15 &&
+            number(q.cpk_labour_standard) >= 25;
+        const leftMarshalNames = [
+            "Włodzimierz Czarzasty", "Robert Biedroń",
+            "Agnieszka Dziemianowicz-Bąk", "Magdalena Biejat",
+            "Marta Stożek", "Adrian Zandberg", "Krzysztof Gawkowski",
+            "Anna Maria Żukowska", "Katarzyna Kotula", "Krzysztof Śmiszek",
+            "Tomasz Trela", "Paulina Matysiak", "Joanna Scheuring-Wielgus",
+            "Wanda Nowicka"
+        ];
+        const speakerName = String(q.sejm_speaker || "");
+        const leftLeaderName = String(q.left_leader || "");
+        const leftMarshal = speakerName.length > 0 && (
+            q.sejm_speaker_party == "lewica" ||
+            leftMarshalNames.includes(speakerName) ||
+            (leftLeaderName.length > 0 && speakerName == leftLeaderName)
+        );
+        const rightSplitCount = [
+            "republikanie_formed", "kukiz_left_kp", "suwerenna_walkout",
+            "pis_split", "far_right_split", "mentzen_bosak_split",
+            "pis_collapsed"
+        ].reduce(function(total, key) {
+            return total + (q[key] ? 1 : 0);
+        }, 0);
+        const referendumReform = [
+            "abortion", "marriage", "church", "asylum"
+        ].some(function(issue) {
+            return q[issue + "_referendum_mandate"] &&
+                number(q[issue + "_reform_stage"]) >= 4;
+        });
+        const terminal = Boolean(
+            number(q.game_over) == 1 &&
+            ["Natural conclusion", "Voted out"].includes(
+                String(q.ending_exit_type || "")
+            )
+        );
+        const checks = [
+            ["left_eight_percent_2020",
+                Boolean(q.pres_first_round_complete) &&
+                number(q.pres_r1_display_left) >= 8],
+            ["biedron_below_historical_2020",
+                Boolean(q.pres_first_round_complete) &&
+                q.presidential_candidate == "Robert Biedroń" &&
+                number(q.pres_r1_display_left) < 2.22],
+            ["biedron_beats_bosak_2020",
+                Boolean(q.pres_first_round_complete) &&
+                q.presidential_candidate == "Robert Biedroń" &&
+                number(q.pres_r1_display_left) > 7 &&
+                number(q.pres_r1_display_left) >
+                    number(q.pres_r1_display_bosak)],
+            ["trzaskowski_president_2020", Boolean(q.trz_inaugurated)],
+            ["left_president_2025", q.pres_2025_winner_key == "left"],
+            ["first_round_president_2025",
+                q.pres_2025_winner_key == "left" &&
+                Boolean(q.pres_2025_first_round_winner)],
+            ["back_in_the_ring",
+                Boolean(q.prawica_formed) &&
+                q.prawica_leader == "Andrzej Duda" &&
+                !q.prawica_pis_government_block],
+            ["ill_be_back",
+                Boolean(q.third_way_split) &&
+                q.third_way_response ==
+                    "PSL recognised as the parliamentary hinge" &&
+                (q.pres_2025_winner_key == "holownia" ||
+                    q.president_name == "Szymon Hołownia")],
+            ["enter_government", cabinetLive && Boolean(q.left_in_government)],
+            ["left_prime_minister",
+                cabinetLive && Boolean(q.left_in_government) &&
+                q.government_party == "lewica"],
+            ["left_only_government", cabinetLive && coalitionCode == "left_only"],
+            ["democratic_coalition",
+                cabinetLive && coalitionCode == "democratic_2023"],
+            ["wina_tuska",
+                q.sejm_list_outcome == "democratic_8" && cabinetLive &&
+                Boolean(q.left_in_government) &&
+                Array.isArray(q.formation_coalition_members) &&
+                !q.formation_coalition_members.includes("ko")],
+            ["split_third_way_coalition",
+                cabinetLive && [
+                    "ko_psl_left", "ko_p2050_left", "left_p2050", "left_psl"
+                ].includes(coalitionCode)],
+            ["left_pis_coalition", cabinetLive && coalitionCode == "left_pis"],
+            ["five_party_coalition",
+                cabinetLive && coalitionCode == "left_pis_konf_third"],
+            ["third_way_left_pis",
+                cabinetLive && coalitionCode == "third_left_pis"],
+            ["borrowed_left_pm",
+                cabinetLive && Boolean(q.left_pm_borrowed_mandate)],
+            ["confidence_and_supply",
+                cabinetLive && !q.left_in_government &&
+                q.left_cabinet_model == "Confidence and supply from opposition"],
+            ["no_third_way",
+                Boolean(q.third_way_split) &&
+                (coalitionCode == "ko_p2050_left" ||
+                    coalitionCode == "left_p2050") &&
+                Boolean(q.psl_2023_exclusion_crisis_done) &&
+                Boolean(q.psl_right_alignment_locked)],
+            ["budget_concession",
+                Boolean(q.budget_concession_after_defeat)],
+            ["marshal_rotation", Boolean(q.marshal_rotation_vote_passed)],
+            ["sejmflix",
+                q.sejm_speaker == "Szymon Hołownia" &&
+                Boolean(q.sejmflix_2023_done) &&
+                number(q.parliament_visibility) >= 65],
+            ["german_agent",
+                cabinetLive && q.government_party == "ko" &&
+                q.prime_minister == "Donald Tusk" &&
+                q.pis_leader == "Jarosław Kaczyński" &&
+                number(q.pis_seats) > 0 && number(q.pis_relation) <= 10],
+            ["power_holding_group",
+                cabinetLive && q.government_party == "lewica" &&
+                Boolean(q.left_president) && leftMarshal],
+            ["nocna_zmiana", Boolean(q.government_removed_by_vonc)],
+            ["sejm_freezer",
+                leftMarshal && Boolean(q.reform_pressure_frozen) &&
+                number(q.frozen_demand_count) >= 1],
+            ["full_abortion_reform", number(q.abortion_reform_stage) >= 4],
+            ["full_marriage_reform", number(q.marriage_reform_stage) >= 4],
+            ["full_church_reform", number(q.church_reform_stage) >= 4],
+            ["full_asylum_reform", number(q.asylum_reform_stage) >= 4],
+            ["full_border_reform", number(q.border_reform_stage) >= 4],
+            ["full_defence_reform", number(q.defence_reform_stage) >= 4],
+            ["full_labor_reform", number(q.labor_reform_stage) >= 4],
+            ["full_health_reform", number(q.health_reform_stage) >= 4],
+            ["full_courts_reform", number(q.courts_reform_stage) >= 4],
+            ["three_max_reforms",
+                Boolean(q.major_reforms_complete) &&
+                number(q.reform_slate_count) == 3 &&
+                number(q.reform_slate_weight) == 12],
+            ["referendum_reform", referendumReform],
+            ["trzaskowski_freebie",
+                q.trz_rights_bill_outcome == "Passed and signed"],
+            ["nuclear_complete", nuclearComplete],
+            ["peoples_atom", peoplesAtom],
+            ["second_nuclear_plant", secondNuclear],
+            ["nuclear_shelved", Boolean(q.nuclear_ever_shelved)],
+            ["cpk_complete", cpkComplete],
+            ["peoples_cpk", peoplesCpk],
+            ["rail_first",
+                q.cpk_scope ==
+                    "Rail programme first, hub airport staged behind demonstrated demand"],
+            ["cpk_public_works",
+                Boolean(q.cpk_cancelled) && Boolean(q.cpk_public_works)],
+            ["compensated_nationalisation",
+                Boolean(q.petrochemical_statute_enacted)],
+            ["unlawful_nationalisation",
+                Boolean(q.petrochemical_unlawful_seizure)],
+            ["ownership_doctrine",
+                Boolean(q.nationalisation_doctrine_adopted)],
+            ["five_nationalisations", number(q.strategic_nationalisations) >= 5],
+            ["mmt_doctrine", Boolean(q.mmt_doctrine_adopted)],
+            ["developmental_state",
+                peoplesAtom && peoplesCpk && secondNuclear &&
+                number(q.strategic_nationalisations) >= 5],
+            ["bez_zadnego_trybu", Boolean(q.emergency_capital_controls)],
+            ["unified_left_party",
+                Boolean(q.left_common_party_exists) &&
+                q.left_merger_structure == "unified_party"],
+            ["member_led_unification",
+                Boolean(q.historical_peaceful_unification) ||
+                Boolean(q.federation_peaceful_unification)],
+            ["binding_federation",
+                q.left_constitution == "member-ratified_federation" ||
+                [
+                    "Member-ratified binding federation",
+                    "Late binding federation"
+                ].includes(String(q.left_structural_endpoint || ""))],
+            ["razem_leaves",
+                Boolean(q.razem_split) && !Boolean(q.razem_in_left)],
+            ["razem_leadership", q.left_dominant_current == "razem"],
+            ["miller_restoration", Boolean(q.miller_restoration_done)],
+            ["miller_akcja",
+                Boolean(q.miller_restoration_done) &&
+                q.razem_future_route == "akcja_socjalistyczna" &&
+                Boolean(q.zandberg_project_active)],
+            ["tak_dla_rozwoju",
+                q.razem_future_route == "tak_dla_rozwoju" &&
+                Boolean(q.matysiak_project_active)],
+            ["biggest_tent",
+                Boolean(q.p2050_joined_left) ||
+                Boolean(q.p2050_social_joined_left) ||
+                Boolean(q.rozwoj_joined_left) ||
+                Boolean(q.ipl_joined_left) ||
+                Boolean(q.greens_joined_left)],
+            ["ground_game",
+                number(q.media_capacity) + number(q.local_network) >= 110],
+            ["miller_imprisoned",
+                Boolean(q.miller_imprisonment_recorded) &&
+                Boolean(q.leszek_miller_imprisoned)],
+            ["pps_circle",
+                Boolean(q.pps_party_formed) &&
+                number(q.pps_party_seats) >= 3],
+            ["club_collapse", Boolean(q.left_club_collapsed)],
+            ["rownosc_founded", Boolean(q.rownosc_media_active)],
+            ["ja_panu_nie_przerywalem",
+                Boolean(q.hostile_policy_interview_done)],
+            ["jest_pan_zerem",
+                Boolean(q.miller_restoration_done) &&
+                number(q.ziobro_world_tour_updates) >= 2],
+            ["kurica_nie_ptica",
+                Boolean(q.ukraine_neutrality_demanded)],
+            ["ten_defections", number(q.individual_defections) >= 10],
+            ["three_left_splits", number(q.organised_left_splits) >= 3],
+            ["three_right_splits", rightSplitCount >= 3],
+            ["cabinet_collapse",
+                q.coalition_status == "Cabinet lost confidence" &&
+                Boolean(q.caretaker_government)],
+            ["piwo_z_mentzenem", q.pres_2025_torun_route == "democratic"],
+            ["bedziesz_siedzial",
+                q.nik_removal_response == "Immunity stripped"],
+            ["szczesc_boze",
+                q.braun_compulsion_strategy ==
+                    "Pre-trial detention and one broad extremist case" &&
+                q.braun_outcome ==
+                    "Braun leaves Poland before the compelled appearance"],
+            ["wniosek_formalny",
+                q.marshal_2019_response == "Standing orders"],
+            ["mokry_sen_kukiza",
+                q.electoral_reform_stage == "enacted" &&
+                (q.sejm_electoral_system == "mixed_230" ||
+                    q.sejm_electoral_system == "fptp_460")],
+            ["impossible_majority",
+                terminal && q.ending_name == "The impossible majority"],
+            ["red_tide",
+                terminal && number(q.ending_family_vote) >= 20 &&
+                number(q.ending_family_seats) > 0 &&
+                number(q.ending_threshold_losses) == 0],
+            ["below_threshold",
+                terminal && q.ending_exit_type == "Voted out"],
+            ["game_completed", terminal]
+        ];
+        const earned = [];
+        for (const check of checks) {
+            if (check[1] && q["game_achievement_" + check[0]] !== 1) {
+                engine.achieve(check[0]);
+                earned.push(check[0]);
+            }
+        }
+        return earned;
+    };
+}
+budgetHost.polandAchievementEvaluator(this, Q);
 !}

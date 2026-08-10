@@ -70,17 +70,19 @@ mechanics without replaying the earlier campaign.
   together, the desk shows the most urgent tier, then reveals lower-priority
   files as it is cleared. Resolving one event cannot discard the rest, and the
   next leadership card is unavailable until every pending issue is addressed.
-- Five contextual decks feed one persistent three-card agenda: Party Affairs;
-  the forty-one-card Government Affairs deck while Lewica holds office in a
+- Four contextual decks feed one persistent three-card agenda: Party Affairs,
+  including four foreign-relationship cards available throughout the campaign;
+  the sixty-six-card Government Affairs deck while Lewica holds office in a
   functioning cabinet; Pressure & Negotiate while Lewica is outside cabinet;
-  Major Reforms; and Foreign Affairs throughout the campaign. Government
+  and Major Reforms. Government
   Affairs has one card for each of thirteen portfolios plus Cabinet Reshuffle,
   Coalition Council, Social Welfare, five socialist-turn cards and twenty
   cards tied to the SLD partocracy, Wiosna social-liberal, Market Left and SLD
-  social-populist paths. Each of those four paths also adds five matching Party
-  Affairs cards. Adopting either substantive outcome permanently resolves that
-  ideological card; refusing it starts a route-specific cooldown and allows
-  the unresolved demand to return later.
+  social-populist paths, plus twenty-five strength- or merger-gated programme
+  cards from SLD, Wiosna, PPS, Razem and the unified New Left. Each set also
+  adds five matching Party Affairs cards. Adopting either substantive outcome
+  permanently resolves that ideological card; refusing it starts a
+  route-specific cooldown and allows the unresolved demand to return later.
   The five socialist-turn government cards and five matching Party Affairs
   cards gain a slight draw weight only when Razem and the younger progressives
   are ascendant, Wiosna does not own the party and organised labour is
@@ -94,7 +96,7 @@ mechanics without replaying the earlier campaign.
   wants a coalition bargain. A pinned
   discard action removes one held opportunity without consuming time or
   changing political state.
-- Foreign Affairs now has four legible files: the EU, Hungary, the United
+- Party Affairs includes four foreign-policy files: the EU, Hungary, the United
   States and Ukraine after the full-scale invasion. Opposition uses European
   democratic, parliamentary and party channels; government can negotiate and
   spend on Poland's behalf. US and Hungarian elections change the available

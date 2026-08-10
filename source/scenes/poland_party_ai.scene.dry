@@ -299,6 +299,161 @@ if (p2050Independent && !Q.p2050_ai_active) {
     }
 }
 
+// Organisational income follows live political advantages rather than a
+// permanent party-name table. Seats and polling are normalised against the
+// strongest active rival; offices benefit the formal alliance that sustains
+// them, while PiS and KO retain their established-media advantage.
+const resourcePartyCodeAI = function(value) {
+    const code = String(value || "").trim().toLowerCase();
+    if (["left", "lewica", "razem"].includes(code)) return "left";
+    if (["pis", "prawo i sprawiedliwosc", "prawo i sprawiedliwość"]
+        .includes(code)) return "pis";
+    if (["ko", "po", "koalicja obywatelska", "platforma obywatelska"]
+        .includes(code)) return "ko";
+    if (["psl", "polskie stronnictwo ludowe"].includes(code)) return "psl";
+    if (["p2050", "polska 2050", "poland 2050"].includes(code)) return "p2050";
+    if (["konf", "konfederacja"].includes(code)) return "konf";
+    return code;
+};
+const officePartyAI = function(name, recordedParty) {
+    const officeName = String(name || "").trim();
+    const lowerName = officeName.toLowerCase();
+    if (
+        !officeName || ["vacant", "pending", "disputed", "acting after"]
+            .some(function(marker) { return lowerName.includes(marker); })
+    ) return "";
+    const dynamicNames = [
+        ["left", Q.left_leader], ["left", Q.left_marshal_nominee],
+        ["pis", Q.pis_leader], ["pis", Q.pres_2025_right_candidate],
+        ["ko", Q.ko_leader], ["psl", Q.psl_leader],
+        ["p2050", Q.p2050_leader],
+        ["konf", Q.konf_libertarian_leader]
+    ];
+    for (const entry of dynamicNames) {
+        if (entry[1] && String(entry[1]).trim() == officeName) {
+            return entry[0];
+        }
+    }
+    const nameFragments = {
+        pis: ["duda", "nawrocki", "morawiecki", "szydło", "witek",
+            "błaszczak", "blaszczak", "czarnek"],
+        ko: ["tusk", "trzaskowski", "kidawa-błońska", "kidawa-blonska",
+            "wielichowska", "sikorski", "nowacka"],
+        psl: ["kosiniak-kamysz", "sawicki", "zgorzelski", "hetman"],
+        p2050: ["hołownia", "holownia", "pełczyńska-nałęcz",
+            "pelczynska-nalecz", "hennig-kloska", "petru"],
+        konf: ["mentzen", "bosak", "korwin-mikke"],
+        left: ["czarzasty", "stożek", "stozek", "biejat", "zandberg",
+            "biedroń", "biedron", "dziemianowicz-bąk",
+            "dziemianowicz-bak", "żukowska", "zukowska", "kotula"]
+    };
+    for (const id of Object.keys(nameFragments)) {
+        if (nameFragments[id].some(function(fragment) {
+            return lowerName.includes(fragment);
+        })) return id;
+    }
+    return resourcePartyCodeAI(recordedParty);
+};
+const cabinetAllianceAI = [];
+if (!Q.caretaker_government && Q.government_has_confidence) {
+    const governmentPartyAI = resourcePartyCodeAI(Q.government_party);
+    if (governmentPartyAI) cabinetAllianceAI.push(governmentPartyAI);
+    if (Q.left_in_government) cabinetAllianceAI.push("left");
+    if (Q.ministry_ko_in_cabinet) cabinetAllianceAI.push("ko");
+    if (Q.ministry_psl_in_cabinet) cabinetAllianceAI.push("psl");
+    if (Q.ministry_p2050_in_cabinet) cabinetAllianceAI.push("p2050");
+    if (Q.sikorski_konf_cabinet) cabinetAllianceAI.push("konf");
+}
+const officeAllianceAI = function(anchor, primeMinister) {
+    const alliance = new Set(anchor ? [anchor] : []);
+    if (
+        (anchor == "psl" || anchor == "p2050") &&
+        (Q.third_way_active || Q.third_way_2023_done) && !Q.third_way_split
+    ) {
+        alliance.add("psl");
+        alliance.add("p2050");
+    }
+    if (
+        (primeMinister && anchor) ||
+        (anchor && cabinetAllianceAI.includes(anchor))
+    ) {
+        for (const party of cabinetAllianceAI) alliance.add(party);
+    }
+    return alliance;
+};
+const presidentPartyAI = officePartyAI(
+    Q.president_name,
+    Q.president_party || Q.president_affiliation
+);
+const primeMinisterPartyAI = officePartyAI(
+    Q.prime_minister,
+    Q.pm_political_family || Q.prime_minister_party || Q.government_party
+);
+const marshalPartyAI = officePartyAI(
+    Q.sejm_speaker,
+    Q.sejm_speaker_party || Q.sejm_speaker_affiliation
+);
+const presidentAllianceAI = officeAllianceAI(presidentPartyAI, false);
+const primeMinisterAllianceAI = officeAllianceAI(primeMinisterPartyAI, true);
+const marshalAllianceAI = officeAllianceAI(marshalPartyAI, false);
+const activeResourcePartiesAI = rivalParties.filter(function(id) {
+    return id != "p2050" || p2050Independent;
+});
+const resourceSeatsAI = function(id) {
+    return Math.max(0, finiteAI(Q[id + "_seats"], 0));
+};
+const resourcePollAI = function(id) {
+    return Math.max(
+        0,
+        finiteAI(Q[id + "_vote_intent"], finiteAI(Q[id + "_poll"], 0))
+    );
+};
+const largestRivalSeatsAI = Math.max.apply(
+    null,
+    activeResourcePartiesAI.map(resourceSeatsAI).concat([1])
+);
+const largestRivalPollAI = Math.max.apply(
+    null,
+    activeResourcePartiesAI.map(resourcePollAI).concat([1])
+);
+for (const id of rivalParties) {
+    if (!activeResourcePartiesAI.includes(id)) {
+        for (const component of [
+            "business", "media", "president", "pm", "marshal",
+            "parliament", "poll"
+        ]) Q[id + "_resource_" + component + "_support"] = 0;
+        Q[id + "_resource_score"] = 0;
+        Q[id + "_org_income"] = 0;
+        continue;
+    }
+    Q[id + "_resource_business_support"] =
+        clampAI(Q[id + "_economic_position"], 0, 100) / 100 * 6;
+    Q[id + "_resource_media_support"] =
+        id == "pis" || id == "ko" ? 8 : 0;
+    Q[id + "_resource_president_support"] =
+        presidentAllianceAI.has(id) ? 10 : 0;
+    Q[id + "_resource_pm_support"] =
+        primeMinisterAllianceAI.has(id) ? 12 : 0;
+    Q[id + "_resource_marshal_support"] =
+        marshalAllianceAI.has(id) ? 8 : 0;
+    Q[id + "_resource_parliament_support"] =
+        resourceSeatsAI(id) / largestRivalSeatsAI * 28;
+    Q[id + "_resource_poll_support"] =
+        resourcePollAI(id) / largestRivalPollAI * 28;
+    Q[id + "_resource_score"] = Math.round((
+        Q[id + "_resource_business_support"] +
+        Q[id + "_resource_media_support"] +
+        Q[id + "_resource_president_support"] +
+        Q[id + "_resource_pm_support"] +
+        Q[id + "_resource_marshal_support"] +
+        Q[id + "_resource_parliament_support"] +
+        Q[id + "_resource_poll_support"]
+    ) * 10) / 10;
+    Q[id + "_org_income"] = Math.round(
+        (4 + Q[id + "_resource_score"] * 0.08) * 10
+    ) / 10;
+}
+
 const currentRivalMonthIndex =
     finiteAI(Q.year, 2019) * 12 + finiteAI(Q.month, 1);
 const lastRivalIncomeMonth = finiteAI(
@@ -312,12 +467,8 @@ const rivalMonthsElapsed = Math.max(
 if (rivalMonthsElapsed > 0) {
     for (const id of rivalParties) {
         if (id != "p2050" || p2050Independent) {
-            const resourceCeiling = Math.max(12, resourceDefaults[id] + 4);
-            Q[id + "_org_resources"] = Math.min(
-                resourceCeiling,
-                Q[id + "_org_resources"] +
-                    Q[id + "_org_income"] * rivalMonthsElapsed / 12
-            );
+            Q[id + "_org_resources"] +=
+                Q[id + "_org_income"] * rivalMonthsElapsed / 12;
         }
     }
 }
@@ -1096,13 +1247,10 @@ const canAffordAI = function(id, cost) {
     return finiteAI(Q[id + "_org_resources"], 0) >= cost;
 };
 const maintainPartyAI = function(id, strategy, headline, recovery) {
-    const resourceCeiling = Math.max(12, resourceDefaults[id] + 4);
     Q[id + "_ai_strategy"] = strategy;
     Q[id + "_ai_headline"] = headline;
-    Q[id + "_org_resources"] = Math.min(
-        resourceCeiling,
-        finiteAI(Q[id + "_org_resources"], 0) + finiteAI(recovery, 0.2)
-    );
+    Q[id + "_org_resources"] =
+        finiteAI(Q[id + "_org_resources"], 0) + finiteAI(recovery, 0.2);
     addMomentumAI(id, 0.04);
     maintenanceHeadlines.push(headline);
 };

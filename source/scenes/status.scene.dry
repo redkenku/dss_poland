@@ -933,7 +933,8 @@ const statusRivalGroupIds = [
     "republikanie", "odnowa", "psl_party", "kukiz15", "kp_partners",
     "p2050_party", "kp_committee",
     "nowa_nadzieja", "ruch_narodowy", "kkp", "konf_committee",
-    "zp_committee"
+    "zp_committee", "duda_movement", "tak_rozwoj_party", "p0_party",
+    "prawica_committee"
 ];
 const statusRivalGroupRecords = Array.isArray(Q.rival_group_records)
     ? Q.rival_group_records
@@ -1244,6 +1245,35 @@ Q.status_social_patriot_electoral_strategy = statusText(
 );
 Q.status_p0_name = statusText(Q.p0_name, statusText(Q.p0_short_name, "P0"));
 Q.status_p0_short_name = statusText(Q.p0_short_name, Q.status_p0_name);
+Q.status_prawica_formed = Q.prawica_formed ? 1 : 0;
+Q.status_prawica_attempted = Q.prawica_stage ? 1 : 0;
+Q.status_prawica_outcome = statusText(
+    Q.right_reunification_outcome,
+    "No Prawica founding congress"
+);
+Q.status_prawica_leader = statusText(Q.prawica_leader, "Andrzej Duda");
+Q.status_prawica_pm_candidate = statusText(
+    Q.prawica_pm_candidate,
+    "Andrzej Duda"
+);
+Q.status_prawica_platform = statusText(Q.prawica_platform, "No common charter");
+Q.status_prawica_fragmentation = statusWhole(Q.prawica_fragmentation_score, 0);
+Q.status_prawica_roll = statusWhole(Q.prawica_attempt_roll, 1000);
+Q.status_prawica_threshold = statusWhole(Q.prawica_attempt_threshold, 0);
+Q.status_prawica_poll = statusOneDecimal(Q.prawica_poll, 0);
+Q.status_prawica_projection = statusWhole(Q.prawica_projected_seats, 0);
+const statusPrawicaDecisions = Array.isArray(Q.prawica_decision_records)
+    ? Q.prawica_decision_records
+    : [];
+Q.status_prawica_members = statusPrawicaDecisions.filter(function(record) {
+    return record && record.accepted;
+}).map(function(record) {
+    return record.name;
+}).concat(Q.prawica_formed ? ["Duda civic vehicle"] : []).join(", ") || "None";
+Q.status_prawica_vote_table = statusText(
+    Q.prawica_vote_table,
+    "No founding votes recorded"
+);
 Q.status_third_way_display_name = statusText(
     Q.third_way_display_name,
     "Third Way"
@@ -1279,6 +1309,18 @@ Q.status_sejm_list_control = statusText(
     "Lewica controls nominations and subsidy"
 );
 Q.status_sejm_list_threshold = statusNumber(Q.sejm_list_threshold, 5);
+Q.status_sejm_electoral_system = statusText(
+    Q.sejm_electoral_system_label,
+    "460 proportional-list MPs"
+);
+Q.status_sejm_electoral_summary = statusText(
+    Q.sejm_electoral_system_summary,
+    "460 proportional seats"
+);
+Q.status_electoral_reform_result = statusText(
+    Q.electoral_reform_result,
+    "No Sejm electoral reform proposed"
+);
 Q.status_sejm_list_partner_score = statusNumber(
     Q.sejm_list_partner_score,
     0
@@ -2322,7 +2364,7 @@ call: status
 [? if status_organised_splits > 0: <div class="ledger-row"><span>Organised splits</span><b>[+ status_organised_splits +]</b></div>?]
 [? if status_visible_damage: </div>?]
 
-[? if status_sejm_list_visible: <div class="ledger-section"><div class="ledger-title">Sejm list arrangement</div><div class="ledger-row"><span>Filed committee</span><b>[+ status_sejm_list_result +]</b></div><div class="ledger-row"><span>Legal form</span><b>[+ status_sejm_list_structure +] · [+ status_sejm_list_threshold +]% threshold</b></div><div class="ledger-subrow">[+ status_sejm_list_members +]. [+ status_sejm_list_control +].</div><div class="ledger-row"><span>Partner floor · internal ratification</span><b>[+ status_sejm_list_partner_score +] · [+ status_sejm_list_internal_score +]</b></div><div class="ledger-row"><span>Razem alliance</span><b>[+ status_razem_alliance_members +]</b></div><div class="ledger-subrow">[+ status_razem_alliance_arithmetic +]</div></div>?]
+[? if status_sejm_list_visible: <div class="ledger-section"><div class="ledger-title">Sejm electoral arrangement</div><div class="ledger-row"><span>Electoral law</span><b>[+ status_sejm_electoral_system +]</b></div><div class="ledger-subrow">[+ status_sejm_electoral_summary +]. [+ status_electoral_reform_result +].</div><div class="ledger-row"><span>Filed committee</span><b>[+ status_sejm_list_result +]</b></div><div class="ledger-row"><span>Legal form</span><b>[? if sejm_electoral_system = "fptp_460": District candidate pact?][? if sejm_electoral_system != "fptp_460": [+ status_sejm_list_structure +] · [+ status_sejm_list_threshold +]% threshold?]</b></div><div class="ledger-subrow">[+ status_sejm_list_members +]. [+ status_sejm_list_control +].</div><div class="ledger-row"><span>Partner floor · internal ratification</span><b>[+ status_sejm_list_partner_score +] · [+ status_sejm_list_internal_score +]</b></div><div class="ledger-row"><span>Razem alliance</span><b>[+ status_razem_alliance_members +]</b></div><div class="ledger-subrow">[+ status_razem_alliance_arithmetic +]</div></div>?]
 
 [? if status_left_breakaways_visible: <div class="ledger-section"><div class="ledger-title">Breakaway parties</div>?]
 [? if barons_party_formed: <div class="faction-row"><span class="party party-sld"><b>[+ status_barons_party_name +]</b></span><span>[+ status_sld_breakaway_seats +] seats · [+ status_barons_departed +] departed / [+ status_barons_retained +] stayed</span></div>?]
@@ -2349,6 +2391,8 @@ is-special: true
 call: status
 
 = Party organisations
+
+[? if status_prawica_formed or status_prawica_attempted: <div class="ledger-section ledger-section-first"><div class="ledger-title"><span class="party party-prawica">Prawica founding congress</span></div><div class="ledger-row"><span>Outcome</span><b>[+ status_prawica_outcome +]</b></div><div class="ledger-row"><span>Fragmentation · seeded roll</span><b>[+ status_prawica_fragmentation +]/100 · [+ status_prawica_roll +]/[+ status_prawica_threshold +]</b></div>[? if status_prawica_formed: <div class="ledger-row"><span>Leader · PM nominee</span><b>[+ status_prawica_leader +] · [+ status_prawica_pm_candidate +]</b></div><div class="ledger-row"><span>Poll · projection</span><b>[+ status_prawica_poll +]% · [+ status_prawica_projection +] seats</b></div><div class="ledger-subrow">Founders: [+ status_prawica_members +].</div><div class="ledger-subrow">[+ status_prawica_platform +].</div>?]<details class="ledger-disclosure"><summary>Every founding vote and reason</summary><div class="ledger-subrow">[+ status_prawica_vote_table +]</div></details></div>?]
 
 <div class="ledger-section ledger-section-first"><div class="ledger-title">National party leadership</div>
 <div class="ledger-row"><span class="party party-pis"><b>PiS</b></span><span>[+ status_pis_leader +]</span></div><div class="ledger-subrow">[+ status_pis_ideology +]</div>
@@ -2666,14 +2710,14 @@ call: status
 [? if status_pres_2025_active: </div>?]
 
 <details class="ledger-disclosure" open><summary>Voter blocs</summary>
-<div class="ledger-section"><div class="faction-row"><span><b>Metropolitan liberals</b></span><span>[+ status_metropolitan_liberals_size +]% electorate · [+ status_left_party_name +] [+ status_metropolitan_liberals_left +]% · [+ status_metropolitan_liberals_leader +] leads</span></div>
-<div class="faction-row"><span><b>Liberal professionals</b></span><span>[+ status_liberal_professionals_size +]% · [+ status_left_party_name +] [+ status_liberal_professionals_left +]% · [+ status_liberal_professionals_leader +] leads</span></div>
+<div class="ledger-section"><div class="faction-row"><span><b>Urban middle class</b></span><span>[+ status_metropolitan_liberals_size +]% electorate · [+ status_left_party_name +] [+ status_metropolitan_liberals_left +]% · [+ status_metropolitan_liberals_leader +] leads</span></div>
+<div class="faction-row"><span><b>Professionals and academics</b></span><span>[+ status_liberal_professionals_size +]% · [+ status_left_party_name +] [+ status_liberal_professionals_left +]% · [+ status_liberal_professionals_leader +] leads</span></div>
 <div class="faction-row"><span><b>Public-service families</b></span><span>[+ status_public_service_families_size +]% · [+ status_left_party_name +] [+ status_public_service_families_left +]% · [+ status_public_service_families_leader +] leads</span></div>
 <div class="faction-row"><span><b>Industrial and logistics</b></span><span>[+ status_industrial_logistics_size +]% · [+ status_left_party_name +] [+ status_industrial_logistics_left +]% · [+ status_industrial_logistics_leader +] leads</span></div>
 <div class="faction-row"><span><b>Provincial welfare voters</b></span><span>[+ status_provincial_welfare_size +]% · [+ status_left_party_name +] [+ status_provincial_welfare_left +]% · [+ status_provincial_welfare_leader +] leads</span></div>
 <div class="faction-row"><span><b>Rural localists</b></span><span>[+ status_rural_localists_size +]% · [+ status_left_party_name +] [+ status_rural_localists_left +]% · [+ status_rural_localists_leader +] leads</span></div>
 <div class="faction-row"><span><b>Older welfare households</b></span><span>[+ status_older_welfare_households_size +]% · [+ status_left_party_name +] [+ status_older_welfare_households_left +]% · [+ status_older_welfare_households_leader +] leads</span></div>
-<div class="faction-row"><span><b>Anti-establishment youth</b></span><span>[+ status_anti_establishment_youth_size +]% · [+ status_left_party_name +] [+ status_anti_establishment_youth_left +]% · [+ status_anti_establishment_youth_leader +] leads</span></div></div>
+<div class="faction-row"><span><b>Young adults and students</b></span><span>[+ status_anti_establishment_youth_size +]% · [+ status_left_party_name +] [+ status_anti_establishment_youth_left +]% · [+ status_anti_establishment_youth_leader +] leads</span></div></div>
 </details>
 
 <details class="ledger-disclosure" open><summary>Campaign posture</summary>
@@ -2758,14 +2802,14 @@ call: status
 <div class="faction-row"><span>PiS · PSL</span><span>[+ status_coalition_pis_psl_seats +] · [+ status_coalition_pis_psl_score +]/100</span></div></div>
 
 <div class="ledger-section"><div class="ledger-title">Mutually exclusive voter blocs</div>
-<div class="faction-row"><span><b>Metropolitan liberals</b></span><span>[+ status_metropolitan_liberals_size +]% electorate · Lewica [+ status_metropolitan_liberals_left +]% (prior [+ status_metropolitan_liberals_left_previous +]%) · [+ status_metropolitan_liberals_turnout +]% turnout · [+ status_metropolitan_liberals_leader +] leads</span></div>
-<div class="faction-row"><span><b>Liberal professionals</b></span><span>[+ status_liberal_professionals_size +]% · Lewica [+ status_liberal_professionals_left +]% (prior [+ status_liberal_professionals_left_previous +]%) · [+ status_liberal_professionals_turnout +]% turnout · [+ status_liberal_professionals_leader +] leads</span></div>
+<div class="faction-row"><span><b>Urban middle class</b></span><span>[+ status_metropolitan_liberals_size +]% electorate · Lewica [+ status_metropolitan_liberals_left +]% (prior [+ status_metropolitan_liberals_left_previous +]%) · [+ status_metropolitan_liberals_turnout +]% turnout · [+ status_metropolitan_liberals_leader +] leads</span></div>
+<div class="faction-row"><span><b>Professionals and academics</b></span><span>[+ status_liberal_professionals_size +]% · Lewica [+ status_liberal_professionals_left +]% (prior [+ status_liberal_professionals_left_previous +]%) · [+ status_liberal_professionals_turnout +]% turnout · [+ status_liberal_professionals_leader +] leads</span></div>
 <div class="faction-row"><span><b>Public-service families</b></span><span>[+ status_public_service_families_size +]% · Lewica [+ status_public_service_families_left +]% (prior [+ status_public_service_families_left_previous +]%) · [+ status_public_service_families_turnout +]% turnout · [+ status_public_service_families_leader +] leads</span></div>
 <div class="faction-row"><span><b>Industrial and logistics</b></span><span>[+ status_industrial_logistics_size +]% · Lewica [+ status_industrial_logistics_left +]% (prior [+ status_industrial_logistics_left_previous +]%) · [+ status_industrial_logistics_turnout +]% turnout · [+ status_industrial_logistics_leader +] leads</span></div>
 <div class="faction-row"><span><b>Provincial welfare voters</b></span><span>[+ status_provincial_welfare_size +]% · Lewica [+ status_provincial_welfare_left +]% (prior [+ status_provincial_welfare_left_previous +]%) · [+ status_provincial_welfare_turnout +]% turnout · [+ status_provincial_welfare_leader +] leads</span></div>
 <div class="faction-row"><span><b>Rural localists</b></span><span>[+ status_rural_localists_size +]% · Lewica [+ status_rural_localists_left +]% (prior [+ status_rural_localists_left_previous +]%) · [+ status_rural_localists_turnout +]% turnout · [+ status_rural_localists_leader +] leads</span></div>
 <div class="faction-row"><span><b>Older welfare households</b></span><span>[+ status_older_welfare_households_size +]% · Lewica [+ status_older_welfare_households_left +]% (prior [+ status_older_welfare_households_left_previous +]%) · [+ status_older_welfare_households_turnout +]% turnout · [+ status_older_welfare_households_leader +] leads</span></div>
-<div class="faction-row"><span><b>Anti-establishment youth</b></span><span>[+ status_anti_establishment_youth_size +]% · Lewica [+ status_anti_establishment_youth_left +]% (prior [+ status_anti_establishment_youth_left_previous +]%) · [+ status_anti_establishment_youth_turnout +]% turnout · [+ status_anti_establishment_youth_leader +] leads</span></div>
+<div class="faction-row"><span><b>Young adults and students</b></span><span>[+ status_anti_establishment_youth_size +]% · Lewica [+ status_anti_establishment_youth_left +]% (prior [+ status_anti_establishment_youth_left_previous +]%) · [+ status_anti_establishment_youth_turnout +]% turnout · [+ status_anti_establishment_youth_leader +] leads</span></div>
 <div class="ledger-note">These eight groups are the complete electorate and sum to 100. The Lewica share is recalculated after every month from choices, rival actions, issue fit and turnout.</div></div>
 
 <div class="ledger-section"><div class="ledger-title">Campaign capacity</div>

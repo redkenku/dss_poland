@@ -256,8 +256,13 @@ function runOne(seed) {
   return {
     ok: true,
     left,
+    pis,
+    ko,
     konf,
+    konfResistance: toNum(qualities.konf_poll_resistance, 0),
+    extremistBonus: toNum(qualities.economic_extremist_poll_bonus, 0),
     thirdWayComparable,
+    thirdWayResistance: toNum(qualities.third_way_poll_resistance, 0),
     leftRank,
     leftInBand: left >= 8 && left <= 12,
     beatenByKonf: konf > left,
@@ -296,16 +301,33 @@ if (!budgetOnly && !results.length) {
 
 if (!budgetOnly) {
 const leftVotes = results.map(function(r) { return r.left; }).sort(function(a, b) { return a - b; });
+const pisVotes = results.map(function(r) { return r.pis; }).sort(function(a, b) { return a - b; });
+const koVotes = results.map(function(r) { return r.ko; }).sort(function(a, b) { return a - b; });
 const konfVotes = results.map(function(r) { return r.konf; }).sort(function(a, b) { return a - b; });
 const thirdWayVotes = results.map(function(r) { return r.thirdWayComparable; }).sort(function(a, b) { return a - b; });
 const meanLeft = leftVotes.reduce(function(sum, n) { return sum + n; }, 0) / leftVotes.length;
+const meanPis = pisVotes.reduce(function(sum, n) { return sum + n; }, 0) / pisVotes.length;
+const meanKo = koVotes.reduce(function(sum, n) { return sum + n; }, 0) / koVotes.length;
 const meanKonf = konfVotes.reduce(function(sum, n) { return sum + n; }, 0) / konfVotes.length;
 const meanThirdWay = thirdWayVotes.reduce(function(sum, n) { return sum + n; }, 0) / thirdWayVotes.length;
+const meanKonfResistance = results.reduce(function(sum, r) {
+  return sum + r.konfResistance;
+}, 0) / results.length;
+const meanThirdWayResistance = results.reduce(function(sum, r) {
+  return sum + r.thirdWayResistance;
+}, 0) / results.length;
+const meanExtremistBonus = results.reduce(function(sum, r) {
+  return sum + r.extremistBonus;
+}, 0) / results.length;
 const inBand = results.filter(function(r) { return r.leftInBand; }).length;
 const leftTop2 = results.filter(function(r) { return r.leftRank <= 2; }).length;
 const leftAtLeast3rd = results.filter(function(r) { return r.leftRank <= 3; }).length;
 const beatenByKonf = results.filter(function(r) { return r.beatenByKonf; }).length;
 const beatenByThirdWay = results.filter(function(r) { return r.beatenByThirdWay; }).length;
+const konfAboveTen = results.filter(function(r) { return r.konf > 10; }).length;
+const thirdWayAboveFifteen = results.filter(function(r) {
+  return r.thirdWayComparable > 15;
+}).length;
 const beatenByEither = results.filter(function(r) {
   return r.beatenByKonf || r.beatenByThirdWay;
 }).length;
@@ -336,6 +358,10 @@ console.log('p50:  ' + percentile(thirdWayVotes, 0.50).toFixed(2));
 console.log('p90:  ' + percentile(thirdWayVotes, 0.90).toFixed(2));
 console.log('');
 console.log('Historical 2023 Sejm comparison');
+console.log('PiS mean / delta vs 35.38: ' + meanPis.toFixed(2) + ' / ' +
+  (meanPis - 35.38).toFixed(2));
+console.log('KO mean / delta vs 30.70:  ' + meanKo.toFixed(2) + ' / ' +
+  (meanKo - 30.70).toFixed(2));
 console.log('Left delta vs 8.61:      ' + (meanLeft - 8.61).toFixed(2));
 console.log('Konf delta vs 7.16:      ' + (meanKonf - 7.16).toFixed(2));
 console.log('ThirdWay delta vs 14.40: ' + (meanThirdWay - 14.40).toFixed(2));
@@ -347,6 +373,11 @@ console.log('Lewica top-3:          ' + ((leftAtLeast3rd / results.length) * 100
 console.log('Outpolled by Konf.:    ' + ((beatenByKonf / results.length) * 100).toFixed(1) + '%');
 console.log('Outpolled by ThirdWay: ' + ((beatenByThirdWay / results.length) * 100).toFixed(1) + '%');
 console.log('Outpolled by either:   ' + ((beatenByEither / results.length) * 100).toFixed(1) + '%');
+console.log('Konf. above 10%:       ' + ((konfAboveTen / results.length) * 100).toFixed(1) + '%');
+console.log('Third Way above 15%:   ' + ((thirdWayAboveFifteen / results.length) * 100).toFixed(1) + '%');
+console.log('Mean resistance removed: Konf ' + meanKonfResistance.toFixed(2) +
+  ' · Third Way ' + meanThirdWayResistance.toFixed(2) +
+  ' · economic bonus ' + meanExtremistBonus.toFixed(2));
 }
 
 // Four enacted budgets in one cabinet, with the prior frame, debt and fiscal

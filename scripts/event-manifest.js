@@ -157,7 +157,8 @@ const knownPeople = [
   'Magdalena Biejat', 'Agnieszka Dziemianowicz-Bąk', 'Donald Tusk',
   'Borys Budka', 'Grzegorz Schetyna', 'Rafał Trzaskowski',
   'Małgorzata Kidawa-Błońska', 'Szymon Hołownia',
-  'Władysław Kosiniak-Kamysz', 'Krzysztof Bosak',
+  'Władysław Kosiniak-Kamysz', 'Piotr Zgorzelski', 'Marek Sawicki',
+  'Krzysztof Bosak',
   'Stanisław Żółtek', 'Marek Jakubiak', 'Paweł Tanajno',
   'Waldemar Witkowski', 'Mirosław Piotrowski',
   'Mateusz Morawiecki', 'Jarosław Kaczyński', 'Elżbieta Witek',
@@ -165,12 +166,14 @@ const knownPeople = [
   'Sławomir Mentzen', 'Grzegorz Braun', 'Katarzyna Pełczyńska-Nałęcz',
   'Paulina Hennig-Kloska', 'Radosław Sikorski', 'Adam Bodnar',
   'Mariusz Błaszczak', 'Beata Szydło', 'Przemysław Czarnek',
+  'Leszek Miller',
   'Chrystian Szpilski', 'Patryk Spaliński', 'Maciej Kozłowski', 'Jan Śpiewak',
   'Damian Soból',
 ];
 const knownOrganisations = [
   'Lewica', 'Nowa Lewica', 'Razem', 'PiS', 'Prawo i Sprawiedliwość',
   'KO', 'Civic Platform', 'Platforma Obywatelska', 'PSL', 'Polska 2050',
+  'Zieloni',
   'Poland 2050', 'Konfederacja', 'Suwerenna Polska', 'Solidarna Polska',
   'European Commission', 'European Union', 'Sejm', 'Senate',
   'Council of Ministers', 'Constitutional Tribunal', 'Supreme Court',
@@ -590,9 +593,6 @@ function validateCorrectnessInvariants() {
     ),
     'A smaller party rebrand cannot become another mandatory leadership event'
   );
-  assert(extensionEvents.includes('Q.political_bulletin_pending = 1'));
-  assert(read('source/scenes/poland_hub.scene.dry')
-    .includes('@poland_political_bulletin'));
 
   const events2026 = read('source/scenes/poland_events_2026.scene.dry');
   assert(
@@ -603,11 +603,15 @@ function validateCorrectnessInvariants() {
   assert(events2026.includes('Q.partnership_presidential_lobby_bonus'));
   assert(events2026.includes('Q.partnership_presidential_score < 50'));
 
-  const foreignDeck = read('source/scenes/cards/poland_foreign_deck.scene.dry');
-  for (const arena of ['EU', 'Hungary', 'United States', 'Ukraine']) {
+  for (const card of [
+    'poland_european_campaign.scene.dry',
+    'poland_european_right.scene.dry',
+    'poland_white_house_pressure.scene.dry',
+    'poland_eastern_flank.scene.dry',
+  ]) {
     assert(
-      foreignDeck.includes(arena),
-      'Foreign Affairs deck omits ' + arena
+      read('source/scenes/cards/' + card).includes('tags: poland_party_card'),
+      'Foreign-affairs card is missing from Party Affairs: ' + card
     );
   }
 

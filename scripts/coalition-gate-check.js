@@ -84,6 +84,46 @@ function formationChamber(Q) {
   Q.konf_seats = 18;
 }
 
+function setPiSRivalGates(Q, enabled) {
+  const gates = [
+    'pis_psl', 'pis_p2050', 'psl_p2050',
+    'pis_konf', 'psl_konf', 'konf_p2050'
+  ];
+  for (const gate of gates) {
+    Q['coalition_viable_' + gate] = enabled.includes(gate) ? 1 : 0;
+  }
+}
+
+function preparePiSRoute(seats, gates, code, lifecycle) {
+  const run = newEngine();
+  const Q = run.Q;
+  Object.assign(Q, {
+    year: 2023,
+    sejm_total: 460,
+    sejm_statutory_majority: 231,
+    formation_majority_needed: 231,
+    formation_pending_pis_code: code || 'left_pis',
+    formation_solpol_exit_seats: 0,
+    suwerenna_walkout: 1,
+    left_committed_seats: seats.left,
+    left_seats: seats.left,
+    pis_seats: seats.pis,
+    psl_seats: seats.psl,
+    p2050_seats: seats.p2050,
+    konf_seats: seats.konf
+  });
+  Object.assign(Q, lifecycle || {});
+  setPiSRivalGates(Q, gates);
+  run.engine.goToScene(
+    'poland_government_formation.formation_prepare_pis_route'
+  );
+  assert.strictEqual(
+    run.engine.state.sceneId,
+    'poland_government_formation.formation_pis_safeguard_institutions'
+  );
+  return run;
+}
+
 // --- 1. opening positions ------------------------------------------------
 {
   const { engine, Q } = newEngine();
@@ -160,6 +200,15 @@ function formationChamber(Q) {
     true,
     'The authored democratic coalition must remain signable'
   );
+  assert.strictEqual(Q.formation_status_democratic, 'Passes');
+  assert.strictEqual(Q.formation_status_left_pis_psl, 'Passes');
+  assert.strictEqual(Q.formation_status_left_pis_p2050, 'No path');
+  assert(
+    engine.getCurrentChoices().filter(function(choice) {
+      return choice.id.includes('.formation_pick_');
+    }).every(function(choice) { return choice.canChoose; }),
+    'The coalition menu must hide rather than grey out impossible routes'
+  );
   assert.strictEqual(
     engine.getCurrentChoices().some(function(c) {
       return c.id === 'poland_government_formation.formation_no_arrangement';
@@ -186,9 +235,12 @@ function formationChamber(Q) {
 
   engine.goToScene('poland_government_formation.formation_fallback_ko_menu');
   assert.strictEqual(
-    choiceById(engine, 'poland_government_formation.formation_fallback_ko_konf').canChoose,
+    engine.getCurrentChoices().some(function(choice) {
+      return choice.id ===
+        'poland_government_formation.formation_fallback_ko_konf';
+    }),
     false,
-    'KO + Konfederacja must be visible but unsignable at opening relations'
+    'KO + Konfederacja must be hidden at opening relations'
   );
   assert.strictEqual(
     choiceById(engine, 'poland_government_formation.formation_fallback_ko_third').canChoose,
@@ -240,6 +292,524 @@ function formationChamber(Q) {
     'A chamber with no compatible bloc must expose the hung-chamber exit; got ' +
       available.join(', ')
   );
+}
+
+// --- 5a. the menu shows the viable NL-TD route, not dead arithmetic -------
+{
+  const { engine, Q } = newEngine();
+  seedRivalRelations(Q, OPENING_RELATIONS_2023);
+  Object.assign(Q, {
+    year: 2023,
+    month: 10,
+    sejm_total: 460,
+    sejm_statutory_majority: 231,
+    ko_seats: 135,
+    p2050_seats: 64,
+    psl_seats: 57,
+    left_seats: 115,
+    left_committed_seats: 115,
+    pis_seats: 71,
+    konf_seats: 18,
+    suwerenna_walkout: 1
+  });
+  engine.goToScene('poland_government_formation.formation_coalition_menu');
+  const choices = engine.getCurrentChoices();
+  const ids = choices.map(function(choice) { return choice.id; });
+  const leftThird = choices.find(function(choice) {
+    return choice.id ===
+      'poland_government_formation.formation_pick_left_third';
+  });
+  assert(leftThird && leftThird.canChoose, 'The NL + TD majority is missing');
+  assert.strictEqual(String(leftThird.title), 'Build Lewica + Third Way');
+  for (const hidden of [
+    'formation_pick_left_only',
+    'formation_pick_left_p2050',
+    'formation_pick_left_psl',
+    'formation_pick_left_pis'
+  ]) {
+    assert(!ids.includes('poland_government_formation.' + hidden),
+      hidden + ' should be hidden when it cannot reach 231');
+  }
+  engine.goToScene(
+    'poland_government_formation.formation_fallback_right_menu'
+  );
+  const fallbackIds = engine.getCurrentChoices().map(function(choice) {
+    return choice.id;
+  });
+  assert(!fallbackIds.includes(
+    'poland_government_formation.formation_fallback_pis_konf'
+  ), 'A fallback that cannot reach 231 even with NL must be hidden');
+  const pslFallback = choiceById(
+    engine,
+    'poland_government_formation.formation_fallback_pis_konf_psl'
+  );
+  engine.choose(engine.getCurrentChoices().findIndex(function(choice) {
+    return choice.id === pslFallback.id;
+  }));
+  const roleIds = engine.getCurrentChoices().map(function(choice) {
+    return choice.id;
+  });
+  assert(!roleIds.includes(
+    'poland_government_formation.formation_fallback_formal'
+  ), 'A sub-majority fallback must not offer a formal cabinet');
+  assert(roleIds.includes(
+    'poland_government_formation.formation_fallback_tolerate'
+  ), 'A fallback reaching 231 with NL toleration must remain available');
+}
+
+// --- 6. PiS rival search is arithmetic-first and preference-ordered -------
+{
+  const center = preparePiSRoute(
+    { pis: 210, psl: 25, p2050: 10, konf: 12, left: 30 },
+    ['pis_psl']
+  );
+  assert.strictEqual(center.Q.formation_pis_rival_code, 'pis_psl');
+  assert.strictEqual(center.Q.formation_pis_rival_pressure, 2,
+    'A centrist replacement must need two deterrence commitments');
+
+  const wholeThird = preparePiSRoute(
+    { pis: 200, psl: 15, p2050: 20, konf: 10, left: 35 },
+    ['pis_psl', 'pis_p2050', 'psl_p2050']
+  );
+  assert.strictEqual(wholeThird.Q.formation_pis_rival_code, 'pis_third');
+
+  const pslKonf = preparePiSRoute(
+    { pis: 190, psl: 20, p2050: 10, konf: 25, left: 45 },
+    ['pis_psl', 'pis_konf', 'psl_konf']
+  );
+  assert.strictEqual(pslKonf.Q.formation_pis_rival_code, 'pis_psl_konf');
+  assert.strictEqual(pslKonf.Q.formation_pis_rival_pressure, 1,
+    'A Konfederacja-assisted replacement must need one deterrence commitment');
+
+  const fullThirdKonf = preparePiSRoute(
+    { pis: 180, psl: 20, p2050: 20, konf: 20, left: 55 },
+    ['pis_psl', 'pis_p2050', 'psl_p2050',
+      'pis_konf', 'psl_konf', 'konf_p2050']
+  );
+  assert.strictEqual(
+    fullThirdKonf.Q.formation_pis_rival_code,
+    'pis_third_konf'
+  );
+
+  const blockedP2050Konf = preparePiSRoute(
+    { pis: 180, psl: 20, p2050: 20, konf: 20, left: 55 },
+    ['pis_psl', 'pis_p2050', 'psl_p2050', 'pis_konf', 'psl_konf']
+  );
+  assert.strictEqual(blockedP2050Konf.Q.formation_pis_rival_code, 'none',
+    'Full Third Way plus Konfederacja must retain the P2050-Konf veto');
+
+  const standaloneKonf = preparePiSRoute(
+    { pis: 220, psl: 5, p2050: 5, konf: 15, left: 30 },
+    ['pis_konf']
+  );
+  assert.strictEqual(standaloneKonf.Q.formation_pis_rival_code, 'pis_konf',
+    'Standalone PiS-Konf must be the last compatible majority');
+
+  const noRival = preparePiSRoute(
+    { pis: 180, psl: 20, p2050: 20, konf: 10, left: 60 },
+    ['pis_psl', 'pis_p2050', 'psl_p2050',
+      'pis_konf', 'psl_konf', 'konf_p2050']
+  );
+  assert.strictEqual(noRival.Q.formation_pis_rival_code, 'none');
+  assert.strictEqual(noRival.Q.formation_pis_rival_pressure, 0,
+    'Sub-majority alternatives must not start an escalation');
+
+  center.choose('poland_government_formation.formation_pis_institutions_firm');
+  center.choose('poland_government_formation.formation_pis_welfare_firm');
+  assert.strictEqual(center.Q.formation_pis_rival_pressure, 0);
+  center.choose('poland_government_formation.formation_pis_exclusive_firm');
+  assert.strictEqual(center.Q.formation_pis_rival_process_resolved, 1);
+  assert.strictEqual(center.Q.formation_pis_left_taboo_broken, 1);
+  center.Q.formation_pending_pis_code = 'left_pis';
+  center.engine.goToScene(
+    'poland_government_formation.formation_prepare_pis_route'
+  );
+  assert.strictEqual(center.Q.formation_pis_rival_code, 'none',
+    'A resolved rival contest must not replay in a later formation');
+
+  standaloneKonf.choose(
+    'poland_government_formation.formation_pis_institutions_firm'
+  );
+  assert.strictEqual(standaloneKonf.Q.formation_pis_rival_pressure, 0,
+    'One firm commitment must close a Konfederacja alternative');
+
+  const earlyGowinEntry = preparePiSRoute(
+    { pis: 210, psl: 25, p2050: 10, konf: 12, left: 30 },
+    ['pis_psl'],
+    'left_pis',
+    {
+      formation_pis_left_taboo_broken: 1,
+      formation_pis_left_taboo_origin:
+        'Joined PiS after Gowin\'s exit in 2021'
+    }
+  );
+  assert.strictEqual(earlyGowinEntry.Q.formation_pis_rival_code, 'none',
+    'The post-Gowin cabinet entry must suppress the later rival minigame');
+  assert.strictEqual(
+    earlyGowinEntry.Q.formation_pis_rival_process_resolved || 0,
+    0,
+    'Breaking the taboo early is distinct from playing the rival contest'
+  );
+
+  const laterFirstPivot = preparePiSRoute(
+    { pis: 210, psl: 25, p2050: 10, konf: 12, left: 30 },
+    ['pis_psl'],
+    'left_pis',
+    {
+      year: 2026,
+      formation_pis_left_taboo_broken: 0,
+      formation_pis_rival_process_resolved: 0
+    }
+  );
+  assert.strictEqual(laterFirstPivot.Q.formation_pis_rival_code, 'pis_psl',
+    'A first PiS-Lewica pivot in a later snap formation still needs the contest');
+}
+
+// --- 7. Solidarna Polska exits once and its MPs are real arithmetic -------
+{
+  const { engine, Q } = newEngine();
+  seedRivalRelations(Q, OPENING_RELATIONS_2023);
+  formationChamber(Q);
+  Q.left_seats = 60;
+  Q.left_committed_seats = 60;
+  const solidarna = Q.rival_group_records.find(function(record) {
+    return record.id === 'solidarna';
+  });
+  assert(solidarna, 'The canonical Solidarna Polska organisation is missing');
+  Object.assign(solidarna, {
+    allied: 1, independent: 0, in_cabinet: 1,
+    mp_count: 18, sejm_mps: 18, exclusive_seats: 18
+  });
+  Q.suwerenna_walkout = 0;
+  engine.goToScene('poland_government_formation.formation_coalition_menu');
+  assert.strictEqual(Q.formation_solpol_exit_seats, 18);
+  assert.strictEqual(
+    Q.formation_option_left_pis,
+    Q.pis_seats - 18 + Q.left_committed_seats,
+    'PiS-Lewica must be gated on support after the Solidarna walkout'
+  );
+  assert.strictEqual(
+    choiceById(engine,
+      'poland_government_formation.formation_pick_left_pis').canChoose,
+    true
+  );
+  const pisBefore = Q.pis_seats;
+  const optionIndex = engine.getCurrentChoices().findIndex(function(choice) {
+    return choice.id ===
+      'poland_government_formation.formation_pick_left_pis';
+  });
+  engine.choose(optionIndex);
+  assert.strictEqual(Q.pis_seats, pisBefore - 18);
+  assert.strictEqual(Q.suwerenna_walkout, 1);
+  assert.strictEqual(Q.suwerenna_seats, 18);
+  assert.strictEqual(Q.formation_solpol_exit_triggered, 1);
+  assert.deepStrictEqual(Q.formation_coalition_members, ['pis', 'lewica']);
+  const netPiS = Q.pis_seats;
+  engine.goToScene('poland_government_formation.formation_coalition_menu');
+  assert.strictEqual(Q.formation_solpol_exit_seats, 0,
+    'An already independent Solidarna Polska caucus must not be deducted twice');
+  assert.strictEqual(
+    Q.formation_option_left_pis,
+    netPiS + Q.left_committed_seats
+  );
+}
+
+// --- 8. Miller-Konf mirrors stay visible but require the signed pact ------
+{
+  const { engine, Q } = newEngine();
+  seedRivalRelations(Q, OPENING_RELATIONS_2023);
+  formationChamber(Q);
+  Q.suwerenna_walkout = 1;
+  engine.goToScene('poland_government_formation.formation_coalition_menu');
+  const mirrors = [
+    'formation_pick_left_pis_konf',
+    'formation_pick_left_pis_konf_psl',
+    'formation_pick_left_pis_konf_p2050',
+    'formation_pick_left_pis_konf_third'
+  ];
+  for (const id of mirrors) {
+    assert.strictEqual(
+      engine.getCurrentChoices().some(function(choice) {
+        return choice.id === 'poland_government_formation.' + id;
+      }),
+      false,
+      id + ' escaped the Miller pact visibility gate'
+    );
+  }
+
+  Q.sld_populist_route_active = 1;
+  Q.miller_restoration_done = 1;
+  Q.old_left_route_state = 'miller_restoration';
+  Q.sld_populist_orientation = 'konfederacja';
+  Q.sld_populist_alliance_state = 'accepted';
+  Q.sejm_list_outcome = 'konf_5';
+  engine.goToScene('poland_government_formation.formation_coalition_menu');
+  assert.strictEqual(Q.formation_miller_konf_exception, 1);
+  assert.strictEqual(
+    choiceById(engine,
+      'poland_government_formation.formation_pick_left_pis_konf').canChoose,
+    true,
+    'The base Miller-PiS-Konf cabinet should unlock on the completed pact'
+  );
+  assert.strictEqual(Q.formation_status_left_pis_konf, 'Passes');
+  assert.strictEqual(Q.coalition_viable_left_konf, 0,
+    'The exception must not globally legalize Lewica-Konfederacja');
+}
+
+// --- 9. nominee and ministry menus read only formal members ---------------
+{
+  const plain = newEngine();
+  Object.assign(plain.Q, {
+    year: 2023,
+    president_name: 'Andrzej Duda',
+    presidential_majority_designation: 0,
+    formation_coalition_selected: 1,
+    formation_coalition_code: 'left_pis',
+    formation_coalition_label: 'PiS + Lewica',
+    formation_coalition_members: ['pis', 'lewica'],
+    formation_coalition_support_seats: 240,
+    formation_player_in_government: 1,
+    formation_government_party: 'pis',
+    sejm_statutory_majority: 231,
+    pis_seats: 180,
+    left_seats: 60,
+    left_committed_seats: 60,
+    psl_seats: 20,
+    p2050_seats: 20
+  });
+  plain.engine.goToScene('poland_government_formation.formation_pm_alt');
+  const plainChoices = plain.engine.getCurrentChoices().map(function(choice) {
+    return choice.id;
+  });
+  assert(!plainChoices.includes(
+    'poland_government_formation.formation_pm_alt_kosiniak'
+  ), 'Plain PiS-Lewica leaked WKK into its nominee slate');
+  assert(!plainChoices.includes(
+    'poland_government_formation.formation_pm_alt_p2050_menu'
+  ), 'Plain PiS-Lewica leaked Poland 2050 nominees');
+  for (const id of [
+    'formation_pm_alt_morawiecki', 'formation_pm_alt_szydlo',
+    'formation_pm_alt_czarnek', 'formation_pm_alt_kowalczyk'
+  ]) {
+    assert(plainChoices.includes('poland_government_formation.' + id),
+      'The PiS slate is missing ' + id);
+  }
+
+  Object.assign(plain.Q, {
+    left_cabinet_committed: 1,
+    left_cabinet_model_code: 'ordinary_left_delegation',
+    ministry_return_mode: 'cabinet_program',
+    ministry_allocation_mode: 'formation',
+    formation_in_progress: 1,
+    prime_minister_party: 'pis',
+    government_party: 'pis'
+  });
+  plain.engine.goToScene('poland_ministries');
+  assert.strictEqual(plain.Q.ministry_pis_in_cabinet, 1);
+  assert.strictEqual(plain.Q.ministry_psl_in_cabinet, 0);
+  assert.strictEqual(plain.Q.agriculture_minister_party, 'PiS',
+    'Plain PiS-Lewica leaked PSL Agriculture ownership');
+
+  const miller = newEngine();
+  Object.assign(miller.Q, {
+    year: 2023,
+    formation_coalition_selected: 1,
+    formation_coalition_code: 'left_pis_konf_third',
+    formation_coalition_members: ['pis', 'lewica', 'konf', 'psl', 'p2050'],
+    formation_coalition_support_seats: 280,
+    formation_player_in_government: 1,
+    formation_government_party: 'pis',
+    formation_miller_konf_exception: 1,
+    sejm_statutory_majority: 231,
+    pis_seats: 170,
+    left_seats: 45,
+    left_committed_seats: 45,
+    psl_seats: 25,
+    p2050_seats: 25,
+    konf_seats: 15,
+    presidential_majority_designation: 0
+  });
+  miller.engine.goToScene('poland_government_formation.formation_pm_alt');
+  const millerChoices = miller.engine.getCurrentChoices().map(function(choice) {
+    return choice.id;
+  });
+  assert(millerChoices.includes(
+    'poland_government_formation.formation_pm_alt_sps_menu'
+  ));
+  assert(!millerChoices.includes(
+    'poland_government_formation.formation_pm_alt_left_menu'
+  ));
+
+  Object.assign(miller.Q, {
+    left_cabinet_committed: 1,
+    left_cabinet_model_code: 'ordinary_left_delegation',
+    ministry_return_mode: 'cabinet_program',
+    ministry_allocation_mode: 'formation',
+    formation_in_progress: 1,
+    prime_minister_party: 'pis',
+    government_party: 'pis'
+  });
+  miller.engine.goToScene('poland_ministries');
+  assert.strictEqual(miller.Q.ministry_konf_in_cabinet, 1);
+  assert.strictEqual(miller.Q.finance_minister_party, 'Konfederacja');
+  assert.strictEqual(miller.Q.finance_minister, 'Sławomir Mentzen');
+  assert.strictEqual(miller.Q.economy_minister_party, 'Konfederacja');
+  assert.strictEqual(miller.Q.agriculture_minister_party, 'PSL');
+  assert.strictEqual(miller.Q.digital_minister_party, 'Poland 2050');
+}
+
+// --- 10. Duda's designation precedes the wider Sejm nominee slate --------
+{
+  const { engine, Q, choose } = newEngine();
+  Object.assign(Q, {
+    year: 2023,
+    president_name: 'Andrzej Duda',
+    presidential_majority_designation: 1,
+    formation_presidential_attempt_resolved: 0,
+    formation_coalition_selected: 1,
+    formation_coalition_code: 'left_pis',
+    formation_coalition_members: ['pis', 'lewica'],
+    formation_pis_cabinet_committed: 1,
+    formation_coalition_support_seats: 240,
+    formation_government_party: 'pis'
+  });
+  engine.goToScene('poland_government_formation.formation_pm_stage');
+  assert.strictEqual(
+    engine.state.sceneId,
+    'poland_government_formation.formation_duda_first_attempt'
+  );
+  choose('poland_government_formation.formation_duda_attempt_lapses');
+  assert.strictEqual(Q.presidential_majority_designation, 0);
+  assert.strictEqual(Q.formation_coalition_code, 'left_pis',
+    'Letting Duda\'s attempt lapse must preserve the signed coalition');
+  assert.strictEqual(
+    engine.state.sceneId,
+    'poland_government_formation.formation_pm_alt'
+  );
+}
+
+// --- 11. formal seats never manufacture outside toleration ----------------
+{
+  const majority = newEngine();
+  seedRivalRelations(majority.Q, OPENING_RELATIONS_2023);
+  Object.assign(majority.Q, {
+    year: 2023,
+    month: 10,
+    sejm_total: 460,
+    sejm_statutory_majority: 231,
+    ko_seats: 200,
+    left_seats: 59,
+    left_committed_seats: 59,
+    p2050_seats: 25,
+    psl_seats: 15,
+    pis_seats: 140,
+    konf_seats: 21
+  });
+  majority.engine.goToScene(
+    'poland_government_formation.formation_coalition_menu'
+  );
+  assert.strictEqual(majority.Q.formation_option_ko_left_formal, 259);
+  assert.strictEqual(majority.Q.formation_option_ko_left_outside, 0);
+  assert.strictEqual(majority.Q.formation_status_ko_left, 'Passes');
+  const majorityChoice = choiceById(
+    majority.engine,
+    'poland_government_formation.formation_pick_ko_left'
+  );
+  assert.strictEqual(majorityChoice.canChoose, true);
+  majority.engine.choose(majority.engine.getCurrentChoices().findIndex(
+    function(choice) { return choice.id === majorityChoice.id; }
+  ));
+  assert.strictEqual(majority.Q.formation_coalition_seats, 259);
+  assert.strictEqual(majority.Q.formation_coalition_support_seats, 259);
+  assert.deepStrictEqual(majority.Q.formation_coalition_members, [
+    'ko', 'lewica'
+  ]);
+  assert.strictEqual(majority.Q.coalition_status,
+    'Self-sufficient KO-Lewica majority');
+
+  const tolerated = newEngine();
+  seedRivalRelations(tolerated.Q, OPENING_RELATIONS_2023);
+  Object.assign(tolerated.Q, {
+    year: 2023,
+    month: 10,
+    sejm_total: 460,
+    sejm_statutory_majority: 231,
+    ko_seats: 190,
+    left_seats: 35,
+    left_committed_seats: 35,
+    p2050_seats: 20,
+    psl_seats: 15,
+    pis_seats: 180,
+    konf_seats: 20
+  });
+  tolerated.engine.goToScene(
+    'poland_government_formation.formation_coalition_menu'
+  );
+  assert.strictEqual(tolerated.Q.formation_option_ko_left_formal, 225);
+  assert.strictEqual(tolerated.Q.formation_option_ko_left_outside, 6);
+  assert.strictEqual(tolerated.Q.formation_status_ko_left, 'Needs support');
+  const toleratedChoice = choiceById(
+    tolerated.engine,
+    'poland_government_formation.formation_pick_ko_left'
+  );
+  tolerated.engine.choose(tolerated.engine.getCurrentChoices().findIndex(
+    function(choice) { return choice.id === toleratedChoice.id; }
+  ));
+  assert.strictEqual(tolerated.Q.formation_coalition_support_seats, 231);
+  Object.assign(tolerated.Q, {
+    democratic_candidate: 'Donald Tusk',
+    confidence_candidate: 'Donald Tusk',
+    formation_pm_candidate_loss: 0,
+    presidential_majority_designation: 0
+  });
+  tolerated.engine.goToScene(
+    'poland_government_formation.formation_pm_alt_roll'
+  );
+  assert.strictEqual(
+    tolerated.Q.candidate_p2050_votes + tolerated.Q.candidate_psl_votes,
+    6,
+    'The nominee roll must add the exact six-vote shortfall, not a fixed ten'
+  );
+}
+
+// --- 12. every KO-free center-left majority has a formal route ------------
+for (const route of [
+  ['left_p2050', 'formation_pick_left_p2050', ['p2050', 'lewica'], 240, 1],
+  ['left_psl', 'formation_pick_left_psl', ['psl', 'lewica'], 235, 1],
+  ['left_third', 'formation_pick_left_third',
+    ['p2050', 'psl', 'lewica'], 275, 0]
+]) {
+  const run = newEngine();
+  seedRivalRelations(run.Q, OPENING_RELATIONS_2023);
+  Object.assign(run.Q, {
+    year: 2023,
+    month: 10,
+    sejm_total: 460,
+    sejm_statutory_majority: 231,
+    ko_seats: 80,
+    left_seats: 200,
+    left_committed_seats: 200,
+    p2050_seats: 40,
+    psl_seats: 35,
+    pis_seats: 90,
+    konf_seats: 15
+  });
+  run.engine.goToScene(
+    'poland_government_formation.formation_coalition_menu'
+  );
+  const choice = choiceById(
+    run.engine,
+    'poland_government_formation.' + route[1]
+  );
+  assert.strictEqual(choice.canChoose, true, route[0] + ' must be signable');
+  run.engine.choose(run.engine.getCurrentChoices().findIndex(
+    function(candidate) { return candidate.id === choice.id; }
+  ));
+  assert.strictEqual(run.Q.formation_coalition_code, route[0]);
+  assert.deepStrictEqual(run.Q.formation_coalition_members, route[2]);
+  assert.strictEqual(run.Q.formation_coalition_seats, route[3]);
+  assert.strictEqual(run.Q.formation_coalition_support_seats, route[3]);
+  assert.strictEqual(run.Q.third_way_split, route[4]);
 }
 
 console.log('coalition-gate-check: all assertions passed');

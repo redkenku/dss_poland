@@ -11,6 +11,7 @@ go-to: poland_presidential_election.setup if pres_first_round_complete = 0; pola
 @results_2023
 title: 2023 Sejm election
 new-page: true
+call: poland_normalize
 on-arrival: {!
 Q.election_2023_seen = 1;
 const leftFamilySeatCeiling =
@@ -56,6 +57,26 @@ Q.coalition_pis_psl_seats = Q.pis_seats + Q.psl_seats +
 Q.news_headline =
     "The election produces " + Q.coalition_democratic_seats +
     " democratic seats";
+const result2023BroadList = Q.sejm_list_outcome == "democratic_8";
+Q.result_2023_broad_list = result2023BroadList ? 1 : 0;
+Q.result_2023_ko_row_class = result2023BroadList
+    ? "election-tree-row--child"
+    : "election-tree-row--committee";
+Q.result_2023_ko_member_class = result2023BroadList
+    ? "election-tree-row--grandchild"
+    : "election-tree-row--child";
+Q.result_2023_third_way_row_class = result2023BroadList
+    ? "election-tree-row--child"
+    : "election-tree-row--committee";
+Q.result_2023_third_way_member_class = result2023BroadList
+    ? "election-tree-row--grandchild"
+    : "election-tree-row--child";
+Q.result_2023_left_row_class = result2023BroadList
+    ? "election-tree-row--child"
+    : "election-tree-row--committee";
+Q.result_2023_left_member_class = result2023BroadList
+    ? "election-tree-row--grandchild"
+    : "election-tree-row--child";
 !}
 on-display: {!
 const data = [];
@@ -129,27 +150,54 @@ if (
 
 = Election results
 
+**Sejm system:** [+ sejm_electoral_system_label +] — [+
+sejm_result_list_seats +] list, [+ sejm_result_urban_seats +] urban district
+and [+ sejm_result_rural_seats +] rural district seats. **Lewica:** [+
+left_list_seats +] list · [+ left_urban_seats +] urban · [+
+left_rural_seats +] rural.
+
 {!<svg id="poland-sejm" class="poland-sejm-chart"></svg>!}
 
-<div class="election-table">
-<div class="election-table-head"><span>Committee</span><span>Vote</span><span>Seats</span><span>Status</span></div>
-[? if sejm_list_has_partners: <div class="election-table-row"><span class="party party-lewica">[+ sejm_list_target +]</span><span>[+ election_2023_filed_committee_vote +]%</span><b>[+ election_2023_filed_committee_seats +]</b><span>[+ sejm_list_threshold +]% filed committee</span></div>?]
-<div class="election-table-row"><span class="party party-pis">PiS</span><span>[+ election_2023_pis_vote +]%</span><b>[+ pis_seats +]</b><span>certified</span></div>
-<div class="election-table-row"><span class="party party-ko">KO</span><span>[+ election_2023_ko_vote +]%</span><b>[+ ko_seats +]</b><span>certified</span></div>
-[? if third_way_split = 0: <div class="election-table-row"><span class="party party-third-way">[+ third_way_display_name +]</span><span>[+ election_2023_third_way_vote +]%</span><b>[+ p2050_seats + psl_seats +]</b><span>joint list · 8% threshold</span></div>?]
-[? if third_way_split = 1: <div class="election-table-row"><span class="party party-p2050">Polska 2050</span><span>[+ election_2023_p2050_vote +]%</span><b>[+ p2050_seats +]</b><span>separate list · 5%</span></div><div class="election-table-row"><span class="party party-psl">PSL</span><span>[+ election_2023_psl_vote +]%</span><b>[+ psl_seats +]</b><span>separate list · 5%</span></div>?]
-<div class="election-table-row"><span class="party party-lewica">[+ left_party_name +]</span><span>[+ election_2023_left_vote +]%</span><b>[+ left_seats +]</b><span>[? if not sejm_list_has_partners: main list?][? if sejm_list_has_partners: component share?]</span></div>
-[? if sld_breakaway_seats > 0 or barons_party_formed = 1: <div class="election-table-row"><span class="party party-sld">[+ barons_party_name +]</span><span>[+ election_2023_sld_breakaway_vote +]%</span><b>[+ sld_breakaway_seats +]</b><span>breakaway</span></div>?]
-[? if social_patriot_seats > 0 or social_patriot_party_formed = 1: <div class="election-table-row"><span class="party party-social-patriot">[+ social_patriot_party_name +]</span><span>[+ election_2023_social_patriot_vote +]%</span><b>[+ social_patriot_seats +]</b><span>[? if social_patriot_list_committee = "pis": PiS host list?][? if social_patriot_list_committee != "pis": independent?]</span></div>?]
-[? if spring_breakaway_seats > 0 or spring_party_formed = 1: <div class="election-table-row"><span class="party party-wiosna">[+ spring_party_name +]</span><span>[+ election_2023_spring_breakaway_vote +]%</span><b>[+ spring_breakaway_seats +]</b><span>breakaway</span></div>?]
-[? if labor_left_seats > 0 or labor_party_formed = 1: <div class="election-table-row"><span class="party party-left-labor">[+ labor_party_name +]</span><span>[+ election_2023_labor_left_vote +]%</span><b>[+ labor_left_seats +]</b><span>breakaway</span></div>?]
-[? if young_left_seats > 0 or progressives_party_formed = 1: <div class="election-table-row"><span class="party party-progressive">[+ progressives_party_name +]</span><span>[+ election_2023_young_left_vote +]%</span><b>[+ young_left_seats +]</b><span>breakaway</span></div>?]
-[? if razem_party_seats > 0 or razem_party_formed = 1: <div class="election-table-row"><span class="party party-razem">Razem</span><span>[+ election_2023_razem_vote +]%</span><b>[+ razem_party_seats +]</b><span>independent list</span></div>?]
-[? if pps_party_seats > 0 or pps_party_formed = 1: <div class="election-table-row"><span class="party party-pps">PPS</span><span>[+ election_2023_pps_vote +]%</span><b>[+ pps_party_seats +]</b><span>independent list</span></div>?]
-[? if centrum_seats > 0 or unia_centrum_formed = 1: <div class="election-table-row"><span class="party party-centrum">Unia Centrum</span><span>[+ election_2023_centrum_vote +]%</span><b>[+ centrum_seats +]</b><span>PL2050 split</span></div>?]
-[? if rozwoj_seats > 0 or pis_split = 1: <div class="election-table-row"><span class="party party-rozwoj">Rozwój Plus</span><span>[+ election_2023_rozwoj_vote +]%</span><b>[+ rozwoj_seats +]</b><span>PiS split</span></div>?]
-[? if korona_seats > 0 or far_right_split > 0: <div class="election-table-row"><span class="party party-korona">Korona</span><span>[+ election_2023_korona_vote +]%</span><b>[+ korona_seats +]</b><span>Konf. split</span></div>?]
-<div class="election-table-row"><span class="party party-konf">Konfederacja</span><span>[+ election_2023_konf_vote +]%</span><b>[+ konf_seats +]</b><span>certified</span></div>
+<div class="election-table election-tree">
+<div class="election-table-head"><span>Committee / member</span><span>Vote</span><span>Seats</span><span>Status</span></div>
+[? if sejm_list_has_partners: <div class="election-table-row election-tree-row--committee election-tree-row--broad"><span class="party party-lewica">[+ sejm_list_target +]</span><span>[+ election_2023_filed_committee_vote +]%</span><b>[+ election_2023_filed_committee_seats +]</b><span>[? if sejm_electoral_system = "fptp_460": common district pact?][? if sejm_electoral_system != "fptp_460": one [+ sejm_list_threshold +]% committee?]</span></div>?]
+<div class="election-table-row [+ result_2023_ko_row_class +]"><span class="party party-ko">Koalicja Obywatelska</span><span>[+ election_2023_ko_vote +]%</span><b>[+ ko_seats +]</b><span>[? if result_2023_broad_list: component of common list?][? if not result_2023_broad_list: certified committee?]</span></div>
+[? if result_member_po_sejm > 0: <div class="election-table-row [+ result_2023_ko_member_class +]"><span class="party party-ko">[+ result_member_po_name +]</span><span aria-label="no separate ballot share">—</span><b>[+ result_member_po_sejm +]</b><span>KO member party</span></div>?]
+[? if result_member_nowoczesna_sejm > 0: <div class="election-table-row [+ result_2023_ko_member_class +]"><span class="party party-ko">[+ result_member_nowoczesna_name +]</span><span aria-label="no separate ballot share">—</span><b>[+ result_member_nowoczesna_sejm +]</b><span>KO member party</span></div>?]
+[? if result_member_ipl_sejm > 0: <div class="election-table-row [+ result_2023_ko_member_class +]"><span class="party party-ko">[+ result_member_ipl_name +]</span><span aria-label="no separate ballot share">—</span><b>[+ result_member_ipl_sejm +]</b><span>KO member party</span></div>?]
+[? if result_member_greens_sejm > 0: <div class="election-table-row [+ result_2023_ko_member_class +]"><span class="party party-ko">[+ result_member_greens_name +]</span><span aria-label="no separate ballot share">—</span><b>[+ result_member_greens_sejm +]</b><span>KO member party</span></div>?]
+[? if result_member_ko_party_sejm > 0: <div class="election-table-row [+ result_2023_ko_member_class +]"><span class="party party-ko">[+ result_member_ko_party_name +]</span><span aria-label="no separate ballot share">—</span><b>[+ result_member_ko_party_sejm +]</b><span>consolidated KO party</span></div>?]
+[? if result_member_ko_independent_parliamentarians_sejm > 0: <div class="election-table-row [+ result_2023_ko_member_class +]"><span>KO-affiliated independents</span><span aria-label="no separate ballot share">—</span><b>[+ result_member_ko_independent_parliamentarians_sejm +]</b><span>non-party nominees</span></div>?]
+[? if third_way_split = 0: <div class="election-table-row [+ result_2023_third_way_row_class +]"><span class="party party-third-way">[+ third_way_display_name +]</span><span>[+ election_2023_third_way_vote +]%</span><b>[+ p2050_seats + psl_seats +]</b><span>[? if result_2023_broad_list: component of common list?][? if not result_2023_broad_list: joint committee?]</span></div><div class="election-table-row [+ result_2023_third_way_member_class +]"><span class="party party-p2050">Polska 2050</span><span>[+ election_2023_p2050_vote +]%</span><b>[+ p2050_seats +]</b><span>Third Way member</span></div><div class="election-table-row [+ result_2023_third_way_member_class +]"><span class="party party-psl">PSL</span><span>[+ election_2023_psl_vote +]%</span><b>[+ psl_seats +]</b><span>Third Way member</span></div>?]
+[? if third_way_split = 1: <div class="election-table-row [+ result_2023_third_way_row_class +]"><span class="party party-p2050">Polska 2050</span><span>[+ election_2023_p2050_vote +]%</span><b>[+ p2050_seats +]</b><span>separate committee</span></div><div class="election-table-row [+ result_2023_third_way_row_class +]"><span class="party party-psl">PSL</span><span>[+ election_2023_psl_vote +]%</span><b>[+ psl_seats +]</b><span>separate committee</span></div>?]
+<div class="election-table-row [+ result_2023_left_row_class +]"><span class="party party-lewica">[+ left_party_name +]</span><span>[+ election_2023_left_vote +]%</span><b>[+ left_seats +]</b><span>[? if result_2023_broad_list: component of common list?][? if not result_2023_broad_list: main list?]</span></div>
+[? if left_barons_seats > 0: <div class="election-table-row [+ result_2023_left_member_class +]"><span class="party party-lewica">[+ barons_name +]</span><span aria-label="no separate ballot share">—</span><b>[+ left_barons_seats +]</b><span>constituent organisation</span></div>?]
+[? if left_spring_seats > 0: <div class="election-table-row [+ result_2023_left_member_class +]"><span class="party party-wiosna">[+ spring_name +]</span><span aria-label="no separate ballot share">—</span><b>[+ left_spring_seats +]</b><span>constituent organisation</span></div>?]
+[? if left_labor_seats > 0: <div class="election-table-row [+ result_2023_left_member_class +]"><span class="party party-left-labor">[+ labor_name +]</span><span aria-label="no separate ballot share">—</span><b>[+ left_labor_seats +]</b><span>constituent network</span></div>?]
+[? if left_progressives_seats > 0: <div class="election-table-row [+ result_2023_left_member_class +]"><span class="party party-progressive">[+ progressives_name +]</span><span aria-label="no separate ballot share">—</span><b>[+ left_progressives_seats +]</b><span>constituent current</span></div>?]
+[? if razem_seats > 0: <div class="election-table-row [+ result_2023_left_member_class +]"><span class="party party-razem">Razem</span><span aria-label="no separate ballot share">—</span><b>[+ razem_seats +]</b><span>internal allocation</span></div>?]
+[? if left_pps_seats > 0: <div class="election-table-row [+ result_2023_left_member_class +]"><span class="party party-pps">PPS</span><span aria-label="no separate ballot share">—</span><b>[+ left_pps_seats +]</b><span>internal allocation</span></div>?]
+[? if left_social_patriot_seats > 0: <div class="election-table-row [+ result_2023_left_member_class +]"><span class="party party-social-patriot">Social-patriot current</span><span aria-label="no separate ballot share">—</span><b>[+ left_social_patriot_seats +]</b><span>internal allocation</span></div>?]
+<div class="election-table-row election-tree-row--committee election-tree-row--right"><span class="party party-pis">Zjednoczona Prawica</span><span>[+ election_2023_pis_vote +]%</span><b>[+ pis_seats +]</b><span>one certified committee</span></div>
+[? if result_member_pis_party_sejm > 0: <div class="election-table-row election-tree-row--child"><span class="party party-pis">[+ result_member_pis_party_name +]</span><span aria-label="no separate ballot share">—</span><b>[+ result_member_pis_party_sejm +]</b><span>lead party</span></div>?]
+[? if result_member_solidarna_sejm > 0: <div class="election-table-row election-tree-row--child"><span class="party party-pis">[+ result_member_solidarna_name +]</span><span aria-label="no separate ballot share">—</span><b>[+ result_member_solidarna_sejm +]</b><span>member party</span></div>?]
+[? if result_member_porozumienie_sejm > 0: <div class="election-table-row election-tree-row--child"><span class="party party-pis">[+ result_member_porozumienie_name +]</span><span aria-label="no separate ballot share">—</span><b>[+ result_member_porozumienie_sejm +]</b><span>member party</span></div>?]
+[? if result_member_republikanie_sejm > 0: <div class="election-table-row election-tree-row--child"><span class="party party-pis">[+ result_member_republikanie_name +]</span><span aria-label="no separate ballot share">—</span><b>[+ result_member_republikanie_sejm +]</b><span>member party</span></div>?]
+[? if result_member_odnowa_sejm > 0: <div class="election-table-row election-tree-row--child"><span class="party party-pis">[+ result_member_odnowa_name +]</span><span aria-label="no separate ballot share">—</span><b>[+ result_member_odnowa_sejm +]</b><span>member party</span></div>?]
+[? if sld_breakaway_seats > 0 or barons_party_formed = 1: <div class="election-table-row election-tree-row--committee"><span class="party party-sld">[+ barons_party_name +]</span><span>[+ election_2023_sld_breakaway_vote +]%</span><b>[+ sld_breakaway_seats +]</b><span>breakaway committee</span></div>?]
+[? if social_patriot_seats > 0 or social_patriot_party_formed = 1: <div class="election-table-row election-tree-row--committee"><span class="party party-social-patriot">[+ social_patriot_party_name +]</span><span>[+ election_2023_social_patriot_vote +]%</span><b>[+ social_patriot_seats +]</b><span>[? if social_patriot_list_committee = "pis": ZP host list?][? if social_patriot_list_committee != "pis": independent?]</span></div>?]
+[? if spring_breakaway_seats > 0 or spring_party_formed = 1: <div class="election-table-row election-tree-row--committee"><span class="party party-wiosna">[+ spring_party_name +]</span><span>[+ election_2023_spring_breakaway_vote +]%</span><b>[+ spring_breakaway_seats +]</b><span>breakaway committee</span></div>?]
+[? if labor_left_seats > 0 or labor_party_formed = 1: <div class="election-table-row election-tree-row--committee"><span class="party party-left-labor">[+ labor_party_name +]</span><span>[+ election_2023_labor_left_vote +]%</span><b>[+ labor_left_seats +]</b><span>breakaway committee</span></div>?]
+[? if young_left_seats > 0 or progressives_party_formed = 1: <div class="election-table-row election-tree-row--committee"><span class="party party-progressive">[+ progressives_party_name +]</span><span>[+ election_2023_young_left_vote +]%</span><b>[+ young_left_seats +]</b><span>breakaway committee</span></div>?]
+[? if razem_party_seats > 0 or razem_party_formed = 1: <div class="election-table-row election-tree-row--committee"><span class="party party-razem">Razem</span><span>[+ election_2023_razem_vote +]%</span><b>[+ razem_party_seats +]</b><span>independent committee</span></div>?]
+[? if pps_party_seats > 0 or pps_party_formed = 1: <div class="election-table-row election-tree-row--committee"><span class="party party-pps">PPS</span><span>[+ election_2023_pps_vote +]%</span><b>[+ pps_party_seats +]</b><span>independent committee</span></div>?]
+[? if centrum_seats > 0 or unia_centrum_formed = 1: <div class="election-table-row election-tree-row--committee"><span class="party party-centrum">Unia Centrum</span><span>[+ election_2023_centrum_vote +]%</span><b>[+ centrum_seats +]</b><span>PL2050 split</span></div>?]
+[? if rozwoj_seats > 0 or pis_split = 1: <div class="election-table-row election-tree-row--committee"><span class="party party-rozwoj">Rozwój Plus</span><span>[+ election_2023_rozwoj_vote +]%</span><b>[+ rozwoj_seats +]</b><span>PiS split</span></div>?]
+[? if korona_seats > 0 or far_right_split > 0: <div class="election-table-row election-tree-row--committee"><span class="party party-korona">Korona</span><span>[+ election_2023_korona_vote +]%</span><b>[+ korona_seats +]</b><span>Konfederacja split</span></div>?]
+<div class="election-table-row election-tree-row--committee election-tree-row--right"><span class="party party-konf">Konfederacja</span><span>[+ election_2023_konf_vote +]%</span><b>[+ konf_seats +]</b><span>one certified committee</span></div>
+[? if result_member_nowa_nadzieja_sejm > 0: <div class="election-table-row election-tree-row--child"><span class="party party-konf">[+ result_member_nowa_nadzieja_name +]</span><span aria-label="no separate ballot share">—</span><b>[+ result_member_nowa_nadzieja_sejm +]</b><span>member party</span></div>?]
+[? if result_member_ruch_narodowy_sejm > 0: <div class="election-table-row election-tree-row--child"><span class="party party-konf">[+ result_member_ruch_narodowy_name +]</span><span aria-label="no separate ballot share">—</span><b>[+ result_member_ruch_narodowy_sejm +]</b><span>member party</span></div>?]
+[? if result_member_kkp_sejm > 0: <div class="election-table-row election-tree-row--child"><span class="party party-konf">[+ result_member_kkp_name +]</span><span aria-label="no separate ballot share">—</span><b>[+ result_member_kkp_sejm +]</b><span>member party</span></div>?]
 </div>
 
 Election-day movement: **[+ election_2023_day_shock_summary +]**.
@@ -164,7 +212,15 @@ new-page: true
 face-image: img/poland/cards/campaigning.webp
 view-if: left_seats = 0 and election_2027_terminal = 0
 game-over: true
-on-arrival: game_over = 1; formation_in_progress = 0; position = "Outside parliament"; ending_exit_type = "Voted out"; news_headline = "The Left falls below the Sejm threshold"
+on-arrival: {!
+Q.game_over = 1;
+Q.formation_in_progress = 0;
+Q.position = "Outside parliament";
+Q.ending_exit_type = "Voted out";
+Q.news_headline = Q.sejm_electoral_system == "fptp_460"
+    ? "The Left fails to win a Sejm district"
+    : "The Left falls below the Sejm threshold";
+!}
 call: poland_ending.prepare_epilogue
 
 = [+ ending_name +]
@@ -221,19 +277,29 @@ on-arrival: election_summary_seen = 1
 PiS returns with **[+ pis_seats +] seats**. KO, the democratic centre and the
 Left parties committed to the transfer hold **[+ coalition_democratic_seats +]
 seats**. [? if third_way_split = 0: [+ third_way_display_name +]'s **[+ p2050_seats + psl_seats
-+] deputies** won election through one committee; their later division into
-PSL and Poland 2050 caucuses does not retroactively change its 8% threshold.?]
-[? if third_way_split = 1: PSL and Poland 2050 fought on separate 5% lists, so
-their seats were calculated separately.?]
++] deputies** won election through one committee.[? if
+sejm_electoral_system != "fptp_460": Their later division into PSL and Poland
+2050 caucuses does not retroactively change its 8% threshold.?][? if
+sejm_electoral_system = "fptp_460": Its member parties shared one candidate
+pact, and seats are credited to the winning nominees.?]?]
+[? if third_way_split = 1 and sejm_electoral_system != "fptp_460": PSL and
+Poland 2050 fought on separate 5% lists, so their seats were calculated
+separately.?][? if third_way_split = 1 and sejm_electoral_system = "fptp_460":
+PSL and Poland 2050 filed separate district candidates, so their seats were
+counted separately.?]
 
 The main **[+ left_party_name +]** list returns with **[+ left_seats +]
 seats**. Separate Left parties hold **[+ left_splinter_seats +]** more.
-The wider Left won **[+ left_family_vote_intent +]%** across **[+
+The wider Left won **[+ left_family_vote_intent +]%**. [? if
+sejm_electoral_system != "fptp_460": It contested through **[+
 left_lists_contesting +] lists**. **[+ left_lists_above_threshold +]** cleared
 their filed threshold; **[+ left_threshold_wasted_vote +] points** were cast
 through committees that won no representation under the national indicator.
 The negotiated form was **[+ sejm_list_structure +]** at **[+
-sejm_list_threshold +]%**: [+ sejm_list_members +].
+sejm_list_threshold +]%**: [+ sejm_list_members +].?][? if
+sejm_electoral_system = "fptp_460": Its filed committee and candidate pacts
+won **[+ left_urban_seats +] urban** and **[+ left_rural_seats +] rural**
+constituencies; there was no national threshold.?]
 Inside the main list there are **[+ nowa_lewica_seats +] Nowa Lewica**, **[+
 razem_seats +] Razem** and **[+ left_pps_seats +] PPS** deputies. Cabinet
 entry therefore requires both coalition arithmetic and an internal mandate.
@@ -243,6 +309,7 @@ entry therefore requires both coalition arithmetic and an internal mandate.
 @senate_results_2023
 title: 2023 Senate election
 new-page: true
+call: poland_normalize
 on-arrival: election_senate_seen = 1
 
 = One hundred district pluralities
@@ -257,15 +324,25 @@ Rule: **[+ senate_election_rule +]**.
 Closest simulated winning margin: **[+ senate_election_closest_margin +]
 points**.
 
-<div class="election-table">
-<div class="election-table-head"><span>Committee family</span><span>Seats</span><span>Position</span><span>Status</span></div>
-<div class="election-table-row"><span class="party party-pis">PiS and aligned right</span><b>[+ senate_pis_seats +]</b><span>right</span><span>district winners</span></div>
-[? if senate_konf_seats > 0: <div class="election-table-row"><span class="party party-konf">Konfederacja and aligned right</span><b>[+ senate_konf_seats +]</b><span>right</span><span>district winners</span></div>?]
-<div class="election-table-row"><span class="party party-ko">KO</span><b>[+ senate_ko_seats +]</b><span>democratic</span><span>district winners</span></div>
-[? if senate_p2050_seats > 0: <div class="election-table-row"><span class="party party-p2050">Polska 2050</span><b>[+ senate_p2050_seats +]</b><span>democratic</span><span>district winners</span></div>?]
-[? if senate_psl_seats > 0: <div class="election-table-row"><span class="party party-psl">PSL</span><b>[+ senate_psl_seats +]</b><span>democratic</span><span>district winners</span></div>?]
-[? if senate_left_seats > 0: <div class="election-table-row"><span class="party party-lewica">Lewica</span><b>[+ senate_left_seats +]</b><span>democratic</span><span>district winners</span></div>?]
-[? if senate_independent_seats > 0: <div class="election-table-row"><span>Independent candidates</span><b>[+ senate_independent_seats +]</b><span>unaligned</span><span>district winners</span></div>?]
+<div class="election-table election-tree election-tree--senate">
+<div class="election-table-head"><span>Bloc / party</span><span>Seats</span><span>Position</span><span>Status</span></div>
+<div class="election-table-row election-tree-row--committee election-tree-row--broad"><span class="party party-ko">Democratic camp</span><b>[+ senate_democratic_seats +]</b><span>democratic</span><span>all district winners</span></div>
+<div class="election-table-row election-tree-row--child"><span class="party party-ko">Koalicja Obywatelska</span><b>[+ senate_ko_seats +]</b><span>democratic</span><span>party nominees</span></div>
+[? if result_member_po_senate > 0: <div class="election-table-row election-tree-row--grandchild"><span class="party party-ko">[+ result_member_po_name +]</span><b>[+ result_member_po_senate +]</b><span>KO member</span><span>party nominees</span></div>?]
+[? if result_member_ko_party_senate > 0: <div class="election-table-row election-tree-row--grandchild"><span class="party party-ko">[+ result_member_ko_party_name +]</span><b>[+ result_member_ko_party_senate +]</b><span>KO member</span><span>party nominees</span></div>?]
+[? if senate_p2050_seats + senate_psl_seats > 0: <div class="election-table-row election-tree-row--child"><span class="party party-third-way">Trzecia Droga</span><b>[+ senate_p2050_seats + senate_psl_seats +]</b><span>democratic</span><span>all member winners</span></div>?]
+[? if senate_p2050_seats > 0: <div class="election-table-row election-tree-row--grandchild"><span class="party party-p2050">Polska 2050</span><b>[+ senate_p2050_seats +]</b><span>Third Way member</span><span>party nominees</span></div>?]
+[? if senate_psl_seats > 0: <div class="election-table-row election-tree-row--grandchild"><span class="party party-psl">PSL</span><b>[+ senate_psl_seats +]</b><span>Third Way member</span><span>party nominees</span></div>?]
+[? if senate_left_seats > 0: <div class="election-table-row election-tree-row--child"><span class="party party-lewica">Lewica</span><b>[+ senate_left_seats +]</b><span>democratic</span><span>party nominees</span></div>?]
+<div class="election-table-row election-tree-row--committee election-tree-row--right"><span class="party party-pis">Zjednoczona Prawica</span><b>[+ senate_pis_seats +]</b><span>right</span><span>all district winners</span></div>
+[? if result_member_pis_party_senate > 0: <div class="election-table-row election-tree-row--child"><span class="party party-pis">[+ result_member_pis_party_name +]</span><b>[+ result_member_pis_party_senate +]</b><span>ZP member</span><span>party nominees</span></div>?]
+[? if result_member_solidarna_senate > 0: <div class="election-table-row election-tree-row--child"><span class="party party-pis">[+ result_member_solidarna_name +]</span><b>[+ result_member_solidarna_senate +]</b><span>ZP member</span><span>party nominees</span></div>?]
+[? if result_member_porozumienie_senate > 0: <div class="election-table-row election-tree-row--child"><span class="party party-pis">[+ result_member_porozumienie_name +]</span><b>[+ result_member_porozumienie_senate +]</b><span>ZP member</span><span>party nominees</span></div>?]
+[? if senate_konf_seats > 0: <div class="election-table-row election-tree-row--committee election-tree-row--right"><span class="party party-konf">Konfederacja</span><b>[+ senate_konf_seats +]</b><span>right</span><span>all district winners</span></div>?]
+[? if result_member_nowa_nadzieja_senate > 0: <div class="election-table-row election-tree-row--child"><span class="party party-konf">[+ result_member_nowa_nadzieja_name +]</span><b>[+ result_member_nowa_nadzieja_senate +]</b><span>Konf. member</span><span>party nominees</span></div>?]
+[? if result_member_ruch_narodowy_senate > 0: <div class="election-table-row election-tree-row--child"><span class="party party-konf">[+ result_member_ruch_narodowy_name +]</span><b>[+ result_member_ruch_narodowy_senate +]</b><span>Konf. member</span><span>party nominees</span></div>?]
+[? if result_member_kkp_senate > 0: <div class="election-table-row election-tree-row--child"><span class="party party-konf">[+ result_member_kkp_name +]</span><b>[+ result_member_kkp_senate +]</b><span>Konf. member</span><span>party nominees</span></div>?]
+[? if senate_independent_seats > 0: <div class="election-table-row election-tree-row--committee"><span>Independent candidates</span><b>[+ senate_independent_seats +]</b><span>unaligned</span><span>district winners</span></div>?]
 </div>
 
 **Democratic senators: [+ senate_democratic_seats +] · right-aligned
@@ -376,6 +453,10 @@ const formatIntent = function(value) {
     "young_left_component_vote_intent", "razem_component_vote_intent",
     "pps_vote_intent", "centrum_vote_intent", "rozwoj_vote_intent",
     "p0_vote_intent",
+    "tak_rozwoj_component_vote_intent", "ko_splinter_component_vote_intent",
+    "suwerenna_component_vote_intent", "porozumienie_component_vote_intent",
+    "republikanie_component_vote_intent", "odnowa_component_vote_intent",
+    "kukiz_component_vote_intent",
     "korona_vote_intent", "psl_vote_intent", "konf_vote_intent",
     "new_hope_component_vote_intent",
     "national_movement_component_vote_intent",
@@ -402,7 +483,9 @@ const projectionParties = [
     ["young_left", "Young", Q.progressives_party_name, Q.young_left_projected_seats],
     ["razem", "Razem", "Razem", Q.razem_projected_seats],
     ["pps", "PPS", "PPS", Q.pps_projected_seats],
+    ["tak_rozwoj", "Tak!", Q.tak_rozwoj_party_name || "Tak! Dla Rozwoju", Q.tak_rozwoj_projected_seats],
     ["ko", "KO", "KO", Q.ko_projected_seats],
+    ["ko_splinter", "KO-S", Q.ko_splinter_name || "KO breakaway", Q.ko_splinter_projected_seats],
     ["centrum", "Centrum", "Unia Centrum", Q.centrum_projected_seats],
     ["pis", "PiS", "PiS", Q.pis_projected_seats],
     ["rozwoj", "Rozwój+", "Rozwój Plus", Q.rozwoj_projected_seats],
@@ -412,6 +495,11 @@ const projectionParties = [
     ["new_hope", "NN", "Nowa Nadzieja", Q.new_hope_projected_seats],
     ["national_movement", "RN", "Ruch Narodowy", Q.national_movement_projected_seats],
     ["duda", "Duda", "Ruch Dudy", Q.duda_projected_seats],
+    ["suwerenna", "SP", "Solidarna / Suwerenna Polska", Q.suwerenna_projected_seats],
+    ["porozumienie", "Por.", "Porozumienie", Q.porozumienie_projected_seats],
+    ["republikanie", "PR", "Partia Republikańska", Q.republikanie_projected_seats],
+    ["odnowa", "OdNowa", "OdNowa RP", Q.odnowa_projected_seats],
+    ["kukiz", "K'15", "Kukiz'15", Q.kukiz_projected_seats],
     ["social_conservative", "Soc.", "Konserwatyści społeczni", Q.social_conservative_projected_seats]
 ];
 if (Q.third_way_joint_list) {
@@ -467,26 +555,39 @@ if (
 
 = Election readiness — July 2023
 
-This is a national d'Hondt indicator, not a claim that an election occurred.
-[? if third_way_joint_list = 1: PSL and Poland 2050 enter the calculation once,
+This is an election-model projection, not a claim that an election occurred.
+[? if sejm_electoral_system = "proportional": All 460 seats use the current
+national d'Hondt indicator and filed thresholds.?]
+[? if sejm_electoral_system = "mixed_230": The projection combines 230
+d'Hondt list seats with 138 urban and 92 rural single-member contests.?]
+[? if sejm_electoral_system = "fptp_460": All seats are projected from 276
+urban and 184 rural single-member plurality contests. National thresholds do
+not apply; filed alliances pool their candidate vote.?]
+[? if third_way_joint_list = 1 and sejm_electoral_system != "fptp_460": PSL and Poland 2050 enter the calculation once,
 as **Third Way**, under the **8% coalition-list threshold**. The displayed
 partner seats are an internal division of that committee's seats.?]
 
-Filed Sejm arrangement: **[+ sejm_list_result +]** — **[+
+Filed Sejm arrangement: **[+ sejm_list_result +]** — [? if
+sejm_electoral_system = "fptp_460": **district candidate pact**.?][? if
+sejm_electoral_system != "fptp_460": **[+
 sejm_list_structure +]**, **[+ sejm_list_threshold +]% threshold**. [+
-sejm_list_control +].
+sejm_list_control +].?]
+
+Projected Lewica seats: **[+ left_projected_list_seats +] list · [+
+left_projected_urban_seats +] urban · [+ left_projected_rural_seats +]
+rural**.
 
 {!<svg id="poland-projection" class="poland-sejm-chart"></svg>!}
 
 <div class="election-table">
 <div class="election-table-head"><span>Party</span><span>Intent</span><span>Seats</span><span>Ballot status</span></div>
-[? if sejm_list_has_partners: <div class="election-table-row"><span class="party party-lewica">[+ sejm_list_target +]</span><span>[+ left_committee_poll_display +]%</span><b>[+ left_filed_committee_projected_seats +]</b><span>[+ sejm_list_threshold +]% committee</span></div>?]
-[? if right_2027_committee_projected_seats > 0: <div class="election-table-row"><span class="party party-pis">Wspólna Prawica 2027</span><span>[+ right_2027_poll_display +]%</span><b>[+ right_2027_committee_projected_seats +]</b><span>one coalition list · internal shares allocated</span></div>?]
+[? if sejm_list_has_partners: <div class="election-table-row"><span class="party party-lewica">[+ sejm_list_target +]</span><span>[+ left_committee_poll_display +]%</span><b>[+ left_filed_committee_projected_seats +]</b><span>[? if sejm_electoral_system = "fptp_460": district candidate pact?][? if sejm_electoral_system != "fptp_460": [+ sejm_list_threshold +]% committee?]</span></div>?]
+[? if right_2027_committee_projected_seats > 0: <div class="election-table-row"><span class="party party-prawica">Prawica</span><span>[+ right_2027_poll_display +]%</span><b>[+ right_2027_committee_projected_seats +]</b><span>[? if sejm_electoral_system = "fptp_460": district candidate pact · component nominees?][? if sejm_electoral_system != "fptp_460": 8% coalition threshold · component seats allocated?]</span></div>?]
 [? if common_centre_2027_committee_projected_seats > 0: <div class="election-table-row"><span class="party party-ko">Wspólne Centrum 2027</span><span>[+ common_centre_2027_poll_display +]%</span><b>[+ common_centre_2027_committee_projected_seats +]</b><span>one coalition list · autonomous components</span></div>?]
 [? if third_way_2027_committee_projected_seats > 0: <div class="election-table-row"><span class="party party-third-way">Trzecia Droga 2027</span><span>[+ third_way_2027_poll_display +]%</span><b>[+ third_way_2027_committee_projected_seats +]</b><span>one permanent coalition list</span></div>?]
 [? if right_2027_committee_projected_seats = 0: <div class="election-table-row"><span class="party party-pis">PiS</span><span>[+ pis_vote_intent_display +]%</span><b>[+ pis_projected_seats +]</b><span>party list</span></div>?]
 [? if common_centre_2027_committee_projected_seats = 0: <div class="election-table-row"><span class="party party-ko">KO</span><span>[+ ko_vote_intent_display +]%</span><b>[+ ko_projected_seats +]</b><span>party list</span></div>?]
-[? if third_way_joint_list = 1 and third_way_2027_committee_projected_seats = 0 and common_centre_2027_committee_projected_seats = 0: <div class="election-table-row"><span class="party party-third-way">[+ third_way_display_name +]</span><span>[+ third_way_vote_intent_display +]%</span><b>[+ third_way_projected_seats +]</b><span>8% coalition</span></div>?]
+[? if third_way_joint_list = 1 and third_way_2027_committee_projected_seats = 0 and common_centre_2027_committee_projected_seats = 0: <div class="election-table-row"><span class="party party-third-way">[+ third_way_display_name +]</span><span>[+ third_way_vote_intent_display +]%</span><b>[+ third_way_projected_seats +]</b><span>[? if sejm_electoral_system = "fptp_460": joint district pact?][? if sejm_electoral_system != "fptp_460": 8% coalition?]</span></div>?]
 [? if third_way_joint_list = 0 and p2050_emerged = 1 and common_centre_2027_committee_projected_seats = 0 and third_way_2027_committee_projected_seats = 0: <div class="election-table-row"><span class="party party-p2050">Polska 2050</span><span>[+ p2050_vote_intent_display +]%</span><b>[+ p2050_projected_seats +]</b><span>party list</span></div>?]
 <div class="election-table-row"><span class="party party-lewica">[+ left_party_name +]</span><span>[+ left_vote_intent_display +]%</span><b>[+ left_projected_seats +]</b><span>[? if not sejm_list_has_partners: host list?][? if sejm_list_has_partners: component share?]</span></div>
 [? if barons_party_formed = 1: <div class="election-table-row"><span class="party party-sld">[+ barons_party_name +]</span><span>[+ sld_breakaway_vote_intent_display +]%</span><b>[+ sld_breakaway_projected_seats +]</b><span>separate</span></div>?]
@@ -495,8 +596,13 @@ sejm_list_control +].
 [? if labor_party_formed = 1: <div class="election-table-row"><span class="party party-left-labor">[+ labor_party_name +]</span><span>[+ labor_left_component_vote_intent_display +]%</span><b>[+ labor_left_projected_seats +]</b><span>[? if labor_list_committee = "left": Lewica host?][? if labor_list_committee = "razem": Razem list?][? if labor_list_committee = "left_coalition": Left coalition?][? if labor_list_committee = "labor_left": separate?]</span></div>?]
 [? if progressives_party_formed = 1: <div class="election-table-row"><span class="party party-progressive">[+ progressives_party_name +]</span><span>[+ young_left_component_vote_intent_display +]%</span><b>[+ young_left_projected_seats +]</b><span>[? if progressives_list_committee = "left": Lewica host?][? if progressives_list_committee = "razem": Razem list?][? if progressives_list_committee = "left_coalition": Left coalition?][? if progressives_list_committee = "young_left": separate?]</span></div>?]
 [? if razem_party_formed = 1: <div class="election-table-row"><span class="party party-razem">Razem</span><span>[+ razem_component_vote_intent_display +]%</span><b>[+ razem_projected_seats +]</b><span>[? if razem_list_committee = "left_coalition": Left coalition?][? if razem_list_committee = "razem" and sejm_list_outcome = "razem_5": host list?][? if razem_list_committee = "razem" and sejm_list_outcome != "razem_5": separate?]</span></div>?]
-[? if kukiz_left_kp = 1 and kukiz_active = 1: <div class="election-table-row"><span class="party party-kukiz">Kukiz'15</span><span>[+ kukiz_vote_intent +]%</span><b>[+ kukiz_projected_seats +]</b><span>[? if kukiz_list_committee = "pis": PiS host list?][? if kukiz_list_committee = "psl": Koalicja Polska?][? if kukiz_list_committee = "kukiz": independent?]</span></div>?]
-[? if porozumienie_exit_done = 1 and porozumienie_active = 1: <div class="election-table-row"><span class="party party-agreement">Porozumienie</span><span>[+ porozumienie_vote_intent +]%</span><b>[+ porozumienie_projected_seats +]</b><span>[? if porozumienie_list_committee = "third_way": Third Way list?][? if porozumienie_list_committee = "ko": KO host list?][? if porozumienie_list_committee = "porozumienie": independent?]</span></div>?]
+[? if tak_dla_rozwoju_party_formed = 1: <div class="election-table-row"><span class="party party-tak-rozwoj">[+ tak_rozwoj_party_name +]</span><span>[+ tak_rozwoj_component_vote_intent_display +]%</span><b>[+ tak_rozwoj_projected_seats +]</b><span>[? if prawica_member_tak_rozwoj: Prawica component?][? if not prawica_member_tak_rozwoj: separate?]</span></div>?]
+[? if kukiz_left_kp = 1 and kukiz_active = 1: <div class="election-table-row"><span class="party party-kukiz">Kukiz'15</span><span>[+ kukiz_vote_intent +]%</span><b>[+ kukiz_projected_seats +]</b><span>[? if kukiz_list_committee = "right_2027": Prawica component?][? if kukiz_list_committee = "pis": PiS host list?][? if kukiz_list_committee = "psl": Koalicja Polska?][? if kukiz_list_committee = "kukiz": independent?]</span></div>?]
+[? if (porozumienie_exit_done = 1 or prawica_member_porozumienie = 1) and porozumienie_active = 1: <div class="election-table-row"><span class="party party-agreement">Porozumienie</span><span>[+ porozumienie_vote_intent +]%</span><b>[+ porozumienie_projected_seats +]</b><span>[? if porozumienie_list_committee = "right_2027": Prawica component?][? if porozumienie_list_committee = "third_way": Third Way list?][? if porozumienie_list_committee = "ko": KO host list?][? if porozumienie_list_committee = "porozumienie": independent?]</span></div>?]
+[? if prawica_member_suwerenna: <div class="election-table-row"><span class="party party-solidary-poland">Solidarna / Suwerenna Polska</span><span>[+ suwerenna_component_vote_intent_display +]%</span><b>[+ suwerenna_projected_seats +]</b><span>Prawica component</span></div>?]
+[? if prawica_member_republikanie: <div class="election-table-row"><span class="party party-republicans">Partia Republikańska</span><span>[+ republikanie_component_vote_intent_display +]%</span><b>[+ republikanie_projected_seats +]</b><span>Prawica component</span></div>?]
+[? if prawica_member_odnowa: <div class="election-table-row"><span class="party party-odnowa">OdNowa RP</span><span>[+ odnowa_component_vote_intent_display +]%</span><b>[+ odnowa_projected_seats +]</b><span>Prawica component</span></div>?]
+[? if prawica_member_ko_splinter: <div class="election-table-row"><span class="party party-ko">[+ ko_splinter_name +]</span><span>[+ ko_splinter_component_vote_intent_display +]%</span><b>[+ ko_splinter_projected_seats +]</b><span>Prawica component</span></div>?]
 [? if pps_party_formed = 1: <div class="election-table-row"><span class="party party-pps">PPS</span><span>[+ pps_vote_intent_display +]%</span><b>[+ pps_projected_seats +]</b><span>separate</span></div>?]
 [? if unia_centrum_formed = 1 and common_centre_2027_committee_projected_seats = 0: <div class="election-table-row"><span class="party party-centrum">Unia Centrum</span><span>[+ centrum_vote_intent_display +]%</span><b>[+ centrum_projected_seats +]</b><span>separate</span></div>?]
 [? if pis_split = 1: <div class="election-table-row"><span class="party party-rozwoj">Rozwój Plus</span><span>[+ rozwoj_vote_intent_display +]%</span><b>[+ rozwoj_projected_seats +]</b><span>separate</span></div>?]
@@ -505,7 +611,7 @@ sejm_list_control +].
 [? if national_movement_projected_seats > 0 and right_2027_committee_projected_seats = 0: <div class="election-table-row"><span class="party party-konf">Ruch Narodowy</span><span>[+ national_movement_component_vote_intent_display +]%</span><b>[+ national_movement_projected_seats +]</b><span>separate list</span></div>?]
 [? if duda_projected_seats > 0: <div class="election-table-row"><span class="party party-pis">Ruch Dudy</span><span>[+ duda_component_vote_intent_display +]%</span><b>[+ duda_projected_seats +]</b><span>component allocation</span></div>?]
 [? if social_conservative_projected_seats > 0: <div class="election-table-row"><span class="party party-pis">Konserwatyści społeczni</span><span>[+ social_conservative_component_vote_intent_display +]%</span><b>[+ social_conservative_projected_seats +]</b><span>component allocation</span></div>?]
-[? if p0_formed = 1: <div class="election-table-row"><span>[+ p0_name +]</span><span>[+ p0_vote_intent_display +]%</span><b>[+ p0_projected_seats +]</b><span>separate</span></div>?]
+[? if p0_formed = 1: <div class="election-table-row"><span class="party party-p0">[+ p0_name +]</span><span>[+ p0_vote_intent_display +]%</span><b>[+ p0_projected_seats +]</b><span>[? if prawica_member_p0: Prawica component?][? if not prawica_member_p0: separate?]</span></div>?]
 [? if third_way_joint_list = 0 and common_centre_2027_committee_projected_seats = 0 and third_way_2027_committee_projected_seats = 0: <div class="election-table-row"><span class="party party-psl">PSL</span><span>[+ psl_vote_intent_display +]%</span><b>[+ psl_projected_seats +]</b><span>party list</span></div>?]
 [? if right_2027_committee_projected_seats = 0: <div class="election-table-row"><span class="party party-konf">Konfederacja</span><span>[+ konf_vote_intent_display +]%</span><b>[+ konf_projected_seats +]</b><span>party list</span></div>?]
 </div>
@@ -514,7 +620,10 @@ sejm_list_control +].
 <div class="coalition-option [? if coalition_center_seats + left_committed_projected_seats >= 231: viable?]"><span>KO · Poland 2050 · PSL · Lewica support</span><b>[+ coalition_center_seats + left_committed_projected_seats +]</b><small>formal centre plus Left confidence</small></div>
 <div class="coalition-option [? if ko_projected_seats + psl_projected_seats + left_committed_projected_seats >= 231: viable?]"><span>KO · PSL · Lewica</span><b>[+ ko_projected_seats + psl_projected_seats + left_committed_projected_seats +]</b><small>Poland 2050 outside government</small></div>
 <div class="coalition-option [? if ko_projected_seats + p2050_projected_seats + left_committed_projected_seats >= 231: viable?]"><span>KO · Poland 2050 · Lewica</span><b>[+ ko_projected_seats + p2050_projected_seats + left_committed_projected_seats +]</b><small>PSL outside government</small></div>
-<div class="coalition-option [? if ko_projected_seats + left_committed_projected_seats >= 231: viable?]"><span>KO · Lewica</span><b>[+ ko_projected_seats + left_committed_projected_seats +]</b><small>Third Way toleration required</small></div>
+<div class="coalition-option [? if ko_projected_seats + left_committed_projected_seats >= 231: viable?]"><span>KO · Lewica</span><b>[+ ko_projected_seats + left_committed_projected_seats +]</b><small>[? if ko_projected_seats + left_committed_projected_seats >= 231: self-sufficient majority?][? if ko_projected_seats + left_committed_projected_seats < 231: outside support required?]</small></div>
+<div class="coalition-option [? if p2050_projected_seats + left_committed_projected_seats >= 231: viable?]"><span>Poland 2050 · Lewica</span><b>[+ p2050_projected_seats + left_committed_projected_seats +]</b><small>[? if p2050_projected_seats + left_committed_projected_seats >= 231: majority without KO or PSL?][? if p2050_projected_seats + left_committed_projected_seats < 231: short of 231?]</small></div>
+<div class="coalition-option [? if psl_projected_seats + left_committed_projected_seats >= 231: viable?]"><span>PSL · Lewica</span><b>[+ psl_projected_seats + left_committed_projected_seats +]</b><small>[? if psl_projected_seats + left_committed_projected_seats >= 231: majority without KO or Poland 2050?][? if psl_projected_seats + left_committed_projected_seats < 231: short of 231?]</small></div>
+<div class="coalition-option [? if p2050_projected_seats + psl_projected_seats + left_committed_projected_seats >= 231: viable?]"><span>Third Way · Lewica</span><b>[+ p2050_projected_seats + psl_projected_seats + left_committed_projected_seats +]</b><small>[? if p2050_projected_seats + psl_projected_seats + left_committed_projected_seats >= 231: majority without KO?][? if p2050_projected_seats + psl_projected_seats + left_committed_projected_seats < 231: short of 231 before outside support?]</small></div>
 <div class="coalition-option [? if coalition_right_seats >= 231: viable?]"><span>PiS · Konfederacja</span><b>[+ coalition_right_seats +]</b><small>[? if coalition_right_seats >= 231: possible majority?][? if coalition_right_seats < 231: short of 231?]</small></div>
 <div class="coalition-option [? if coalition_right_seats + p2050_projected_seats + psl_projected_seats >= 231: viable?]"><span>PiS · Konfederacja · Third Way</span><b>[+ coalition_right_seats + p2050_projected_seats + psl_projected_seats +]</b><small>Third Way split or toleration required</small></div>
 <div class="coalition-option [? if pis_projected_seats + left_committed_projected_seats >= 231: viable?]"><span>PiS · Lewica</span><b>[+ pis_projected_seats + left_committed_projected_seats +]</b><small>exploratory cross-party pact</small></div>

@@ -114,6 +114,26 @@ if (!Q.legvote_prepared) {
         Q["legvote_" + party + "_no"] = partySeats - yes - abstain;
         Q["legvote_" + party + "_label"] = labels[party];
     }
+    if (Q.legvote_callback == "trz_rights") {
+        // Fragmentation still decides whether the bill wins. Once it does,
+        // report the smallest winning split instead of a mass PiS rebellion.
+        const yes = parties.reduce(function(sum, party) {
+            return sum + Q["legvote_" + party + "_yes"];
+        }, 0);
+        const no = parties.reduce(function(sum, party) {
+            return sum + Q["legvote_" + party + "_no"];
+        }, 0);
+        let surplus = Math.max(0, Math.floor((yes - no - 1) / 2));
+        for (const party of ["pis", "psl", "ko", "other", "p2050", "left"]) {
+            const moved = Math.min(
+                surplus,
+                Q["legvote_" + party + "_yes"]
+            );
+            Q["legvote_" + party + "_yes"] -= moved;
+            Q["legvote_" + party + "_no"] += moved;
+            surplus -= moved;
+        }
+    }
     Q.legvote_parties = parties;
     Q.legvote_bargain_party = Q.legvote_profile == "institutions"
         ? "pis"

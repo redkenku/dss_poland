@@ -6,9 +6,55 @@ const queueScene =
     this.game.scenes["poland_event_queue.events_choice"];
 const allEventsScene =
     this.game.scenes["poland_event_queue.all_events"];
+const rootId = this.state.rootSceneId;
+const millerAuthorityLive =
+    Q.continuous_campaign && Q.left_in_government &&
+    Q.government_has_confidence && !Q.caretaker_government &&
+    Q.justice_minister_party == "Lewica";
+const millerRazemStrong =
+    Q.razem_active && Q.left_dominant_current == "razem" &&
+    (Number(Q.razem_strength) || 0) >= 23;
+if (
+    !Q.miller_accountability_done && millerAuthorityLive && millerRazemStrong
+) {
+    if (
+        !Number.isFinite(Number(Q.miller_justice_control_start_time)) ||
+        Number(Q.miller_justice_control_start_time) < 0
+    ) {
+        Q.miller_justice_control_start_time = Number(Q.time) || 0;
+        Q.miller_accountability_due_time =
+            Q.miller_justice_control_start_time + 3;
+    }
+} else if (!Q.miller_accountability_done) {
+    Q.miller_justice_control_start_time = -1;
+    Q.miller_accountability_due_time = -1;
+    Q.miller_accountability_pending = 0;
+    Q.miller_launch_checked_time = -1;
+}
+if (
+    millerAuthorityLive && millerRazemStrong &&
+    !Q.miller_accountability_done && !Q.miller_accountability_pending &&
+    Number(Q.time) >= Number(Q.miller_accountability_due_time) &&
+    Number(Q.miller_accountability_due_time) >= 0 &&
+    Number(Q.miller_launch_checked_time) != Number(Q.time)
+) {
+    Q.miller_launch_checked_time = Number(Q.time) || 0;
+    const guardedEvents = (this._compileChoices(allEventsScene) || [])
+        .filter(function(choice) {
+            return choice.id !== rootId;
+        });
+    Q.miller_launch_guard_count = guardedEvents.length;
+    Q.miller_launch_guard_titles = guardedEvents.map(function(choice) {
+        return choice.title;
+    }).join(" · ");
+    if (guardedEvents.length === 0) {
+        Q.miller_accountability_elapsed_months =
+            Number(Q.time) - Number(Q.miller_justice_control_start_time);
+        Q.miller_accountability_pending = 1;
+    }
+}
 const compiled = this._compileChoices(queueScene) || [];
 const allCompiled = this._compileChoices(allEventsScene) || [];
-const rootId = this.state.rootSceneId;
 const activeTier = compiled.filter(function(choice) {
     return choice.id !== rootId;
 });

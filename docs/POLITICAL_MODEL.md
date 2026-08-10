@@ -252,6 +252,35 @@ breakaways accept or reject Razem individually according to that arithmetic.
 An SLD breakaway does not return through Razem, and PPS always remains on its
 own committee.
 
+The later right-reunification route uses the same committee machinery rather
+than inventing a second election model. From November 2026 through September
+2027, Andrzej Duda can attempt to found **Prawica** only after his third act,
+only when he holds neither the presidency nor premiership, and only while PiS
+is wholly outside government. A live fragmentation score counts distinct
+eligible right committees, PiS collapse and splits, Korona and
+Mentzen–Bosak fragmentation, a Third Way split, PiS collapse pressure and
+sub-threshold invitees. A seeded roll gives qualifying games a 40–60% chance
+of reaching the congress, so the route is not automatic.
+
+Every surviving invitee records a deterministic vote, poll estimate, score and
+positive/negative reasons. Sub-5% organisations usually accept the protection
+of a common list, while leadership and charter red lines can still defeat that
+incentive. Korona/KKP is always ineligible; PSL is ineligible while any of its
+ministers remains in cabinet; and only an independent KO breakaway led by
+Radosław Sikorski can enter. Prawica forms only with PiS and at least two other
+acceptors. All votes are calculated before state changes, so a failed congress
+leaves every list, club, colour and logo untouched.
+
+On success, Duda is both leader and prime-ministerial nominee. Founders retain
+their parties, leaders, MPs and negotiated shares but file through the existing
+`right_2027` committee, sit in a shared Prawica parliamentary club and use the
+Prawica presentation. The coalition is counted once at the 8% threshold before
+seats are allocated back to components. Prawica membership has final
+normalisation precedence over Zjednoczona Prawica, Third Way, Koalicja Polska
+and common-centre assignments. Korona remains outside with its own branding;
+if an intact non-KKP Konfederacja joins, only KKP's declared representation can
+move to Korona.
+
 ### Initial caucus map
 
 This is an illustrative research map, not a fixed roster.
@@ -740,9 +769,9 @@ slider.
 ### Playable voter-bloc approximation
 
 The implemented layer uses eight mutually exclusive, Poland-wide blocs:
-metropolitan liberals, liberal professionals, public-service families,
+the urban middle class, professionals and academics, public-service families,
 industrial and logistics voters, provincial welfare voters, rural localists,
-older welfare households and anti-establishment youth. Their authored sizes
+older welfare households, and young adults and students. Their authored sizes
 sum to 100.
 
 Every active party has a baseline score and a mutable affinity inside every
@@ -771,9 +800,21 @@ the election awards each of 100 single-member seats to its district plurality.
 ### Playable rival-party layer
 
 PiS, KO, PSL, Konfederacja and Poland 2050 each have their own organisational
-pool, annual income and monthly action policy. Poland 2050 activates after
-Hołownia's presidential campaign. Rival actions buy organisation, target
-blocs, attack competitors or improve coalition channels.
+pool, annual income and monthly action policy. Annual income is recalculated
+on a common 0–100 scale from business support, established-media access, the
+presidency, premiership, Sejm Marshal, current mandates and current polling.
+Formal electoral and cabinet allies share office advantages; PiS and KO retain
+an established-media advantage. Poland 2050 activates after Hołownia's
+presidential campaign. Rival actions buy organisation, target blocs, attack
+competitors or improve coalition channels.
+
+Konfederacja and a joint Third Way list meet diminishing polling returns near
+10 and 15 percent during 2023 rather than hard caps. A real breakthrough can
+cross either point. The certified election result then becomes the new
+resistance point; every three months thereafter it moves 35 percent toward the
+latest underlying support, allowing durable realignments without turning one
+outlier poll into a permanent ratchet. Support displaced by resistance returns
+proportionally to the other top-level party families, including PiS and KO.
 
 The parties move on hidden economic, cultural and overall left–right
 coordinates. A second hidden value is the **party-system pendulum**: the

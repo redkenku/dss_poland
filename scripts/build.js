@@ -188,6 +188,125 @@ if (fs.existsSync(browserCss)) {
   line-height: 1.2;
   text-align: left;
 }
+
+.election-tree {
+  overflow: hidden;
+  border: 1px solid var(--ledger-rule-color);
+  border-radius: 6px;
+  background: var(--signal-surface);
+  font-size: 0.78rem;
+  line-height: 1.15;
+}
+
+.election-tree .election-table-head,
+.election-tree .election-table-row {
+  grid-template-columns: minmax(8.5rem, 1.65fr) 4rem 3rem minmax(7rem, 1fr);
+  gap: 0.45rem;
+  padding: 0.34rem 0.55rem;
+}
+
+.election-tree .election-table-head {
+  border-bottom: 1px solid var(--ledger-rule-color);
+  background: rgba(128, 128, 128, 0.08);
+  font-size: 0.66rem;
+  letter-spacing: 0.055em;
+}
+
+.election-tree .election-table-row {
+  border-bottom: 1px solid var(--ledger-rule-color);
+}
+
+.election-tree .election-table-row:last-child {
+  border-bottom: 0;
+}
+
+.election-tree .election-table-row > :last-child {
+  color: var(--ledger-muted-color);
+  font-size: 0.9em;
+}
+
+.election-tree-row--committee {
+  border-top: 2px solid var(--ledger-rule-color);
+  background: rgba(128, 128, 128, 0.055);
+  font-weight: 650;
+}
+
+.election-tree .election-table-head + .election-tree-row--committee {
+  border-top: 0;
+}
+
+.election-tree-row--broad {
+  box-shadow: inset 0.22rem 0 var(--party-lewica);
+}
+
+.election-tree-row--right {
+  box-shadow: inset 0.22rem 0 var(--party-pis);
+}
+
+.election-tree-row--child,
+.election-tree-row--grandchild {
+  background: rgba(128, 128, 128, 0.018);
+  font-size: 0.94em;
+}
+
+.election-tree-row--grandchild {
+  color: var(--ledger-muted-color);
+  font-size: 0.88em;
+}
+
+.election-tree-row--child > :first-child,
+.election-tree-row--grandchild > :first-child {
+  position: relative;
+  padding-left: 1.1rem;
+}
+
+.election-tree-row--grandchild > :first-child {
+  padding-left: 2rem;
+}
+
+.election-tree-row--child > :first-child::before,
+.election-tree-row--grandchild > :first-child::before {
+  position: absolute;
+  left: 0.28rem;
+  color: var(--ledger-muted-color);
+  content: "└";
+  font-weight: 400;
+}
+
+.election-tree-row--grandchild > :first-child::before {
+  left: 1.15rem;
+}
+
+@media (max-width: 520px) {
+  .election-tree {
+    font-size: 0.74rem;
+  }
+
+  .election-tree .election-table-head,
+  .election-tree .election-table-row {
+    grid-template-columns: minmax(0, 1fr) 3.45rem 2.7rem;
+    gap: 0.18rem 0.38rem;
+    padding: 0.32rem 0.42rem;
+  }
+
+  .election-tree .election-table-head > :last-child {
+    display: none;
+  }
+
+  .election-tree .election-table-row > :last-child {
+    grid-column: 1 / -1;
+    text-align: left;
+    font-size: 0.78em;
+  }
+
+  .election-tree-row--child > :last-child {
+    padding-left: 1.1rem;
+  }
+
+  .election-tree-row--grandchild > :last-child {
+    padding-left: 2rem;
+  }
+}
 `;
   fs.writeFileSync(browserCss, css);
 }

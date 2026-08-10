@@ -41,6 +41,7 @@ const normalizePartyCode = function(value) {
     if (text == "ko" || text.includes("obywatelsk")) return "ko";
     if (text == "psl") return "psl";
     if (text == "p2050" || text.includes("2050")) return "p2050";
+    if (text == "konf" || text.includes("konfeder")) return "konf";
     if (text == "lewica" || text == "left" || text.includes("lewica")) {
         return "lewica";
     }
@@ -52,6 +53,7 @@ const partyDisplay = function(code) {
     if (code == "ko") return "KO";
     if (code == "psl") return "PSL";
     if (code == "p2050") return "Poland 2050";
+    if (code == "konf") return "Konfederacja";
     if (code == "lewica") return "Lewica";
     return "Cabinet";
 };
@@ -106,18 +108,42 @@ const thirdAttemptDemocraticCabinet =
     Number(Q.confidence_stage) == 4 &&
     Boolean(Q.third_left_cabinet) &&
     currentGovernmentCode != "pis";
-const selectedFormationMembers = {
+const canonicalFormationMembers = Array.isArray(Q.formation_coalition_members)
+    ? Q.formation_coalition_members.map(normalizePartyCode).filter(Boolean)
+    : null;
+const fallbackFormationMembers = {
     democratic_2023: ["ko", "p2050", "psl"],
     ko_psl_left: ["ko", "psl"],
     ko_p2050_left: ["ko", "p2050"],
+    left_p2050: ["p2050", "lewica"],
+    left_psl: ["psl", "lewica"],
+    left_third: ["p2050", "psl", "lewica"],
     third_left_pis: ["p2050", "psl"],
     ko_left: ["ko"],
     left_only: [],
-    pis_konf_third: ["p2050", "psl"],
-    pis_konf_psl: ["psl"],
+    pis_konf_third: ["pis", "p2050", "psl", "konf"],
+    pis_konf_psl: ["pis", "psl", "konf"],
     ko_third: ["ko", "p2050", "psl"],
-    ko_konf: ["ko"]
+    ko_konf: ["ko", "konf"],
+    left_pis: ["pis", "lewica"],
+    left_pis_psl: ["pis", "lewica", "psl"],
+    left_pis_p2050: ["pis", "lewica", "p2050"],
+    left_pis_third: ["pis", "lewica", "psl", "p2050"],
+    left_pis_konf: ["pis", "lewica", "konf"],
+    left_pis_konf_psl: ["pis", "lewica", "konf", "psl"],
+    left_pis_konf_p2050: ["pis", "lewica", "konf", "p2050"],
+    left_pis_konf_third: ["pis", "lewica", "konf", "psl", "p2050"],
+    pis_psl: ["pis", "psl"],
+    pis_third: ["pis", "psl", "p2050"],
+    pis_psl_konf: ["pis", "psl", "konf"],
+    pis_third_konf: ["pis", "psl", "p2050", "konf"],
+    pis_konf: ["pis", "konf"]
 }[String(Q.formation_coalition_code || "").replace(/_tolerated$/, "")];
+const selectedFormationMembers =
+    Q.formation_coalition_selected && canonicalFormationMembers &&
+        canonicalFormationMembers.length
+        ? canonicalFormationMembers
+        : fallbackFormationMembers;
 const resolveCommitment = function(code) {
     if (preserveExisting) {
         if (flagRecorded("ministry_" + code + "_in_cabinet")) {
@@ -174,12 +200,16 @@ const leftCommitted =
 const soleLeftCabinet =
     String(Q.formation_coalition_code || "").replace(/_tolerated$/, "") ==
         "left_only";
+const formalPiSLeftCabinet =
+    String(Q.formation_coalition_code || "")
+        .replace(/_tolerated$/, "").indexOf("left_pis") === 0 &&
+    selectedFormationMembers && selectedFormationMembers.includes("lewica");
 let leftCabinetSeats = preserveExisting || sameGovernmentRoster
     ? finiteMinistry(Q.left_cabinet_delegation_seats, -1)
     : -1;
 if (leftCabinetSeats < 0) {
     if (
-        soleLeftCabinet || wholeLeftMandate || maximalMandate ||
+        soleLeftCabinet || formalPiSLeftCabinet || wholeLeftMandate || maximalMandate ||
         Boolean(Q.razem_in_government)
     ) {
         leftCabinetSeats = finiteMinistry(
@@ -219,24 +249,28 @@ const statutoryMajority = Math.max(
     Math.round(finiteMinistry(Q.sejm_statutory_majority, 231))
 );
 const leftHasMajority = leftCabinetSeats >= statutoryMajority;
-const democraticFormation =
-    ["cabinet_program", "governing_agreement"].includes(
-        String(Q.ministry_return_mode || "")
-    );
 const pisInCabinet =
-    !democraticFormation &&
-    !Boolean(Q.caretaker_government) &&
-    currentGovernmentCode == "pis" &&
-    finiteMinistry(Q.pis_seats, 0) > 0;
+    finiteMinistry(Q.pis_seats, 0) > 0 &&
+    resolveCommitment("pis") &&
+    (!leftHasMajority || !selectedFormationMembers ||
+        selectedFormationMembers.includes("pis"));
 const koInCabinet =
-    !pisInCabinet && !leftHasMajority &&
-    finiteMinistry(Q.ko_seats, 0) > 0 && resolveCommitment("ko");
+    finiteMinistry(Q.ko_seats, 0) > 0 && resolveCommitment("ko") &&
+    (!leftHasMajority || !selectedFormationMembers ||
+        selectedFormationMembers.includes("ko"));
 const p2050InCabinet =
-    !pisInCabinet && !leftHasMajority &&
-    finiteMinistry(Q.p2050_seats, 0) > 0 && resolveCommitment("p2050");
+    finiteMinistry(Q.p2050_seats, 0) > 0 && resolveCommitment("p2050") &&
+    (!leftHasMajority || !selectedFormationMembers ||
+        selectedFormationMembers.includes("p2050"));
 const pslInCabinet =
-    !pisInCabinet && !leftHasMajority && !Boolean(Q.coalition_broken) &&
-    finiteMinistry(Q.psl_seats, 0) > 0 && resolveCommitment("psl");
+    !Boolean(Q.coalition_broken) && finiteMinistry(Q.psl_seats, 0) > 0 &&
+    resolveCommitment("psl") &&
+    (!leftHasMajority || !selectedFormationMembers ||
+        selectedFormationMembers.includes("psl"));
+const konfInCabinet =
+    finiteMinistry(Q.konf_seats, 0) > 0 && resolveCommitment("konf") &&
+    (!leftHasMajority || !selectedFormationMembers ||
+        selectedFormationMembers.includes("konf"));
 
 let cabinetLeaderCode = normalizePartyCode(Q.prime_minister_party);
 if (!cabinetLeaderCode) {
@@ -249,6 +283,7 @@ if (pisInCabinet) committedCodes.push("pis");
 if (koInCabinet) committedCodes.push("ko");
 if (p2050InCabinet) committedCodes.push("p2050");
 if (pslInCabinet) committedCodes.push("psl");
+if (konfInCabinet) committedCodes.push("konf");
 if (leftCommitted) committedCodes.push("lewica");
 if (!committedCodes.includes(cabinetLeaderCode)) {
     cabinetLeaderCode = committedCodes[0] || "cabinet";
@@ -268,7 +303,7 @@ const ministerRosters = {
         interior: "Mariusz Kamiński",
         finance: "Tadeusz Kościński",
         economy: "Piotr Nowak",
-        justice: "Zbigniew Ziobro",
+        justice: "Paweł Jabłoński",
         foreign: "Zbigniew Rau",
         agriculture: "Grzegorz Puda",
         defence: "Mariusz Błaszczak"
@@ -318,6 +353,10 @@ const ministerRosters = {
         agriculture: "Czesław Siekierski",
         defence: "Władysław Kosiniak-Kamysz"
     },
+    konf: {
+        finance: "Sławomir Mentzen",
+        economy: "Konrad Berkowicz"
+    },
     cabinet: {
         labor: "Gertruda Uścińska",
         equality: "Zuzanna Rudzińska-Bluszcz",
@@ -339,11 +378,14 @@ const ministerFor = function(code, portfolio) {
     return roster[portfolio] || ministerRosters.cabinet[portfolio];
 };
 const ownerForPortfolio = function(portfolio) {
-    if (pisInCabinet) return "pis";
     if (portfolio == "agriculture" && pslInCabinet) return "psl";
+    if (portfolio == "digital" && p2050InCabinet) return "p2050";
+    if (["finance", "economy"].includes(portfolio) && konfInCabinet) {
+        return "konf";
+    }
+    if (pisInCabinet) return "pis";
     if (portfolio == "defence" && pslInCabinet) return "psl";
     if (portfolio == "economy" && pslInCabinet) return "psl";
-    if (portfolio == "digital" && p2050InCabinet) return "p2050";
     if (
         ["interior", "finance", "justice", "foreign"].includes(portfolio) &&
         koInCabinet
@@ -365,7 +407,8 @@ const cabinetSeats = Math.max(
         (pisInCabinet ? Math.max(0, finiteMinistry(Q.pis_seats, 0)) : 0) +
         (koInCabinet ? Math.max(0, finiteMinistry(Q.ko_seats, 0)) : 0) +
         (p2050InCabinet ? Math.max(0, finiteMinistry(Q.p2050_seats, 0)) : 0) +
-        (pslInCabinet ? Math.max(0, finiteMinistry(Q.psl_seats, 0)) : 0)
+        (pslInCabinet ? Math.max(0, finiteMinistry(Q.psl_seats, 0)) : 0) +
+        (konfInCabinet ? Math.max(0, finiteMinistry(Q.konf_seats, 0)) : 0)
 );
 const negotiationBonus = maximalMandate ? 8 : wholeLeftMandate ? 6 : 3;
 const democraticCandidate = String(Q.democratic_candidate || "").trim();
@@ -374,7 +417,8 @@ const leftPrimeMinister = [
     "Agnieszka Dziemianowicz-Bąk", "Magdalena Biejat",
     "Krzysztof Gawkowski", "Włodzimierz Czarzasty", "Robert Biedroń",
     "Adrian Zandberg", "Anna Maria Żukowska", "Tomasz Trela",
-    "Dariusz Wieczorek", "Katarzyna Kotula"
+    "Dariusz Wieczorek", "Katarzyna Kotula", "Leszek Miller",
+    "Monika Jaruzelska"
 ].includes(democraticCandidate) ||
     democraticCandidate != "" &&
     democraticCandidate != "Undecided" &&
@@ -534,6 +578,7 @@ Q.ministry_pis_in_cabinet = pisInCabinet ? 1 : 0;
 Q.ministry_ko_in_cabinet = koInCabinet ? 1 : 0;
 Q.ministry_p2050_in_cabinet = p2050InCabinet ? 1 : 0;
 Q.ministry_psl_in_cabinet = pslInCabinet ? 1 : 0;
+Q.ministry_konf_in_cabinet = konfInCabinet ? 1 : 0;
 Q.ministry_cabinet_leader_code = cabinetLeaderCode;
 Q.ministry_reshuffle_changes = 0;
 Q.ministry_coalition_partners = committedCodes
@@ -646,14 +691,14 @@ finalised.?]
 place, but a reduced entitlement creates real leverage debt rather than free
 overrepresentation.?]
 
-[? if ministry_pis_in_cabinet = 1: PiS will bargain over social policy, public
-services, digital administration, science and development. Interior, Finance,
-Justice, Foreign Affairs, Agriculture and Defence remain PiS red lines in this
-accession agreement.?]
+[? if ministry_pis_in_cabinet = 1: Cabinet commitments are explicit: **[+
+ministry_coalition_partners +]**. PiS begins with every unclaimed portfolio;
+formal PSL receives Agriculture, formal Poland 2050 receives Digital Affairs,
+and formal Konfederacja receives Finance and Development.?]
 [? if ministry_pis_in_cabinet = 0: Cabinet commitments are explicit: **[+
 ministry_coalition_partners +]**. KO treats Finance and Foreign Affairs as
-senior claims. PSL treats Agriculture and Defence as senior claims, but those
-claims can be negotiated rather than hidden behind an unreachable flag.?]
+senior claims.[? if ministry_psl_in_cabinet = 1: PSL treats Agriculture and
+Defence as senior claims, but those claims can be negotiated.?]?]
 
 <div class="ministry-grid">
 <div><span>Labour & Social Policy</span><b>[+ labor_minister_party +] · [+ labor_minister +]</b></div>
@@ -702,7 +747,7 @@ go-to: menu
 title: Fill every remaining ministry from the Lewica bench
 subtitle: One signature instead of thirteen. Available only when no other party sits in the cabinet.
 tags: poland_ministry_take
-view-if: ministry_cabinet_leader_code = "lewica" and ministry_pis_in_cabinet = 0 and ministry_ko_in_cabinet = 0 and ministry_p2050_in_cabinet = 0 and ministry_psl_in_cabinet = 0 and ministry_count < 13
+view-if: ministry_cabinet_leader_code = "lewica" and ministry_pis_in_cabinet = 0 and ministry_ko_in_cabinet = 0 and ministry_p2050_in_cabinet = 0 and ministry_psl_in_cabinet = 0 and ministry_konf_in_cabinet = 0 and ministry_count < 13
 choose-if: ministry_leverage_debt = 0
 unavailable-subtitle: Clear the leverage debt before claiming the rest of the cabinet.
 on-arrival: {!
@@ -763,7 +808,7 @@ Q.ministry_labor_penalty_active = 0;
 Q.ministry_labor_penalty_relation = 0;
 Q.ministry_labor_penalty_partner_dissent = 0;
 Q.ministry_labor_penalty_general_dissent = 0;
-if (["pis", "ko", "psl", "p2050"].includes(owner)) {
+if (["pis", "ko", "psl", "p2050", "konf"].includes(owner)) {
     Q[owner + "_relation"] = finiteMinistry(Q[owner + "_relation"], 0) - 1;
     Q[owner + "_coalition_dissent"] =
         finiteMinistry(Q[owner + "_coalition_dissent"], 0) + 1;
@@ -806,7 +851,7 @@ Q.ministry_equality_penalty_active = 0;
 Q.ministry_equality_penalty_relation = 0;
 Q.ministry_equality_penalty_partner_dissent = 0;
 Q.ministry_equality_penalty_general_dissent = 0;
-if (["pis", "ko", "psl", "p2050"].includes(owner)) {
+if (["pis", "ko", "psl", "p2050", "konf"].includes(owner)) {
     Q[owner + "_relation"] = finiteMinistry(Q[owner + "_relation"], 0) - 1;
     Q[owner + "_coalition_dissent"] =
         finiteMinistry(Q[owner + "_coalition_dissent"], 0) + 1;
@@ -847,7 +892,7 @@ Q.ministry_housing_penalty_active = 0;
 Q.ministry_housing_penalty_relation = 0;
 Q.ministry_housing_penalty_partner_dissent = 0;
 Q.ministry_housing_penalty_general_dissent = 0;
-if (["pis", "ko", "psl", "p2050"].includes(owner)) {
+if (["pis", "ko", "psl", "p2050", "konf"].includes(owner)) {
     Q[owner + "_relation"] = finiteMinistry(Q[owner + "_relation"], 0) - 1;
     Q[owner + "_coalition_dissent"] =
         finiteMinistry(Q[owner + "_coalition_dissent"], 0) + 1;
@@ -888,7 +933,7 @@ Q.ministry_health_penalty_active = 0;
 Q.ministry_health_penalty_relation = 0;
 Q.ministry_health_penalty_partner_dissent = 0;
 Q.ministry_health_penalty_general_dissent = 0;
-if (["pis", "ko", "psl", "p2050"].includes(owner)) {
+if (["pis", "ko", "psl", "p2050", "konf"].includes(owner)) {
     Q[owner + "_relation"] = finiteMinistry(Q[owner + "_relation"], 0) - 1;
     Q[owner + "_coalition_dissent"] =
         finiteMinistry(Q[owner + "_coalition_dissent"], 0) + 1;
@@ -929,7 +974,7 @@ Q.ministry_digital_penalty_active = 0;
 Q.ministry_digital_penalty_relation = 0;
 Q.ministry_digital_penalty_partner_dissent = 0;
 Q.ministry_digital_penalty_general_dissent = 0;
-if (["pis", "ko", "psl", "p2050"].includes(owner)) {
+if (["pis", "ko", "psl", "p2050", "konf"].includes(owner)) {
     Q[owner + "_relation"] = finiteMinistry(Q[owner + "_relation"], 0) - 1;
     Q[owner + "_coalition_dissent"] =
         finiteMinistry(Q[owner + "_coalition_dissent"], 0) + 1;
@@ -970,7 +1015,7 @@ Q.ministry_science_penalty_active = 0;
 Q.ministry_science_penalty_relation = 0;
 Q.ministry_science_penalty_partner_dissent = 0;
 Q.ministry_science_penalty_general_dissent = 0;
-if (["pis", "ko", "psl", "p2050"].includes(owner)) {
+if (["pis", "ko", "psl", "p2050", "konf"].includes(owner)) {
     Q[owner + "_relation"] = finiteMinistry(Q[owner + "_relation"], 0) - 1;
     Q[owner + "_coalition_dissent"] =
         finiteMinistry(Q[owner + "_coalition_dissent"], 0) + 1;
@@ -1011,7 +1056,7 @@ Q.ministry_interior_penalty_active = 0;
 Q.ministry_interior_penalty_relation = 0;
 Q.ministry_interior_penalty_partner_dissent = 0;
 Q.ministry_interior_penalty_general_dissent = 0;
-if (["pis", "ko", "psl", "p2050"].includes(owner)) {
+if (["pis", "ko", "psl", "p2050", "konf"].includes(owner)) {
     Q[owner + "_relation"] = finiteMinistry(Q[owner + "_relation"], 0) - 3;
     Q[owner + "_coalition_dissent"] =
         finiteMinistry(Q[owner + "_coalition_dissent"], 0) + 5;
@@ -1052,7 +1097,7 @@ Q.ministry_finance_penalty_active = 0;
 Q.ministry_finance_penalty_relation = 0;
 Q.ministry_finance_penalty_partner_dissent = 0;
 Q.ministry_finance_penalty_general_dissent = 0;
-if (["pis", "ko", "psl", "p2050"].includes(owner)) {
+if (["pis", "ko", "psl", "p2050", "konf"].includes(owner)) {
     Q[owner + "_relation"] = finiteMinistry(Q[owner + "_relation"], 0) - 10;
     Q[owner + "_coalition_dissent"] =
         finiteMinistry(Q[owner + "_coalition_dissent"], 0) + 14;
@@ -1093,7 +1138,7 @@ Q.ministry_economy_penalty_active = 0;
 Q.ministry_economy_penalty_relation = 0;
 Q.ministry_economy_penalty_partner_dissent = 0;
 Q.ministry_economy_penalty_general_dissent = 0;
-if (["pis", "ko", "psl", "p2050"].includes(owner)) {
+if (["pis", "ko", "psl", "p2050", "konf"].includes(owner)) {
     Q[owner + "_relation"] = finiteMinistry(Q[owner + "_relation"], 0) - 4;
     Q[owner + "_coalition_dissent"] =
         finiteMinistry(Q[owner + "_coalition_dissent"], 0) + 8;
@@ -1134,7 +1179,7 @@ Q.ministry_justice_penalty_active = 0;
 Q.ministry_justice_penalty_relation = 0;
 Q.ministry_justice_penalty_partner_dissent = 0;
 Q.ministry_justice_penalty_general_dissent = 0;
-if (["pis", "ko", "psl", "p2050"].includes(owner)) {
+if (["pis", "ko", "psl", "p2050", "konf"].includes(owner)) {
     Q[owner + "_relation"] = finiteMinistry(Q[owner + "_relation"], 0) - 5;
     Q[owner + "_coalition_dissent"] =
         finiteMinistry(Q[owner + "_coalition_dissent"], 0) + 8;
@@ -1175,7 +1220,7 @@ Q.ministry_foreign_penalty_active = 0;
 Q.ministry_foreign_penalty_relation = 0;
 Q.ministry_foreign_penalty_partner_dissent = 0;
 Q.ministry_foreign_penalty_general_dissent = 0;
-if (["pis", "ko", "psl", "p2050"].includes(owner)) {
+if (["pis", "ko", "psl", "p2050", "konf"].includes(owner)) {
     Q[owner + "_relation"] = finiteMinistry(Q[owner + "_relation"], 0) - 8;
     Q[owner + "_coalition_dissent"] =
         finiteMinistry(Q[owner + "_coalition_dissent"], 0) + 12;
@@ -1216,7 +1261,7 @@ Q.ministry_agriculture_penalty_active = 0;
 Q.ministry_agriculture_penalty_relation = 0;
 Q.ministry_agriculture_penalty_partner_dissent = 0;
 Q.ministry_agriculture_penalty_general_dissent = 0;
-if (["pis", "ko", "psl", "p2050"].includes(owner)) {
+if (["pis", "ko", "psl", "p2050", "konf"].includes(owner)) {
     Q[owner + "_relation"] = finiteMinistry(Q[owner + "_relation"], 0) - 10;
     Q[owner + "_coalition_dissent"] =
         finiteMinistry(Q[owner + "_coalition_dissent"], 0) + 16;
@@ -1257,7 +1302,7 @@ Q.ministry_defence_penalty_active = 0;
 Q.ministry_defence_penalty_relation = 0;
 Q.ministry_defence_penalty_partner_dissent = 0;
 Q.ministry_defence_penalty_general_dissent = 0;
-if (["pis", "ko", "psl", "p2050"].includes(owner)) {
+if (["pis", "ko", "psl", "p2050", "konf"].includes(owner)) {
     Q[owner + "_relation"] = finiteMinistry(Q[owner + "_relation"], 0) - 10;
     Q[owner + "_coalition_dissent"] =
         finiteMinistry(Q[owner + "_coalition_dissent"], 0) + 14;
@@ -1300,7 +1345,8 @@ const ownerStillPartner =
     (owner == "pis" && Q.ministry_pis_in_cabinet) ||
     (owner == "ko" && Q.ministry_ko_in_cabinet) ||
     (owner == "psl" && Q.ministry_psl_in_cabinet) ||
-    (owner == "p2050" && Q.ministry_p2050_in_cabinet);
+    (owner == "p2050" && Q.ministry_p2050_in_cabinet) ||
+    (owner == "konf" && Q.ministry_konf_in_cabinet);
 if (Q.ministry_labor_penalty_active && ownerStillPartner) {
     Q[owner + "_relation"] = finiteMinistry(Q[owner + "_relation"], 0) +
         finiteMinistry(Q.ministry_labor_penalty_relation, 0);
@@ -1355,7 +1401,8 @@ const ownerStillPartner =
     (owner == "pis" && Q.ministry_pis_in_cabinet) ||
     (owner == "ko" && Q.ministry_ko_in_cabinet) ||
     (owner == "psl" && Q.ministry_psl_in_cabinet) ||
-    (owner == "p2050" && Q.ministry_p2050_in_cabinet);
+    (owner == "p2050" && Q.ministry_p2050_in_cabinet) ||
+    (owner == "konf" && Q.ministry_konf_in_cabinet);
 if (Q.ministry_equality_penalty_active && ownerStillPartner) {
     Q[owner + "_relation"] = finiteMinistry(Q[owner + "_relation"], 0) +
         finiteMinistry(Q.ministry_equality_penalty_relation, 0);
@@ -1408,7 +1455,8 @@ const ownerStillPartner =
     (owner == "pis" && Q.ministry_pis_in_cabinet) ||
     (owner == "ko" && Q.ministry_ko_in_cabinet) ||
     (owner == "psl" && Q.ministry_psl_in_cabinet) ||
-    (owner == "p2050" && Q.ministry_p2050_in_cabinet);
+    (owner == "p2050" && Q.ministry_p2050_in_cabinet) ||
+    (owner == "konf" && Q.ministry_konf_in_cabinet);
 if (Q.ministry_housing_penalty_active && ownerStillPartner) {
     Q[owner + "_relation"] = finiteMinistry(Q[owner + "_relation"], 0) +
         finiteMinistry(Q.ministry_housing_penalty_relation, 0);
@@ -1461,7 +1509,8 @@ const ownerStillPartner =
     (owner == "pis" && Q.ministry_pis_in_cabinet) ||
     (owner == "ko" && Q.ministry_ko_in_cabinet) ||
     (owner == "psl" && Q.ministry_psl_in_cabinet) ||
-    (owner == "p2050" && Q.ministry_p2050_in_cabinet);
+    (owner == "p2050" && Q.ministry_p2050_in_cabinet) ||
+    (owner == "konf" && Q.ministry_konf_in_cabinet);
 if (Q.ministry_health_penalty_active && ownerStillPartner) {
     Q[owner + "_relation"] = finiteMinistry(Q[owner + "_relation"], 0) +
         finiteMinistry(Q.ministry_health_penalty_relation, 0);
@@ -1514,7 +1563,8 @@ const ownerStillPartner =
     (owner == "pis" && Q.ministry_pis_in_cabinet) ||
     (owner == "ko" && Q.ministry_ko_in_cabinet) ||
     (owner == "psl" && Q.ministry_psl_in_cabinet) ||
-    (owner == "p2050" && Q.ministry_p2050_in_cabinet);
+    (owner == "p2050" && Q.ministry_p2050_in_cabinet) ||
+    (owner == "konf" && Q.ministry_konf_in_cabinet);
 if (Q.ministry_digital_penalty_active && ownerStillPartner) {
     Q[owner + "_relation"] = finiteMinistry(Q[owner + "_relation"], 0) +
         finiteMinistry(Q.ministry_digital_penalty_relation, 0);
@@ -1567,7 +1617,8 @@ const ownerStillPartner =
     (owner == "pis" && Q.ministry_pis_in_cabinet) ||
     (owner == "ko" && Q.ministry_ko_in_cabinet) ||
     (owner == "psl" && Q.ministry_psl_in_cabinet) ||
-    (owner == "p2050" && Q.ministry_p2050_in_cabinet);
+    (owner == "p2050" && Q.ministry_p2050_in_cabinet) ||
+    (owner == "konf" && Q.ministry_konf_in_cabinet);
 if (Q.ministry_science_penalty_active && ownerStillPartner) {
     Q[owner + "_relation"] = finiteMinistry(Q[owner + "_relation"], 0) +
         finiteMinistry(Q.ministry_science_penalty_relation, 0);
@@ -1620,7 +1671,8 @@ const ownerStillPartner =
     (owner == "pis" && Q.ministry_pis_in_cabinet) ||
     (owner == "ko" && Q.ministry_ko_in_cabinet) ||
     (owner == "psl" && Q.ministry_psl_in_cabinet) ||
-    (owner == "p2050" && Q.ministry_p2050_in_cabinet);
+    (owner == "p2050" && Q.ministry_p2050_in_cabinet) ||
+    (owner == "konf" && Q.ministry_konf_in_cabinet);
 if (Q.ministry_interior_penalty_active && ownerStillPartner) {
     Q[owner + "_relation"] = finiteMinistry(Q[owner + "_relation"], 0) +
         finiteMinistry(Q.ministry_interior_penalty_relation, 0);
@@ -1673,7 +1725,8 @@ const ownerStillPartner =
     (owner == "pis" && Q.ministry_pis_in_cabinet) ||
     (owner == "ko" && Q.ministry_ko_in_cabinet) ||
     (owner == "psl" && Q.ministry_psl_in_cabinet) ||
-    (owner == "p2050" && Q.ministry_p2050_in_cabinet);
+    (owner == "p2050" && Q.ministry_p2050_in_cabinet) ||
+    (owner == "konf" && Q.ministry_konf_in_cabinet);
 if (Q.ministry_finance_penalty_active && ownerStillPartner) {
     Q[owner + "_relation"] = finiteMinistry(Q[owner + "_relation"], 0) +
         finiteMinistry(Q.ministry_finance_penalty_relation, 0);
@@ -1726,7 +1779,8 @@ const ownerStillPartner =
     (owner == "pis" && Q.ministry_pis_in_cabinet) ||
     (owner == "ko" && Q.ministry_ko_in_cabinet) ||
     (owner == "psl" && Q.ministry_psl_in_cabinet) ||
-    (owner == "p2050" && Q.ministry_p2050_in_cabinet);
+    (owner == "p2050" && Q.ministry_p2050_in_cabinet) ||
+    (owner == "konf" && Q.ministry_konf_in_cabinet);
 if (Q.ministry_economy_penalty_active && ownerStillPartner) {
     Q[owner + "_relation"] = finiteMinistry(Q[owner + "_relation"], 0) +
         finiteMinistry(Q.ministry_economy_penalty_relation, 0);
@@ -1779,7 +1833,8 @@ const ownerStillPartner =
     (owner == "pis" && Q.ministry_pis_in_cabinet) ||
     (owner == "ko" && Q.ministry_ko_in_cabinet) ||
     (owner == "psl" && Q.ministry_psl_in_cabinet) ||
-    (owner == "p2050" && Q.ministry_p2050_in_cabinet);
+    (owner == "p2050" && Q.ministry_p2050_in_cabinet) ||
+    (owner == "konf" && Q.ministry_konf_in_cabinet);
 if (Q.ministry_justice_penalty_active && ownerStillPartner) {
     Q[owner + "_relation"] = finiteMinistry(Q[owner + "_relation"], 0) +
         finiteMinistry(Q.ministry_justice_penalty_relation, 0);
@@ -1832,7 +1887,8 @@ const ownerStillPartner =
     (owner == "pis" && Q.ministry_pis_in_cabinet) ||
     (owner == "ko" && Q.ministry_ko_in_cabinet) ||
     (owner == "psl" && Q.ministry_psl_in_cabinet) ||
-    (owner == "p2050" && Q.ministry_p2050_in_cabinet);
+    (owner == "p2050" && Q.ministry_p2050_in_cabinet) ||
+    (owner == "konf" && Q.ministry_konf_in_cabinet);
 if (Q.ministry_foreign_penalty_active && ownerStillPartner) {
     Q[owner + "_relation"] = finiteMinistry(Q[owner + "_relation"], 0) +
         finiteMinistry(Q.ministry_foreign_penalty_relation, 0);
@@ -1885,7 +1941,8 @@ const ownerStillPartner =
     (owner == "pis" && Q.ministry_pis_in_cabinet) ||
     (owner == "ko" && Q.ministry_ko_in_cabinet) ||
     (owner == "psl" && Q.ministry_psl_in_cabinet) ||
-    (owner == "p2050" && Q.ministry_p2050_in_cabinet);
+    (owner == "p2050" && Q.ministry_p2050_in_cabinet) ||
+    (owner == "konf" && Q.ministry_konf_in_cabinet);
 if (Q.ministry_agriculture_penalty_active && ownerStillPartner) {
     Q[owner + "_relation"] = finiteMinistry(Q[owner + "_relation"], 0) +
         finiteMinistry(Q.ministry_agriculture_penalty_relation, 0);
@@ -1938,7 +1995,8 @@ const ownerStillPartner =
     (owner == "pis" && Q.ministry_pis_in_cabinet) ||
     (owner == "ko" && Q.ministry_ko_in_cabinet) ||
     (owner == "psl" && Q.ministry_psl_in_cabinet) ||
-    (owner == "p2050" && Q.ministry_p2050_in_cabinet);
+    (owner == "p2050" && Q.ministry_p2050_in_cabinet) ||
+    (owner == "konf" && Q.ministry_konf_in_cabinet);
 if (Q.ministry_defence_penalty_active && ownerStillPartner) {
     Q[owner + "_relation"] = finiteMinistry(Q[owner + "_relation"], 0) +
         finiteMinistry(Q.ministry_defence_penalty_relation, 0);
@@ -1984,6 +2042,7 @@ const normalizePartyCode = function(value) {
     if (text == "ko" || text.includes("obywatelsk")) return "ko";
     if (text == "psl") return "psl";
     if (text == "p2050" || text.includes("2050")) return "p2050";
+    if (text == "konf" || text.includes("konfeder")) return "konf";
     if (text == "lewica" || text == "left" || text.includes("lewica")) return "lewica";
     if (text == "cabinet" || text == "independent") return "cabinet";
     return "";
@@ -2063,6 +2122,7 @@ if (Q.ministry_pis_in_cabinet) partnerCodes.push("pis");
 if (Q.ministry_ko_in_cabinet) partnerCodes.push("ko");
 if (Q.ministry_p2050_in_cabinet) partnerCodes.push("p2050");
 if (Q.ministry_psl_in_cabinet) partnerCodes.push("psl");
+if (Q.ministry_konf_in_cabinet) partnerCodes.push("konf");
 const goodwillPool = Math.floor(unspent / 3);
 const goodwillEach = partnerCodes.length
     ? Math.floor(goodwillPool / partnerCodes.length)
@@ -2141,6 +2201,7 @@ const normalizePartyCode = function(value) {
     if (text == "ko" || text.includes("obywatelsk")) return "ko";
     if (text == "psl") return "psl";
     if (text == "p2050" || text.includes("2050")) return "p2050";
+    if (text == "konf" || text.includes("konfeder")) return "konf";
     if (text == "lewica" || text == "left" || text.includes("lewica")) return "lewica";
     return "";
 };

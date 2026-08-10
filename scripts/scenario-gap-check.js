@@ -59,6 +59,75 @@ function record(Q, id) {
   });
 }
 
+function prawicaFixture(seed, overrides) {
+  const run = newRun(seed);
+  Object.assign(run.Q, {
+    continuous_campaign: 1,
+    year: 2027,
+    month: 6,
+    election_2027_terminal: 0,
+    president_name: 'Rafał Trzaskowski',
+    prime_minister: 'Donald Tusk',
+    government_party: 'ko',
+    ministry_pis_in_cabinet: 0,
+    ministry_psl_in_cabinet: 0,
+    duda_stage: 1,
+    duda_done: 1,
+    duda_programme_reach: 80,
+    duda_organisation: 80,
+    prawica_stage: 0,
+    prawica_formed: 0,
+    prawica_attempt_roll: 0,
+    pis_collapsed: 1,
+    pis_split: 1,
+    pis_collapse_pressure: 100,
+    pis_leader: 'Mateusz Morawiecki',
+    pis_poll: 4,
+    far_right_split: 0,
+    mentzen_bosak_split: 0,
+    third_way_split: 1,
+    third_way_active: 0,
+    p0_formed: 1,
+    p0_poll: 3,
+    tak_dla_rozwoju_party_formed: 1,
+    tak_dla_rozwoju_legal_party_formed: 1,
+    tak_rozwoj_party_name: 'Tak! Dla Rozwoju',
+    tak_rozwoj_poll: 3,
+    tak_rozwoj_activists: 35,
+    rozwoj_association_active: 1,
+    rozwoj_party_formed: 1,
+    rozwoj_poll: 3,
+    kukiz_active: 1,
+    kukiz_poll: 2,
+    porozumienie_active: 1,
+    porozumienie_poll: 2,
+    suwerenna_merged: 0,
+    suwerenna_poll: 3,
+    ko_splinter_active: 1,
+    ko_splinter_poll: 4,
+  }, overrides || {});
+  const sikorski = record(run.Q, 'ko_splinter');
+  if (sikorski) {
+    sikorski.active = 1;
+    sikorski.independent = 1;
+    sikorski.leader = 'Radosław Sikorski';
+    sikorski.name = 'Nowa Platforma';
+    sikorski.list_committee = 'ko_splinter';
+    sikorski.contesting = 1;
+  }
+  normalize(run);
+  const normalizedSikorski = record(run.Q, 'ko_splinter');
+  if (normalizedSikorski) {
+    normalizedSikorski.active = 1;
+    normalizedSikorski.independent = 1;
+    normalizedSikorski.leader = 'Radosław Sikorski';
+    normalizedSikorski.name = 'Nowa Platforma';
+    normalizedSikorski.list_committee = 'ko_splinter';
+    normalizedSikorski.contesting = 1;
+  }
+  return run;
+}
+
 // Every audited row has one owner, a campaign/date-or-stage gate and a
 // no-resource way out. The manifest generator separately validates authored
 // subtitles and delayed memory for every strategic choice.
@@ -246,51 +315,312 @@ function borderFixture(seed, documented) {
 
 // Shared committees are projected once, then allocated back to persistent
 // component records; the certified Sejm still conserves exactly 460 seats.
+// Duda's Prawica route is separately gated, transactional and auditable.
 {
-  const run = newRun('scenario-shared-committee');
-  Object.assign(run.Q, {
+  const low = newRun('scenario-prawica-low-fragmentation');
+  Object.assign(low.Q, {
     continuous_campaign: 1,
     year: 2027,
     month: 6,
     election_2027_terminal: 0,
-    right_reunification_outcome: 'Joint right committee',
-    mentzen_bosak_split: 1,
-    poll_state_month_key: -1,
+    president_name: 'Rafał Trzaskowski',
+    prime_minister: 'Donald Tusk',
+    government_party: 'ko',
+    ministry_pis_in_cabinet: 0,
+    duda_stage: 1,
+    duda_programme_reach: 80,
+    duda_organisation: 80,
+    prawica_attempt_roll: 0,
   });
+  normalize(low);
+  assert(low.Q.prawica_fragmentation_score < 55);
+  assert.strictEqual(live(low,
+    'poland_scenario_party_gaps.right_reunification_2027'), false);
+
+  const qualifying = prawicaFixture('scenario-prawica-roll-occurs', {
+    prawica_attempt_roll: 0,
+  });
+  assert(qualifying.Q.prawica_fragmentation_score >= 55);
+  assert(qualifying.Q.prawica_attempt_threshold >= 400);
+  assert(qualifying.Q.prawica_attempt_threshold <= 600);
+  assert.strictEqual(live(qualifying,
+    'poland_scenario_party_gaps.right_reunification_2027'), true,
+  JSON.stringify({
+    year: qualifying.Q.year,
+    month: qualifying.Q.month,
+    score: qualifying.Q.prawica_fragmentation_score,
+    roll: qualifying.Q.prawica_attempt_roll,
+    threshold: qualifying.Q.prawica_attempt_threshold,
+    dudaStage: qualifying.Q.duda_stage,
+    reach: qualifying.Q.duda_programme_reach,
+    organisation: qualifying.Q.duda_organisation,
+    president: qualifying.Q.president_name,
+    primeMinister: qualifying.Q.prime_minister,
+    governmentBlock: qualifying.Q.prawica_pis_government_block,
+    terminal: qualifying.Q.election_2027_terminal,
+  }));
+
+  const failedRoll = prawicaFixture('scenario-prawica-roll-fails', {
+    prawica_attempt_roll: 999,
+  });
+  assert.strictEqual(live(failedRoll,
+    'poland_scenario_party_gaps.right_reunification_2027'), false);
+
+  const jow = newRun('scenario-prawica-jow-attempt');
+  Object.assign(jow.Q, {
+    continuous_campaign: 1,
+    year: 2027,
+    month: 6,
+    election_2027_terminal: 0,
+    president_name: 'Rafał Trzaskowski',
+    prime_minister: 'Donald Tusk',
+    government_party: 'ko',
+    ministry_pis_in_cabinet: 0,
+    duda_stage: 1,
+    duda_programme_reach: 80,
+    duda_organisation: 80,
+    prawica_attempt_roll: 949,
+    electoral_reform_stage: 'enacted',
+    sejm_electoral_system: 'mixed_230',
+  });
+  normalize(jow);
+  assert.strictEqual(jow.Q.prawica_attempt_threshold, 950);
+  assert.strictEqual(live(jow,
+    'poland_scenario_party_gaps.right_reunification_2027'), true,
+  'JOW pragmatism should bypass the ordinary fragmentation gate');
+
+  const pisLed = prawicaFixture('scenario-prawica-pis-led', {
+    government_party: 'pis',
+  });
+  assert.strictEqual(pisLed.Q.prawica_pis_government_block, 1);
+  assert.strictEqual(live(pisLed,
+    'poland_scenario_party_gaps.right_reunification_2027'), false);
+
+  const pisParticipant = prawicaFixture('scenario-prawica-pis-cabinet', {
+    government_party: 'ko',
+    ministry_pis_in_cabinet: 1,
+  });
+  assert.strictEqual(pisParticipant.Q.prawica_pis_government_block, 1);
+  assert.strictEqual(live(pisParticipant,
+    'poland_scenario_party_gaps.right_reunification_2027'), false);
+}
+
+{
+  const run = prawicaFixture('scenario-prawica-success');
+  run.Q.konf_seats = 10;
+  run.Q.korona_seats = 0;
+  const kkp = record(run.Q, 'kkp');
+  kkp.exclusive_seats = 1;
+  kkp.mp_count = 1;
+  kkp.sejm_mps = 1;
+  run.engine.goToScene('poland_scenario_party_gaps.right_reunification_2027');
+  assert.strictEqual(run.Q.prawica_formed, 1);
+  assert.strictEqual(run.Q.prawica_leader, 'Andrzej Duda');
+  assert.strictEqual(run.Q.prawica_pm_candidate, 'Andrzej Duda');
+  assert(run.Q.prawica_member_ids.includes('pis_party'));
+  assert(run.Q.prawica_member_ids.filter(function(id) {
+    return id !== 'pis_party' && id !== 'duda_movement';
+  }).length >= 2, 'Prawica formed without PiS plus two acceptors');
+  const kkpDecision = run.Q.prawica_decision_records.find(function(decision) {
+    return decision.id === 'kkp';
+  });
+  assert.strictEqual(kkpDecision.eligible, 0);
+  assert.strictEqual(kkpDecision.accepted, 0);
+  assert(!run.Q.prawica_member_ids.includes('kkp'));
+  assert.strictEqual(record(run.Q, 'kkp').list_committee, 'korona');
+  assert.strictEqual(run.Q.korona_seats, 1,
+    'Only KKP\'s one declared seat should follow Korona');
+  assert.strictEqual(run.Q.konf_seats, 9);
+  const p0Decision = run.Q.prawica_decision_records.find(function(decision) {
+    return decision.id === 'p0_party';
+  });
+  assert.strictEqual(p0Decision.accepted, 1,
+    'A compatible sub-5% party should normally accept');
+  const solidarnaDecision = run.Q.prawica_decision_records.find(function(decision) {
+    return decision.id === 'solidarna';
+  });
+  assert.strictEqual(solidarnaDecision.accepted, 0,
+    'Ziobro/Jaki-style red lines must remain capable of defeating threshold pressure');
+  assert(solidarnaDecision.negative_reasons.some(function(reason) {
+    return /hard-line leadership/.test(reason);
+  }));
+}
+
+{
+  const run = prawicaFixture('scenario-prawica-psl-cabinet');
+  run.Q.electoral_reform_stage = 'enacted';
+  run.Q.sejm_electoral_system = 'mixed_230';
+  run.Q.ministry_psl_in_cabinet = 1;
+  record(run.Q, 'psl_party').in_cabinet = 1;
+  run.engine.goToScene('poland_scenario_party_gaps.right_reunification_2027');
+  const pslDecision = run.Q.prawica_decision_records.find(function(decision) {
+    return decision.id === 'psl_party';
+  });
+  assert.strictEqual(pslDecision.eligible, 0);
+  assert.strictEqual(pslDecision.accepted, 0);
+}
+
+{
+  const run = prawicaFixture('scenario-prawica-jow-sweep', {
+    electoral_reform_stage: 'enacted',
+    sejm_electoral_system: 'fptp_460',
+    pis_collapsed: 0,
+    pis_split: 0,
+    pis_collapse_pressure: 0,
+    pis_leader: 'Jarosław Kaczyński',
+    pis_poll: 30,
+    third_way_active: 1,
+    third_way_split: 0,
+    third_way_cohesion: 100,
+    cultural_issue_salience: 100,
+    far_right_agenda: 100,
+  });
+  run.engine.goToScene('poland_scenario_party_gaps.right_reunification_2027');
+  const eligible = run.Q.prawica_decision_records.filter(function(decision) {
+    return decision.eligible;
+  });
+  assert(eligible.length >= 3);
+  assert(eligible.every(function(decision) { return decision.accepted; }),
+    'Every eligible organisation must accept Prawica under JOWs');
+  assert(eligible.every(function(decision) {
+    return decision.positive_reasons.some(function(reason) {
+      return /Duda's JOW warning/.test(reason);
+    });
+  }), 'Every JOW acceptance must record its pragmatic reason');
+  const kkpDecision = run.Q.prawica_decision_records.find(function(decision) {
+    return decision.id === 'kkp';
+  });
+  const pslDecision = eligible.find(function(decision) {
+    return decision.id === 'psl_party';
+  });
+  assert.strictEqual(kkpDecision.eligible, 0);
+  assert.strictEqual(kkpDecision.accepted, 0);
+  assert(kkpDecision.negative_reasons.some(function(reason) {
+    return /expelled before Duda offered the JOW district pact/.test(reason);
+  }), 'The JOW vote must record Korona / KKP\'s earlier expulsion');
+  assert(pslDecision && pslDecision.accepted,
+    'PSL outside government must join the JOW sweep');
+  assert.match(run.Q.right_reunification_outcome,
+    /one-candidate JOW argument wins every invited party/);
+  assert(!run.Q.prawica_member_ids.includes('kkp'));
   normalize(run);
-  const sharedIds = ['pis_party', 'nowa_nadzieja', 'ruch_narodowy'];
-  const sharedShares = [50, 30, 20];
-  sharedIds.forEach(function(id, index) {
-    const party = record(run.Q, id);
-    party.active = 1;
-    party.contesting = 1;
-    party.list_committee = 'right_2027';
-    party.organisation = Math.max(40, Number(party.organisation) || 0);
-    party.negotiated_list_share = sharedShares[index];
+  assert.strictEqual(record(run.Q, 'kkp').list_committee, 'korona',
+    'Normalization restored expelled Korona / KKP to the JOW pact');
+}
+
+{
+  const run = prawicaFixture('scenario-prawica-transaction-fails', {
+    pis_collapsed: 0,
+    pis_split: 0,
+    pis_collapse_pressure: 0,
+    pis_leader: 'Jarosław Kaczyński',
+    pis_poll: 30,
   });
+  const before = (run.Q.rival_group_records || []).map(function(entry) {
+    return [entry.id, entry.list_committee, entry.club, entry.parent];
+  });
+  run.engine.goToScene('poland_scenario_party_gaps.right_reunification_2027');
+  assert.strictEqual(run.Q.prawica_formed, 0);
+  assert.strictEqual(run.Q.prawica_member_ids.length, 0);
+  assert.deepStrictEqual((run.Q.rival_group_records || []).map(function(entry) {
+    return [entry.id, entry.list_committee, entry.club, entry.parent];
+  }), before, 'A failed congress mutated an affiliation');
+}
+
+{
+  const run = prawicaFixture('scenario-prawica-too-few-acceptors');
+  Object.assign(run.Q, {
+    p0_formed: 0,
+    tak_dla_rozwoju_legal_party_formed: 0,
+    kukiz_active: 0,
+    porozumienie_active: 0,
+    republikanie_formed: 0,
+    odnowa_formed: 0,
+    ko_splinter_active: 0,
+  });
+  [
+    'rozwoj_plus', 'konf_committee', 'nowa_nadzieja', 'ruch_narodowy',
+    'psl_party', 'kukiz15', 'solidarna', 'porozumienie', 'republikanie',
+    'odnowa', 'ko_splinter', 'tak_rozwoj_party', 'p0_party',
+  ].forEach(function(id) {
+    const party = record(run.Q, id);
+    if (party) party.active = 0;
+  });
+  run.engine.goToScene('poland_scenario_party_gaps.right_reunification_2027');
+  assert.strictEqual(run.Q.prawica_decision_records.find(function(decision) {
+    return decision.id === 'pis_party';
+  }).accepted, 1);
+  assert.strictEqual(run.Q.prawica_formed, 0,
+    'PiS without two other acceptors must not found Prawica');
+  assert.deepStrictEqual(run.Q.prawica_member_party_keys, [],
+    'A failed congress must not trigger Prawica branding');
+}
+
+{
+  const wrongLeader = prawicaFixture('scenario-prawica-wrong-ko-splinter');
+  record(wrongLeader.Q, 'ko_splinter').leader = 'Borys Budka';
+  wrongLeader.engine.goToScene(
+    'poland_scenario_party_gaps.right_reunification_2027'
+  );
+  assert.strictEqual(wrongLeader.Q.prawica_decision_records.find(
+    function(decision) { return decision.id === 'ko_splinter'; }
+  ).eligible, 0);
+  const sikorski = prawicaFixture('scenario-prawica-sikorski');
+  sikorski.engine.goToScene(
+    'poland_scenario_party_gaps.right_reunification_2027'
+  );
+  assert.strictEqual(sikorski.Q.prawica_decision_records.find(
+    function(decision) { return decision.id === 'ko_splinter'; }
+  ).eligible, 1);
+}
+
+{
+  const run = prawicaFixture('scenario-prawica-committee');
+  run.engine.goToScene('poland_scenario_party_gaps.right_reunification_2027');
+  assert.strictEqual(run.Q.prawica_formed, 1);
   run.Q.poll_state_month_key = -1;
   run.engine.goToScene('poland_polling');
-  const componentSeats = ['pis_party', 'konf_committee', 'nowa_nadzieja',
-    'ruch_narodowy'].reduce(function(total, id) {
-    return total + Number(record(run.Q, id).projected_seats || 0);
-  }, 0);
+  const componentSeats = run.Q.prawica_member_source_ids.reduce(
+    function(total, id) {
+      return total + Number(run.Q[id + '_projected_seats'] || 0);
+    }, 0
+  );
   assert.strictEqual(componentSeats, run.Q.right_2027_committee_projected_seats,
-    'Shared right-list seats must be allocated once among components');
-  assert(Math.abs(
-    Number(record(run.Q, 'nowa_nadzieja').projected_seats || 0) /
-      Math.max(1, componentSeats) - 0.30
-  ) < 0.02, 'Projection ignored negotiated component list shares: ' +
-    sharedIds.map(function(id) {
-      const party = record(run.Q, id);
-      return id + '=' + party.projected_seats + '/' +
-        party.negotiated_list_share;
-    }).join(', ') + '; committee=' + componentSeats);
+    'Prawica seats must be allocated once among vote-bearing components');
+  const componentVote = run.Q.prawica_member_source_ids.reduce(
+    function(total, id) {
+      return total + Number(run.Q[id + '_component_vote_intent'] || 0);
+    }, 0
+  );
+  assert(Math.abs(componentVote - Number(run.Q.right_2027_vote_intent || 0)) < 0.001,
+    'Prawica vote was not aggregated exactly once');
+  const projectedSeats = [
+    'left_projected_seats', 'pis_projected_seats', 'ko_projected_seats',
+    'p2050_projected_seats', 'psl_projected_seats', 'konf_projected_seats',
+    'p0_projected_seats', 'other_projected_seats',
+    'sld_breakaway_projected_seats', 'social_patriot_projected_seats',
+    'spring_breakaway_projected_seats', 'labor_left_projected_seats',
+    'young_left_projected_seats', 'razem_projected_seats',
+    'pps_projected_seats', 'tak_rozwoj_projected_seats',
+    'centrum_projected_seats', 'rozwoj_projected_seats',
+    'korona_projected_seats', 'ko_splinter_projected_seats',
+    'suwerenna_projected_seats', 'porozumienie_projected_seats',
+    'republikanie_projected_seats', 'odnowa_projected_seats',
+    'kukiz_projected_seats', 'new_hope_projected_seats',
+    'national_movement_projected_seats', 'duda_projected_seats',
+    'social_conservative_projected_seats',
+  ].reduce(function(total, quality) {
+    return total + Number(run.Q[quality] || 0);
+  }, 0);
+  assert.strictEqual(projectedSeats, 460,
+    'Projected Sejm seats must sum to 460');
   run.engine.goToScene('poland_events_2026.snap_result_2026');
   assert.strictEqual(
     Number(run.Q.snap_election_right_2027_seats || 0),
-    Number(run.Q.pis_seats || 0) + Number(run.Q.new_hope_seats || 0) +
-      Number(run.Q.national_movement_seats || 0),
-    'Certified shared committee was counted more than once'
+    run.Q.prawica_member_source_ids.reduce(function(total, id) {
+      return total + Number(run.Q[id + '_seats'] || 0);
+    }, 0),
+    'Certified Prawica committee was counted more than once'
   );
   const seats = [
     'pis_seats', 'ko_seats', 'p2050_seats', 'psl_seats', 'left_seats',
@@ -298,7 +628,10 @@ function borderFixture(seed, documented) {
     'social_patriot_seats', 'spring_breakaway_seats', 'labor_left_seats',
     'young_left_seats', 'razem_party_seats', 'pps_party_seats',
     'tak_rozwoj_seats', 'centrum_seats', 'rozwoj_seats', 'korona_seats',
-    'ko_splinter_seats', 'new_hope_seats', 'national_movement_seats',
+    'ko_splinter_seats', 'p0_seats', 'suwerenna_seats',
+    'porozumienie_seats', 'kukiz_seats',
+    'republikanie_seats', 'odnowa_seats',
+    'new_hope_seats', 'national_movement_seats',
     'duda_seats', 'social_conservative_seats',
   ].reduce(function(total, quality) {
     return total + Number(run.Q[quality] || 0);
