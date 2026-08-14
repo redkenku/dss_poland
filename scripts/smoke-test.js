@@ -1320,7 +1320,7 @@ const expectedEvents = [
   'poland_events.candidate',
   'poland_events.budget_2019',
   'poland_leadership_events.po_handoff_2020',
-  'poland_opposition_budget.read_draft',
+  'poland_budget_2023_2026.budget_open',
   'poland_events.covid',
   'poland_gowin_crisis.postal_crisis',
   'poland_leadership_events.ko_candidate_replacement_2020',
@@ -2393,7 +2393,21 @@ function runSmoke(game) {
 
   function returnToHub() {
     choose('poland_hub');
-    assert.strictEqual(engine.state.sceneId, 'poland_hub');
+    assert.strictEqual(engine.state.sceneId, 'poland_hub', JSON.stringify({
+      budgetYear: engine.state.qualities.annual_budget_year,
+      budgetResult: engine.state.qualities.annual_budget_result,
+      budgetVote: [
+        engine.state.qualities.annual_budget_yes,
+        engine.state.qualities.annual_budget_no,
+        engine.state.qualities.annual_budget_abstain,
+      ],
+      deadline: [
+        engine.state.qualities.budget_deadline_active,
+        engine.state.qualities.budget_deadline_time,
+        engine.state.qualities.time,
+      ],
+      snapRequested: engine.state.qualities.snap_election_requested,
+    }));
   }
 
   function resolveLeftRevolt() {
@@ -4130,68 +4144,52 @@ function runSmoke(game) {
   }
 
   function testSenateBudgetStages() {
-    startStandard('senate-2019-budget-stage');
-    const firstBudget = engine.state.qualities;
-    firstBudget.budget_2019_ratified = 1;
-    firstBudget.budget_2019_backing = 68;
-    firstBudget.budget_2019_vetoes = 0;
-    engine.goToScene('poland_senate.budget_2019');
-    checkNumbers();
-    assert.strictEqual(engine.state.sceneId, 'poland_senate.budget_2019');
-    assert(
-      currentChoices().every(function(choice) {
-        return !choice.id.toLowerCase().includes('reject');
-      }),
-      'The Senate was incorrectly allowed to reject a budget bill'
-    );
-    choose('poland_senate.budget_2019_common');
+    startStandard('shared-budget-senate-stage');
+    const qualities = engine.state.qualities;
+    Object.assign(qualities, {
+      year: 2024,
+      month: 12,
+      annual_budget_year: 2024,
+      left_in_government: 1,
+      government_party: 'lewica',
+      prime_minister_party: 'lewica',
+      finance_minister_party: 'Lewica',
+      government_has_confidence: 1,
+      caretaker_government: 0,
+      government_support_seats: 260,
+      coalition_seats: 260,
+      left_seats: 260,
+      senate_total: 100,
+      senate_government_seats: 45,
+      senate_ko_seats: 40,
+    });
+    engine.goToScene('poland_budget_2023_2026.annual_budget');
     assert.strictEqual(
       engine.state.sceneId,
-      'poland_senate.budget_2019_common',
-      'The first Senate budget outcome skipped its reaction beat'
+      'poland_budget_2023_2026.budget_open'
     );
-    choose('poland_senate.budget_2019_return_vote');
-    choose('poland_senate.budget_2019_complete');
-    assert.strictEqual(engine.state.sceneId, 'poland_hub');
-    assert.strictEqual(firstBudget.senate_budget_2019_done, 1);
-    assert.strictEqual(
-      firstBudget.senate_budget_2019_result,
-      'Common costed amendments passed the Senate but was removed by the Sejm'
+    qualities.government_support_seats = 260;
+    qualities.coalition_seats = 260;
+    qualities.left_seats = 260;
+    assert.strictEqual(globalThis.polandBudgetModel.version, 2);
+    const first = globalThis.polandBudgetModel.preview(qualities);
+    assert(first.affordable);
+    assert(first.vote.passed);
+    choose('poland_budget_2023_2026.submit_budget');
+    assert.strictEqual(engine.state.sceneId, 'poland_budget_2023_2026.senate');
+    assert.deepStrictEqual(
+      currentChoices().map(function(choice) { return choice.id; }),
+      [
+        'poland_budget_2023_2026.senate_accept',
+        'poland_budget_2023_2026.senate_compromise',
+        'poland_budget_2023_2026.senate_reject',
+      ]
     );
-    assert.strictEqual(firstBudget.senate_left_leverage, 8);
-    assert.strictEqual(firstBudget.senate_amendment_credit, 3);
-
-    startStandard('senate-2020-budget-stage');
-    const pandemicBudget = engine.state.qualities;
-    pandemicBudget.budget_package_code = 1;
-    pandemicBudget.budget_2020_ratified = 1;
-    engine.goToScene('poland_senate.budget_2020');
-    checkNumbers();
-    assert.strictEqual(engine.state.sceneId, 'poland_senate.budget_2020');
-    assert(
-      currentChoices().every(function(choice) {
-        return !choice.id.toLowerCase().includes('reject');
-      }),
-      'The Senate was incorrectly allowed to reject the pandemic budget'
-    );
-    choose('poland_senate.budget_2020_social');
-    assert.strictEqual(
-      engine.state.sceneId,
-      'poland_senate.budget_2020_social',
-      'The pandemic Senate outcome skipped its reaction beat'
-    );
-    choose('poland_senate.budget_2020_return_vote');
-    choose('poland_senate.budget_2020_complete');
-    assert.strictEqual(engine.state.sceneId, 'poland_hub');
-    assert.strictEqual(pandemicBudget.senate_budget_2020_done, 1);
-    assert.strictEqual(
-      pandemicBudget.senate_budget_2020_result,
-      'Social-shield amendments passed the Senate but was removed by the Sejm'
-    );
-    assert.strictEqual(pandemicBudget.senate_left_leverage, 8);
-    assert.strictEqual(pandemicBudget.senate_amendment_credit, 3);
+    choose('poland_budget_2023_2026.senate_accept');
+    assert.strictEqual(engine.state.sceneId, 'poland_budget_2023_2026.enact');
+    assert.strictEqual(qualities.annual_budget_passed, 1);
+    assert.strictEqual(qualities.budget_execution_pending, 1);
   }
-
   function testSenateElectionAndGovernmentCorrections() {
     startStandard('senate-pact-event');
     let qualities = engine.state.qualities;
@@ -4392,29 +4390,35 @@ function runSmoke(game) {
     const openGovernmentSenate = function(seed, rightSeats, sejmYes) {
       startStandard(seed);
       const budget = engine.state.qualities;
-      budget.left_in_government = 1;
-      budget.government_has_confidence = 1;
-      budget.caretaker_government = 0;
-      budget.government_party = 'ko';
-      budget.coalition_status = 'Democratic coalition';
-      budget.annual_budget_left_cabinet_authority = 1;
-      budget.annual_budget_passed = 1;
-      budget.annual_budget_senate_stage_done = 0;
-      budget.annual_budget_package_code = 1;
-      budget.annual_budget_yes = sejmYes;
-      budget.annual_budget_no = 460 - sejmYes;
-      budget.annual_budget_abstain = 0;
-      budget.annual_budget_present = 460;
-      budget.senate_total = 100;
-      budget.senate_pis_seats = rightSeats;
-      budget.senate_konf_seats = 0;
-      budget.senate_ko_seats = 100 - rightSeats;
-      budget.senate_p2050_seats = 0;
-      budget.senate_psl_seats = 0;
-      budget.senate_left_seats = 0;
-      budget.senate_independent_seats = 0;
-      engine.goToScene('poland_budget_2023_2026.senate_budget_review');
-      checkNumbers();
+      Object.assign(budget, {
+        year: 2024,
+        annual_budget_year: 2024,
+        left_in_government: 1,
+        government_has_confidence: 1,
+        caretaker_government: 0,
+        government_party: 'ko',
+        prime_minister_party: 'ko',
+        finance_minister_party: 'Lewica',
+        government_support_seats: 260,
+        coalition_seats: 260,
+        left_seats: 60,
+        ko_seats: 200,
+        ministry_ko_in_cabinet: 1,
+        senate_total: 100,
+        senate_government_seats: 100 - rightSeats,
+        senate_pis_seats: rightSeats,
+        senate_ko_seats: 100 - rightSeats,
+        senate_left_seats: 0,
+      });
+      engine.goToScene('poland_budget_2023_2026.annual_budget');
+      budget.budget_game.sejm = {
+        yes: sejmYes,
+        no: 460 - sejmYes,
+        abstain: 0,
+        present: 460,
+        passed: true,
+      };
+      engine.goToScene('poland_budget_2023_2026.senate');
       return budget;
     };
 
@@ -4424,82 +4428,31 @@ function runSmoke(game) {
       235
     );
     assert.strictEqual(
-      qualities.annual_budget_senate_corrections_pending,
-      0
+      globalThis.polandBudgetModel.senatePreview(qualities).target,
+      ''
     );
-    choose('poland_budget_2023_2026.senate_budget_unchanged');
-    assert.strictEqual(qualities.annual_budget_senate_stage_done, 1);
+    assert(globalThis.polandBudgetModel.resolveSenate(qualities, 'accept'));
 
     qualities = openGovernmentSenate(
       'hostile-government-senate-adheres',
       55,
       235
     );
-    assert.strictEqual(
-      qualities.annual_budget_senate_corrections_pending,
-      1
-    );
-    choose('poland_budget_2023_2026.senate_budget_accept');
-    assert.strictEqual(
-      qualities.annual_budget_senate_corrections_accepted,
-      1
-    );
-    assert.strictEqual(qualities.annual_budget_senate_stage_done, 1);
+    const hostileSenate =
+      globalThis.polandBudgetModel.senatePreview(qualities);
+    assert(hostileSenate.target);
+    assert.strictEqual(hostileSenate.amendmentParty, 'pis');
+    assert(globalThis.polandBudgetModel.resolveSenate(qualities, 'accept'));
 
     qualities = openGovernmentSenate(
-      'hostile-government-senate-deadlock',
+      'hostile-government-senate-no-override',
       55,
-      234
-    );
-    choose('poland_budget_2023_2026.senate_budget_override');
-    assert.strictEqual(
-      qualities.annual_budget_senate_override_passed,
-      0
+      230
     );
     assert.strictEqual(
-      qualities.annual_budget_senate_corrections_accepted,
-      1
+      globalThis.polandBudgetModel.resolveSenate(qualities, 'reject'),
+      false
     );
-    assert.strictEqual(qualities.coalition_break_threat, 1);
-
-    startStandard('budget-senate-counts-only-cabinet-parties');
-    qualities = engine.state.qualities;
-    Object.assign(qualities, {
-      year: 2024,
-      government_party: 'ko',
-      left_in_government: 1,
-      ministry_ko_in_cabinet: 1,
-      ministry_psl_in_cabinet: 0,
-      ministry_p2050_in_cabinet: 0,
-      government_has_confidence: 1,
-      caretaker_government: 0,
-      annual_budget_left_cabinet_authority: 1,
-      annual_budget_passed: 1,
-      annual_budget_senate_stage_done: 0,
-      annual_budget_package_code: 2,
-      annual_budget_yes: 235,
-      annual_budget_no: 225,
-      annual_budget_abstain: 0,
-      annual_budget_present: 460,
-      senate_total: 100,
-      senate_pis_seats: 42,
-      senate_konf_seats: 0,
-      senate_ko_seats: 41,
-      senate_p2050_seats: 10,
-      senate_psl_seats: 5,
-      senate_left_seats: 2,
-      senate_independent_seats: 0,
-      senate_cohesion: 100,
-    });
-    engine.goToScene('poland_budget_2023_2026.senate_budget_review');
-    assert.strictEqual(
-      qualities.annual_budget_senate_government_votes,
-      43,
-      'The budget whip treated opposition democratic senators as government votes'
-    );
-    assert.strictEqual(qualities.annual_budget_senate_hostile_votes, 57);
-    assert.strictEqual(qualities.annual_budget_senate_corrections_pending, 1);
-
     startStandard('hung-snap-senate-resolves-marshal');
     qualities = engine.state.qualities;
     Object.assign(qualities, {
@@ -7810,99 +7763,34 @@ function runSmoke(game) {
       'Razem chooses confidence and supply'
     );
 
-    startStandard('razem-pivotal-budget');
+    startStandard('razem-supply-pact-budget');
     qualities = engine.state.qualities;
     Object.assign(qualities, {
-      annual_budget_left_cabinet_authority: 1,
-      annual_budget_vote_round: 1,
+      year: 2024,
+      month: 12,
       annual_budget_year: 2024,
-      coalition_seats: 225,
-      ministry_left_cabinet_seats: 18,
+      left_in_government: 0,
       government_party: 'ko',
-      ko_seats: 207,
-      ministry_ko_in_cabinet: 1,
+      prime_minister_party: 'ko',
+      finance_minister_party: 'KO',
+      government_has_confidence: 1,
+      caretaker_government: 0,
+      government_support_seats: 225,
+      coalition_seats: 225,
+      ko_seats: 225,
+      left_seats: 26,
       razem_seats: 7,
-      razem_in_government: 0,
       razem_budget_support_pact: 1,
       razem_red_line_broken: 0,
-      annual_budget_internal_backing: 100,
-      annual_budget_internal_vetoes: 0,
-      annual_budget_external_deal_used: 1,
-      annual_budget_external_deal_target: 'razem',
-      annual_budget_external_votes_committed: 7,
-      annual_budget_public_wage_guarantee: 1,
-      annual_budget_social_share: 18.5,
-      annual_budget_defence_share: 4.8,
-      annual_budget_deficit_share: 4.5,
-      government_coalition_dissent: 0,
-      ko_relation: 60,
-      ko_coalition_dissent: 0,
-      sejm_total: 460,
-      sejm_quorum_floor: 230,
     });
-    engine.goToScene('poland_budget_2023_2026.coalition_whip');
-    assert.strictEqual(qualities.annual_budget_predicted_yes, 232);
-    assert.strictEqual(qualities.annual_budget_external_votes_live, 7);
-    engine.goToScene('poland_budget_2023_2026.budget_vote');
-    assert.strictEqual(qualities.annual_budget_yes, 232);
-
-    startStandard('razem-funded-cabinet-budget');
-    qualities = engine.state.qualities;
-    qualities.annual_budget_left_cabinet_authority = 1;
-    qualities.annual_budget_package_code = 1;
-    qualities.razem_in_government = 1;
-    qualities.razem_budget_support_pact = 1;
-    qualities.party_unity = 50;
-    qualities.razem_dissent = 20;
-    qualities.annual_budget_social_share = 19.2;
-    qualities.annual_budget_defence_share = 4.6;
-    qualities.annual_budget_deficit_share = 4.5;
-    qualities.annual_budget_public_wage_guarantee = 1;
-    qualities.annual_budget_progressive_revenue = 1;
-    engine.goToScene('poland_budget_2023_2026.internal_ratification');
-    assert.strictEqual(qualities.annual_budget_razem_backing, 85);
-
-    startStandard('razem-red-line-exit');
-    qualities = engine.state.qualities;
-    setRedLineFixture(qualities);
-    qualities.razem_cooperation = 30;
-    qualities.razem_dissent = 50;
-    engine.goToScene('poland_normalize');
-    engine.goToScene('poland_budget_2023_2026.budget_enact');
-    assert.strictEqual(qualities.razem_in_government, 0);
-    assert.strictEqual(qualities.razem_budget_support_pact, 0);
-    assert.strictEqual(qualities.razem_red_line_broken, 1);
-    assert.strictEqual(qualities.coalition_seats, 225);
-    assert.strictEqual(qualities.ministry_left_cabinet_seats, 11);
-    assert.strictEqual(qualities.coalition_break_threat, 1);
-
-    startStandard('cooperative-razem-keeps-budget-pact');
-    qualities = engine.state.qualities;
-    setRedLineFixture(qualities);
-    qualities.razem_cooperation = 70;
-    qualities.razem_dissent = 10;
-    engine.goToScene('poland_normalize');
-    engine.goToScene('poland_budget_2023_2026.budget_enact');
-    assert.strictEqual(qualities.razem_breakaway_protected, 1);
-    assert.strictEqual(qualities.razem_in_government, 1);
-    assert.strictEqual(qualities.razem_budget_support_pact, 1);
-    assert.strictEqual(qualities.razem_red_line_broken, 0);
-
-    startStandard('party-leading-razem-keeps-budget-pact');
-    qualities = engine.state.qualities;
-    setRedLineFixture(qualities);
-    qualities.razem_merged = 1;
-    qualities.merger_leader = 'Razem';
-    qualities.razem_cooperation = 10;
-    qualities.razem_dissent = 90;
-    engine.goToScene('poland_normalize');
-    engine.goToScene('poland_budget_2023_2026.budget_enact');
-    assert.strictEqual(qualities.razem_breakaway_protected, 1);
-    assert.strictEqual(qualities.razem_in_government, 1);
-    assert.strictEqual(qualities.razem_budget_support_pact, 1);
-    assert.strictEqual(qualities.razem_red_line_broken, 0);
+    engine.goToScene('poland_budget_2023_2026.annual_budget');
+    globalThis.polandBudgetModel.selectStrategy(qualities, 'no');
+    const pactVote = globalThis.polandBudgetModel.submit(qualities).vote;
+    assert.strictEqual(pactVote.externalYes, 7);
+    assert(pactVote.reasons.some(function(reason) {
+      return reason.includes('previously signed supply pact');
+    }));
   }
-
   function testDissentEffectiveness() {
     startStandard('dissent-effectiveness');
     const qualities = engine.state.qualities;
@@ -9393,67 +9281,54 @@ function runSmoke(game) {
     cardsPlayed.push(card.id);
   }
 
-  function playOppositionBudgetStages(priorityOne, priorityTwo, tactic) {
-    if (engine.state.sceneId === 'poland_opposition_budget.audit') {
-      choose('poland_opposition_budget.audit_continue');
+  function playOppositionBudgetStages(preserveChronology) {
+    assert.strictEqual(
+      engine.state.sceneId,
+      'poland_budget_2023_2026.budget_open'
+    );
+    globalThis.polandBudgetModel.selectStrategy(
+      engine.state.qualities,
+      'no'
+    );
+    if (preserveChronology && !globalThis.polandBudgetModel.preview(
+      engine.state.qualities
+    ).vote.passed) {
+      globalThis.polandBudgetModel.selectStrategy(
+        engine.state.qualities,
+        'bargain'
+      );
+      const amendment = globalThis.polandBudgetModel.lines.find(
+        function(line) {
+          return globalThis.polandBudgetModel.toggleDemand(
+            engine.state.qualities,
+            line.id
+          );
+        }
+      );
+      assert(amendment, 'Minority budget exposed no affordable amendment');
+      globalThis.polandBudgetModel.setPosture(
+        engine.state.qualities,
+        'support'
+      );
     }
-    assert.strictEqual(
-      engine.state.sceneId,
-      'poland_opposition_budget.read_draft'
-    );
-    choose('poland_opposition_budget.priorities');
-    choose(priorityOne || 'poland_opposition_budget.priority_wages');
-    choose(priorityTwo || 'poland_opposition_budget.priority_services');
-    choose('poland_opposition_budget.conference_free_vote');
-    choose(tactic || 'poland_opposition_budget.tactic_against');
-    assert.strictEqual(
-      engine.state.sceneId,
-      'poland_opposition_budget.resolve'
-    );
-    choose('poland_opposition_budget.complete');
+    choose('poland_budget_2023_2026.submit_budget');
+    if (engine.state.sceneId === 'poland_budget_2023_2026.defeat') {
+      choose('poland_budget_2023_2026.close_opposition_defeat');
+    } else {
+      assert.strictEqual(
+        engine.state.sceneId,
+        'poland_budget_2023_2026.enact'
+      );
+      choose('poland_budget_2023_2026.return_queue');
+    }
+    if (engine.state.sceneId === 'poland_monthly_briefing') {
+      choose('poland_monthly_briefing.briefing_return');
+    }
   }
-
   function resolveEvent(sceneId) {
     switch (sceneId) {
-    case 'poland_opposition_budget.audit':
-    case 'poland_opposition_budget.read_draft': {
-      // The dated budget wrapper deliberately routes straight into the
-      // shared opposition process. Preserve the logical dated-event identity
-      // in the corpus while testing the staged implementation it advertises.
-      const routedBudgetYear = engine.state.qualities.annual_budget_year;
-      playOppositionBudgetStages(
-        routedBudgetYear === 2022
-          ? 'poland_opposition_budget.priority_security'
-          : undefined,
-        routedBudgetYear === 2022
-          ? 'poland_opposition_budget.priority_energy_refugees'
-          : undefined
-      );
-      if (routedBudgetYear === 2019 || routedBudgetYear === 2020) {
-        const senateBudget =
-          'poland_senate.budget_' + routedBudgetYear;
-        assert.strictEqual(engine.state.sceneId, senateBudget);
-        chooseFirstAvailable(
-          routedBudgetYear === 2019
-            ? [
-                'poland_senate.budget_2019_common',
-                'poland_senate.budget_2019_broker',
-                'poland_senate.budget_2019_record',
-              ]
-            : [
-                'poland_senate.budget_2020_social',
-                'poland_senate.budget_2020_local',
-                'poland_senate.budget_2020_equality',
-                'poland_senate.budget_2020_selective',
-                'poland_senate.budget_2020_record',
-              ]
-        );
-        choose(senateBudget + '_return_vote');
-        choose(senateBudget + '_complete');
-      }
-      if (engine.state.sceneId === 'poland_monthly_briefing') {
-        choose('poland_monthly_briefing.briefing_return');
-      }
+    case 'poland_budget_2023_2026.budget_open': {
+      playOppositionBudgetStages(true);
       assert.strictEqual(engine.state.sceneId, 'poland_hub');
       break;
     }
@@ -9544,10 +9419,8 @@ function runSmoke(game) {
       break;
     case 'poland_monthly_briefing':
       choose('poland_monthly_briefing.briefing_return');
-      if (
-        engine.state.sceneId === 'poland_opposition_budget.audit' ||
-        engine.state.sceneId === 'poland_opposition_budget.read_draft'
-      ) {
+      if (engine.state.sceneId ===
+          'poland_budget_2023_2026.budget_open') {
         resolveEvent(engine.state.sceneId);
         break;
       }
@@ -9795,20 +9668,7 @@ function runSmoke(game) {
       assert.strictEqual(engine.state.sceneId, 'poland_hub');
       break;
     case 'poland_events.budget_2020':
-      playOppositionBudgetStages();
-      assert.strictEqual(
-        engine.state.sceneId,
-        'poland_senate.budget_2020'
-      );
-      chooseFirstAvailable([
-        'poland_senate.budget_2020_social',
-        'poland_senate.budget_2020_local',
-        'poland_senate.budget_2020_equality',
-        'poland_senate.budget_2020_selective',
-        'poland_senate.budget_2020_record',
-      ]);
-      choose('poland_senate.budget_2020_return_vote');
-      choose('poland_senate.budget_2020_complete');
+      playOppositionBudgetStages(true);
       assert.strictEqual(engine.state.sceneId, 'poland_hub');
       break;
     case 'poland_events.vaccine':
@@ -10110,14 +9970,7 @@ function runSmoke(game) {
       ]);
       choose('poland_events_2021_2023.december_2021_hub');
       choose('poland_events_2021_2023.budget_2021');
-      playOppositionBudgetStages();
-      assert.strictEqual(engine.state.sceneId, 'poland_senate.budget_2021_2022');
-      chooseFirstAvailable([
-        'poland_senate.budget_later_common',
-        'poland_senate.budget_later_narrow',
-        'poland_senate.budget_later_record',
-      ]);
-      choose('poland_senate.budget_later_complete');
+      playOppositionBudgetStages(true);
       assert.strictEqual(
         engine.state.sceneId,
         'poland_events_2021_2023.december_2021_hub'
@@ -10310,17 +10163,7 @@ function runSmoke(game) {
       assert.strictEqual(engine.state.sceneId, 'poland_hub');
       break;
     case 'poland_events_2021_2023.december_2022':
-      playOppositionBudgetStages(
-        'poland_opposition_budget.priority_security',
-        'poland_opposition_budget.priority_energy_refugees'
-      );
-      assert.strictEqual(engine.state.sceneId, 'poland_senate.budget_2021_2022');
-      chooseFirstAvailable([
-        'poland_senate.budget_later_common',
-        'poland_senate.budget_later_narrow',
-        'poland_senate.budget_later_record',
-      ]);
-      choose('poland_senate.budget_later_complete');
+      playOppositionBudgetStages(true);
       assert.strictEqual(
         engine.state.sceneId,
         'poland_events_2021_2023.dec22_szymczyk'
@@ -14393,345 +14236,45 @@ function runSmoke(game) {
   }
 
   function testBudgetOppositionAndConstitutionalRoutes() {
-    function openOppositionBudget(
-      seed,
-      governingSeats,
-      caretaker,
-      externalLeftSupport
-    ) {
-      startStandard(seed);
-      const qualities = engine.state.qualities;
-      qualities.year = 2024;
-      qualities.month = 12;
-      qualities.time = 62;
-      qualities.annual_budget_year = 2024;
-      qualities.left_seats = 26;
-      qualities.left_in_government = 0;
-      qualities.government_party = 'ko';
-      qualities.prime_minister = 'Donald Tusk';
-      qualities.government_name = 'KO-led democratic coalition';
-      qualities.government_owner = 'KO-led democratic coalition';
-      qualities.government_has_confidence = caretaker ? 0 : 1;
-      qualities.caretaker_government = caretaker ? 1 : 0;
-      qualities.psl_seats = 30;
-      qualities.ko_seats = Math.max(0, governingSeats - qualities.psl_seats);
-      qualities.coalition_seats = governingSeats;
-      qualities.government_support_seats = governingSeats;
-      qualities.left_committed_seats = 26;
-      if (externalLeftSupport) {
-        qualities.position = 'Confidence-and-supply opposition';
-        qualities.left_cabinet_model =
-          'Confidence and supply from opposition';
-      }
-      qualities.sejm_total = 460;
-      qualities.sejm_quorum_floor = 230;
-      engine.goToScene('poland_budget_2023_2026.annual_budget');
-      checkNumbers();
-      assert.strictEqual(qualities.annual_budget_fiscal_year, 2025);
-      assert.strictEqual(
-        qualities.budget_submission_time,
-        59,
-        'The Article 225 clock did not start at the autumn draft submission'
-      );
-      assert.strictEqual(qualities.budget_deadline_time, 63);
-      assert.strictEqual(qualities.budget_deadline_label, 'January 2025');
-      return qualities;
-    }
-
-    function openSixStageProcess(qualities) {
-      const annualChoices = currentChoices().map(function(choice) {
-        return choice.id;
-      });
-      assert(annualChoices.includes('poland_opposition_budget.start'));
-      assert(!annualChoices.includes(
-        'poland_budget_2023_2026.government_social_protocol'
-      ));
-      choose('poland_opposition_budget.start');
-      assert.strictEqual(
-        engine.state.sceneId,
-        'poland_opposition_budget.read_draft'
-      );
-      assert.strictEqual(
-        qualities.opposition_budget_draft_title,
-        "the coalition's first full 2025 budget"
-      );
-      choose('poland_opposition_budget.priorities');
-      const priorityChoices = currentChoices().map(function(choice) {
-        return choice.id;
-      });
-      [
-        'poland_opposition_budget.priority_flood',
-        'poland_opposition_budget.priority_security',
-        'poland_opposition_budget.priority_kpo',
-        'poland_opposition_budget.priority_razem_promises',
-      ].forEach(function(choiceId) {
-        assert(
-          priorityChoices.includes(choiceId),
-          'The 2024 crisis menu omitted ' + choiceId
-        );
-      });
-      assert(!priorityChoices.includes(
-        'poland_opposition_budget.priority_pandemic'
-      ));
-      assert.strictEqual(qualities.opposition_budget_priority_count, 0);
-    }
-
-    function finishConferenceAndChoose(tactic) {
-      choose('poland_opposition_budget.priority_flood');
-      choose('poland_opposition_budget.priority_kpo');
-      assert.strictEqual(
-        engine.state.sceneId,
-        'poland_opposition_budget.conference'
-      );
-      choose('poland_opposition_budget.conference_discipline');
-      assert.strictEqual(
-        engine.state.sceneId,
-        'poland_opposition_budget.conference_result'
-      );
-      choose(tactic);
-      if (tactic === 'poland_opposition_budget.tactic_bargain') {
-        assert.strictEqual(
-          engine.state.sceneId,
-          'poland_opposition_budget.bargain_answer'
-        );
-        choose('poland_opposition_budget.bargain_support');
-      }
-      assert.strictEqual(
-        engine.state.sceneId,
-        'poland_opposition_budget.resolve'
-      );
-    }
-
-    startStandard('opposition-budget-retains-2019-senate');
-    let qualities = engine.state.qualities;
-    qualities.resources = 5;
-    engine.goToScene('poland_events.budget_2019');
-    assert.strictEqual(engine.state.sceneId, 'poland_events.budget_2019');
-    choose('poland_events.budget_2019_shadow');
-    assert.strictEqual(
-      qualities.annual_budget_done_2019,
-      0,
-      'The December draft was incorrectly treated as the Sejm vote'
-    );
-    assert.strictEqual(qualities.budget_submission_month, 12);
-    assert.strictEqual(qualities.budget_deadline_label, 'April 2020');
-    engine.goToScene('poland_events.budget_2019_sejm_vote_2020');
+    let qualities;
+    startStandard('shared-opposition-budget-fast-lane');
+    qualities = engine.state.qualities;
+    Object.assign(qualities, {
+      year: 2024,
+      month: 12,
+      annual_budget_year: 2024,
+      left_in_government: 0,
+      government_party: 'ko',
+      prime_minister_party: 'ko',
+      finance_minister_party: 'KO',
+      government_has_confidence: 1,
+      caretaker_government: 0,
+      government_support_seats: 240,
+      coalition_seats: 240,
+      ko_seats: 205,
+      psl_seats: 35,
+      left_seats: 26,
+      ministry_ko_in_cabinet: 1,
+      ministry_psl_in_cabinet: 1,
+      resources: 5,
+    });
+    engine.goToScene('poland_budget_2023_2026.annual_budget');
     assert.strictEqual(
       engine.state.sceneId,
-      'poland_opposition_budget.read_draft'
+      'poland_budget_2023_2026.budget_open'
     );
-    choose('poland_opposition_budget.priorities');
-    choose('poland_opposition_budget.priority_wages');
-    choose('poland_opposition_budget.priority_services');
-    choose('poland_opposition_budget.conference_free_vote');
-    assert(qualities.opposition_budget_named_rebels.includes('Adrian Zandberg'));
-    choose('poland_opposition_budget.tactic_shadow');
-    choose('poland_opposition_budget.complete');
-    assert.strictEqual(engine.state.sceneId, 'poland_senate.budget_2019');
-    assert(currentChoices().every(function(choice) {
-      return !choice.id.toLowerCase().includes('reject');
+    const resourcesBefore = qualities.resources;
+    globalThis.polandBudgetModel.selectStrategy(qualities, 'no');
+    choose('poland_budget_2023_2026.submit_budget');
+    assert.strictEqual(qualities.resources, resourcesBefore);
+    assert.strictEqual(qualities.annual_budget_posture, 'Vote no');
+    assert.strictEqual(
+      qualities.annual_budget_concession,
+      'No amendments or programme credit'
+    );
+    assert(!qualities.budget_game.sejm.reasons.some(function(reason) {
+      return /rebel/i.test(reason);
     }));
-    choose('poland_senate.budget_2019_record');
-    choose('poland_senate.budget_2019_return_vote');
-    choose('poland_senate.budget_2019_complete');
-    assert.strictEqual(engine.state.sceneId, 'poland_hub');
-
-    qualities = openOppositionBudget(
-      'opposition-budget-rejection',
-      222,
-      false
-    );
-    qualities.resources = 5;
-    openSixStageProcess(qualities);
-    const beforeShadowCapacity = {
-      household: qualities.household_security,
-      health: qualities.health_capacity,
-      local: qualities.local_network,
-      military: qualities.military_trust,
-      delivery: qualities.government_delivery,
-      kpo: qualities.kpo_delivery,
-    };
-    finishConferenceAndChoose('poland_opposition_budget.tactic_shadow');
-    assert.strictEqual(qualities.annual_budget_yes, 222);
-    assert.strictEqual(
-      qualities.annual_budget_no + qualities.annual_budget_abstain,
-      238,
-      'Named Lewica rebels were lost from the rejection roll call'
-    );
-    assert.strictEqual(
-      qualities.annual_budget_yes + qualities.annual_budget_no +
-        qualities.annual_budget_abstain,
-      460
-    );
-    assert.strictEqual(qualities.annual_budget_passed, 0);
-    assert.deepStrictEqual(
-      {
-        household: qualities.household_security,
-        health: qualities.health_capacity,
-        local: qualities.local_network,
-        military: qualities.military_trust,
-        delivery: qualities.government_delivery,
-        kpo: qualities.kpo_delivery,
-      },
-      beforeShadowCapacity,
-      'A shadow budget changed public capacity before enactment'
-    );
-    assert.strictEqual(qualities.opposition_budget_issue_ownership, 5);
-    assert.strictEqual(qualities.opposition_budget_credibility, 4);
-    assert.strictEqual(qualities.opposition_budget_media_attention, 4);
-    assert.strictEqual(qualities.annual_budget_year, 2024);
-    assert.strictEqual(qualities.annual_budget_left_cabinet_authority, 0);
-    choose('poland_opposition_budget.complete');
-    assert.strictEqual(
-      engine.state.sceneId,
-      'poland_budget_2023_2026.opposition_budget_failed'
-    );
-    assert.strictEqual(qualities.government_has_confidence, 1);
-    assert.strictEqual(qualities.caretaker_government, 0);
-    assert.strictEqual(qualities.snap_election_requested, 0);
-
-    qualities = openOppositionBudget(
-      'opposition-budget-external-support-not-double-counted',
-      222,
-      false,
-      true
-    );
-    assert.strictEqual(
-      qualities.annual_budget_preview_government_yes,
-      222,
-      'The budget preview counted Lewica both inside coalition_seats and separately'
-    );
-    qualities.resources = 5;
-    openSixStageProcess(qualities);
-    finishConferenceAndChoose('poland_opposition_budget.tactic_against');
-    assert.strictEqual(qualities.opposition_budget_government_seats, 222);
-    assert.strictEqual(qualities.annual_budget_yes, 222);
-    assert.strictEqual(
-      qualities.annual_budget_no + qualities.annual_budget_abstain,
-      238
-    );
-    assert.strictEqual(
-      qualities.annual_budget_yes + qualities.annual_budget_no +
-        qualities.annual_budget_abstain,
-      460
-    );
-    assert.strictEqual(qualities.annual_budget_passed, 0);
-
-    qualities = openOppositionBudget(
-      'opposition-budget-toleration',
-      222,
-      false
-    );
-    qualities.resources = 5;
-    openSixStageProcess(qualities);
-    finishConferenceAndChoose('poland_opposition_budget.tactic_abstain');
-    assert.strictEqual(qualities.annual_budget_yes, 222);
-    assert.strictEqual(
-      qualities.annual_budget_no + qualities.annual_budget_abstain,
-      238,
-      'The toleration posture did not account for the full non-government bloc'
-    );
-    assert.strictEqual(
-      qualities.annual_budget_threshold,
-      qualities.annual_budget_no + 1
-    );
-    assert.strictEqual(
-      qualities.annual_budget_passed,
-      1,
-      'An ordinary bill with more yes than no incorrectly required 231 yes'
-    );
-
-    qualities = openOppositionBudget(
-      'opposition-budget-negotiation-and-audit',
-      222,
-      false
-    );
-    qualities.resources = 5;
-    openSixStageProcess(qualities);
-    qualities.negotiation_capital = 100;
-    const beforeConcession = {
-      household: qualities.household_security,
-      health: qualities.health_capacity,
-      local: qualities.local_network,
-      delivery: qualities.government_delivery,
-      kpo: qualities.kpo_delivery,
-    };
-    finishConferenceAndChoose('poland_opposition_budget.tactic_bargain');
-    assert.strictEqual(qualities.opposition_budget_amendments_passed, 2);
-    assert.strictEqual(qualities.annual_budget_passed, 1);
-    assert.strictEqual(qualities.opposition_budget_audit_enacted, 1);
-    const budgetResultCopy = contentText(engine.state.currentContent);
-    assert(budgetResultCopy.includes('Lewica after the vote'));
-    assert(budgetResultCopy.includes('Full Sejm roll call'));
-    assert(budgetResultCopy.includes('Next: Senate review'));
-    assert(!budgetResultCopy.includes('Government acceptance score'));
-    assert.deepStrictEqual(
-      {
-        household: qualities.household_security,
-        health: qualities.health_capacity,
-        local: qualities.local_network,
-        delivery: qualities.government_delivery,
-        kpo: qualities.kpo_delivery,
-      },
-      beforeConcession,
-      'An enacted opposition clause changed capacity before next year\'s audit'
-    );
-    qualities.year = 2025;
-    qualities.annual_budget_year = 2025;
-    engine.goToScene('poland_opposition_budget.start');
-    assert.strictEqual(engine.state.sceneId, 'poland_opposition_budget.audit');
-    assert.strictEqual(qualities.opposition_budget_audit_capacity_gain, 4);
-    assert.strictEqual(qualities.local_network, beforeConcession.local + 2);
-    assert.strictEqual(
-      qualities.government_delivery,
-      beforeConcession.delivery + 3
-    );
-    assert.strictEqual(qualities.opposition_budget_audit_pending, 0);
-
-    qualities = openOppositionBudget(
-      'opposition-budget-one-technical-revision',
-      220,
-      false
-    );
-    qualities.resources = 5;
-    const beforeRevisionHousehold = qualities.household_security;
-    openSixStageProcess(qualities);
-    finishConferenceAndChoose('poland_opposition_budget.tactic_shadow');
-    choose('poland_opposition_budget.complete');
-    assert.strictEqual(qualities.annual_budget_passed, 0);
-    choose('poland_budget_2023_2026.opposition_revision_hearing');
-    choose('poland_budget_2023_2026.opposition_revision_abstain');
-    assert.strictEqual(qualities.budget_rescue_attempted, 1);
-    assert.strictEqual(qualities.annual_budget_yes, 220);
-    assert.strictEqual(qualities.annual_budget_no, 214);
-    assert.strictEqual(
-      qualities.annual_budget_passed,
-      1,
-      'The cabinet technical revision did not change the second roll-call arithmetic'
-    );
-    choose('poland_budget_2023_2026.opposition_roll_continue');
-    assert.strictEqual(
-      engine.state.sceneId,
-      'poland_budget_2023_2026.opposition_budget_passed'
-    );
-    assert.strictEqual(
-      qualities.household_security,
-      beforeRevisionHousehold,
-      'A technical revision granted capacity before its next-year audit'
-    );
-
-    qualities = openOppositionBudget(
-      'caretaker-budget-rejection',
-      222,
-      true
-    );
-    qualities.resources = 5;
-    openSixStageProcess(qualities);
-    finishConferenceAndChoose('poland_opposition_budget.tactic_against');
-    assert.strictEqual(qualities.annual_budget_passed, 0);
-    choose('poland_opposition_budget.complete');
-    assert.strictEqual(qualities.caretaker_government, 1);
-    assert.strictEqual(qualities.snap_election_requested, 0);
 
     if (process.env.DSS_BUDGET_SMOKE === '1') {
       return;
@@ -14739,20 +14282,18 @@ function runSmoke(game) {
 
     startStandard('article-160-is-not-a-budget-vote');
     qualities = engine.state.qualities;
-    qualities.left_in_government = 1;
-    qualities.government_has_confidence = 1;
-    qualities.caretaker_government = 0;
-    qualities.annual_budget_left_cabinet_authority = 1;
-    qualities.annual_budget_passed = 0;
-    qualities.annual_budget_yes = 220;
-    qualities.annual_budget_no = 212;
-    qualities.annual_budget_abstain = 28;
-    qualities.budget_deadline_active = 1;
-    qualities.party_unity = 50;
-    qualities.ko_relation = 40;
-    qualities.psl_relation = 40;
-    qualities.p2050_relation = 40;
-    engine.goToScene('poland_budget_2023_2026.confidence_roll');
+    Object.assign(qualities, {
+      left_in_government: 1,
+      government_has_confidence: 1,
+      caretaker_government: 0,
+      annual_budget_left_cabinet_authority: 1,
+      annual_budget_passed: 0,
+      budget_deadline_active: 1,
+      government_support_seats: 235,
+      coalition_seats: 235,
+      budget_game: {year: 2024},
+    });
+    engine.goToScene('poland_budget_2023_2026.confidence_vote');
     checkNumbers();
     assert.strictEqual(qualities.government_has_confidence, 1);
     assert.strictEqual(
@@ -15225,7 +14766,8 @@ function runSmoke(game) {
     qualities.left_in_government = 1;
     qualities.government_has_confidence = 1;
     qualities.caretaker_government = 0;
-    engine.goToScene('poland_budget_2023_2026.confidence_snap');
+    qualities.budget_game = {year: 2026};
+    engine.goToScene('poland_budget_2023_2026.self_dissolution');
     assert.strictEqual(qualities.snap_self_dissolution_threshold, 307);
     assert.strictEqual(
       qualities.snap_self_dissolution_yes +
@@ -15553,9 +15095,9 @@ function runSmoke(game) {
       'Normalisation erased an independent cabinet support ledger'
     );
     qualities.annual_budget_year = 2024;
-    engine.goToScene('poland_opposition_budget.start');
+    engine.goToScene('poland_budget_2023_2026.annual_budget');
     assert.strictEqual(
-      qualities.opposition_budget_government_seats,
+      globalThis.polandBudgetModel.preview(qualities).vote.governmentYes,
       222,
       'The opposition budget treated an independent cabinet as seatless'
     );
@@ -16680,8 +16222,9 @@ function runSmoke(game) {
     });
     engine.goToScene('poland_monthly_briefing');
     choose('poland_monthly_briefing.briefing_return');
-    assert(
-      engine.state.sceneId.startsWith('poland_opposition_budget.'),
+    assert.strictEqual(
+      engine.state.sceneId,
+      'poland_budget_2023_2026.budget_open',
       'The February briefing still bypassed the mandatory budget vote'
     );
 
@@ -17847,24 +17390,19 @@ function runSmoke(game) {
     engine.goToScene('poland_events_2021_2023.budget_2021');
     assert.strictEqual(
       engine.state.sceneId,
-      'poland_events_2021_2023.budget_2021_cabinet'
+      'poland_budget_2023_2026.budget_open'
     );
-    choose('poland_events_2021_2023.budget21_cabinet_social');
-    assert.strictEqual(qualities.budget_2021_ratified, 1);
+    assert.strictEqual(qualities.budget_game.role, 'government');
+    assert(globalThis.polandBudgetModel.submit(qualities).ok);
     assert.strictEqual(qualities.annual_budget_left_cabinet_authority, 1);
-    assert.strictEqual(
-      qualities.last_policy_authority,
-      'Third Morawiecki Cabinet'
-    );
 
     engine.goToScene('poland_events_2021_2023.december_2022');
     assert.strictEqual(
       engine.state.sceneId,
-      'poland_events_2021_2023.budget_2022_cabinet'
+      'poland_budget_2023_2026.budget_open'
     );
-    choose('poland_events_2021_2023.budget22_cabinet_shield');
-    assert.strictEqual(qualities.budget_2022_ratified, 1);
-    assert.strictEqual(qualities.budget_2022_concession_pending, 1);
+    assert.strictEqual(qualities.budget_game.year, 2022);
+    assert.strictEqual(qualities.budget_game.role, 'government');
 
     engine.goToScene('poland_coalition_council');
     choose('poland_coalition_council.leave_pis_cabinet');
@@ -18331,18 +17869,7 @@ function runSmoke(game) {
     );
     choose('poland_budget_2023_2026.budget_2023');
     assert.strictEqual(qualities.poland_event_phase, 1);
-    choose('poland_opposition_budget.start');
-    playOppositionBudgetStages(
-      'poland_opposition_budget.priority_transition',
-      'poland_opposition_budget.priority_housing',
-      'poland_opposition_budget.tactic_abstain'
-    );
-    if (
-      engine.state.sceneId ===
-      'poland_budget_2023_2026.opposition_budget_failed'
-    ) {
-      choose('poland_budget_2023_2026.opposition_hold_deadline');
-    }
+    playOppositionBudgetStages();
     continueDatedEventAfterword('poland_hub');
     assert.strictEqual(engine.state.sceneId, 'poland_hub');
     assert.strictEqual(qualities.poland_event_phase, 0);
@@ -18508,22 +18035,7 @@ function runSmoke(game) {
       ['poland_budget_2023_2026.budget_2026']
     );
     choose('poland_budget_2023_2026.budget_2026');
-    choose('poland_opposition_budget.start');
-    playOppositionBudgetStages(
-      'poland_opposition_budget.priority_inspection',
-      'poland_opposition_budget.priority_partnerships',
-      'poland_opposition_budget.tactic_abstain'
-    );
-    if (
-      engine.state.sceneId ===
-      'poland_budget_2023_2026.opposition_budget_failed'
-    ) {
-      choose('poland_budget_2023_2026.opposition_hold_deadline');
-    }
-    if (engine.state.sceneId === 'poland_senate.budget_2021_2022') {
-      choose('poland_senate.budget_later_record');
-      choose('poland_senate.budget_later_complete');
-    }
+    playOppositionBudgetStages();
     continueDatedEventAfterword('poland_hub');
     assert.strictEqual(qualities.poland_event_phase, 0);
     assert.strictEqual(qualities.timeline_complete, 0);
@@ -20553,17 +20065,14 @@ function runSmoke(game) {
       }
       if (
         routedSceneId === 'poland_monthly_briefing' &&
-        expectedSceneId === 'poland_opposition_budget.read_draft'
+        expectedSceneId === 'poland_budget_2023_2026.budget_open'
       ) {
         eventsSeen.push(expectedSceneId);
         resolveEvent(routedSceneId);
         continue;
       }
       const sharedBudgetRoute =
-        [
-          'poland_opposition_budget.audit',
-          'poland_opposition_budget.read_draft',
-        ].includes(routedSceneId) &&
+        routedSceneId === 'poland_budget_2023_2026.budget_open' &&
         [
           'poland_events.budget_2019',
           'poland_events.budget_2020',

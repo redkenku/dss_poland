@@ -393,95 +393,75 @@ the government can limp on from its submitted draft while negotiations
 continue.
 ([Constitution, Articles 157–162](https://trybunal.gov.pl/en/about-the-tribunal/legal-basis/the-constitution-of-the-republic-of-poland))
 
-### Annual budget calendar
+### Shared dossier board
 
-| Phase | Approximate window | Conflict |
-| --- | --- | --- |
-| **1. Promises become bids** | January–May | Ministries and caucuses translate manifestos into costed demands. Underfunded delivery creates grievance before formal talks. |
-| **2. Fiscal envelope** | June–July | Finance ministry, EU rules, defence commitments, debt service and macro forecast set the ceiling. Parties contest whether the ceiling is real or political. |
-| **3. Internal-left settlement** | July–August | SLD barons, progressives, Wiosna, labour wing and Razem decide priorities, minimum wins and acceptable sacrifices. Failure here means the Left reaches coalition talks divided. |
-| **4. Coalition summit** | August–September | KO, PSL, Poland 2050/successors and Left trade tax, spending, ministries, local funds and non-budget bills. |
-| **5. Government draft** | By late September ordinarily | Council of Ministers must adopt one text. A minister can resign; a party can attach a protocol; a caucus can announce it was betrayed. |
-| **6. Sejm committees** | October–November | MPs introduce amendments, opposition courts rebels and sectoral lobbies mobilise. The Marshal and committee chairs control time and admissibility. |
-| **7. Final Sejm vote** | November–December | Support, abstention or revolt determines whether the coalition still exists in practice. |
-| **8. Senate and president** | December–January | Senate amendments return; president signs quickly or refers constitutional questions. |
-| **9. Execution and accounts** | Following year | Supplementary budget, frozen appropriations, procurement failure and eventual discharge show whether the bargain was real. |
+All 2019–2026 budget routes use one deterministic `budget_game` dossier. One
+budget-room point is 0.25% of GDP. The player edits nine lines—health,
+education/pay, income security, housing/local government, labour/equality,
+rural/transport, defence/Ukraine, energy/KPO and institutions/state capacity—
+at Cut, Maintain, Fund or Flagship. A cut releases one point; Fund costs one
+point and one later delivery capacity; Flagship costs two of each. Legal floors
+cannot be cut. Every softer cut names the promise and constituency put at risk.
 
-The calendar may shift in an election or emergency year, but every playable
-year needs a recognisable closing budget chain.
+The starting text is authored by up to four distinct live cabinet actors:
+finance minister's party, Lewica, prime minister's party and the largest
+remaining coalition partners. An inherited carry-over is added when only one
+author exists. Authorship records agenda ownership but never locks the board.
 
-### Two coalitions must pass the budget
+Exactly one funding card is active: no new revenue, progressive revenue, broad
+tax base, borrowing or capital-only KPO matching. Allocation and revenue
+changes produce the displayed deficit and debt directly; no macro effect is
+applied until enactment.
 
-The Left negotiates twice:
+### Deterministic red lines and vote
 
-1. **internal coalition:** formal organisations and tendencies agree what the
-   Left will demand and whether its negotiator has authority to compromise;
-2. **government coalition:** the Left bargains that mandate with KO, PSL and
-   other partners.
+Every cabinet party and active Lewica current has one visible red line. Meeting
+it guarantees that delegation's displayed support. Breaking it moves the named
+block to abstention. A stamped outside deal moves a real whole club, and the
+board always publishes exact yes, no, abstention, quorum and passage status.
+There is no random rebellion or hidden negotiation score. A supported fixture
+always has either an internal majority or a labelled cross-party settlement,
+but conflicting red lines prevent a universal no-sacrifice draft.
 
-This produces hard choices. A negotiator can win money by quietly dropping an
-abortion timetable, preserve a social bill by accepting less housing money, or
-claim a large ministry allocation that the finance minister later freezes.
-Every deal has an internal ratification stage.
+Annual pressure cards are:
 
-### Budget ledgers
-
-The annual budget should track **allocations and political ownership**, not only
-a pool of abstract points:
-
-- health and hospital debt;
-- housing and local government;
-- education, teachers and religion/health curriculum implementation;
-- family benefits, pensions and disability support;
-- labour inspectorate and active labour policy;
-- agriculture and rural transport;
-- defence, refugees and Ukraine;
-- energy relief, coal transition and climate adaptation;
-- justice, public media and institutional reform;
-- EU co-financing and KPO milestones;
-- taxes by source, deficit, debt and inflation exposure.
-
-Each line has:
-
-- amount/ambition;
-- responsible minister and party;
-- caucus claiming credit;
-- minimum implementation capacity;
-- groups that gain and pay;
-- presidential/court exposure;
-- promise made in the previous budget.
-
-### Budget crisis outcomes
-
-| Outcome | Meaning |
+| Draft year | Principal pressures |
 | --- | --- |
-| **Disciplined passage** | All party and caucus red lines were pre-negotiated. Stable but expensive; suppressed dissent may return at candidate selection. |
-| **Passage with rebels** | Budget survives through abstention, opposition votes or a narrow margin. Rebel caucuses gain identity; leader authority falls. |
-| **Issue exchange** | Another party supplies votes for a named policy. The bill passes, but coalition trust and opposition identity change. |
-| **Protocol budget** | A coalition partner votes yes only after publishing deadlines and extra guarantees. Missing them launches a timed exit chain. |
-| **Ministerial resignation** | Party stays, minister leaves, portfolio is redistributed. This creates a leadership and credit struggle. |
-| **Confidence and supply** | One party exits cabinet but supports the budget. Government survives as a minority and renegotiates every major bill. |
-| **Budget defeated, talks continue** | Political humiliation without automatic legal dissolution. Prime minister seeks a new vote or confidence test. |
-| **Constructive replacement** | At least 231 deputies agree on a named new prime minister. Arithmetic and personnel must both be real. |
-| **Four-month deadline** | President gains the option—not the obligation—to shorten the term. Presidential strategy becomes decisive. |
-| **Early election** | Parties must choose lists under threshold pressure; unresolved caucuses become splinters. |
+| 2019 | public pay, housing, local finance |
+| 2020 | health capacity, care, income protection |
+| 2021 | Polish Deal repair, hospitals, transparent local finance |
+| 2022 | defence/Ukraine, energy relief, inflation protection |
+| 2023 | teacher pay, local finance, institutional transition |
+| 2024 | flood reconstruction, KPO, rural/social promises |
+| 2025 | defence, schools, labour/housing delivery |
+| 2026 | Labour Inspection, equality, municipal services/KPO |
 
-### Opposition years
+Government edits a coalition proposal and may stamp disclosed allocation/deal
+terms. A defeat permits one revision changing at least two decisions, followed
+only by separate confidence, resignation or lawful two-thirds dissolution
+routes. The compact Senate screen accepts its named amendment, spends one
+party resource on compromise, or rejects it only when 231 Sejm votes are
+already displayed.
 
-Before December 2023, the budget still closes the year:
+Opposition chooses one of four routes: a free immediate no; a bargain of up to
+two affordable amendments using visible leverage; a one-resource shadow
+budget; or a one-resource wedge against a genuinely unmet coalition demand.
+Only a signed pact or broken red line changes Lewica's declared posture. A
+shadow budget earns programme ownership but never changes state spending.
 
-- vote against as a united democratic opposition;
-- abstain after winning a Left amendment;
-- support pandemic/war/emergency spending;
-- strike an issue deal with PiS;
-- present a funded left alternative;
-- let Razem, SLD and Wiosna vote differently;
-- use the vote to attempt a United Right rupture.
+### January execution
 
-The cost is identity. Supporting a useful allocation can rescue the government;
-blanket opposition can sacrifice beneficiaries; an uncosted shadow budget can
-please activists and destroy future credibility.
+Enactment applies revenue, deficit and debt once. Implementation opens in
+January, or in the first month after a historically delayed enactment.
+Government capacity is 2, plus one at delivery 55, plus one when state
+capacity is funded, minus one at fiscal stress 70, clamped to 1–4. Maintained
+lines need no assignment; funded and flagship commitments cost one and two.
 
+A governing player assigns, phases or freezes commitments. In opposition the
+cabinet assigns capacity deterministically from its published party priorities
+and legal commitments; Lewica may audit one line free, a second for one
+resource, or none. Service, credibility, oversight and betrayal effects apply
+only when this ledger closes, with enactment and execution idempotence guards.
 ## This is not Weimar
 
 The inherited game supplies excellent event-chain structure, but several

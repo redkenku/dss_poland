@@ -1985,52 +1985,57 @@ Q.status_annual_budget_threshold = statusNumber(
     Q.annual_budget_threshold,
     0
 );
-Q.status_opposition_budget_priority_1 = statusText(
-    Q.opposition_budget_priority_1,
-    "Not selected"
-);
-Q.status_opposition_budget_priority_2 = statusText(
-    Q.opposition_budget_priority_2,
-    "Not selected"
-);
-Q.status_opposition_budget_tactic = statusText(
-    Q.opposition_budget_tactic,
-    "No tactic selected"
-);
-Q.status_opposition_budget_named_rebels = statusText(
-    Q.opposition_budget_named_rebels,
-    "None"
-);
-Q.status_opposition_budget_amendment_1 = statusText(
-    Q.opposition_budget_amendment_1,
-    "No amendment filed"
-);
-Q.status_opposition_budget_amendment_2 = statusText(
-    Q.opposition_budget_amendment_2,
-    "No amendment filed"
-);
-Q.status_opposition_budget_issue_ownership = statusNumber(
-    Q.opposition_budget_issue_ownership,
-    0
-);
-Q.status_opposition_budget_credibility = statusNumber(
-    Q.opposition_budget_credibility,
-    0
-);
-Q.status_opposition_budget_media_attention = statusNumber(
-    Q.opposition_budget_media_attention,
-    0
-);
-Q.status_opposition_budget_audit_pending =
-    Q.opposition_budget_audit_pending ? 1 : 0;
-Q.status_opposition_budget_audit_result = statusText(
-    Q.opposition_budget_audit_result,
-    "No audit due"
-);
-Q.status_budget_deadline_active = Q.budget_deadline_active ? 1 : 0;
-Q.status_budget_deadline_label = statusText(
-    Q.budget_deadline_label,
-    "No constitutional budget deadline is running"
+const statusBudgetHistory = Array.isArray(Q.budget_history)
+    ? Q.budget_history : [];
+const statusBudgetRecord = statusBudgetHistory.length
+    ? statusBudgetHistory[statusBudgetHistory.length - 1]
+    : Q.budget_game;
+const statusBudgetLineNames = {
+    health: "Health and care",
+    education: "Education and public-sector pay",
+    income: "Pensions, family benefits and income security",
+    housing: "Housing and local government",
+    labour: "Labour enforcement and equality",
+    rural: "Rural development and transport",
+    defence: "Defence, border security and Ukraine",
+    energy: "Energy, climate, infrastructure and KPO",
+    institutions: "Justice, public media and state capacity"
+};
+const statusBudgetFinanceNames = {
+    none: "No new revenue",
+    progressive: "Progressive revenue",
+    broad: "Broad tax base",
+    borrowing: "Borrowing",
+    kpo: "KPO matching"
+};
+const statusBudgetTiers = statusBudgetRecord && statusBudgetRecord.tiers
+    ? statusBudgetRecord.tiers : {};
+Q.status_budget_priorities = Object.keys(statusBudgetLineNames).filter(
+    function(id) {
+        return statusBudgetTiers[id] == "fund" ||
+            statusBudgetTiers[id] == "flagship";
+    }
+).map(function(id) {
+    return statusBudgetLineNames[id] +
+        (statusBudgetTiers[id] == "flagship" ? " (flagship)" : "");
+}).join(" · ") || "No funded priorities";
+Q.status_budget_cuts = Object.keys(statusBudgetLineNames).filter(function(id) {
+    return statusBudgetTiers[id] == "cut";
+}).map(function(id) {
+    return statusBudgetLineNames[id];
+}).join(" · ") || "No discretionary cuts";
+Q.status_budget_financing = statusBudgetFinanceNames[
+    statusBudgetRecord && statusBudgetRecord.financingId
+] || "No financing selected";
+Q.status_budget_ownership = statusText(
+    statusBudgetRecord && (statusBudgetRecord.author ||
+        statusBudgetRecord.presetId),
+    "No author recorded"
+).replace(/_/g, " ");
+Q.status_budget_execution = statusText(
+    statusBudgetRecord && (statusBudgetRecord.executionStatus ||
+        (statusBudgetRecord.execution ? "Implementation open" : "")),
+    Q.annual_budget_execution_status || "Not enacted"
 );
 Q.status_senate_total = statusNumber(Q.senate_total, 100);
 Q.status_senate_pis = statusNumber(Q.senate_pis_seats, 48);
@@ -2996,12 +3001,7 @@ call: status
 [? if status_abortion_visible: <div class="ledger-row"><span>Abortion line</span><b>[+ status_abortion_strategy +]</b></div>?]
 [? if status_covid_visible or status_postal_visible or status_abortion_visible: </div>?]
 
-[? if status_budget_2019_done or status_budget_2020_done: <div class="ledger-section"><div class="ledger-title">Completed party confidence tests</div>?]
-[? if status_budget_2019_done: <div class="ledger-row"><span>2019 budget line</span><b>[+ status_budget_2019_backing +]% backing</b></div><div class="ledger-subrow">[? if status_budget_2019_ratified: <span class="meter-good">ratified</span>?][? if not status_budget_2019_ratified: <span class="meter-warning">not ratified</span>?][? if status_budget_2019_vetoes > 0:  · [+ status_budget_2019_vetoes +] caucus vetoes?]</div>?]
-[? if status_budget_2020_done: <div class="ledger-row"><span>2020 budget line</span><b>[+ status_budget_2020_backing +]% backing</b></div><div class="ledger-subrow">[? if status_budget_2020_ratified: <span class="meter-good">ratified</span>?][? if not status_budget_2020_ratified: <span class="meter-warning">not ratified</span>?][? if status_budget_2020_vetoes > 0:  · [+ status_budget_2020_vetoes +] caucus vetoes?]</div>?]
-[? if status_budget_2019_done or status_budget_2020_done: <div class="ledger-note">In opposition this measures a common voting line, not control of state spending.</div></div>?]
-
-[? if status_annual_budget_year > 0: <div class="ledger-section"><div class="ledger-title">Latest state budget</div><div class="ledger-row"><span>Vote</span><b>December [+ status_annual_budget_year +] · [+ status_annual_budget_result +]</b></div><div class="ledger-row"><span>[+ status_left_party_name +] posture</span><b>[+ status_annual_budget_posture +]</b></div>[? if status_annual_budget_concession != "No concession negotiated": <div class="ledger-row"><span>Negotiated clause</span><b>[+ status_annual_budget_concession +]</b></div>?][? if not annual_budget_left_cabinet_authority: <div class="ledger-row"><span>Priorities</span><b>[+ status_opposition_budget_priority_1 +] · [+ status_opposition_budget_priority_2 +]</b></div><div class="ledger-row"><span>Tactic</span><b>[+ status_opposition_budget_tactic +]</b></div>?][? if status_budget_deadline_active: <div class="ledger-subrow meter-warning">Constitutional deadline: [+ status_budget_deadline_label +].</div>?][? if status_opposition_budget_audit_pending: <div class="ledger-subrow">Performance audit due next year.</div>?][? if not status_opposition_budget_audit_pending and status_opposition_budget_audit_result != "No audit yet": <div class="ledger-subrow">Audit: [+ status_opposition_budget_audit_result +].</div>?]</div>?]
+[? if status_annual_budget_year > 0: <div class="ledger-section"><div class="ledger-title">Latest state budget dossier</div><div class="ledger-row"><span>Fiscal year and owner</span><b>[+ status_annual_budget_fiscal_year +] · [+ status_budget_ownership +]</b></div><div class="ledger-row"><span>Top priorities</span><b>[+ status_budget_priorities +]</b></div><div class="ledger-row"><span>Cuts</span><b>[+ status_budget_cuts +]</b></div><div class="ledger-row"><span>Financing</span><b>[+ status_budget_financing +]</b></div><div class="ledger-row"><span>Exact vote</span><b>[+ status_annual_budget_yes +] yes · [+ status_annual_budget_no +] no · [+ status_annual_budget_abstain +] abstain</b></div><div class="ledger-row"><span>Lewica posture</span><b>[+ status_annual_budget_posture +]</b></div><div class="ledger-row"><span>Implementation</span><b>[+ status_budget_execution +]</b></div><div class="ledger-subrow">[+ status_annual_budget_result +]</div></div>?]
 
 [? if status_confidence_mode != "None" or status_confidence_present > 0: <div class="ledger-section"><div class="ledger-title">Cabinet confidence</div><div class="ledger-row"><span>Procedure</span><b>[+ status_confidence_mode +]</b></div><div class="ledger-row"><span>Candidate</span><b>[+ status_confidence_candidate +]</b></div><div class="ledger-row"><span>Roll call</span><b>[+ status_confidence_yes +] yes · [+ status_confidence_no +] no · [+ status_confidence_abstain +] abstain</b></div><div class="ledger-row"><span>Threshold</span><b>[+ status_confidence_threshold +] of [+ status_confidence_present +]</b></div></div>?]
 
@@ -3020,29 +3020,18 @@ call: status
 <div class="ledger-row"><span>Pandemic pressure</span><b>[+ status_pandemic_pressure +]/100</b></div>
 <div class="ledger-row"><span>Broken fiscal promises</span><b>[+ status_budget_breaches +]</b></div></div>
 
-<div class="ledger-section"><div class="ledger-title">Annual confidence tests</div>
-<div class="ledger-row"><span>2019 backing</span><b>[? if status_budget_2019_done: [+ status_budget_2019_backing +]%?][? if not status_budget_2019_done: —?]</b></div>
-<div class="ledger-subrow">[? if not status_budget_2019_done: pending?][? if status_budget_2019_done and status_budget_2019_ratified: <span class="meter-good">ratified</span>?][? if status_budget_2019_done and not status_budget_2019_ratified: <span class="meter-warning">not ratified</span>?][? if status_budget_2019_done: · [+ status_budget_2019_vetoes +] caucus vetoes?]</div>
-<div class="ledger-row"><span>2020 backing</span><b>[? if status_budget_2020_done: [+ status_budget_2020_backing +]%?][? if not status_budget_2020_done: —?]</b></div>
-<div class="ledger-subrow">[? if not status_budget_2020_done: pending?][? if status_budget_2020_done and status_budget_2020_ratified: <span class="meter-good">ratified</span>?][? if status_budget_2020_done and not status_budget_2020_ratified: <span class="meter-warning">not ratified</span>?][? if status_budget_2020_done: · [+ status_budget_2020_vetoes +] caucus vetoes?]</div>
-<div class="ledger-note">In opposition, these values measure a common Left voting line—not control of state spending. In government, an internal mandate must then survive coalition and chamber votes.</div></div>
-
 [? if status_annual_budget_year > 0: <div class="ledger-section"><div class="ledger-title">Latest state budget</div>
 <div class="ledger-row"><span>Fiscal year</span><b>[+ status_annual_budget_fiscal_year +]</b></div>
-<div class="ledger-row"><span>Sejm vote</span><b>December [+ status_annual_budget_year +]</b></div>
+<div class="ledger-row"><span>Proposal owner</span><b>[+ status_budget_ownership +]</b></div>
+<div class="ledger-row"><span>Top priorities</span><b>[+ status_budget_priorities +]</b></div>
+<div class="ledger-row"><span>Cuts</span><b>[+ status_budget_cuts +]</b></div>
+<div class="ledger-row"><span>Financing</span><b>[+ status_budget_financing +]</b></div>
 <div class="ledger-row"><span>Lewica posture</span><b>[+ status_annual_budget_posture +]</b></div>
-<div class="ledger-row"><span>Negotiated clause</span><b>[+ status_annual_budget_concession +]</b></div>
-[? if not annual_budget_left_cabinet_authority: <div class="ledger-row"><span>Chosen priorities</span><b>[+ status_opposition_budget_priority_1 +] · [+ status_opposition_budget_priority_2 +]</b></div>
-<div class="ledger-row"><span>Parliamentary tactic</span><b>[+ status_opposition_budget_tactic +]</b></div>
-<div class="ledger-row"><span>Named rebels</span><b>[+ status_opposition_budget_named_rebels +]</b></div>
-<div class="ledger-row"><span>Amendment one</span><b>[+ status_opposition_budget_amendment_1 +]</b></div>
-<div class="ledger-row"><span>Amendment two</span><b>[+ status_opposition_budget_amendment_2 +]</b></div>?]
 <div class="ledger-row"><span>Roll call</span><b>[+ status_annual_budget_yes +] yes · [+ status_annual_budget_no +] no · [+ status_annual_budget_abstain +] abstain</b></div>
 <div class="ledger-row"><span>Required</span><b>[+ status_annual_budget_threshold +] yes</b></div>
 <div class="ledger-row"><span>Result</span><b>[+ status_annual_budget_result +]</b></div>
+<div class="ledger-row"><span>Implementation</span><b>[+ status_budget_execution +]</b></div>
 <div class="ledger-subrow">[? if status_budget_deadline_active: Constitutional deadline: [+ status_budget_deadline_label +].?][? if not status_budget_deadline_active: No active budget deadline.?]</div>
-<div class="ledger-subrow">Opposition record: [+ status_opposition_budget_issue_ownership +] issue ownership · [+ status_opposition_budget_credibility +] credibility · [+ status_opposition_budget_media_attention +] media attention.</div>
-<div class="ledger-subrow">Audit: [? if status_opposition_budget_audit_pending: due next year?][? if not status_opposition_budget_audit_pending: [+ status_opposition_budget_audit_result +]?].</div>
-<div class="ledger-note">Opposition resources fund drafting, whips and monitoring. Only the cabinet controls expenditure and implements an adopted budget.</div></div>?]
+<div class="ledger-note">The state budget records one authored proposal, one funding source, an exact vote and a separate implementation result.</div></div>?]
 
 [? if status_confidence_mode != "None" or status_confidence_present > 0: <div class="ledger-section"><div class="ledger-title">Cabinet confidence</div><div class="ledger-row"><span>Procedure</span><b>[+ status_confidence_mode +]</b></div><div class="ledger-row"><span>Candidate</span><b>[+ status_confidence_candidate +]</b></div><div class="ledger-row"><span>Roll call</span><b>[+ status_confidence_yes +] yes · [+ status_confidence_no +] no · [+ status_confidence_abstain +] abstain</b></div><div class="ledger-row"><span>Threshold</span><b>[+ status_confidence_threshold +] of [+ status_confidence_present +] present</b></div><div class="ledger-row"><span>Cabinet-party seats</span><b>[+ status_coalition_seats +]/460</b></div><div class="ledger-subrow">Outside confidence-and-supply votes are recorded only in the roll call.</div></div>?]

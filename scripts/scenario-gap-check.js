@@ -464,6 +464,10 @@ function borderFixture(seed, documented) {
   const run = prawicaFixture('scenario-prawica-jow-sweep', {
     electoral_reform_stage: 'enacted',
     sejm_electoral_system: 'fptp_460',
+    sejm_list_outcome: 'democratic_8',
+    sejm_list_host: 'democratic_list',
+    sejm_list_members: 'KO, Poland 2050, PSL and the coordinating Left',
+    sejm_list_result: 'Broad democratic coalition accepted',
     pis_collapsed: 0,
     pis_split: 0,
     pis_collapse_pressure: 0,
@@ -506,6 +510,37 @@ function borderFixture(seed, documented) {
   normalize(run);
   assert.strictEqual(record(run.Q, 'kkp').list_committee, 'korona',
     'Normalization restored expelled Korona / KKP to the JOW pact');
+  assert(!run.Q.sejm_list_members.includes('PSL'),
+    'PSL remained on the broad opposition pact after joining Prawica: ' +
+      JSON.stringify({
+        formed: run.Q.prawica_formed,
+        sources: run.Q.prawica_member_source_ids,
+        outcome: run.Q.sejm_list_outcome,
+        members: run.Q.sejm_list_members,
+      }));
+  assert.match(run.Q.sejm_list_result, /continues without PSL/);
+}
+
+for (const displaced of [
+  {outcome: 'third_host_5', host: 'psl'},
+  {outcome: 'pis_5', host: 'pis'},
+  {outcome: 'konf_5', host: 'konf'},
+]) {
+  const run = prawicaFixture('scenario-prawica-displaces-' + displaced.host, {
+    electoral_reform_stage: 'enacted',
+    sejm_electoral_system: 'fptp_460',
+    sejm_list_outcome: displaced.outcome,
+    sejm_list_host: displaced.host,
+    sejm_list_has_partners: 1,
+  });
+  run.engine.goToScene('poland_scenario_party_gaps.right_reunification_2027');
+  assert.strictEqual(run.Q.prawica_formed, 1);
+  normalize(run);
+  assert.strictEqual(run.Q.sejm_list_outcome, 'left_5',
+    'Lewica stayed on the ' + displaced.host +
+      ' host list after that host joined Prawica');
+  assert.strictEqual(run.Q.sejm_list_host, 'left');
+  assert.strictEqual(run.Q.sejm_list_has_partners, 0);
 }
 
 {

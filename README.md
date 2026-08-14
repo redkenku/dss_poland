@@ -194,18 +194,15 @@ mechanics without replaying the earlier campaign.
   their own consequences rather than ending the storyline; opposition routes
   bargain, scrutinise, litigate and organise without exercising executive
   authority.
-- The 2019 opposition Senate majority and budget-amendment procedure remain
-  playable. In 2023 the three Sejm lists separately decide whether to share a
-  Senate Pact, after which all 100 single-member districts are counted by
-  plurality. The Senate may amend a budget but cannot reject it or participate
-  in a confidence vote. A governing Left must incorporate, negotiate or find
-  an absolute Sejm majority against Senate budget corrections; a failed
-  override can deadlock the coalition. Opposition budgets run through a
-  six-stage process:
-  read the government draft, choose two year-specific Left priorities, manage
-  a visible faction conference, choose a parliamentary tactic, resolve the
-  actual roll call and audit enacted delivery the following year. Shadow
-  budgets build political ownership rather than public capacity.
+- Every 2019–2026 state budget now uses one responsive dossier board: nine
+  editable allocation lines, one financing card, visible party/current red
+  lines and an exact deterministic Sejm tally. Government edits a live
+  cabinet-authored proposal; opposition may vote no immediately, bargain for
+  up to two affordable amendments, publish a shadow alternative or expose one
+  real coalition wedge. The compact Senate step preserves its amendment-only
+  power and 231-vote Sejm override. Enacted texts return in January for a
+  separate capacity-assignment or opposition-audit minigame, so macro effects
+  and delivery effects cannot fire twice or be confused with one another.
 - The Polish ledger now covers polls and seats, public opinion, rival AI,
   coalition arithmetic, Left factions, ministries, media, the Palace, Senate,
   judiciary and KPO. The active route does not enter the inherited German

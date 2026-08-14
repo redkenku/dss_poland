@@ -11,6 +11,7 @@
 
   var main = function(dendryUI) {
     ui = dendryUI;
+    ui.save_prefix = 'Polish_Red_Autumn_budget_v2_save';
     game = ui.game;
     var achievementEngine = ui.dendryEngine;
     var engineAchieve = achievementEngine.achieve.bind(achievementEngine);
@@ -503,6 +504,8 @@
     document.getElementById('radio-volume-value').textContent =
       Math.round(radioVolume * 100) + '%';
     radio.hidden = !audio && !(startScene && startScene.audio);
+    // Drives the on-air dot next to the "Radio" label.
+    radio.classList.toggle('playing', Boolean(audio) && !audio.paused);
     if (!audio) {
       document.getElementById('radio-toggle').textContent = 'Play';
       document.getElementById('radio-toggle').disabled = !enabledTracks.length;
@@ -6649,12 +6652,316 @@ window.disableGrayMode = function() {
     }
   };
 
+  var budgetEscape = function(value) {
+    return String(value === undefined || value === null ? '' : value)
+      .replace(/&/g, '&amp;').replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+  };
+
+  var budgetChoose = function(sceneId) {
+    var engine = window.dendryUI && window.dendryUI.dendryEngine;
+    var choices = engine && engine.getCurrentChoices();
+    var index = choices ? choices.findIndex(function(choice) {
+      return choice.id === sceneId && choice.canChoose;
+    }) : -1;
+    if (index >= 0) engine.choose(index);
+  };
+
+  var budgetButton = function(label, action, value, active, disabled) {
+    return '<button type="button" class="budget-button' +
+      (active ? ' is-active' : '') + '" data-budget-action="' +
+      budgetEscape(action) + '" data-budget-value="' +
+      budgetEscape(value) + '" aria-pressed="' +
+      (active ? 'true' : 'false') + '"' +
+      (disabled ? ' disabled' : '') + '>' + budgetEscape(label) + '</button>';
+  };
+
+  var renderBudgetBoard = function(host) {
+    var engine = window.dendryUI && window.dendryUI.dendryEngine;
+    var Q = engine && engine.state && engine.state.qualities;
+    var model = window.polandBudgetModel;
+    var budget = Q && Q.budget_game;
+    if (!model || !budget) return;
+    var mode = host.getAttribute('data-budget-board');
+    var p = model.preview(Q);
+    var tierOrder = ['cut', 'maintain', 'fund', 'flagship'];
+    var html = '<section class="budget-board" aria-label="State budget dossier">';
+
+    if (mode === 'senate') {
+      var senate = model.senatePreview(Q);
+      html += '<div class="budget-top"><div><small>Senate amendment</small><b>' +
+        budgetEscape(senate.label) + '</b></div><div><small>Sejm override</small><b>' +
+        senate.overrideVotes + ' / ' + senate.overrideRequired + '</b></div></div>' +
+        '<p class="budget-note">The Senate may amend, not reject, a budget. ' +
+        (senate.target ? budgetEscape(model.partyData[senate.amendmentParty].label) +
+          ' proposes a named line change.' : 'No upper-chamber majority adopted a change.') +
+        '</p><div class="budget-actions">' +
+        budgetButton('Accept amendment', 'scene',
+          'poland_budget_2023_2026.senate_accept', false, false) +
+        budgetButton('Narrow compromise · 1 resource', 'scene',
+          'poland_budget_2023_2026.senate_compromise', false,
+          Number(Q.resources || 0) < 1) +
+        budgetButton('Reject with 231', 'scene',
+          'poland_budget_2023_2026.senate_reject', false,
+          !senate.canOverride) + '</div></section>';
+      host.innerHTML = html;
+      return;
+    }
+
+    if (mode === 'execution') {
+      var execution = budget.execution;
+      var assigned = Object.keys(execution.assignments).reduce(function(sum, id) {
+        return sum + Number(execution.assignments[id] || 0);
+      }, 0);
+      html += '<div class="budget-top"><div><small>Delivery capacity</small><b>' +
+        assigned + ' / ' + execution.capacity + '</b></div><div><small>Role</small><b>' +
+        (budget.role === 'government' ? 'Assign delivery' : 'Audit cabinet') +
+        '</b></div></div><div class="budget-lines">';
+      model.lines.forEach(function(line) {
+        var need = Math.max(0, model.tiers[budget.tiers[line.id]] || 0);
+        if (!need) return;
+        var amount = Number(execution.assignments[line.id] || 0);
+        html += '<article class="budget-line"><div class="budget-line-copy"><b>' +
+          budgetEscape(line.label) + '</b><small>' + budgetEscape(line.effect) +
+          ' · commitment ' + need + '</small></div><div class="budget-tier-group">';
+        if (budget.role === 'government') {
+          html += budgetButton('Freeze', 'delivery', line.id + ':0', amount === 0, false);
+          if (need > 1) html += budgetButton('Phase', 'delivery', line.id + ':1',
+            amount === 1, assigned - amount + 1 > execution.capacity);
+          html += budgetButton('Deliver', 'delivery', line.id + ':' + need,
+            amount === need, assigned - amount + need > execution.capacity);
+        } else {
+          html += '<span class="budget-result ' + (amount >= need ? 'is-pass' : 'is-fail') +
+            '">' + (amount >= need ? 'Delivered' : (amount ? 'Phased' : 'Frozen')) + '</span>' +
+            budgetButton(execution.audits.includes(line.id) ? 'Audited' : 'Audit',
+              'audit', line.id, execution.audits.includes(line.id),
+              execution.audits.length >= 2 ||
+                (execution.audits.length === 1 && Number(Q.resources || 0) < 1));
+        }
+        html += '</div></article>';
+      });
+      html += '</div><div class="budget-actions">' +
+        budgetButton('Close implementation ledger', 'scene',
+          'poland_budget_2023_2026.finish_execution', false, false) +
+        '</div></section>';
+      host.innerHTML = html;
+      return;
+    }
+
+    var source = model.financing.find(function(item) {
+      return item.id === budget.financingId;
+    });
+    html += '<div class="budget-top" aria-live="polite" aria-atomic="true">' +
+      '<div><small>Author</small><b>' + budgetEscape(budget.presetId.replace(/_/g, ' ')) +
+      '</b></div><div><small>Budget room</small><b>' + p.remaining + ' point' +
+      (p.remaining === 1 ? '' : 's') + '</b></div><div><small>Deficit / debt</small><b>' +
+      p.deficit.toFixed(2) + '% / ' + p.debt.toFixed(1) + '% GDP</b></div>' +
+      '<div><small>Exact Sejm tally</small><b class="' +
+      (p.vote.passed ? 'budget-pass' : 'budget-fail') + '">' + p.vote.yes + ' yes · ' +
+      p.vote.no + ' no · ' + p.vote.abstain + ' abstain</b></div></div>';
+
+    var cards = model.pressure[budget.year] || [];
+    html += '<div class="budget-pressure" aria-label="Annual pressures">' +
+      cards.map(function(card) {
+        return '<span><b>' + budgetEscape(card[0]) + '</b><small>' +
+          budgetEscape(model.lines.find(function(line) { return line.id === card[1]; }).label) +
+          ' · ' + (card[2] === 2 ? 'Flagship' : 'Fund') + '</small></span>';
+      }).join('') + '</div>';
+
+    if (budget.role === 'government') {
+      html += '<fieldset class="budget-card-row"><legend>Coalition-authored starting proposals</legend>' +
+        budget.presets.map(function(preset) {
+          return budgetButton(preset.label, 'preset', preset.id,
+            preset.id === budget.presetId, false);
+        }).join('') + '</fieldset>';
+    } else {
+      var strategies = [
+        ['no', 'Vote no; this is their budget', 'Free, immediate, no programme credit.'],
+        ['bargain', 'Bargain', 'Spend visible leverage on up to two amendments.'],
+        ['shadow', 'Publish a shadow budget · 1 resource', 'Own a coherent alternative, not state spending.'],
+        ['wedge', 'Exploit a coalition wedge · 1 resource', 'Target one genuinely unmet partner demand.']
+      ];
+      html += '<fieldset class="budget-card-row"><legend>Opposition route</legend>' +
+        strategies.map(function(item) {
+          return '<button type="button" class="budget-strategy' +
+            (budget.strategy === item[0] ? ' is-active' : '') +
+            '" data-budget-action="strategy" data-budget-value="' + item[0] +
+            '" aria-pressed="' + (budget.strategy === item[0]) + '"' +
+            ((item[0] === 'shadow' || item[0] === 'wedge') && Number(Q.resources || 0) < 1
+              ? ' disabled' : '') + '><b>' + budgetEscape(item[1]) + '</b><small>' +
+            budgetEscape(item[2]) + '</small></button>';
+        }).join('') + '</fieldset>';
+      if (budget.strategy === 'bargain') {
+        html += '<p class="budget-note">Leverage: <b>' + model.leverage(Q) +
+          ' points</b>. A maintained-line amendment costs 1; restoring a cut costs 2.</p>';
+      }
+    }
+
+    var editable = budget.role === 'government' || budget.strategy === 'shadow';
+    html += '<div class="budget-lines">';
+    model.lines.forEach(function(line) {
+      var tier = budget.tiers[line.id];
+      var value = model.tiers[tier] || 0;
+      var floor = model.hardFloors(budget.year)[line.id] !== undefined;
+      html += '<article class="budget-line"><div class="budget-line-copy"><b>' +
+        budgetEscape(line.label) + '</b><small>' + (value * 0.25).toFixed(2) +
+        '% GDP from baseline · ' + budgetEscape(line.ministry) + '</small>' +
+        '<details><summary>Ownership and effects</summary><p>' +
+        budgetEscape(line.beneficiaries) + '; ' + budgetEscape(line.effect) +
+        (floor ? '. Statutory/contractual floor: cannot cut.' : '.') +
+        '</p></details></div><div class="budget-tier-group">';
+      if (editable) {
+        tierOrder.forEach(function(id) {
+          html += budgetButton(model.tierNames[id], 'tier', line.id + ':' + id,
+            tier === id, id === 'cut' && floor);
+        });
+      } else if (budget.strategy === 'bargain') {
+        html += '<span class="budget-current">' + budgetEscape(model.tierNames[tier]) + '</span>' +
+          budgetButton(budget.demands.includes(line.id) ? 'Demanded' : 'Amend',
+            'demand', line.id, budget.demands.includes(line.id), false);
+      } else {
+        html += '<span class="budget-current">' + budgetEscape(model.tierNames[tier]) + '</span>';
+      }
+      html += '</div></article>';
+    });
+    html += '</div>';
+
+    if (editable) {
+      html += '<fieldset class="budget-card-row"><legend>Financing — exactly one</legend>' +
+        model.financing.map(function(item) {
+          return '<button type="button" class="budget-strategy' +
+            (item.id === budget.financingId ? ' is-active' : '') +
+            '" data-budget-action="financing" data-budget-value="' + item.id +
+            '" aria-pressed="' + (item.id === budget.financingId) + '"' +
+            (item.id === 'kpo' && !model.kpoOpen(Q) ? ' disabled' : '') +
+            '><b>' + budgetEscape(item.label) + '</b><small>' +
+            budgetEscape(item.note) + '</small></button>';
+        }).join('') + '</fieldset>';
+    }
+
+    if (budget.role === 'government') {
+      var cabinetIds = model.cabinetParties(Q);
+      var outsideDeals = Object.keys(model.partyData).filter(function(id) {
+        return !cabinetIds.includes(id) && model.partySeats(Q, id) > 0;
+      }).sort(function(a, b) {
+        return model.partySeats(Q, b) - model.partySeats(Q, a);
+      });
+      var currentCards = cabinetIds.includes('left')
+        ? model.currentBlocks(Q, budget).map(function(current) {
+          return '<div class="budget-demand ' + (current.met ? 'is-met' : 'is-broken') +
+            '"><span><b>' + budgetEscape(current.label) + ' · ' + current.seats +
+            ' MPs</b><small>' + budgetEscape(current.redLine) + '</small></span>' +
+            '<span class="budget-result ' + (current.met ? 'is-pass' : 'is-fail') + '">' +
+            (current.met ? 'Supports' : 'Abstains') + '</span></div>';
+        }).join('') : '';
+      html += '<fieldset class="budget-demands"><legend>Visible red lines and deal stamps</legend>' +
+        p.demands.map(function(demand) {
+          return '<div class="budget-demand ' + (demand.met ? 'is-met' : 'is-broken') +
+            '"><span><b>' + budgetEscape(demand.label) + ' · ' + demand.seats +
+            ' MPs</b><small>' + budgetEscape(demand.redLine) + '</small></span>' +
+            budgetButton(demand.met ? 'Met' : 'Stamp deal', 'deal', demand.id,
+              budget.deals.includes(demand.id), false) + '</div>';
+        }).join('') + currentCards + outsideDeals.map(function(id) {
+          var party = model.partyData[id];
+          return '<div class="budget-demand"><span><b>Outside deal: ' +
+            budgetEscape(party.label) + ' · ' + model.partySeats(Q, id) +
+            ' MPs</b><small>' + budgetEscape(party.redLine) +
+            '</small></span>' + budgetButton('Stamp whole-club deal', 'deal', id,
+              budget.deals.includes(id), false) + '</div>';
+        }).join('') + '</fieldset>';
+    } else if (budget.strategy === 'wedge') {
+      html += '<fieldset class="budget-demands"><legend>Target one unmet governing demand</legend>' +
+        p.demands.filter(function(demand) { return !demand.met; }).map(function(demand) {
+          return '<div class="budget-demand is-broken"><span><b>' +
+            budgetEscape(demand.label) + ' · ' + demand.seats + ' MPs</b><small>' +
+            budgetEscape(demand.redLine) + '</small></span>' +
+            budgetButton('Target', 'wedge', demand.id, budget.wedge === demand.id, false) +
+            '</div>';
+        }).join('') + '</fieldset>';
+    }
+
+    if (budget.role === 'opposition' && budget.strategy === 'bargain') {
+      html += '<fieldset class="budget-tier-group"><legend>Final posture</legend>' +
+        budgetButton('Support', 'posture', 'support', budget.posture === 'support', false) +
+        budgetButton('Abstain', 'posture', 'abstain', budget.posture === 'abstain', false) +
+        budgetButton('Reject', 'posture', 'no', budget.posture === 'no', false) + '</fieldset>';
+    }
+
+    var reasons = p.vote.reasons.length
+      ? p.vote.reasons.map(function(reason) { return '<li>' + budgetEscape(reason) + '</li>'; }).join('')
+      : '<li>Every displayed governing delegation supports the draft.</li>';
+    html += '<div class="budget-tally" role="status" aria-live="polite"><b>' +
+      (p.vote.passed ? 'PASSING' : 'DEFEATED') + ': ' + p.vote.yes + '–' + p.vote.no +
+      ', ' + p.vote.abstain + ' abstain</b><ul>' + reasons + '</ul></div>';
+    if (p.breaches.length || Q.budget_submit_error) {
+      html += '<div class="budget-errors" role="alert">' +
+        p.breaches.map(budgetEscape).join(' · ') +
+        (Q.budget_submit_error === 'revision' ? 'Change at least two decisions before resubmitting.' : '') +
+        '</div>';
+    }
+    var strategyReady = budget.role === 'government' || Boolean(budget.strategy);
+    var specialReady = budget.strategy !== 'bargain' || budget.demands.length > 0;
+    specialReady = specialReady && (budget.strategy !== 'wedge' || Boolean(budget.wedge));
+    var affordable = budget.strategy === 'shadow' || budget.role === 'government'
+      ? p.affordable : true;
+    var revisionReady = !budget.failedDraft || p.changeCount >= 2;
+    html += '<div class="budget-actions">' +
+      (editable ? budgetButton('Reset proposal', 'reset', '', false, false) : '') +
+      budgetButton(budget.role === 'opposition' && budget.strategy === 'no'
+        ? 'Vote no and move on' : 'Submit to the Sejm', 'scene',
+        'poland_budget_2023_2026.submit_budget', false,
+        !strategyReady || !specialReady || !affordable || !revisionReady) +
+      '</div></section>';
+    host.innerHTML = html;
+  };
+
+  var initializeBudgetBoards = function() {
+    var hosts = document.querySelectorAll('.budget-board-host');
+    if (!hosts.length) return;
+    var choices = document.querySelectorAll('#content ul.choices');
+    for (var choiceIndex = 0; choiceIndex < choices.length; choiceIndex++) {
+      choices[choiceIndex].classList.add('budget-native-choices');
+    }
+    for (var hostIndex = 0; hostIndex < hosts.length; hostIndex++) {
+      var host = hosts[hostIndex];
+      renderBudgetBoard(host);
+      host.onclick = function(event) {
+        var button = event.target.closest('[data-budget-action]');
+        if (!button || button.disabled) return;
+        var currentEngine = window.dendryUI.dendryEngine;
+        var Q = currentEngine.state.qualities;
+        var action = button.getAttribute('data-budget-action');
+        var value = button.getAttribute('data-budget-value');
+        if (action === 'scene') return budgetChoose(value);
+        if (action === 'preset') window.polandBudgetModel.selectPreset(Q, value);
+        if (action === 'financing') window.polandBudgetModel.setFinancing(Q, value);
+        if (action === 'reset') window.polandBudgetModel.reset(Q);
+        if (action === 'deal') window.polandBudgetModel.toggleDeal(Q, value);
+        if (action === 'strategy') window.polandBudgetModel.selectStrategy(Q, value);
+        if (action === 'demand') window.polandBudgetModel.toggleDemand(Q, value);
+        if (action === 'posture') window.polandBudgetModel.setPosture(Q, value);
+        if (action === 'wedge') window.polandBudgetModel.setWedge(Q, value);
+        if (action === 'audit') window.polandBudgetModel.toggleAudit(Q, value);
+        if (action === 'tier') {
+          var tierParts = value.split(':');
+          window.polandBudgetModel.setTier(Q, tierParts[0], tierParts[1]);
+        }
+        if (action === 'delivery') {
+          var deliveryParts = value.split(':');
+          window.polandBudgetModel.setDelivery(Q, deliveryParts[0], Number(deliveryParts[1]));
+        }
+        renderBudgetBoard(event.currentTarget);
+      };
+    }
+  };
+
   window.onDisplayContent = function() {
       window.updateSidebar();
       window.updateSidebarRight();
       window.updateMoodBackground();
       var content = document.getElementById('content');
       window.enhancePartyElements(content);
+      initializeBudgetBoards();
       if (content) {
         var engine = window.dendryUI && window.dendryUI.dendryEngine;
         var state = engine && engine.state;

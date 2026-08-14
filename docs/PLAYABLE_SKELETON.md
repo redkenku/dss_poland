@@ -724,63 +724,40 @@ capacity. They are not coup or partisan-loyalty meters.
 
 ## Annual budget rule
 
-Every complete playable year ends with a fiscal test. Party resources never
-become state money: budget capacity is visible and spendable only while Lewica
-governs, receives one normal restoration at the beginning of the year, and can
-gain limited extra room from KPO co-financing.
+Every complete playable year ends in the shared budget dossier. Party resources
+never become state money. The serializable state is `budget_game`; completed
+texts and execution results are appended to `budget_history`, while event
+routing retains only year, fiscal year, completion/pass flags, exact vote,
+posture, result, deficit and implementation status.
 
-Every opposition budget from 2019 onward now uses the same six political
-stages, with different content each year:
+The board has nine allocation lines and four tiers. One point is 0.25% GDP:
+Cut releases one, Maintain preserves the inherited baseline, Fund costs one and
+creates a one-capacity commitment, and Flagship costs two of each. Statutory
+floors cannot be cut. The live rail shows author, room, deficit/debt and the
+exact deterministic Sejm tally.
 
-1. Lewica reads the government's draft, its actual priorities, its working
-   majority and the boundary between parliamentary influence and executive
-   spending authority.
-2. The player chooses exactly two priorities from that year's crisis menu.
-   Pandemic protection appears in 2020, Polish Deal repair in 2021, energy and
-   refugee services in 2022, and the 2024 menu separately names flood
-   reconstruction, defence, KPO co-financing and Razem's written promises.
-3. The active Left currents publish demands and red lines. Leadership may
-   negotiate an instruction, make a future promise, permit a free vote or
-   impose discipline. There is no weighted ratification percentage.
-4. The parliamentary club publishes a shadow budget, submits named
-   amendments, bargains for exact concessions, abstains or votes against.
-5. The Sejm record shows the government's votes, Lewica's line, named rebels,
-   each amendment result and the real ordinary-majority count.
-6. The next annual process audits the previous fiscal year. Only a clause that
-   survived the final bill changes public capacity. A shadow budget instead
-   accumulates issue ownership, programme credibility and media attention.
+A governing Left selects and edits a proposal authored by a live cabinet
+party, chooses one financing card, and meets visible party/current red lines or
+stamps a disclosed deal. A first defeat allows one revision with at least two
+changed decisions. Senate acceptance, a one-resource compromise and a
+231-vote override are resolved on the same compact file.
 
-In 2019 and 2020 the completed Sejm vote still enters the Senate amendment
-stage. The Senate may pass an amendment but cannot reject the budget; a final
-Sejm response now records whether that upper-chamber language was enacted or
-remained only a political roll call.
+An opposition Left chooses:
 
-From December 2023 through December 2026, a governing Left chooses among a
-funded social protocol, a rural-social compact, a fiscal minimum or a direct
-coalition dare. The package sets internal backing and possible caucus vetoes.
-The chamber count then combines:
+1. **Vote no; this is their budget** — free and immediate, with no amendment
+   or programme credit and no arbitrary rebels.
+2. **Bargain** — spend visible leverage on up to two affordable allocation
+   amendments, then support, abstain or reject.
+3. **Shadow budget** — spend one resource to edit a Left-authored alternative;
+   it earns ownership but never changes state spending.
+4. **Coalition wedge** — spend one resource against one actually unmet
+   governing-party red line, with the affected delegation shown before use.
 
-- actual coalition and Left seats;
-- internal Left rebels;
-- KO, PSL and centrist relations;
-- general coalition dissent and earlier party ruptures;
-- the package's partner bonus or penalty;
-- a stored small roll-call shock.
-
-A carried budget returns to the monthly event desk because other December
-crises may still be pending. A defeat opens an emergency council. The player
-can buy PSL back with a written rural guarantee, rebuild around a Left red
-line, offer another democratic prime minister, or accept an early election.
-The first three choices receive a rescue confidence roll. Failure removes
-Lewica's spending authority, creates a caretaker and activates the later
-constitutional election route.
-
-If Lewica is in opposition in 2023–2026, passage is calculated from the real
-government, opposition and Lewica lines rather than assumed. A failed budget
-still opens the constitutional revision/deadline routes without automatically
-dismissing the cabinet. Neither a proposal nor a cabinet promise grants budget
-capacity before enactment and the following-year audit.
-
+Enactment changes debt, revenue and deficit. January execution separately
+changes services and political credit. Government capacity is 1–4 and is
+assigned to funded/flagship commitments; an opposition player instead audits
+the cabinet's deterministic assignment. Both phases are guarded against
+duplicate effects.
 ## Election presentation, ministries and confidence
 
 The presentation layer adapted from the inherited election flow is now active

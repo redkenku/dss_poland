@@ -15,317 +15,1011 @@ if (july2021ChainPending) {
     Q.poland_historical_event_phase =
         historicalCalendar && Q.polling_has_dated_route ? 1 : 0;
 }
-if (!budgetHost.polandBudgetModel) {
+if (!budgetHost.polandBudgetModel || budgetHost.polandBudgetModel.version < 2) {
     const number = function(value, fallback) {
         return Number.isFinite(Number(value)) ? Number(value) : fallback;
+    };
+    const integer = function(value, fallback) {
+        return Math.max(0, Math.round(number(value, fallback)));
     };
     const clamp = function(value, low, high) {
         return Math.max(low, Math.min(high, number(value, low)));
     };
-    const factions = {
-        barons: {
-            label: "SLD establishment", nameKey: "barons_name",
-            representative: "Tomasz Trela", seatsKey: "left_barons_seats",
-            priorities: [2, 5, 9, 11, 14],
-            social: 17.2, deficit: 5.4,
-            defenceFloor: 4.3, defenceCeiling: 5.5
+    const copy = function(value) {
+        return JSON.parse(JSON.stringify(value));
+    };
+    const tiers = {cut: -1, maintain: 0, fund: 1, flagship: 2};
+    const tierNames = {
+        cut: "Cut", maintain: "Maintain", fund: "Fund", flagship: "Flagship"
+    };
+    const lines = [
+        {
+            id: "health", label: "Health and care", ministry: "Health",
+            beneficiaries: "patients, carers and health workers",
+            effect: "health capacity and care access", capital: false
         },
-        spring: {
-            label: "Wiosna", nameKey: "spring_name",
-            representative: "Krzysztof Śmiszek", seatsKey: "left_spring_seats",
-            priorities: [4, 7, 10, 15],
-            social: 18.4, deficit: 5.8,
-            defenceFloor: 4.0, defenceCeiling: 5.1
+        {
+            id: "education", label: "Education and public-sector pay",
+            ministry: "Education and public administration",
+            beneficiaries: "teachers and public-service staff",
+            effect: "school delivery and public-sector morale", capital: false
         },
-        labor: {
-            label: "Lewica Pracy", nameKey: "labor_name",
-            representative: "Agnieszka Dziemianowicz-Bąk",
-            seatsKey: "left_labor_seats", priorities: [1, 2, 7, 12, 13, 14],
-            social: 19.0, deficit: 6.1,
-            defenceFloor: 3.9, defenceCeiling: 5.0
+        {
+            id: "income", label: "Pensions, family benefits and income security",
+            ministry: "Family and Social Policy",
+            beneficiaries: "pensioners, families and low-income households",
+            effect: "household security", capital: false
         },
-        progressives: {
-            label: "Younger progressives", nameKey: "progressives_name",
-            representative: "Katarzyna Kotula",
-            seatsKey: "left_progressives_seats", priorities: [3, 4, 8, 10, 15],
-            social: 18.5, deficit: 5.8,
-            defenceFloor: 3.9, defenceCeiling: 5.0
+        {
+            id: "housing", label: "Housing and local government",
+            ministry: "Development and local government",
+            beneficiaries: "tenants, municipalities and local services",
+            effect: "housing supply and municipal capacity", capital: true
         },
-        razem: {
-            label: "Razem", representative: "Adrian Zandberg",
-            seatsKey: "razem_seats", priorities: [1, 2, 3, 12, 13],
-            social: 18.0, deficit: 6.3,
-            defenceFloor: 3.8, defenceCeiling: 4.9
+        {
+            id: "labour", label: "Labour enforcement and equality",
+            ministry: "Labour and Equality",
+            beneficiaries: "workers and groups facing discrimination",
+            effect: "labour enforcement and equality delivery", capital: false
         },
-        pps: {
-            label: "PPS", representative: "Joanna Senyszyn",
-            seatsKey: "left_pps_seats", priorities: [1, 2, 5, 7, 11, 14],
-            social: 18.8, deficit: 6.0,
-            defenceFloor: 4.0, defenceCeiling: 5.0
+        {
+            id: "rural", label: "Rural development and transport",
+            ministry: "Agriculture and Infrastructure",
+            beneficiaries: "farmers, commuters and smaller towns",
+            effect: "rural access and transport", capital: true
         },
-        social_patriot: {
-            label: "Social patriots", nameKey: "social_patriot_name",
-            representative: "Paulina Matysiak",
-            seatsKey: "left_social_patriot_seats", priorities: [2, 5, 9, 11, 14],
-            social: 17.2, deficit: 5.2,
-            defenceFloor: 4.8, defenceCeiling: 5.8
+        {
+            id: "defence", label: "Defence, border security and Ukraine",
+            ministry: "National Defence and Interior",
+            beneficiaries: "service personnel, border communities and Ukraine",
+            effect: "security readiness", capital: true
+        },
+        {
+            id: "energy", label: "Energy, climate, infrastructure and KPO",
+            ministry: "Climate and Funds",
+            beneficiaries: "energy users, industry and future infrastructure",
+            effect: "energy resilience and investment delivery", capital: true
+        },
+        {
+            id: "institutions", label: "Justice, public media and state capacity",
+            ministry: "Justice and the Chancellery",
+            beneficiaries: "court users, citizens and the civil service",
+            effect: "institutional and administrative capacity", capital: false
+        }
+    ];
+    const lineById = {};
+    for (const line of lines) lineById[line.id] = line;
+    const financing = [
+        {
+            id: "none", label: "No new revenue", points: 0, revenue: 0,
+            note: "Upgrades require a cut elsewhere."
+        },
+        {
+            id: "progressive", label: "Progressive revenue", points: 4,
+            revenue: 1, note: "Four unrestricted points; +1.0% GDP revenue."
+        },
+        {
+            id: "broad", label: "Broad tax base", points: 5, revenue: 1.25,
+            note: "Five points; visible household backlash."
+        },
+        {
+            id: "borrowing", label: "Borrowing", points: 4, revenue: 0,
+            note: "Four points added to borrowing."
+        },
+        {
+            id: "kpo", label: "KPO matching", points: 3, revenue: 0,
+            capitalOnly: true, note: "Three capital-only points."
+        }
+    ];
+    const financeById = {};
+    for (const source of financing) financeById[source.id] = source;
+    const partyData = {
+        left: {
+            label: "Lewica", seats: "left_seats",
+            preferred: ["health", "housing", "labour"],
+            redLine: "Fund two of health, housing and labour",
+            financing: "progressive"
+        },
+        ko: {
+            label: "KO", seats: "ko_seats",
+            preferred: ["education", "institutions", "energy"],
+            redLine: "Protect institutions and keep the deficit disciplined",
+            financing: "none"
+        },
+        psl: {
+            label: "PSL", seats: "psl_seats",
+            preferred: ["income", "rural", "defence"],
+            redLine: "Fund rural development or income security; do not cut defence",
+            financing: "progressive"
+        },
+        p2050: {
+            label: "Polska 2050", seats: "p2050_seats",
+            preferred: ["energy", "institutions", "rural"],
+            redLine: "Fund climate/KPO and protect state capacity",
+            financing: "kpo"
+        },
+        pis: {
+            label: "PiS", seats: "pis_seats",
+            preferred: ["income", "defence", "rural"],
+            redLine: "Fund family income and defence",
+            financing: "borrowing"
+        },
+        konf: {
+            label: "Konfederacja", seats: "konf_seats",
+            preferred: ["defence"],
+            redLine: "Fund defence without a progressive or broad tax",
+            financing: "none"
         }
     };
-    const activeFactions = function(q) {
-        const active = Array.isArray(q.factions)
-            ? q.factions.filter(function(id) {
-                return typeof id == "string" && factions[id];
-            })
-            : ["barons", "spring", "progressives", "razem"];
-        if (
-            q.labor_active && q.labor_in_left && !q.labor_party_formed &&
-            !active.includes("labor")
-        ) {
-            active.push("labor");
+    const pressure = {
+        2019: [
+            ["Public pay", "education", 1],
+            ["Housing", "housing", 1],
+            ["Local finance", "housing", 1]
+        ],
+        2020: [
+            ["Health capacity", "health", 2],
+            ["Care", "health", 1],
+            ["Income protection", "income", 1]
+        ],
+        2021: [
+            ["Polish Deal repair", "income", 1],
+            ["Hospitals", "health", 1],
+            ["Transparent local finance", "housing", 1]
+        ],
+        2022: [
+            ["Defence and Ukraine", "defence", 2],
+            ["Energy relief", "energy", 1],
+            ["Inflation protection", "income", 1]
+        ],
+        2023: [
+            ["Teacher pay", "education", 1],
+            ["Local finance", "housing", 1],
+            ["Institutional transition", "institutions", 1]
+        ],
+        2024: [
+            ["Flood reconstruction", "housing", 1],
+            ["KPO delivery", "energy", 1],
+            ["Rural and social promises", "rural", 1]
+        ],
+        2025: [
+            ["Defence", "defence", 1],
+            ["Schools", "education", 1],
+            ["Labour and housing delivery", "labour", 1]
+        ],
+        2026: [
+            ["Labour Inspection", "labour", 2],
+            ["Equality", "labour", 1],
+            ["Municipal services and KPO", "housing", 1]
+        ]
+    };
+    const currentData = {
+        barons: ["SLD establishment", "housing", "left_barons_seats"],
+        spring: ["Wiosna", "labour", "left_spring_seats"],
+        labor: ["Lewica Pracy", "education", "left_labor_seats"],
+        progressives: ["Younger progressives", "labour", "left_progressives_seats"],
+        razem: ["Razem", "housing", "razem_seats"],
+        pps: ["PPS", "health", "left_pps_seats"],
+        social_patriot: [
+            "Social patriots", "defence", "left_social_patriot_seats"
+        ]
+    };
+    const partyId = function(value) {
+        const raw = String(value || "").toLowerCase();
+        if (raw.indexOf("2050") >= 0 || raw.indexOf("hołown") >= 0 ||
+            raw.indexOf("holown") >= 0) return "p2050";
+        if (raw.indexOf("konf") >= 0) return "konf";
+        if (raw.indexOf("psl") >= 0 || raw.indexOf("ludow") >= 0) return "psl";
+        if (raw.indexOf("pis") >= 0 || raw.indexOf("prawo") >= 0) return "pis";
+        if (raw.indexOf("ko") >= 0 || raw.indexOf("platform") >= 0 ||
+            raw.indexOf("civic") >= 0) return "ko";
+        if (raw.indexOf("lew") >= 0 || raw.indexOf("razem") >= 0 ||
+            raw.indexOf("sld") >= 0) return "left";
+        return "";
+    };
+    const lineTier = function(game, id) {
+        return tiers[game.tiers[id]] === undefined ? 0 : tiers[game.tiers[id]];
+    };
+    const kpoOpen = function(q) {
+        return integer(q.kpo_uncommitted, 0) > 0 ||
+            integer(q.kpo_unlocked, 0) > 0 ||
+            integer(q.kpo_blocks_unlocked, 0) > 0;
+    };
+    const hardFloors = function(year) {
+        const floors = {income: 0, defence: 0};
+        if (year == 2020) floors.health = 0;
+        if (year == 2022) floors.energy = 0;
+        return floors;
+    };
+    const blankTiers = function() {
+        const result = {};
+        for (const line of lines) result[line.id] = "maintain";
+        return result;
+    };
+    const cabinetParties = function(q) {
+        const lead = partyId(q.government_party) || "pis";
+        const active = [lead];
+        const flags = {
+            left: q.left_in_government,
+            ko: q.ministry_ko_in_cabinet,
+            psl: q.ministry_psl_in_cabinet,
+            p2050: q.ministry_p2050_in_cabinet,
+            pis: q.ministry_pis_in_cabinet,
+            konf: q.ministry_konf_in_cabinet
+        };
+        for (const id of Object.keys(flags)) {
+            if (flags[id] && !active.includes(id)) active.push(id);
         }
         return active;
     };
-    const factionBacking = function(q, id) {
-        const target = factions[id] || factions.barons;
-        const social = number(q.annual_budget_social_share, 17);
-        const defence = number(q.annual_budget_defence_share, 4.6);
-        const deficit = number(q.annual_budget_deficit_share, 4.5);
-        const socialFloorBreach = Math.max(
-            0,
-            number(q.annual_budget_social_floor, 0) - social
-        );
-        let support =
-            60 + number(q.party_unity, 50) * 0.10 -
-            number(q[id + "_dissent"], 0) * 0.32;
-        if (social < target.social) support -= (target.social - social) * 20;
-        else support += Math.min(9, (social - target.social) * 6);
-        if (deficit > target.deficit) support -= (deficit - target.deficit) * 11;
-        if (defence < target.defenceFloor) {
-            support -= (target.defenceFloor - defence) *
-                (id == "social_patriot" ? 18 : 5);
-        }
-        if (defence > target.defenceCeiling && social < target.social + 0.2) {
-            support -= (defence - target.defenceCeiling) * 14;
-        }
-        if (socialFloorBreach > 0) {
-            support -= socialFloorBreach *
-                (id == "razem"
-                    ? 12
-                    : (["labor", "pps"].includes(id) ? 34 : 20));
-        }
-        if (q.annual_budget_public_wage_guarantee) {
-            if (id == "labor") support += 14;
-            if (id == "razem") support += 10;
-            if (id == "pps") support += 12;
-            if (id == "spring") support += 4;
-        }
-        if (q.annual_budget_progressive_revenue) {
-            if (id == "labor") support += 7;
-            if (id == "progressives") support += 6;
-            if (id == "razem") support += 9;
-            if (id == "pps") support += 6;
-            if (id == "barons") support -= 2;
-            if (id == "social_patriot") support -= 3;
-        }
-        if (q.annual_budget_kpo_cofinance) {
-            if (id == "progressives") support += 5;
-            if (id == "barons") support += 3;
-            if (id == "spring") support += 3;
-        }
-        if (q.annual_budget_green_investment) {
-            if (id == "progressives") support += 10;
-            if (id == "spring") support += 8;
-            if (id == "labor") support += 3;
-        }
-        if (q.annual_budget_local_compact) {
-            if (id == "barons") support += 5;
-            if (id == "social_patriot") support += 4;
-            if (id == "labor") support += 2;
-        }
-        if (q.annual_budget_deficit_rule) {
-            if (id == "barons" || id == "social_patriot") support += 6;
-            if (id == "labor") support -= 2;
-            if (id == "razem") support -= 3;
-        }
-        if (q.annual_budget_market_cuts) {
-            if (id == "labor") support -= 18;
-            if (id == "razem") support -= 10;
-            if (id == "pps") support -= 16;
-            if (id == "progressives") support -= 9;
-            if (id == "spring") support -= 7;
-            if (id == "barons") support += 3;
-            if (id == "social_patriot") support += 4;
-        }
-        if (q.annual_budget_family_defence_deal) {
-            if (id == "progressives") support -= 16;
-            if (id == "spring") support -= 12;
-            if (id == "razem") support -= 22;
-            if (id == "labor") support -= 8;
-            if (id == "social_patriot") support += 15;
-            if (id == "barons") support += 3;
-        }
-        if (
-            id == "razem" && social < 18.0 &&
-            (q.razem_in_government || q.razem_budget_support_pact)
-        ) {
-            support = Math.min(support, 20);
-        }
-        if (
-            id == "labor" && social < 17.4 &&
-            !q.annual_budget_public_wage_guarantee
-        ) {
-            support = Math.min(support, 28);
-        }
-        return Math.round(clamp(support, 0, 100));
+    const partySeats = function(q, id) {
+        return integer(q[partyData[id].seats], 0);
     };
-    const malcontents = function(stress, seats) {
-        return Math.min(
-            Math.max(0, Math.round(number(seats, 0))),
-            Math.max(0, Math.round((number(stress, 0) - 20) / 5))
-        );
-    };
-    const priceRebellion = function(options) {
-        const governmentSeats = Math.max(
-            0,
-            Math.round(number(options.governmentSeats, 0))
-        );
-        const pool = Math.min(
-            governmentSeats,
-            Math.max(0, Math.round(number(options.malcontents, 0)))
-        );
-        const freedom = clamp(
-            (number(options.loyalYes, governmentSeats) -
-                number(options.oppositionNo, 0)) / 30,
-            0,
-            1
-        );
-        const diehards = Math.floor(pool * 0.2);
-        const whipBonus = Math.max(
-            0,
-            Math.round(number(options.whipBonus, 0))
-        );
-        const priced = Math.min(
-            governmentSeats,
-            diehards + Math.round((pool - diehards) * freedom)
-        );
-        const defectors = Math.max(0, priced - Math.min(priced, whipBonus));
-        const openNo = Math.round(defectors * freedom * 0.5);
-        return {
-            freedom: freedom,
-            loyalMargin: number(options.loyalYes, governmentSeats) -
-                number(options.oppositionNo, 0),
-            diehards: diehards,
-            minimum: Math.max(0, diehards - whipBonus),
-            maximum: Math.max(0, pool - whipBonus),
-            defectors: defectors,
-            openNo: openNo,
-            abstain: defectors - openNo
-        };
-    };
-    const rollCall = function(options) {
-        const total = Math.max(1, Math.round(number(options.sejmTotal, 460)));
-        const governmentSeats = Math.max(
-            0,
-            Math.min(total, Math.round(number(options.governmentSeats, 0)))
-        );
-        const leftYes = Math.max(0, Math.round(number(options.leftYes, 0)));
-        const leftNo = Math.max(0, Math.round(number(options.leftNo, 0)));
-        const leftAbstain = Math.max(
-            0,
-            Math.round(number(options.leftAbstain, 0))
-        );
-        const externalYes = Math.max(
-            0,
-            Math.round(number(options.externalYes, 0))
-        );
-        const externalNo = Math.max(
-            0,
-            Math.round(number(options.externalNo, 0))
-        );
-        const externalAbstain = Math.max(
-            0,
-            Math.round(number(options.externalAbstain, 0))
-        );
-        const priced = priceRebellion({
-            governmentSeats: governmentSeats,
-            malcontents: options.malcontents,
-            loyalYes: governmentSeats + leftYes + externalYes,
-            oppositionNo: leftNo + externalNo,
-            whipBonus: options.whipBonus
+    const presets = function(q) {
+        const cabinet = cabinetParties(q);
+        const wanted = [
+            partyId(q.finance_minister_party),
+            cabinet.includes("left") ? "left" : "",
+            partyId(q.prime_minister_party),
+            partyId(q.government_party)
+        ].concat(cabinet.slice().sort(function(a, b) {
+            return partySeats(q, b) - partySeats(q, a);
+        }));
+        const authors = [];
+        for (const id of wanted) {
+            if (partyData[id] && cabinet.includes(id) && !authors.includes(id)) {
+                authors.push(id);
+            }
+            if (authors.length == 4) break;
+        }
+        const result = authors.map(function(id) {
+            const proposal = blankTiers();
+            const data = partyData[id];
+            proposal[data.preferred[0]] = "fund";
+            if (data.preferred[1]) proposal[data.preferred[1]] = "fund";
+            if (id == "pis") proposal.defence = "flagship";
+            if (id == "left") proposal.labour = "fund";
+            let source = data.financing;
+            if (source == "kpo" && !kpoOpen(q)) source = "progressive";
+            if (id == "ko") {
+                proposal.housing = "cut";
+                proposal.labour = "cut";
+            }
+            if (id == "p2050" && source == "kpo") {
+                proposal.institutions = "maintain";
+                proposal.rural = "fund";
+            }
+            return {
+                id: id + "_proposal", author: id,
+                label: data.label + " proposal", financingId: source,
+                tiers: proposal
+            };
         });
-        const defectors = Number.isFinite(Number(options.defectors))
-            ? Math.max(
-                0,
-                Math.min(governmentSeats, Math.round(Number(options.defectors)))
-            )
-            : priced.defectors;
-        const openNo = Math.round(defectors * priced.freedom * 0.5);
-        const governmentYes = governmentSeats - defectors;
-        const governmentAbstain = defectors - openNo;
-        const yes = governmentYes + leftYes + externalYes;
-        const no = openNo + leftNo + externalNo;
-        const abstain = governmentAbstain + leftAbstain + externalAbstain;
-        const present = yes + no + abstain;
-        const quorum = Math.max(1, Math.round(number(options.quorum, 230)));
-        const passed = present >= quorum && yes > no ? 1 : 0;
+        if (result.length < 2) {
+            result.push({
+                id: "carryover", author: "carryover",
+                label: "Inherited carry-over", financingId: "none",
+                tiers: blankTiers()
+            });
+        }
+        return result;
+    };
+    const meetsParty = function(game, id, preview) {
+        if (game.deals.includes(id)) return true;
+        if (id == "left") {
+            return ["health", "housing", "labour"].filter(function(line) {
+                return lineTier(game, line) >= 1;
+            }).length >= 2;
+        }
+        if (id == "ko") {
+            return lineTier(game, "institutions") >= 0 &&
+                preview.deficit <= preview.baseDeficit + 0.5;
+        }
+        if (id == "psl") {
+            return (lineTier(game, "rural") >= 1 ||
+                lineTier(game, "income") >= 1) &&
+                lineTier(game, "defence") >= 0;
+        }
+        if (id == "p2050") {
+            return lineTier(game, "energy") >= 1 &&
+                lineTier(game, "institutions") >= 0;
+        }
+        if (id == "pis") {
+            return lineTier(game, "income") >= 1 &&
+                lineTier(game, "defence") >= 1;
+        }
+        if (id == "konf") {
+            return lineTier(game, "defence") >= 1 &&
+                !["progressive", "broad"].includes(game.financingId);
+        }
+        return false;
+    };
+    const currentBlocks = function(q, game) {
+        const configured = Array.isArray(q.factions)
+            ? q.factions.filter(function(id) { return currentData[id]; })
+            : ["barons", "spring", "progressives", "razem"];
+        if (q.labor_active && q.labor_in_left &&
+            !configured.includes("labor")) configured.push("labor");
+        return configured.map(function(id) {
+            const data = currentData[id];
+            const met = lineTier(game, data[1]) >= 0;
+            return {
+                id: id, label: data[0], line: data[1],
+                redLine: "Do not cut " + lineById[data[1]].label.toLowerCase(),
+                seats: integer(q[data[2]], 0), met: met
+            };
+        });
+    };
+    const preview = function(q, gameOverride) {
+        const game = gameOverride || q.budget_game;
+        const source = financeById[game.financingId] || financeById.none;
+        let upgrades = 0;
+        let cuts = 0;
+        let capitalUpgrades = 0;
+        const breaches = [];
+        const floors = hardFloors(game.year);
+        for (const line of lines) {
+            const value = lineTier(game, line.id);
+            if (value > 0) {
+                upgrades += value;
+                if (line.capital) capitalUpgrades += value;
+            } else if (value < 0) {
+                cuts += -value;
+            }
+            if (floors[line.id] !== undefined && value < floors[line.id]) {
+                breaches.push(
+                    line.label + " is a statutory or contractual floor"
+                );
+            }
+        }
+        if (source.id == "kpo" && !kpoOpen(q)) {
+            breaches.push("No unlocked KPO block is available");
+        }
+        const kpoUsed = source.capitalOnly
+            ? Math.min(source.points, capitalUpgrades)
+            : 0;
+        const domesticNeed = upgrades - cuts - kpoUsed;
+        const available = source.capitalOnly ? 0 : source.points;
+        const remaining = available - domesticNeed;
+        if (source.capitalOnly && domesticNeed > 0) {
+            breaches.push(
+                "KPO points are capital-only; non-capital upgrades need cuts"
+            );
+        } else if (remaining < 0) {
+            breaches.push("The draft overspends by " + (-remaining) + " point" +
+                (-remaining == 1 ? "" : "s"));
+        }
+        const baseDeficit = number(q.annual_budget_deficit_share, 4.5);
+        const deficitPoints = upgrades - cuts - kpoUsed -
+            source.revenue / 0.25;
+        const deficit = Math.round((baseDeficit + deficitPoints * 0.25) * 100) /
+            100;
+        const debt = Math.round((
+            number(q.public_debt, 45.7) +
+            Math.max(0, deficit - 3) * 0.18
+        ) * 10) / 10;
+        const provisional = {
+            upgrades: upgrades, cuts: cuts, capitalUpgrades: capitalUpgrades,
+            kpoUsed: kpoUsed, remaining: remaining, deficit: deficit,
+            debt: debt, baseDeficit: baseDeficit, breaches: breaches
+        };
+        const demands = cabinetParties(q).map(function(id) {
+            return {
+                id: id, label: partyData[id].label,
+                redLine: partyData[id].redLine,
+                met: meetsParty(game, id, provisional),
+                seats: partySeats(q, id)
+            };
+        });
+        provisional.demands = demands;
+        provisional.vote = vote(q, game, provisional);
+        provisional.affordable = breaches.length == 0;
+        provisional.changeCount = game.failedDraft
+            ? changedDecisions(game, game.failedDraft)
+            : 99;
+        return provisional;
+    };
+    const changedDecisions = function(game, oldDraft) {
+        let changed = game.financingId == oldDraft.financingId ? 0 : 1;
+        for (const line of lines) {
+            if (game.tiers[line.id] != oldDraft.tiers[line.id]) changed += 1;
+        }
+        const before = (oldDraft.deals || []).slice().sort().join("|");
+        const after = (game.deals || []).slice().sort().join("|");
+        if (before != after) changed += 1;
+        return changed;
+    };
+    const vote = function(q, game, calculated) {
+        const p = calculated || preview(q, game);
+        const total = integer(q.sejm_total, 460) || 460;
+        const governmentTotal = Math.min(
+            total,
+            integer(q.government_support_seats,
+                integer(q.coalition_seats, partySeats(
+                    q, partyId(q.government_party) || "pis"
+                )))
+        );
+        const cabinet = cabinetParties(q);
+        const lead = partyId(q.government_party) || "pis";
+        let cabinetKnown = 0;
+        let governmentYes = 0;
+        let governmentAbstain = 0;
+        const reasons = [];
+        for (const demand of p.demands || []) {
+            if (demand.id == lead) continue;
+            const seats = Math.min(demand.seats,
+                Math.max(0, governmentTotal - cabinetKnown));
+            cabinetKnown += seats;
+            if (demand.met) governmentYes += seats;
+            else {
+                governmentAbstain += seats;
+                reasons.push(demand.label + " abstains " + seats +
+                    " MPs: " + demand.redLine);
+            }
+        }
+        const leadDemand = (p.demands || []).find(function(item) {
+            return item.id == lead;
+        });
+        const leadSeats = Math.max(0, governmentTotal - cabinetKnown);
+        if (!leadDemand || leadDemand.met) governmentYes += leadSeats;
+        else {
+            const holdouts = Math.min(leadSeats, Math.max(1,
+                Math.round(leadSeats * 0.2)));
+            governmentYes += leadSeats - holdouts;
+            governmentAbstain += holdouts;
+            reasons.push(partyData[lead].label + " abstains " + holdouts +
+                " MPs: " + leadDemand.redLine);
+        }
+        const leftDemand = (p.demands || []).find(function(item) {
+            return item.id == "left";
+        });
+        if (cabinet.includes("left") && (!leftDemand || leftDemand.met)) {
+            let leftMoved = 0;
+            for (const current of currentBlocks(q, game)) {
+                if (!current.met && current.seats > 0) {
+                    const moved = Math.min(
+                        current.seats,
+                        Math.max(0, partySeats(q, "left") - leftMoved),
+                        governmentYes
+                    );
+                    governmentYes -= moved;
+                    governmentAbstain += moved;
+                    leftMoved += moved;
+                    if (moved > 0) {
+                        reasons.push(current.label + " abstains " + moved +
+                            " MPs: " + current.redLine);
+                    }
+                }
+            }
+        }
+        let externalYes = 0;
+        for (const id of game.deals) {
+            if (!cabinet.includes(id) && partyData[id]) {
+                externalYes += partySeats(q, id);
+                reasons.push(partyData[id].label + " supports under a displayed deal");
+            }
+        }
+        const leftSeats = partySeats(q, "left");
+        if (!cabinet.includes("left")) {
+            if (game.role == "opposition") {
+                if (game.posture == "support") externalYes += leftSeats;
+                else if (game.posture == "abstain") governmentAbstain += leftSeats;
+                else if (game.strategy == "no" && q.razem_budget_support_pact &&
+                    !q.razem_red_line_broken) {
+                    const pactSeats = Math.min(leftSeats, partySeats(q, "left"),
+                        integer(q.razem_seats, 0));
+                    externalYes += pactSeats;
+                    reasons.push("Razem supplies " + pactSeats +
+                        " votes under its previously signed supply pact");
+                }
+            } else if (game.deals.includes("left")) {
+                externalYes += leftSeats;
+            }
+        }
+        const wedge = game.strategy == "wedge" ? game.wedge : "";
+        if (wedge && cabinet.includes(wedge) && wedge != lead) {
+            const moved = Math.min(partySeats(q, wedge), governmentYes);
+            governmentYes -= moved;
+            governmentAbstain += moved;
+            reasons.push(partyData[wedge].label + " abstains " + moved +
+                " MPs after its unmet red line is exposed");
+        }
+        const abstain = governmentAbstain;
+        const yes = governmentYes + externalYes;
+        const no = Math.max(0, total - yes - abstain);
+        const present = total;
+        const quorum = integer(q.sejm_quorum_floor, 230) || 230;
         return {
-            governmentYes: governmentYes,
-            governmentNo: openNo,
-            governmentAbstain: governmentAbstain,
-            defectors: defectors,
-            freedom: priced.freedom,
-            loyalMargin: priced.loyalMargin,
-            diehards: priced.diehards,
-            minimum: priced.minimum,
-            maximum: priced.maximum,
-            yes: yes,
-            no: no,
-            abstain: abstain,
-            present: present,
-            threshold: no + 1,
-            passed: passed,
-            margin: passed ? yes - no : 0,
-            shortfall: passed ? 0 : Math.max(0, no + 1 - yes)
+            yes: yes, no: no, abstain: abstain, present: present,
+            quorum: quorum, threshold: no + 1,
+            passed: present >= quorum && yes > no,
+            margin: yes > no ? yes - no : 0,
+            shortfall: yes > no ? 0 : no + 1 - yes,
+            governmentYes: governmentYes, externalYes: externalYes,
+            reasons: reasons
         };
     };
-    const forecast = function(options) {
-        const centre = rollCall(options);
-        const unity = clamp(options.partyUnity, 0, 100);
-        const width = centre.maximum > centre.minimum
-            ? Math.max(
-                1,
-                Math.ceil(number(options.malcontents, 0) *
-                    (0.45 - unity * 0.003)) -
-                    Math.round(number(options.whipBonus, 0))
-            )
-            : 0;
-        const low = Math.max(centre.minimum, centre.defectors - width);
-        const high = Math.min(centre.maximum, centre.defectors + width);
-        const rolls = [];
-        for (let defectors = low; defectors <= high; defectors += 1) {
-            rolls.push(rollCall(Object.assign({}, options, {defectors: defectors})));
+    const applyPartyDeal = function(game, id) {
+        if (!partyData[id]) return;
+        const data = partyData[id];
+        if (!game.deals.includes(id)) game.deals.push(id);
+        for (const line of data.preferred.slice(0, 2)) {
+            if (lineTier(game, line) < 1) game.tiers[line] = "fund";
         }
-        const range = function(key) {
-            const values = rolls.map(function(roll) { return roll[key]; });
-            return {low: Math.min.apply(Math, values), high: Math.max.apply(Math, values)};
+        if (id == "pis") game.tiers.defence = "fund";
+    };
+    const initialise = function(q, year) {
+        const budgetYear = integer(year, integer(q.year, 2019));
+        const role = q.left_in_government && q.government_has_confidence &&
+            !q.caretaker_government ? "government" : "opposition";
+        const generated = presets(q);
+        const first = generated[0];
+        q.budget_game = {
+            version: 2, year: budgetYear, fiscalYear: budgetYear + 1,
+            role: role, phase: role == "government" ? "proposal" : "strategy",
+            presetId: first.id, financingId: first.financingId,
+            tiers: copy(first.tiers), deals: [], strategy: "",
+            demands: [], posture: role == "government" ? "support" : "no",
+            sejm: null, senate: null, execution: null,
+            presets: generated, revisionUsed: false, failedDraft: null,
+            draftTiers: copy(first.tiers), draftFinancingId: first.financingId,
+            wedge: "", effectsApplied: false
         };
+        q.annual_budget_year = budgetYear;
+        q.annual_budget_fiscal_year = budgetYear + 1;
+        q.annual_budget_result = "Drafting open";
+        q.annual_budget_posture = "No posture chosen";
+        q.annual_budget_revision_used = 0;
+        q.budget_game_version = 2;
+        if (!Array.isArray(q.budget_history)) q.budget_history = [];
+        return q.budget_game;
+    };
+    const selectPreset = function(q, id) {
+        const game = q.budget_game;
+        const preset = game.presets.find(function(item) { return item.id == id; });
+        if (!preset) return false;
+        game.presetId = preset.id;
+        game.financingId = preset.financingId;
+        game.tiers = copy(preset.tiers);
+        game.deals = [];
+        return true;
+    };
+    const setTier = function(q, id, tier) {
+        const game = q.budget_game;
+        if (!lineById[id] || tiers[tier] === undefined) return false;
+        if (tier == "cut" && hardFloors(game.year)[id] !== undefined) return false;
+        game.tiers[id] = tier;
+        return true;
+    };
+    const setFinancing = function(q, id) {
+        if (!financeById[id] || (id == "kpo" && !kpoOpen(q))) return false;
+        q.budget_game.financingId = id;
+        return true;
+    };
+    const reset = function(q) {
+        return selectPreset(q, q.budget_game.presetId);
+    };
+    const toggleDeal = function(q, id) {
+        const game = q.budget_game;
+        if (!partyData[id]) return false;
+        if (game.deals.includes(id)) {
+            game.deals = game.deals.filter(function(item) { return item != id; });
+        } else {
+            applyPartyDeal(game, id);
+        }
+        return true;
+    };
+    const leverage = function(q) {
+        const seats = partySeats(q, "left");
+        const governmentSeats = integer(
+            q.government_support_seats, integer(q.coalition_seats, 0)
+        );
+        const pivotal = governmentSeats <= 230 &&
+            governmentSeats + seats > 230 ? 1 : 0;
+        const score = number(q.negotiation_leverage,
+            number(q.negotiation_capital, 0));
+        return 1 + pivotal + (score >= 40 ? 1 : 0) + (score >= 70 ? 1 : 0);
+    };
+    const selectStrategy = function(q, strategy) {
+        const game = q.budget_game;
+        if (!["no", "bargain", "shadow", "wedge"].includes(strategy)) {
+            return false;
+        }
+        game.strategy = strategy;
+        game.demands = [];
+        game.wedge = "";
+        game.posture = strategy == "no" ? "no" : "abstain";
+        if (strategy != "shadow") {
+            game.tiers = copy(game.draftTiers);
+            game.financingId = game.draftFinancingId;
+        }
+        if (strategy == "shadow") {
+            const left = game.presets.find(function(item) {
+                return item.author == "left";
+            }) || {
+                id: "left_shadow", author: "left",
+                financingId: "progressive", tiers: blankTiers()
+            };
+            game.presetId = left.id;
+            game.financingId = left.financingId;
+            game.tiers = copy(left.tiers);
+        }
+        return true;
+    };
+    const toggleDemand = function(q, lineId) {
+        const game = q.budget_game;
+        if (!lineById[lineId]) return false;
+        if (game.demands.includes(lineId)) {
+            game.demands = game.demands.filter(function(id) { return id != lineId; });
+            return true;
+        }
+        if (lineTier(game, lineId) >= 1) return false;
+        if (game.demands.length >= 2) return false;
+        const cost = lineTier(game, lineId) < 0 ? 2 : 1;
+        const used = game.demands.reduce(function(sum, id) {
+            return sum + (lineTier(game, id) < 0 ? 2 : 1);
+        }, 0);
+        if (used + cost > leverage(q)) return false;
+        const simulated = copy(game);
+        simulated.tiers[lineId] = "fund";
+        if (!preview(q, simulated).affordable) return false;
+        game.demands.push(lineId);
+        return true;
+    };
+    const setPosture = function(q, posture) {
+        if (!["support", "abstain", "no"].includes(posture)) return false;
+        q.budget_game.posture = posture;
+        return true;
+    };
+    const setWedge = function(q, id) {
+        const previewNow = preview(q);
+        const unmet = previewNow.demands.some(function(item) {
+            return item.id == id && !item.met;
+        });
+        if (!unmet || id == partyId(q.government_party)) return false;
+        q.budget_game.wedge = id;
+        return true;
+    };
+    const applyFlatVote = function(q, game) {
+        q.annual_budget_yes = game.sejm.yes;
+        q.annual_budget_no = game.sejm.no;
+        q.annual_budget_abstain = game.sejm.abstain;
+        q.annual_budget_present = game.sejm.present;
+        q.annual_budget_threshold = game.sejm.threshold;
+        q.annual_budget_margin = game.sejm.margin;
+        q.annual_budget_shortfall = game.sejm.shortfall;
+        q.annual_budget_passed = game.sejm.passed ? 1 : 0;
+        q.annual_budget_posture = game.posture == "support"
+            ? "Support" : (game.posture == "abstain" ? "Abstain" : "Vote no");
+    };
+    const submit = function(q) {
+        const game = q.budget_game;
+        if (game.role == "opposition") {
+            if (game.strategy == "bargain") {
+                for (const id of game.demands) {
+                    if (lineTier(game, id) < 1) game.tiers[id] = "fund";
+                }
+            } else if (game.strategy == "no") {
+                game.posture = "no";
+            } else if (game.strategy == "wedge") {
+                game.posture = "no";
+            }
+            if (["shadow", "wedge"].includes(game.strategy) &&
+                !game.strategyCostPaid) {
+                if (integer(q.resources, 0) < 1) return {ok: false, error: "resource"};
+                q.resources -= 1;
+                game.strategyCostPaid = true;
+            }
+            if (game.strategy == "shadow" && !preview(q).affordable) {
+                return {ok: false, error: "unaffordable"};
+            }
+            if (game.strategy == "bargain" && game.demands.length == 0) {
+                return {ok: false, error: "demand"};
+            }
+            if (game.strategy == "wedge" && !game.wedge) {
+                return {ok: false, error: "wedge"};
+            }
+            if (!game.strategy) return {ok: false, error: "strategy"};
+            if (game.strategy == "shadow") {
+                game.shadow = {
+                    presetId: game.presetId,
+                    financingId: game.financingId,
+                    tiers: copy(game.tiers)
+                };
+                game.tiers = copy(game.draftTiers);
+                game.financingId = game.draftFinancingId;
+            }
+        } else {
+            const p = preview(q);
+            if (!p.affordable) return {ok: false, error: "unaffordable"};
+            if (game.failedDraft && changedDecisions(game, game.failedDraft) < 2) {
+                return {ok: false, error: "revision"};
+            }
+        }
+        const p = preview(q);
+        game.sejm = p.vote;
+        game.phase = game.sejm.passed ? "senate" : "defeat";
+        applyFlatVote(q, game);
+        if (game.role == "opposition") {
+            q.annual_budget_strategy = game.strategy;
+            if (game.strategy == "no") {
+                q.annual_budget_concession = "No amendments or programme credit";
+            } else if (game.strategy == "bargain") {
+                q.annual_budget_concession = game.demands.map(function(id) {
+                    return lineById[id].label;
+                }).join("; ");
+                q.labor_credibility += game.demands.includes("labour") ? 2 : 0;
+            } else if (game.strategy == "shadow") {
+                q.labor_credibility += 3;
+                q.media_capacity += 2;
+                q.annual_budget_concession = "Published alternative; no state spending";
+            } else {
+                q.government_coalition_dissent += 3;
+                q.annual_budget_concession =
+                    "Exposed " + partyData[game.wedge].label + " red line";
+            }
+        }
+        return {ok: true, vote: game.sejm};
+    };
+    const startRevision = function(q) {
+        const game = q.budget_game;
+        if (game.revisionUsed) return false;
+        game.revisionUsed = true;
+        q.annual_budget_revision_used = 1;
+        game.failedDraft = {
+            financingId: game.financingId, tiers: copy(game.tiers),
+            deals: copy(game.deals)
+        };
+        game.phase = "revision";
+        return true;
+    };
+    const senatePreview = function(q) {
+        const game = q.budget_game;
+        const total = integer(q.senate_total, 100) || 100;
+        const government = integer(q.senate_government_seats,
+            integer(q.senate_pis_seats, 48));
+        const cabinet = cabinetParties(q);
+        const outside = Object.keys(partyData).filter(function(id) {
+            return !cabinet.includes(id) &&
+                integer(q["senate_" + id + "_seats"], 0) > 0;
+        }).sort(function(a, b) {
+            return integer(q["senate_" + b + "_seats"], 0) -
+                integer(q["senate_" + a + "_seats"], 0);
+        });
+        const amendmentParty = government >= Math.floor(total / 2) + 1
+            ? "" : (outside[0] || "left");
+        const target = amendmentParty
+            ? partyData[amendmentParty].preferred.find(function(id) {
+                return lineTier(game, id) < 2;
+            }) || partyData[amendmentParty].preferred[0]
+            : "";
+        const absolute = Math.floor(integer(q.sejm_total, 460) / 2) + 1;
         return {
-            centre: centre,
-            width: high - low,
-            defectors: {low: low, high: high},
-            yes: range("yes"),
-            no: range("no"),
-            abstain: range("abstain")
+            amendmentParty: amendmentParty, target: target,
+            label: target ? "Raise " + lineById[target].label : "No amendment",
+            overrideVotes: game.sejm.yes,
+            overrideRequired: absolute,
+            canOverride: game.sejm.yes >= absolute
         };
+    };
+    const resolveSenate = function(q, choice) {
+        const game = q.budget_game;
+        const senate = senatePreview(q);
+        if (choice == "reject" && !senate.canOverride) return false;
+        if (choice == "compromise") {
+            if (integer(q.resources, 0) < 1) return false;
+            q.resources -= 1;
+        }
+        if (choice == "accept" && senate.target) {
+            const current = lineTier(game, senate.target);
+            game.tiers[senate.target] =
+                current < 0 ? "maintain" : (current < 1 ? "fund" : "flagship");
+        }
+        game.senate = copy(senate);
+        game.senate.choice = choice;
+        game.phase = "enacted";
+        return true;
+    };
+    const snapshot = function(q, game) {
+        const p = preview(q, game);
+        return {
+            version: 2, year: game.year, fiscalYear: game.fiscalYear,
+            role: game.role, author: game.presetId,
+            financingId: game.financingId, tiers: copy(game.tiers),
+            deals: copy(game.deals), strategy: game.strategy,
+            posture: game.posture, sejm: copy(game.sejm),
+            senate: copy(game.senate), deficit: p.deficit, debt: p.debt,
+            executionStatus: "Pending", execution: null
+        };
+    };
+    const enact = function(q) {
+        const game = q.budget_game;
+        if (game.effectsApplied) return false;
+        const p = preview(q);
+        game.effectsApplied = true;
+        q.annual_budget_deficit_share = p.deficit;
+        q.public_debt = p.debt;
+        q.fiscal_stress += game.financingId == "borrowing" ? 5 :
+            (game.financingId == "broad" ? 2 : -1);
+        if (game.financingId == "broad") q.public_trust -= 2;
+        if (game.financingId == "progressive") q.labor_credibility += 1;
+        if (game.financingId == "kpo") {
+            q.kpo_uncommitted = Math.max(0, integer(q.kpo_uncommitted, 1) - 1);
+        }
+        q.annual_budget_done = 1;
+        q["annual_budget_done_" + game.year] = 1;
+        q["annual_budget_passed_" + game.year] = 1;
+        q["budget_" + game.year + "_ratified"] = 1;
+        q.annual_budget_passed = 1;
+        q.annual_budget_result = "Enacted; delivery pending";
+        q.budget_deadline_active = 0;
+        q.budget_execution_pending = 1;
+        if (integer(q.year, game.year) >= game.fiscalYear) {
+            q.budget_execution_due_year = integer(q.month, 1) >= 12
+                ? integer(q.year, game.fiscalYear) + 1
+                : integer(q.year, game.fiscalYear);
+            q.budget_execution_due_month = integer(q.month, 1) >= 12
+                ? 1 : integer(q.month, 1) + 1;
+        } else {
+            q.budget_execution_due_year = game.fiscalYear;
+            q.budget_execution_due_month = 1;
+        }
+        q.news_headline = "Parliament enacts the " + game.fiscalYear + " budget";
+        const item = snapshot(q, game);
+        q.budget_history.push(item);
+        game.historyIndex = q.budget_history.length - 1;
+        return item;
+    };
+    const beginExecution = function(q, historyIndex) {
+        const index = historyIndex === undefined
+            ? q.budget_history.map(function(item) {
+                return item.executionStatus;
+            }).lastIndexOf("Pending")
+            : historyIndex;
+        if (index < 0 || !q.budget_history[index]) return false;
+        const item = q.budget_history[index];
+        const role = q.left_in_government && q.government_has_confidence &&
+            !q.caretaker_government ? "government" : "opposition";
+        let capacity = 2 + (number(q.government_delivery, 0) >= 55 ? 1 : 0) +
+            (tiers[item.tiers.institutions] >= 1 ? 1 : 0) -
+            (number(q.fiscal_stress, 0) >= 70 ? 1 : 0);
+        capacity = clamp(capacity, 1, 4);
+        const assignments = {};
+        for (const line of lines) assignments[line.id] = 0;
+        q.budget_game = {
+            version: 2, year: item.year, fiscalYear: item.fiscalYear,
+            role: role, phase: "execution", presetId: item.author,
+            financingId: item.financingId, tiers: copy(item.tiers),
+            deals: copy(item.deals), strategy: item.strategy,
+            demands: [], posture: item.posture, sejm: copy(item.sejm),
+            senate: copy(item.senate), execution: {
+                historyIndex: index, capacity: capacity, assignments: assignments,
+                audits: [], effectsApplied: false
+            }
+        };
+        if (role == "opposition") {
+            const priorities = partyData[
+                partyId(q.government_party) || "pis"
+            ].preferred;
+            const commitments = lines.filter(function(line) {
+                return tiers[item.tiers[line.id]] > 0;
+            }).sort(function(a, b) {
+                return (priorities.includes(b.id) ? 1 : 0) -
+                    (priorities.includes(a.id) ? 1 : 0);
+            });
+            let left = capacity;
+            for (const line of commitments) {
+                const need = tiers[item.tiers[line.id]];
+                const assigned = Math.min(need, left);
+                assignments[line.id] = assigned;
+                left -= assigned;
+            }
+        }
+        return q.budget_game;
+    };
+    const setDelivery = function(q, id, amount) {
+        const game = q.budget_game;
+        if (!game || !game.execution || !lineById[id]) return false;
+        const need = Math.max(0, lineTier(game, id));
+        const wanted = clamp(integer(amount, 0), 0, need);
+        const assigned = Object.keys(game.execution.assignments).reduce(
+            function(sum, key) {
+                return sum + (key == id ? 0 : game.execution.assignments[key]);
+            }, 0
+        );
+        if (assigned + wanted > game.execution.capacity) return false;
+        game.execution.assignments[id] = wanted;
+        return true;
+    };
+    const toggleAudit = function(q, id) {
+        const game = q.budget_game;
+        if (!game || !game.execution || !lineById[id]) return false;
+        const audits = game.execution.audits;
+        if (audits.includes(id)) {
+            game.execution.audits = audits.filter(function(item) { return item != id; });
+            return true;
+        }
+        if (audits.length >= 2) return false;
+        if (audits.length == 1 && integer(q.resources, 0) < 1) return false;
+        audits.push(id);
+        return true;
+    };
+    const finishExecution = function(q) {
+        const game = q.budget_game;
+        const execution = game && game.execution;
+        if (!execution || execution.effectsApplied) return false;
+        const item = q.budget_history[execution.historyIndex];
+        if (!item || item.executionStatus != "Pending") return false;
+        if (game.role == "opposition" && execution.audits.length > 1) {
+            q.resources -= 1;
+        }
+        let delivered = 0;
+        let frozen = 0;
+        const frozenNames = [];
+        for (const line of lines) {
+            const need = Math.max(0, lineTier(game, line.id));
+            if (need == 0) continue;
+            const amount = execution.assignments[line.id] || 0;
+            if (amount >= need) delivered += 1;
+            else {
+                frozen += 1;
+                frozenNames.push(line.label);
+            }
+        }
+        q.government_delivery += delivered * 2 - frozen * 2;
+        q.public_trust += delivered - frozen;
+        if ((execution.assignments.health || 0) > 0) q.health_policy_pressure -= 2;
+        if ((execution.assignments.income || 0) > 0) q.household_policy_pressure -= 2;
+        if ((execution.assignments.labour || 0) > 0) q.labor_credibility += 2;
+        if ((execution.assignments.institutions || 0) > 0) {
+            q.administrative_capacity += 2;
+        }
+        if (game.role == "opposition") {
+            let exposed = 0;
+            for (const id of execution.audits) {
+                if ((execution.assignments[id] || 0) <
+                    Math.max(0, lineTier(game, id))) exposed += 1;
+            }
+            q.media_capacity += exposed * 2;
+            q.public_trust += exposed;
+            q.government_delivery -= exposed;
+        }
+        execution.effectsApplied = true;
+        execution.delivered = delivered;
+        execution.frozen = frozen;
+        execution.frozenNames = frozenNames;
+        item.execution = copy(execution);
+        item.executionStatus = frozen
+            ? (delivered ? "Partially implemented" : "Frozen")
+            : "Implemented";
+        q.annual_budget_execution_status = item.executionStatus;
+        q.annual_budget_result = item.executionStatus;
+        q.last_policy_stage = "Implementation";
+        q.last_policy_authority = game.role == "government"
+            ? "Council of Ministers" : "Cabinet delivery audited by Lewica";
+        q.last_policy_implementation = delivered > 0 ? 1 : 0;
+        q.news_headline = frozen
+            ? "The budget ledger records " + frozen + " frozen commitment" +
+                (frozen == 1 ? "" : "s")
+            : "The budget's funded commitments enter delivery";
+        game.phase = "complete";
+        return item;
     };
     budgetHost.polandBudgetModel = {
-        factions: factions,
-        activeFactions: activeFactions,
-        factionBacking: factionBacking,
-        malcontents: malcontents,
-        priceRebellion: priceRebellion,
-        rollCall: rollCall,
-        forecast: forecast
+        version: 2, lines: lines, tiers: tiers, tierNames: tierNames,
+        financing: financing, partyData: partyData, pressure: pressure,
+        partyId: partyId, partySeats: partySeats, cabinetParties: cabinetParties,
+        hardFloors: hardFloors, kpoOpen: kpoOpen, presets: presets,
+        currentBlocks: currentBlocks, preview: preview, vote: vote,
+        initialise: initialise, selectPreset: selectPreset, setTier: setTier,
+        setFinancing: setFinancing, reset: reset, toggleDeal: toggleDeal,
+        leverage: leverage, selectStrategy: selectStrategy,
+        toggleDemand: toggleDemand, setPosture: setPosture, setWedge: setWedge,
+        submit: submit, startRevision: startRevision,
+        senatePreview: senatePreview, resolveSenate: resolveSenate,
+        enact: enact, beginExecution: beginExecution,
+        setDelivery: setDelivery, toggleAudit: toggleAudit,
+        finishExecution: finishExecution, changedDecisions: changedDecisions
     };
 }
 const publicMoodHost = budgetHost;
@@ -3236,6 +3930,46 @@ if (Q.started) {
         }
         if (Q.prawica_member_source_ids.includes("suwerenna")) {
             Q.suwerenna_own_list = 0;
+        }
+        const filedOutcome = String(Q.sejm_list_outcome || "left_5");
+        const displacedHost = filedOutcome == "third_host_5"
+            ? String(Q.sejm_list_host || "psl")
+            : (filedOutcome == "pis_5"
+                ? "pis"
+                : (filedOutcome == "konf_5" ? "konf" : ""));
+        const hostJoinedPrawica = displacedHost == "konf"
+            ? ["konf", "new_hope", "national_movement"].some(function(id) {
+                return Q.prawica_member_source_ids.includes(id);
+            })
+            : Q.prawica_member_source_ids.includes(displacedHost);
+        if (hostJoinedPrawica) {
+            Q.sejm_list_target = "Independent Lewica list";
+            Q.sejm_list_outcome = "left_5";
+            Q.sejm_list_structure = "Host-party list";
+            Q.sejm_list_host = "left";
+            Q.sejm_list_threshold = 5;
+            Q.sejm_list_members = "Lewica and its internal partners";
+            Q.sejm_list_control = "Lewica controls nominations and subsidy";
+            Q.sejm_list_result =
+                "Lewica files independently after its former host joins Prawica";
+            Q.sejm_list_has_partners = 0;
+            Q.poll_state_month_key = -1;
+        } else if (Q.prawica_member_source_ids.includes("psl") &&
+            filedOutcome == "democratic_8" &&
+            Q.sejm_list_target != "Broad democratic pact without PSL") {
+            Q.sejm_list_target = "Broad democratic pact without PSL";
+            Q.sejm_list_members = "KO, Poland 2050 and the coordinating Left";
+            Q.sejm_list_result =
+                "The broad democratic pact continues without PSL after it joins Prawica";
+            Q.poll_state_month_key = -1;
+        } else if (Q.prawica_member_source_ids.includes("psl") &&
+            filedOutcome == "third_way_8" &&
+            Q.sejm_list_target != "Poland 2050–Left pact") {
+            Q.sejm_list_target = "Poland 2050–Left pact";
+            Q.sejm_list_members = "Poland 2050 and the coordinating Left";
+            Q.sejm_list_result =
+                "The Poland 2050–Left pact continues after PSL joins Prawica";
+            Q.poll_state_month_key = -1;
         }
         const prawicaDuda = rivalGroup("duda_movement");
         if (prawicaDuda) {

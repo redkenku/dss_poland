@@ -178,38 +178,35 @@ These fields are specified in the
 [media model](MEDIA_MODEL.md#reach-is-not-support). Event scenes should mutate
 only the dimensions their choice plausibly affects.
 
-## The recurring annual budget chain
+## The recurring annual budget board
 
-Every playable year ends with a budget vote. This is mandatory campaign
-structure, not a random event. The detailed calendar and constitutional
-guardrails are in [POLITICAL_MODEL.md](POLITICAL_MODEL.md#the-annual-budget-is-the-season-finale).
+Every playable year ends with the same deterministic dossier rather than a
+year-specific choice chain. The board makes allocation, financing, authorship,
+coalition promises and the exact chamber arithmetic editable together. The
+legal guardrails remain those in
+[POLITICAL_MODEL.md](POLITICAL_MODEL.md#the-annual-budget-is-the-season-finale).
 
-The vote tests two coalitions. First, the mini-parties inside the Left must
-ratify priorities and acceptable concessions. Second, the governing coalition
-must find 231 votes for one allocation. In opposition years, the same chain
-tests whether the Left votes together, supports emergency spending or trades
-votes with PiS.
+| ID | Principal pressure cards |
+| --- | --- |
+| **BUD-2019** | Public pay, housing, local finance |
+| **BUD-2020** | Health capacity, care, income protection |
+| **BUD-2021** | Polish Deal repair, hospitals, transparent local finance |
+| **BUD-2022** | Defence/Ukraine, energy relief, inflation protection |
+| **BUD-2023** | Teacher pay, local finance, institutional transition |
+| **BUD-2024** | Flood reconstruction, KPO, rural/social promises |
+| **BUD-2025** | Defence, schools, labour/housing delivery |
+| **BUD-2026** | Labour Inspection, equality, municipal services/KPO |
 
-| ID | Label | Principal year-end conflict | Plausible ruptures and rewards |
-| --- | --- | --- | --- |
-| **BUD-2019 — Return to parliament** | **H/P** | The new 49-member left delegation votes on a PiS budget while SLD, Wiosna and Razem write their first common fiscal alternative. | Common shadow budget establishes unity; separate amendments expose that the electoral alliance has no shared governing programme. |
-| **BUD-2020 — Pandemic settlement** | **H/P** | Hospitals, wage support, small firms, local government and election costs compete amid emergency rules. | Supporting relief can rescue PiS; rejecting it can abandon beneficiaries. A Left amendment package can split Gowin/Solidarna Polska or split the Left over civil liberties and spending. |
-| **BUD-2021 — Minority government and Polish Deal** | **H/P** | After Gowin leaves, PiS needs discipline or outside votes while the new tax system, border security, health and EU recovery money collide. | A second Left–PiS issue bargain may deliver policy and rupture opposition trust; refusal can deepen the government crisis. Merger rebels can withhold votes. |
-| **BUD-2022 — War, energy and refugees** | **H/P** | Defence, Ukrainian refugees, energy shields and inflation relief crowd out housing, health and wages. | National-security consensus can hide distributional conflict. Razem/Nowa Lewica unity depends on funding solidarity without normalising austerity or anti-refugee politics. |
-| **BUD-2023 — The transfer of power** | **H/N** | The outgoing PiS draft meets a new KO–Third Way–Left majority. Teacher pay, public media, IVF, local government and inherited deficit become the first coalition allocation. | Amend the inherited budget rapidly, write a new settlement or use an interim compromise. Razem can support investiture but reject fiscal assumptions; ministries can exist without funded promises. |
-| **BUD-2024 — First full coalition test** | **H/P** | The government must reconcile defence, EU/KPO investment, flood reconstruction, rural concessions, health, housing and Left social promises after PSL defeats the abortion bill. | PSL converts its social-policy veto into rural/budget leverage; the Left can retaliate, publish a delivery protocol or trade policy for money. Razem's departure becomes more or less likely according to the settlement. |
-| **BUD-2025 — After presidential defeat** | **H/P** | A hostile incoming president, weak Third Way parties, Marshal rotation, shorter-time pilot, school reform and high defence costs force a coalition reset. | Hołownia/PSL can condition support on offices; the Left can make Czarzasty's rotation and labour implementation budget terms. Nawrocki cannot use an ordinary budget veto, but can exploit delay and constitutional review. |
-| **BUD-2026 — Pre-election survival** | **P** | Growing debt/deficit pressure, EU milestones, military spending, PIP enforcement, partnership veto and fragmented centre/right make the 2027 budget the last full governing offer before the election. | KO may demand restraint, PSL rural protection, Left funded delivery and centrist remnants electoral shelter. A protocol budget can hold until 2027; defeat can launch a constructive no-confidence attempt or early-election deadline. |
+Government chooses an editable cabinet-authored proposal, one funding source
+and disclosed deals. Opposition can vote no immediately, bargain for up to two
+affordable lines, publish a shadow alternative or expose one real coalition
+wedge. Every party/current deviation names the broken red line and exact MPs;
+there are no hidden scores or random rebellions.
 
-Each budget has four later checks:
-
-1. Was the appropriation actually released?
-2. Did the responsible ministry have capacity to spend it?
-3. Which party and caucus received credit?
-4. Did a concession quietly violate a non-budget promise?
-
-Passing the vote suppresses immediate crisis; it does not erase the grievance.
-
+A passed text receives a compact Senate resolution and a separate January
+execution ledger. Macro effects apply at enactment. Delivery, freeze,
+credibility, oversight and betrayal effects apply only during idempotent
+execution.
 ## PSL and Third Way: the permanent coalition-management game
 
 PSL should be neither an always-loyal centrist accessory nor a randomly
