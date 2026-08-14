@@ -2959,7 +2959,10 @@ if (Q.started) {
     }
     const kpCommitteeId = thirdWayFormed ? "third_way" : "psl";
     for (const member of Q.rival_group_records) {
-        if (["psl_party", "kp_partners"].includes(member.id) && member.active) {
+        const returningKukiz = member.id == "kukiz15" &&
+            ["psl", "third_way"].includes(member.list_committee);
+        if ((["psl_party", "kp_partners"].includes(member.id) || returningKukiz) &&
+            member.active) {
             member.list_committee = kpCommitteeId;
             member.parent = thirdWayFormed ? "Trzecia Droga" : "Koalicja Polska";
         }
@@ -3424,6 +3427,11 @@ if (Q.started) {
             )
         });
     };
+    const dynamicFamilyAllocation = Boolean(
+        Q.election_2023_certified || Q.snap_election_held
+    );
+    // ponytail: national weights stand in for district candidate places;
+    // replace them only if the simulation gains district-level nominations.
     const externalPartyEntries = function(listCommittee, order, weights) {
         return Q.rival_group_records.filter(function(record) {
             return record.active && record.kind == "party" &&
@@ -3439,7 +3447,23 @@ if (Q.started) {
                 list_committee: listCommittee,
                 sejm_weight: weights[record.id] !== undefined
                     ? weights[record.id]
-                    : Math.max(0, Number(record.mp_count) || 0),
+                    : (dynamicFamilyAllocation
+                        ? (Math.max(
+                            0,
+                            Number(record.negotiated_list_share) || 0
+                        ) || Math.max(
+                            0,
+                            Number(record.id == "psl_party"
+                                ? Q.psl_seats
+                                : (record.id == "p2050_party"
+                                    ? Q.p2050_seats
+                                    : record.mp_count)) || 0
+                        ) + Math.max(
+                            0,
+                            Number(record.organisation) || 0
+                        ) / 5
+                        )
+                        : Math.max(0, Number(record.mp_count) || 0)),
                 senate_weight: 0
             };
         });
@@ -3453,7 +3477,7 @@ if (Q.started) {
     const zpLead = zpEntries.find(function(entry) {
         return entry.id == "pis_party";
     });
-    if (zpLead) {
+    if (zpLead && !dynamicFamilyAllocation) {
         const juniorSejm = zpEntries.reduce(function(total, entry) {
             return total + (entry.id == "pis_party" ? 0 : entry.sejm_weight);
         }, 0);
@@ -3498,7 +3522,7 @@ if (Q.started) {
     const koHost = koEntries.find(function(entry) {
         return ["ko_party", "po"].includes(entry.id);
     });
-    if (koHost) {
+    if (koHost && !dynamicFamilyAllocation) {
         const koJuniorSejm = koEntries.reduce(function(total, entry) {
             return total + (entry.id == koHost.id ? 0 : entry.sejm_weight);
         }, 0);
@@ -3543,16 +3567,20 @@ if (Q.started) {
     }, 0);
     for (const entry of kpEntries) {
         if (entry.id == "psl_party") {
-            entry.sejm_weight = Math.max(
-                1,
-                (Number(Q.psl_seats) || 0) - kpJuniorSeats
-            );
+            if (!dynamicFamilyAllocation) {
+                entry.sejm_weight = Math.max(
+                    1,
+                    (Number(Q.psl_seats) || 0) - kpJuniorSeats
+                );
+            }
             entry.senate_weight = Math.max(
                 0,
                 (Number(Q.senate_psl_seats) || 0) - kpJuniorSenators
             );
         } else if (entry.id == "p2050_party") {
-            entry.sejm_weight = Math.max(0, Number(Q.p2050_seats) || 0);
+            if (!dynamicFamilyAllocation) {
+                entry.sejm_weight = Math.max(0, Number(Q.p2050_seats) || 0);
+            }
             entry.senate_weight = Math.max(
                 0,
                 Number(Q.senate_p2050_seats) || 0
@@ -3638,6 +3666,10 @@ if (Q.started) {
             return record.id == id;
         }) || {};
         Q["result_member_" + id + "_name"] = String(party.name || id);
+        Q["result_member_" + id + "_family"] = String(party.family || "");
+        Q["result_member_" + id + "_committee"] = String(
+            party.list_committee || ""
+        );
         Q["result_member_" + id + "_sejm"] = Math.max(
             0, Math.round(Number(party.sejm_mps) || 0)
         );
@@ -5627,6 +5659,83 @@ if (Q.started) {
                 Number(Q.budget_submission_time) + 4;
         }
     }
+    if (typeof Q.opposition_2023_strategy != "string") {
+        Q.opposition_2023_strategy = "Unselected";
+    }
+    if (!["social", "watchdog", "broker"].includes(
+        String(Q.opposition_2023_strategy_code || "")
+    )) {
+        Q.opposition_2023_strategy_code = "none";
+    }
+    if (!Number.isFinite(Number(Q.opposition_2023_mandate_set))) {
+        Q.opposition_2023_mandate_set =
+            Q.opposition_2023_strategy_code == "none" ? 0 : 1;
+    }
+    for (const oppositionFlag of [
+        "opposition_strategy_review_2024_done",
+        "opposition_presidential_review_2025_done",
+        "opposition_convention_2026_done"
+    ]) {
+        Q[oppositionFlag] = Number(Q[oppositionFlag]) ? 1 : 0;
+    }
+    if (!Number.isFinite(Number(Q.opposition_operation_last_time))) {
+        Q.opposition_operation_last_time = -99;
+    }
+    if (typeof Q.opposition_2027_offer != "string") {
+        Q.opposition_2027_offer = "No alternative-government offer";
+    }
+    Q.formation_autonomous_coalition_checked =
+        Number(Q.formation_autonomous_coalition_checked) ? 1 : 0;
+    if (typeof Q.formation_autonomous_code != "string") {
+        Q.formation_autonomous_code = "none";
+    }
+    if (!Array.isArray(Q.formation_autonomous_members)) {
+        Q.formation_autonomous_members = [];
+    }
+    if (Q.left_in_government) {
+        Q.left_role_code = Q.caretaker_government
+            ? "caretaker"
+            : (Q.government_party == "lewica"
+                ? "lead_government" : "junior_government");
+    } else if (
+        String(Q.position || "").toLowerCase().includes("confidence")
+    ) {
+        Q.left_role_code = "confidence_supply";
+    } else {
+        Q.left_role_code = "opposition";
+    }
+    const governmentMembers = [];
+    for (const party of ["pis", "ko", "p2050", "psl", "konf"]) {
+        if (Q["ministry_" + party + "_in_cabinet"]) {
+            governmentMembers.push(party);
+        }
+    }
+    if (Q.left_in_government) governmentMembers.push("lewica");
+    if (!governmentMembers.length) {
+        const owner = String(Q.government_party || "").toLowerCase();
+        if (["pis", "ko", "p2050", "psl", "konf", "lewica"].includes(owner)) {
+            governmentMembers.push(owner);
+        }
+    }
+    Q.government_members = governmentMembers;
+    Q.government_supporters = Q.left_role_code == "confidence_supply"
+        ? ["lewica"] : [];
+    const governmentMajority = Math.max(
+        1,
+        Number(Q.sejm_statutory_majority) || 231
+    );
+    const governmentSupport = Math.max(
+        0,
+        Number(Q.government_support_seats) || Number(Q.coalition_seats) || 0
+    );
+    Q.government_majority_type = Q.caretaker_government
+        ? "caretaker"
+        : (governmentSupport >= governmentMajority
+            ? (governmentMembers.length <= 1
+                ? "single_party_majority" : "coalition_majority")
+            : "minority_government");
+    Q.government_majority_margin = governmentSupport - governmentMajority;
+
     if (Q.caretaker_government) {
         Q.left_role =
             Q.left_in_government || Q.ministry_count > 0

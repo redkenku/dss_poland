@@ -7985,13 +7985,13 @@ function runSmoke(game) {
     choose('poland_ministries.opposition_allocation_continue');
     assert.strictEqual(
       engine.state.sceneId,
-      'poland_government_formation.cabinet_program'
+      'poland_government_formation.formation_external_cabinet_program'
     );
     assert(
       currentChoices().some(function(choice) {
         return choice.canChoose;
       }),
-      'Confidence-and-supply ministry route dead-ended at the exposé'
+      'Non-player ministry route dead-ended before the confidence vote'
     );
   }
 
@@ -13288,8 +13288,8 @@ function runSmoke(game) {
     );
     assert.strictEqual(
       negotiationCardIds.length,
-      5,
-      'Pressure & Negotiate did not contain its five native cards'
+      6,
+      'Pressure & Negotiate did not contain its six native cards'
     );
     majorReformCardIds.forEach(function(cardId) {
       assert(
@@ -13989,6 +13989,24 @@ function runSmoke(game) {
           checkNumbers();
         });
       });
+
+    [
+      ['sld_homes_national', 'government_goal_housing'],
+      ['pps_six_hour_law', 'government_goal_labor'],
+      ['wiosna_thirty_guarantee', 'government_goal_health'],
+      ['nowa_lewica_breakfast_universal', 'government_goal_welfare'],
+      ['wiosna_assistant_right', 'government_goal_equality'],
+    ].forEach(function(testCase) {
+      startStandard('constituent-burden-' + testCase[0]);
+      qualities = engine.state.qualities;
+      qualities.budget = 100;
+      engine.goToScene('poland_constituent_government.' + testCase[0]);
+      assert.strictEqual(
+        qualities[testCase[1]],
+        1,
+        testCase[0] + ' did not fulfill ' + testCase[1]
+      );
+    });
   }
 
   function testNegotiationAndCohabitation() {
@@ -14471,6 +14489,13 @@ function runSmoke(game) {
         'poland_opposition_budget.conference_result'
       );
       choose(tactic);
+      if (tactic === 'poland_opposition_budget.tactic_bargain') {
+        assert.strictEqual(
+          engine.state.sceneId,
+          'poland_opposition_budget.bargain_answer'
+        );
+        choose('poland_opposition_budget.bargain_support');
+      }
       assert.strictEqual(
         engine.state.sceneId,
         'poland_opposition_budget.resolve'
@@ -17958,7 +17983,7 @@ function runSmoke(game) {
     choose('poland_events_2026.snap_result_2026');
     assert.strictEqual(
       engine.state.sceneId,
-      'poland_events_2026.snap_result_2026'
+      'poland_events_2026.snap_result_2026_display'
     );
     assert.strictEqual(qualities.election_2027_terminal, 1);
     assert.strictEqual(qualities.snap_election_complete, 1);
@@ -19024,6 +19049,12 @@ function runSmoke(game) {
       ko_relation: 44,
       pis_relation: 60,
       sejm_list_outcome: 'left_5',
+      pis_seats: 194,
+      ko_seats: 157,
+      p2050_seats: 33,
+      psl_seats: 32,
+      left_seats: 26,
+      konf_seats: 18,
     });
     engine.goToScene(
       'poland_events_2023_2024.october_mobilisations_2023'

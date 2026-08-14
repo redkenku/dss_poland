@@ -22,6 +22,9 @@ Q.opposition_budget_rebel_count = 0;
 Q.opposition_budget_named_rebels = "None";
 Q.opposition_budget_tactic = "No tactic selected";
 Q.opposition_budget_tactic_code = 0;
+Q.opposition_budget_bargain_response = "Not selected";
+Q.opposition_budget_bargain_preview_score = 0;
+Q.opposition_budget_bargain_preview_accepted = 0;
 Q.opposition_budget_amendment_1 = "No amendment filed";
 Q.opposition_budget_amendment_2 = "No amendment filed";
 Q.opposition_budget_amendment_1_passed = 0;
@@ -693,6 +696,18 @@ Q.opposition_budget_priority_mismatch = mismatchNames.length
 Q.opposition_budget_named_rebels = rebelNames.length
     ? rebelNames.join(", ")
     : "None";
+const mandatePriorityCodes = [
+    Number(Q.opposition_budget_priority_1_code) || 0,
+    Number(Q.opposition_budget_priority_2_code) || 0
+];
+const socialPriorityCodes = [1, 2, 3, 4, 7, 10, 12, 13, 14, 15];
+Q.opposition_budget_mandate_bonus =
+    Q.opposition_2023_strategy_code == "broker" ? 6 :
+    (Q.opposition_2023_strategy_code == "watchdog" ? 4 :
+        (Q.opposition_2023_strategy_code == "social" &&
+            mandatePriorityCodes.some(function(code) {
+                return socialPriorityCodes.includes(code);
+            }) ? 5 : 0));
 !}
 
 = Club instruction: [+ opposition_budget_conference_management +]
@@ -753,10 +768,88 @@ go-to: resolve
 
 @tactic_bargain
 title: Bargain for named concessions
-subtitle: Cost: 1 party resource. Best chance of a concession; the cabinet's exact answer sets a support, abstention or no-vote line.
+subtitle: Cost: 1 party resource. The cabinet answers first; Lewica then chooses support, abstention or rejection.
 choose-if: resources >= 1
 unavailable-subtitle: A written negotiation and monitoring file requires one party resource.
 on-arrival: resources -= 1; opposition_budget_tactic_code = 3; opposition_budget_tactic = "Named-concession bargain"; annual_budget_posture = "Conditional line"
+go-to: bargain_answer
+
+@bargain_answer
+title: The cabinet answers the two demands
+new-page: true
+call: poland_normalize
+on-arrival: {!
+const relationByGovernment = Q.government_party == "pis"
+    ? Number(Q.pis_relation) || 0
+    : (Q.government_party == "ko"
+        ? Number(Q.ko_relation) || 0
+        : (Q.government_party == "psl"
+            ? Number(Q.psl_relation) || 0
+            : Number(Q.p2050_relation) || 0));
+const conferenceBonus = Q.opposition_budget_conference_code == 1
+    ? 8 : (Q.opposition_budget_conference_code == 4 ? 3 : 0);
+const pivotalBonus = Q.opposition_budget_left_is_pivotal ? 16 : 0;
+const leftPowerShare = Math.max(
+    0,
+    Math.min(
+        1,
+        (Number(Q.opposition_budget_left_seats) || 0) /
+            Math.max(1, Number(Q.sejm_total) || 460)
+    )
+);
+Q.opposition_budget_bargain_preview_score = Math.round(
+    (Number(Q.negotiation_leverage) || 0) * 0.55 +
+    relationByGovernment * 0.35 + conferenceBonus + pivotalBonus +
+    Math.round(leftPowerShare * 24) +
+    (Number(Q.opposition_budget_mandate_bonus) || 0) + 10
+);
+Q.opposition_budget_negotiation_threshold =
+    Q.government_party == "pis" ? 54 : 46;
+Q.opposition_budget_bargain_preview_1 =
+    Q.opposition_budget_bargain_preview_score >=
+        Q.opposition_budget_negotiation_threshold ? 1 : 0;
+Q.opposition_budget_bargain_preview_2 =
+    Q.opposition_budget_bargain_preview_score >=
+        Q.opposition_budget_negotiation_threshold + 12 ? 1 : 0;
+Q.opposition_budget_bargain_preview_accepted =
+    Q.opposition_budget_bargain_preview_1 +
+    Q.opposition_budget_bargain_preview_2;
+!}
+
+= Written answer before the whip
+
+<div class="ledger-section ledger-section-first"><div class="ledger-title">Cabinet response</div>
+<div class="ledger-row"><span>[+ opposition_budget_priority_1 +]</span><b>[? if opposition_budget_bargain_preview_1: Accepted?][? if not opposition_budget_bargain_preview_1: Refused?]</b></div>
+<div class="ledger-row"><span>[+ opposition_budget_priority_2 +]</span><b>[? if opposition_budget_bargain_preview_2: Accepted?][? if not opposition_budget_bargain_preview_2: Refused?]</b></div>
+<div class="ledger-row"><span>Negotiation score</span><b>[+ opposition_budget_bargain_preview_score +] · required [+ opposition_budget_negotiation_threshold +]</b></div>
+<div class="ledger-subrow">The [+ opposition_2023_strategy +] mandate contributes [+ opposition_budget_mandate_bonus +] points. Accepted language changes the bill, not who owns the treasury.</div></div>
+
+The cabinet has answered. Lewica now chooses its own vote; an accepted clause
+does not automatically buy support, and a refused clause does not force an
+abstention.
+
+- @bargain_support
+- @bargain_abstain
+- @bargain_reject
+
+@bargain_support
+title: Support the amended budget
+subtitle: Whip for yes and own the bargain while the cabinet owns implementation.
+view-if: opposition_budget_bargain_preview_accepted > 0
+on-arrival: opposition_budget_bargain_response = "Support accepted clauses"; annual_budget_posture = "Conditional support"
+go-to: resolve
+
+@bargain_abstain
+title: Abstain for the accepted language
+subtitle: No Lewica yes whip; preserve distance while allowing the cabinet to find its majority.
+view-if: opposition_budget_bargain_preview_accepted > 0
+on-arrival: opposition_budget_bargain_response = "Abstain for accepted clauses"; annual_budget_posture = "Abstain on named concession"
+go-to: resolve
+
+@bargain_reject
+title: Reject the answer and vote no
+subtitle: Available whether the cabinet refused everything or the accepted package is still inadequate.
+on-arrival: opposition_budget_bargain_response = "Reject cabinet answer"; annual_budget_posture = "Vote no after bargain"
 go-to: resolve
 
 @tactic_abstain
@@ -800,7 +893,8 @@ const powerBonus = Math.round(leftPowerShare * 24);
 Q.opposition_budget_negotiation_score = Math.round(
     (Number(Q.negotiation_leverage) || 0) * 0.55 +
     relationByGovernment * 0.35 + conferenceBonus +
-    pivotalBonus + powerBonus
+    pivotalBonus + powerBonus +
+    (Number(Q.opposition_budget_mandate_bonus) || 0)
 );
 Q.opposition_budget_negotiation_threshold =
     Q.government_party == "pis" ? 54 : 46;
@@ -824,16 +918,16 @@ if (Q.opposition_budget_tactic_code == 2) {
         bargainScore >= Q.opposition_budget_negotiation_threshold ? 1 : 0;
     Q.opposition_budget_amendment_2_passed =
         bargainScore >= Q.opposition_budget_negotiation_threshold + 12 ? 1 : 0;
-    if (
-        Q.opposition_budget_amendment_1_passed &&
-        Q.opposition_budget_amendment_2_passed &&
-        Q.opposition_budget_left_is_pivotal
-    ) {
+    if (Q.opposition_budget_bargain_response == "Support accepted clauses" &&
+        Q.opposition_budget_amendment_1_passed) {
         Q.annual_budget_posture = "Conditional support";
-    } else if (Q.opposition_budget_amendment_1_passed) {
+    } else if (
+        Q.opposition_budget_bargain_response == "Abstain for accepted clauses" &&
+        Q.opposition_budget_amendment_1_passed
+    ) {
         Q.annual_budget_posture = "Abstain on named concession";
     } else {
-        Q.annual_budget_posture = "Vote no — bargain refused";
+        Q.annual_budget_posture = "Vote no after bargain";
     }
 }
 Q.opposition_budget_amendments_passed =
@@ -883,10 +977,6 @@ const socialEnough =
 const outrageousFrame =
     (socialShare < 16.8 && deficitShare > 5.3) ||
     (socialShare < 17.2 && defenceShare > 5.6);
-if (Q.annual_budget_posture == "Conditional support" && !socialEnough) {
-    Q.annual_budget_posture =
-        "Abstain on named concession";
-}
 const factionVotes = Object.keys(budgetModel.factions).map(function(id) {
     return Object.assign({id: id}, budgetModel.factions[id]);
 });
@@ -1093,6 +1183,28 @@ if (Q.opposition_budget_tactic_code == 1) {
     Q.opposition_budget_media_attention += 4;
     Q.media_capacity += 2;
     Q.public_trust += 1;
+} else if (Q.opposition_budget_tactic_code == 2) {
+    Q.opposition_budget_credibility += 2 +
+        Q.opposition_budget_amendments_passed;
+    Q.opposition_budget_issue_ownership +=
+        Q.opposition_budget_amendments_passed;
+    if (!Q.opposition_budget_amendments_passed) {
+        Q.negotiation_capital += 2;
+    }
+} else if (Q.opposition_budget_tactic_code == 3) {
+    Q.public_trust += Q.opposition_budget_amendments_passed;
+    Q.negotiation_capital -= Math.min(
+        4,
+        Q.opposition_budget_amendments_passed * 2
+    );
+    if (Q.opposition_budget_bargain_response == "Reject cabinet answer" &&
+        Q.opposition_budget_amendments_passed > 0) {
+        Q.party_unity += 2;
+        Q.opposition_budget_credibility += 2;
+    }
+} else if (Q.opposition_budget_tactic_code == 5 && governmentDefections > 0) {
+    Q.negotiation_capital += 2;
+    Q.media_capacity += 2;
 }
 
 Q.opposition_budget_audit_pending = 1;

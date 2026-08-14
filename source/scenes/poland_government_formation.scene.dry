@@ -64,6 +64,13 @@ Q.formation_tusk_suit_done = 0;
 Q.formation_hundred_days_done = 0;
 Q.formation_player_toleration = 0;
 Q.formation_player_in_government = 1;
+Q.formation_external_left_yes = 0;
+Q.formation_external_left_no = 0;
+Q.formation_external_left_abstain = 0;
+Q.opposition_2023_mandate_set = 0;
+Q.formation_autonomous_coalition_checked = 0;
+Q.formation_autonomous_code = "none";
+Q.formation_autonomous_members = [];
 Q.formation_pm_candidate_loss = 0;
 Q.formation_pm_candidate_support = 0;
 Q.ministries_finalized = 0;
@@ -980,6 +987,13 @@ Q.formation_return_ready = 0;
 Q.formation_complete = 0;
 Q.formation_outcome_score = 0;
 Q.left_in_government = 0;
+Q.formation_external_left_yes = 0;
+Q.formation_external_left_no = 0;
+Q.formation_external_left_abstain = 0;
+Q.opposition_2023_mandate_set = 0;
+Q.formation_autonomous_coalition_checked = 0;
+Q.formation_autonomous_code = "none";
+Q.formation_autonomous_members = [];
 
 Q.year = 2023;
 Q.month = 10;
@@ -1547,6 +1561,7 @@ go-to: poland_election.results_2023
 # prose-audit: Grade A — The certified seats remain visible, while the scene moves immediately to the President, PSL's brokers and Lewica's competing caucuses.
 title: The first sitting
 new-page: true
+call: poland_normalize
 on-arrival: {!
 if (!Q.trz_inaugurated) {
     Q.formation_president_nominee = "Mateusz Morawiecki";
@@ -1556,6 +1571,7 @@ if (!Q.trz_inaugurated) {
     Q.confidence_mode = "Article 154 presidential first attempt — Morawiecki designation";
 }
 !}
+go-to: autonomous_majority if pis_seats >= sejm_statutory_majority or ko_seats >= sejm_statutory_majority or (not third_way_split and p2050_seats + psl_seats >= sejm_statutory_majority); autonomous_coalition if formation_autonomous_coalition_checked = 0 and pis_seats < sejm_statutory_majority and ko_seats < sejm_statutory_majority and (third_way_split or p2050_seats + psl_seats < sejm_statutory_majority)
 
 = 13 November 2023 — two clocks begin
 
@@ -1598,6 +1614,253 @@ the Left to keep the filed bargain alive.?]
 - @first_rural_channel
 - @first_morawiecki_continuation
 - @trzaskowski_majority_designation
+
+@autonomous_coalition
+title: Rival parties test a government without Lewica
+on-arrival: {!
+Q.formation_autonomous_coalition_checked = 1;
+const majority = Math.max(1, Number(Q.sejm_statutory_majority) || 231);
+const seatMap = {
+    pis: Math.max(0, Number(Q.pis_seats) || 0),
+    ko: Math.max(0, Number(Q.ko_seats) || 0),
+    p2050: Math.max(0, Number(Q.p2050_seats) || 0),
+    psl: Math.max(0, Number(Q.psl_seats) || 0),
+    konf: Math.max(0, Number(Q.konf_seats) || 0)
+};
+const relation = function(key) {
+    return Math.max(0, Number(Q["rival_relation_" + key]) || 0);
+};
+const candidates = [
+    {code: "ko_p2050", label: "KO + Poland 2050", members: ["ko", "p2050"], gates: ["ko_p2050"], relations: ["ko_p2050"]},
+    {code: "ko_psl", label: "KO + PSL", members: ["ko", "psl"], gates: ["ko_psl"], relations: ["ko_psl"]},
+    {code: "pis_konf", label: "PiS + Konfederacja", members: ["pis", "konf"], gates: ["pis_konf"], relations: ["pis_konf"]},
+    {code: "pis_psl", label: "PiS + PSL", members: ["pis", "psl"], gates: ["pis_psl"], relations: ["pis_psl"]},
+    {code: "pis_p2050", label: "PiS + Poland 2050", members: ["pis", "p2050"], gates: ["pis_p2050"], relations: ["pis_p2050"]},
+    {code: "ko_konf", label: "KO + Konfederacja", members: ["ko", "konf"], gates: ["ko_konf"], relations: ["ko_konf"]},
+    {code: "ko_third", label: "KO + Third Way", members: ["ko", "p2050", "psl"], gates: ["ko_p2050", "ko_psl", "psl_p2050"], relations: ["ko_p2050", "ko_psl", "psl_p2050"]},
+    {code: "pis_third", label: "PiS + Third Way", members: ["pis", "p2050", "psl"], gates: ["pis_p2050", "pis_psl", "psl_p2050"], relations: ["pis_p2050", "pis_psl", "psl_p2050"]},
+    {code: "pis_konf_psl", label: "PiS + Konfederacja + PSL", members: ["pis", "konf", "psl"], gates: ["pis_konf", "pis_psl", "psl_konf"], relations: ["pis_konf", "pis_psl", "psl_konf"]},
+    {code: "pis_konf_p2050", label: "PiS + Konfederacja + Poland 2050", members: ["pis", "konf", "p2050"], gates: ["pis_konf", "pis_p2050", "konf_p2050"], relations: ["pis_konf", "pis_p2050", "konf_p2050"]},
+    {code: "pis_konf_third", label: "PiS + Konfederacja + Third Way", members: ["pis", "konf", "p2050", "psl"], gates: ["pis_konf", "pis_p2050", "pis_psl", "konf_p2050", "psl_konf", "psl_p2050"], relations: ["pis_konf", "pis_p2050", "pis_psl", "konf_p2050", "psl_konf", "psl_p2050"]}
+];
+for (const candidate of candidates) {
+    candidate.seats = candidate.members.reduce(function(total, party) {
+        return total + seatMap[party];
+    }, 0);
+    candidate.trust = candidate.relations.reduce(function(total, key) {
+        return total + relation(key);
+    }, 0) / candidate.relations.length;
+}
+// ponytail: deterministic minimal-winning coalition with one multiparty
+// readiness floor; add policy utilities only if authored preferences arrive.
+const viable = candidates.filter(function(candidate) {
+    return candidate.seats >= majority &&
+        (candidate.members.length <= 2 || candidate.trust >= 45) &&
+        candidate.gates.every(function(key) {
+            return Number(Q["coalition_viable_" + key]) == 1;
+        });
+}).sort(function(a, b) {
+    return a.members.length - b.members.length ||
+        b.trust - a.trust || a.seats - b.seats;
+});
+if (!viable.length) {
+    Q.formation_autonomous_code = "none";
+    Q.formation_autonomous_members = [];
+} else {
+    const selected = viable[0];
+    const leader = selected.members.reduce(function(best, party) {
+        return seatMap[party] > seatMap[best] ? party : best;
+    }, selected.members[0]);
+    const premiers = {
+        pis: Number(Q.year) == 2023
+            ? "Mateusz Morawiecki" : (Q.pis_leader || "PiS nominee"),
+        ko: Q.ko_leader || "Donald Tusk",
+        p2050: Q.p2050_leader || "Szymon Hołownia",
+        psl: Q.psl_leader || "Władysław Kosiniak-Kamysz",
+        konf: Q.konf_leader || "Sławomir Mentzen"
+    };
+    let speaker = selected.members.includes("p2050") &&
+        premiers[leader] != "Szymon Hołownia"
+        ? "Szymon Hołownia"
+        : (selected.members.includes("psl")
+            ? "Marek Sawicki"
+            : (selected.members.includes("ko")
+                ? "Małgorzata Kidawa-Błońska"
+                : (selected.members.includes("pis")
+                    ? "Elżbieta Witek" : "Krzysztof Bosak")));
+    Q.formation_autonomous_code = selected.code;
+    Q.formation_autonomous_label = selected.label;
+    Q.formation_autonomous_members = selected.members;
+    Q.formation_autonomous_seats = selected.seats;
+    Q.formation_autonomous_leader = leader;
+    Q.formation_autonomous_premier = premiers[leader];
+    Q.formation_autonomous_speaker = speaker;
+    if (!Q.third_way_split &&
+        selected.members.includes("psl") != selected.members.includes("p2050")) {
+        Q.third_way_split = 1;
+        Q.third_way_active = 0;
+        Q.third_way_joint_list = 0;
+        Q.third_way_display_name = "PSL and Poland 2050";
+        Q.third_way_future = "Split when only one member joined the cabinet";
+    }
+}
+!}
+go-to: autonomous_majority if formation_autonomous_code != "none"; first_sitting if formation_autonomous_code = "none"
+
+@autonomous_majority
+title: A majority forms without Lewica
+new-page: true
+on-arrival: {!
+const majority = Math.max(1, Number(Q.sejm_statutory_majority) || 231);
+const pisSeats = Math.max(0, Number(Q.pis_seats) || 0);
+const koSeats = Math.max(0, Number(Q.ko_seats) || 0);
+const p2050Seats = Math.max(0, Number(Q.p2050_seats) || 0);
+const pslSeats = Math.max(0, Number(Q.psl_seats) || 0);
+let code = String(Q.formation_autonomous_code || "none");
+let label = String(Q.formation_autonomous_label || "");
+let members = Array.isArray(Q.formation_autonomous_members)
+    ? Q.formation_autonomous_members.slice() : [];
+let seats = Number(Q.formation_autonomous_seats) || 0;
+let leader = String(Q.formation_autonomous_leader || "");
+let premier = String(Q.formation_autonomous_premier || "");
+let speaker = String(Q.formation_autonomous_speaker || "");
+if (!members.length && pisSeats >= majority) {
+    code = "pis_majority";
+    label = "PiS self-sufficient majority";
+    members = ["pis"];
+    seats = pisSeats;
+    leader = "pis";
+    premier = Number(Q.year) == 2023
+        ? "Mateusz Morawiecki"
+        : (Q.pis_leader || "PiS nominee");
+    speaker = "Elżbieta Witek";
+} else if (!members.length && koSeats >= majority) {
+    code = "ko_majority";
+    label = "KO self-sufficient majority";
+    members = ["ko"];
+    seats = koSeats;
+    leader = "ko";
+    premier = Q.ko_leader || "Donald Tusk";
+    speaker = "Małgorzata Kidawa-Błońska";
+} else if (!members.length) {
+    code = "third_way_majority";
+    label = "Third Way self-sufficient majority";
+    members = ["p2050", "psl"];
+    seats = p2050Seats + pslSeats;
+    leader = p2050Seats >= pslSeats ? "p2050" : "psl";
+    premier = leader == "p2050"
+        ? (Q.p2050_leader || "Szymon Hołownia")
+        : (Q.psl_leader || "Władysław Kosiniak-Kamysz");
+    speaker = premier == "Szymon Hołownia"
+        ? "Marek Sawicki"
+        : "Szymon Hołownia";
+}
+Q.formation_coalition_selected = 1;
+Q.formation_coalition_locked = 1;
+Q.formation_coalition_code = code;
+Q.formation_coalition_label = label;
+Q.formation_coalition_members = members;
+Q.formation_coalition_seats = seats;
+Q.formation_coalition_support_seats = seats;
+Q.formation_government_party = leader;
+Q.formation_pm_default = premier;
+Q.formation_pm_candidate_party = leader;
+Q.democratic_candidate = premier;
+Q.democratic_candidate_party = leader;
+Q.confidence_candidate = premier;
+Q.prime_minister_party = leader;
+Q.formation_player_in_government = 0;
+Q.formation_player_toleration = 0;
+Q.left_cabinet_committed = 0;
+Q.left_cabinet_model = "Parliamentary opposition";
+Q.formation_marshal_nominee = speaker;
+Q.formation_marshal_elected = 1;
+Q.sejm_speaker = speaker;
+Q.sejm_speaker_party = leader;
+Q.candidate_pis_votes = members.includes("pis") ? pisSeats : 0;
+Q.candidate_ko_votes = members.includes("ko") ? koSeats : 0;
+Q.candidate_p2050_votes = members.includes("p2050") ? p2050Seats : 0;
+Q.candidate_psl_votes = members.includes("psl") ? pslSeats : 0;
+Q.candidate_left_votes = 0;
+Q.democratic_votes = seats;
+Q.candidate_vote_passed = 1;
+Q.candidate_right_absent = 0;
+Q.formation_external_left_yes = 0;
+Q.formation_external_left_no = 0;
+Q.formation_external_left_abstain = 0;
+Q.ministry_return_mode = "cabinet_program";
+Q.ministry_allocation_mode = "formation";
+Q.ministries_finalized = 0;
+Q.ministry_count = 0;
+Q.left_role_code = "opposition";
+Q.government_members = members.slice();
+Q.government_supporters = [];
+Q.government_majority_type = members.length == 1
+    ? "single_party_majority" : "coalition_majority";
+Q.government_majority_margin = seats - majority;
+const palaceAcceptsMajority = Boolean(Q.trz_inaugurated) || leader == "pis";
+Q.presidential_majority_designation = palaceAcceptsMajority ? 1 : 0;
+Q.formation_presidential_attempt_resolved = palaceAcceptsMajority ? 0 : 1;
+Q.confidence_stage = palaceAcceptsMajority ? 1 : 2;
+Q.confidence_mode = palaceAcceptsMajority
+    ? "Article 154 presidential first attempt — majority nominee"
+    : "Article 154 Sejm initiative — majority nominee";
+Q.news_headline = label + " names " + premier + " without Lewica";
+!}
+
+= The election has already decided who can govern
+
+**[+ formation_coalition_label +]** controls **[+ formation_coalition_seats +]**
+seats, **[+ government_majority_margin +]** above the statutory majority. Its
+own agreement names **[+ democratic_candidate +]** for prime minister and **[+
+formation_marshal_nominee +]** for Marshal. Lewica cannot choose either office
+and receives no invitation to divide the ministries.
+
+[? if presidential_majority_designation = 0: President Duda's first nominee
+cannot command this chamber. That attempt lapses, and the self-sufficient
+majority elects its own nominee at the Sejm stage.?]
+
+Lewica still owns one decision: how its deputies vote on a cabinet that does
+not need them.
+
+- @autonomous_majority_oppose
+- @autonomous_majority_abstain
+- @autonomous_majority_support
+
+@autonomous_majority_oppose
+title: Vote against the rival cabinet
+subtitle: Become the opposition immediately; the majority carries its own government.
+on-arrival: formation_external_left_no = left_committed_seats; formation_external_left_yes = 0; formation_external_left_abstain = 0; party_unity += 2; news_headline = "Lewica votes against the self-sufficient cabinet"
+go-to: autonomous_majority_prepare
+
+@autonomous_majority_abstain
+title: Abstain and judge the cabinet bill by bill
+subtitle: Neither an office bargain nor confidence and supply; Lewica remains ordinary opposition.
+on-arrival: formation_external_left_no = 0; formation_external_left_yes = 0; formation_external_left_abstain = left_committed_seats; constitutional_restraint += 2; news_headline = "Lewica abstains on a cabinet that already has a majority"
+go-to: autonomous_majority_prepare
+
+@autonomous_majority_support
+title: Vote yes for an orderly transfer
+subtitle: A one-off investiture vote gives no ministries, budget authority or continuing support pact.
+on-arrival: formation_external_left_no = 0; formation_external_left_yes = left_committed_seats; formation_external_left_abstain = 0; public_trust += 1; news_headline = "Lewica lends a one-off vote to the incoming majority"
+go-to: autonomous_majority_prepare
+
+@autonomous_majority_prepare
+title: The majority assembles its own cabinet
+on-arrival: {!
+Q.candidate_left_votes = 0;
+Q.democratic_votes = Q.formation_coalition_seats;
+Q.candidate_vote_passed = 1;
+Q.formation_pm_candidate_loss = 0;
+Q.cabinet_ko_loss = 0;
+Q.cabinet_p2050_loss = 0;
+Q.cabinet_psl_loss = 0;
+Q.cabinet_left_loss = 0;
+Q.cabinet_pis_loss = 0;
+Q.cabinet_konf_loss = 0;
+Q.news_headline = Q.formation_coalition_label + " allocates its cabinet";
+!}
+go-to: poland_ministries
 
 @first_democratic_protocol
 title: Sign a public democratic voting protocol
@@ -4711,41 +4974,12 @@ authority.?]
 
 @formation_pm_alt_success_continue
 title: Continue from the nominee whip count
-go-to: poland_ministries if formation_player_in_government = 1; formation_external_cabinet_program if formation_player_in_government = 0
+go-to: poland_ministries
 
 @formation_external_cabinet_program
 title: The outside-support cabinet presents its agreement
 new-page: true
 on-arrival: {!
-const members = Array.isArray(Q.formation_coalition_members)
-    ? Q.formation_coalition_members : [];
-const baseline = {
-    labor: ["PiS", "Marlena Maląg"],
-    equality: ["PiS", "Anna Schmidt"],
-    housing: ["PiS", "Piotr Uściński"],
-    health: ["PiS", "Adam Niedzielski"],
-    digital: members.includes("p2050")
-        ? ["Poland 2050", "Michał Gramatyka"]
-        : ["PiS", "Janusz Cieszyński"],
-    science: ["PiS", "Przemysław Czarnek"],
-    interior: ["PiS", "Mariusz Kamiński"],
-    finance: members.includes("konf")
-        ? ["Konfederacja", "Sławomir Mentzen"]
-        : ["PiS", "Tadeusz Kościński"],
-    economy: members.includes("konf")
-        ? ["Konfederacja", "Konrad Berkowicz"]
-        : ["PiS", "Piotr Nowak"],
-    justice: ["PiS", "Paweł Jabłoński"],
-    foreign: ["PiS", "Zbigniew Rau"],
-    agriculture: members.includes("psl")
-        ? ["PSL", "Czesław Siekierski"]
-        : ["PiS", "Grzegorz Puda"],
-    defence: ["PiS", "Mariusz Błaszczak"]
-};
-for (const portfolio of Object.keys(baseline)) {
-    Q[portfolio + "_minister_party"] = baseline[portfolio][0];
-    Q[portfolio + "_minister"] = baseline[portfolio][1];
-}
 Q.cabinet_program = Q.formation_player_toleration
     ? "Coalition contract with a written toleration protocol"
     : "Formal coalition contract without player participation";
@@ -4755,8 +4989,6 @@ Q.cabinet_psl_loss = 0;
 Q.cabinet_left_loss = 0;
 Q.cabinet_pis_loss = 0;
 Q.cabinet_konf_loss = 0;
-Q.ministries_finalized = 1;
-Q.ministry_allocation_mode = "settled";
 Q.news_headline = "The proposed cabinet presents its contract to the Sejm";
 !}
 
@@ -4996,9 +5228,19 @@ if (Q.formation_coalition_selected) {
     );
     const nonSupporters = Math.max(0, sejmTotal - contractedSupport);
     const selectedRightAbsent = Math.min(rightAbsent, nonSupporters);
-    Q.confidence_yes = nomineeSupport - cabinetLosses;
-    Q.confidence_no = nonSupporters - selectedRightAbsent;
-    Q.confidence_abstain = nomineeWithholding + cabinetLosses;
+    const externalLeftYes = Math.min(
+        nonSupporters - selectedRightAbsent,
+        Math.max(0, Number(Q.formation_external_left_yes) || 0)
+    );
+    const externalLeftAbstain = Math.min(
+        nonSupporters - selectedRightAbsent - externalLeftYes,
+        Math.max(0, Number(Q.formation_external_left_abstain) || 0)
+    );
+    Q.confidence_yes = nomineeSupport - cabinetLosses + externalLeftYes;
+    Q.confidence_no = nonSupporters - selectedRightAbsent -
+        externalLeftYes - externalLeftAbstain;
+    Q.confidence_abstain = nomineeWithholding + cabinetLosses +
+        externalLeftAbstain;
 } else {
     const pledgedSupport = Math.max(
         0,
@@ -5112,6 +5354,37 @@ if (Q.formation_coalition_selected) {
 Q.left_in_government = Q.formation_coalition_selected
     ? (Q.formation_player_in_government ? 1 : 0)
     : (Q.left_cabinet_committed ? 1 : 0);
+const formationMembers = Array.isArray(Q.formation_coalition_members)
+    ? Q.formation_coalition_members.slice() : [];
+if (!Q.formation_coalition_selected) {
+    for (const party of ["pis", "ko", "p2050", "psl", "konf"]) {
+        if (Q["ministry_" + party + "_in_cabinet"] &&
+            !formationMembers.includes(party)) {
+            formationMembers.push(party);
+        }
+    }
+}
+if (Q.left_in_government && !formationMembers.includes("lewica")) {
+    formationMembers.push("lewica");
+}
+Q.government_members = formationMembers;
+Q.government_supporters = Q.formation_player_toleration ? ["lewica"] : [];
+Q.left_role_code = Q.left_in_government
+    ? (Q.government_party == "lewica" ? "lead_government" : "junior_government")
+    : (Q.formation_player_toleration ? "confidence_supply" : "opposition");
+const formationMajority = Math.max(
+    1,
+    Number(Q.sejm_statutory_majority) || 231
+);
+const formalGovernmentSupport = Q.formation_coalition_selected
+    ? Number(Q.formation_coalition_support_seats) || 0
+    : Number(Q.confidence_yes) || 0;
+Q.government_majority_type = formalGovernmentSupport >= formationMajority
+    ? (formationMembers.length <= 1
+        ? "single_party_majority" : "coalition_majority")
+    : "minority_government";
+Q.government_majority_margin =
+    formalGovernmentSupport - formationMajority;
 // A Left premier the larger partners agreed to rather than earned starts the
 // term owing them, and the coalition says so from the first week.
 const largestCabinetPartner = Math.max(
@@ -5178,10 +5451,13 @@ if (Q.formation_coalition_selected) {
         0,
         Number(Q.formation_coalition_seats) || 0
     );
-    Q.government_support_seats = Math.max(
-        0,
-        Math.round(Number(Q.confidence_yes) || 0)
-    );
+    Q.government_support_seats = Q.formation_player_in_government ||
+        Q.formation_player_toleration
+        ? Math.max(0, Math.round(Number(Q.confidence_yes) || 0))
+        : Math.max(
+            0,
+            Math.round(Number(Q.formation_coalition_support_seats) || 0)
+        );
 } else {
     Q.coalition_status = cabinetPartyLabels.length
         ? cabinetPartyLabels.join(" · ") + " cabinet"
@@ -5308,7 +5584,57 @@ programme of negotiated sequencing.
 
 @government_entry_gate
 title: Determine the Left's constitutional position
-go-to: poland_ministries if left_in_government = 1 and ministries_finalized = 0; governing_agreement if left_in_government = 1 and ministries_finalized = 1 and standard_four_party_cabinet = 1; nonstandard_governing_agreement if left_in_government = 1 and ministries_finalized = 1 and standard_four_party_cabinet = 0; campaign_return if left_in_government = 0 and formation_continuous = 1; opposition_assessment if left_in_government = 0 and formation_continuous = 0
+go-to: poland_ministries if left_in_government = 1 and ministries_finalized = 0; governing_agreement if left_in_government = 1 and ministries_finalized = 1 and standard_four_party_cabinet = 1; nonstandard_governing_agreement if left_in_government = 1 and ministries_finalized = 1 and standard_four_party_cabinet = 0; opposition_mandate if left_in_government = 0 and opposition_2023_mandate_set = 0; campaign_return if left_in_government = 0 and formation_continuous = 1; opposition_assessment if left_in_government = 0 and formation_continuous = 0
+
+@opposition_mandate
+title: Choose the opposition mandate
+new-page: true
+on-arrival: {!
+Q.left_role_code = "opposition";
+Q.position = "Parliamentary opposition";
+Q.budget = 0;
+Q.budget_authority = "Opposition — no state spending authority";
+Q.opposition_2023_strategy = "Unselected";
+Q.opposition_2023_strategy_code = "none";
+if (!Number.isFinite(Number(Q.opposition_operation_last_time))) {
+    Q.opposition_operation_last_time = -99;
+}
+!}
+
+= The cabinet has offices; Lewica needs a theory of opposition
+
+**[+ government_name +]** can survive without Lewica. The next term therefore
+cannot be played as a cabinet negotiation waiting to happen. Party resources
+fund bills, hearings and organisation; they do not become state spending.
+
+Choose what turns those limited instruments into leverage. This line will
+shape the standing opposition operation available from the Leadership Table.
+
+- @opposition_mandate_social
+- @opposition_mandate_watchdog
+- @opposition_mandate_broker
+
+@opposition_mandate_social
+title: Build a social opposition outside Parliament
+subtitle: Organise around wages, housing and public services; accept cooler relations with the cabinet.
+on-arrival: opposition_2023_mandate_set = 1; opposition_2023_strategy = "Social and movement opposition"; opposition_2023_strategy_code = "social"; labor_credibility += 4; workers_support += 3; movement_autonomy += 2; negotiation_capital += 1; ko_relation -= 2; news_headline = "Lewica opens the term as a social opposition"
+go-to: opposition_mandate_continue
+
+@opposition_mandate_watchdog
+title: Form a shadow cabinet and audit delivery
+subtitle: Own the implementation record, committee hearings and costed alternatives.
+on-arrival: opposition_2023_mandate_set = 1; opposition_2023_strategy = "Shadow cabinet and delivery audit"; opposition_2023_strategy_code = "watchdog"; constitutional_restraint += 3; media_capacity += 2; public_trust += 1; negotiation_capital += 2; news_headline = "Lewica forms a delivery-focused shadow cabinet"
+go-to: opposition_mandate_continue
+
+@opposition_mandate_broker
+title: Become the parliamentary hinge
+subtitle: Seek narrow statutes and oversight concessions without promising confidence and supply.
+on-arrival: opposition_2023_mandate_set = 1; opposition_2023_strategy = "Independent parliamentary broker"; opposition_2023_strategy_code = "broker"; negotiation_capital += 4; ko_relation += 2; p2050_relation += 2; psl_relation += 1; razem_dissent += 2; news_headline = "Lewica offers bill-by-bill parliamentary bargains"
+go-to: opposition_mandate_continue
+
+@opposition_mandate_continue
+title: Begin the opposition term
+go-to: campaign_return if formation_continuous = 1; opposition_assessment if formation_continuous = 0
 
 @third_attempt
 title: The President's last attempt

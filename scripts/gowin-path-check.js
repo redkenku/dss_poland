@@ -1493,6 +1493,75 @@ console.log('gowin-path-check: prime-ministerial family OK');
 }
 
 {
+  // A fresh election allocates family seats from live list membership and
+  // organisation instead of freezing every junior party at its 2019 count.
+  const { engine, Q } = newEngine();
+  const party = function(id) {
+    return Q.parliamentary_party_records.find(function(record) {
+      return record.id === id;
+    });
+  };
+  normalize(engine);
+  Q.election_2023_certified = 1;
+  Q.p2050_emerged = 1;
+  Q.third_way_active = 1;
+  Q.third_way_2023_done = 1;
+  Q.third_way_split = 0;
+  Q.ministry_psl_in_cabinet = 0;
+  Q.ministry_p2050_in_cabinet = 0;
+  Q.psl_seats = 70;
+  Q.p2050_seats = 50;
+  Q.ko_seats = 220;
+  Q.pis_seats = 180;
+
+  Q.porozumienie_exit_done = 1;
+  Q.porozumienie_list_committee = 'third_way';
+  group(Q, 'porozumienie').mp_count = 6;
+  group(Q, 'porozumienie').organisation = 35;
+  Q.kukiz_route_2023 = 'kp';
+  Q.kukiz_list_committee = 'psl';
+  group(Q, 'kukiz15').list_committee = 'psl';
+
+  Q.republikanie_formed = 1;
+  Object.assign(group(Q, 'republikanie'), {
+    active: 1, list_committee: 'pis', mp_count: 5, organisation: 35
+  });
+  Q.odnowa_formed = 1;
+  Object.assign(group(Q, 'odnowa'), {
+    active: 1, list_committee: 'pis', mp_count: 3, organisation: 30
+  });
+
+  normalize(engine);
+  const uedBeforeOrganisation = party('kp_partners').sejm_mps;
+  group(Q, 'kp_partners').organisation = 70;
+  normalize(engine);
+
+  assert.strictEqual(group(Q, 'kukiz15').list_committee, 'third_way');
+  for (const id of ['porozumienie', 'kukiz15', 'kp_partners']) {
+    assert.strictEqual(party(id).family, 'kp', id + ' must follow its live list');
+    assert(party(id).sejm_mps > 0, id + ' must receive a list allocation');
+  }
+  assert(party('kp_partners').sejm_mps > uedBeforeOrganisation,
+    'A stronger UED organisation must win more than its frozen legacy seat');
+  assert.strictEqual(
+    Q.parliamentary_family_records.find(function(record) {
+      return record.id === 'kp';
+    }).sejm_seats,
+    120
+  );
+  assert(party('po').sejm_mps > Q.ko_seats / 2,
+    'PO remains hegemonic inside a dynamically allocated KO');
+  assert(party('nowoczesna').sejm_mps > 10,
+    'A large KO victory also elects more junior-party candidates');
+  for (const id of ['republikanie', 'odnowa']) {
+    assert.strictEqual(party(id).family, 'zp');
+    assert(party(id).sejm_mps > 0, id + ' must share ZP list seats');
+  }
+  assert(party('pis_party').sejm_mps > Q.pis_seats / 2,
+    'PiS remains hegemonic inside a dynamically allocated ZP');
+}
+
+{
   const statusSource = fs.readFileSync(
     path.join(projectRoot, 'source/scenes/status.scene.dry'), 'utf8'
   );

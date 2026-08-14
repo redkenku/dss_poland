@@ -35,7 +35,7 @@ dendry.convertJSONToGame(json, function(error, converted) {
 
 // A KO-led cabinet with a workable but not crushing majority, a badly split
 // coalition and Lewica sitting outside it holding the pivotal bloc.
-function openRoll(seed, posture) {
+function openRoll(seed, posture, bargainResponse) {
   const engine = new dendry.DendryEngine(new dendry.UserInterface(), game);
   engine.beginGame([seed]);
   const Q = engine.state.qualities;
@@ -61,6 +61,20 @@ function openRoll(seed, posture) {
   Q.caretaker_government = 0;
   Q.coalition_seats = 235;
   Q.government_support_seats = 235;
+  if (bargainResponse) {
+    Object.assign(Q, {
+      resources: 8,
+      negotiation_capital: 30,
+      ko_relation: 90,
+      public_trust: 80,
+      labor_credibility: 80,
+      local_network: 80,
+      media_access: 80,
+      opposition_2023_mandate_set: 1,
+      opposition_2023_strategy: 'Independent parliamentary broker',
+      opposition_2023_strategy_code: 'broker',
+    });
+  }
 
   engine.goToScene('poland_budget_2023_2026.annual_budget');
   // A coalition with real malcontents to lose: 55 stress puts seven of them
@@ -72,6 +86,22 @@ function openRoll(seed, posture) {
   choose('poland_opposition_budget.priority_services');
   choose('poland_opposition_budget.conference_discipline');
   choose(posture);
+  if (bargainResponse) {
+    assert.strictEqual(engine.state.sceneId,
+      'poland_opposition_budget.bargain_answer');
+    assert(Q.opposition_budget_bargain_preview_accepted > 0,
+      'High-leverage bargain produced no accepted clause');
+    for (const response of [
+      'poland_opposition_budget.bargain_support',
+      'poland_opposition_budget.bargain_abstain',
+      'poland_opposition_budget.bargain_reject',
+    ]) {
+      assert(engine.getCurrentChoices().some(function(choice) {
+        return choice.id === response;
+      }), 'Bargain omitted response ' + response);
+    }
+    choose(bargainResponse);
+  }
   return Q;
 }
 
@@ -135,6 +165,34 @@ assert(
   'Tightening the margin did not reduce open votes against the cabinet: ' +
     hard.annual_budget_government_no + ' vs ' + soft.annual_budget_government_no
 );
+
+for (const bargain of [
+  {
+    choice: 'poland_opposition_budget.bargain_support',
+    response: 'Support accepted clauses',
+    posture: 'Conditional support',
+  },
+  {
+    choice: 'poland_opposition_budget.bargain_abstain',
+    response: 'Abstain for accepted clauses',
+    posture: 'Abstain on named concession',
+  },
+  {
+    choice: 'poland_opposition_budget.bargain_reject',
+    response: 'Reject cabinet answer',
+    posture: 'Vote no after bargain',
+  },
+]) {
+  const result = openRoll(
+    'budget-bargain-' + bargain.response,
+    'poland_opposition_budget.tactic_bargain',
+    bargain.choice
+  );
+  assert.strictEqual(result.opposition_budget_bargain_response,
+    bargain.response);
+  assert.strictEqual(result.annual_budget_posture, bargain.posture,
+    'The roll call silently rewrote the explicit bargain response');
+}
 
 // A better whip narrows uncertainty instead of revealing a point result.
 {

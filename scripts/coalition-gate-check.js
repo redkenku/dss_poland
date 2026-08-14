@@ -72,6 +72,15 @@ function choiceById(engine, id) {
   return found;
 }
 
+function choiceText(value) {
+  if (value === undefined || value === null) return '';
+  if (typeof value === 'string' || typeof value === 'number') {
+    return String(value);
+  }
+  if (Array.isArray(value)) return value.map(choiceText).join(' ');
+  return choiceText(value.content);
+}
+
 function formationChamber(Q) {
   Q.year = 2023;
   Q.month = 10;
@@ -810,6 +819,95 @@ for (const route of [
   assert.strictEqual(run.Q.formation_coalition_seats, route[3]);
   assert.strictEqual(run.Q.formation_coalition_support_seats, route[3]);
   assert.strictEqual(run.Q.third_way_split, route[4]);
+}
+
+// --- 13. cabinet programme names and moves only real supporters ----------
+function cabinetProgrammeRun(members, p2050Votes, pslVotes) {
+  const run = newEngine();
+  Object.assign(run.Q, {
+    formation_pis_player_coalition: 0,
+    formation_coalition_selected: 1,
+    formation_coalition_members: members,
+    formation_coalition_support_seats: 300,
+    democratic_votes: 300,
+    democratic_candidate: 'Coalition nominee',
+    sejm_total: 460,
+    sejm_quorum_floor: 230,
+    coalition_right_seats: 160,
+    candidate_right_absent: 0,
+    candidate_ko_votes: members.includes('ko') ? 100 : 0,
+    candidate_p2050_votes: p2050Votes,
+    candidate_psl_votes: pslVotes,
+    candidate_left_votes: 100,
+    razem_seats: 0,
+    ministry_ko_in_cabinet: members.includes('ko') ? 1 : 0,
+    ministry_p2050_in_cabinet: members.includes('p2050') ? 1 : 0,
+    ministry_psl_in_cabinet: members.includes('psl') ? 1 : 0,
+    psl_coalition_dissent: 20,
+    p2050_coalition_dissent: 20,
+    ko_coalition_dissent: 20,
+    psl_relation: 50,
+    p2050_relation: 50
+  });
+  run.engine.goToScene('poland_government_formation.cabinet_program');
+  return run;
+}
+
+for (const route of [
+  [['ko', 'lewica'], 0, 0],
+  [['p2050', 'lewica'], 40, 0],
+  [['psl', 'lewica'], 0, 35],
+  [['p2050', 'psl', 'lewica'], 40, 35],
+  [['ko', 'p2050', 'psl', 'lewica'], 40, 35],
+  [['ko', 'psl', 'lewica'], 4, 35],
+  [['ko', 'p2050', 'lewica'], 40, 4]
+]) {
+  const run = cabinetProgrammeRun(route[0], route[1], route[2]);
+  const social = choiceText(choiceById(
+    run.engine,
+    'poland_government_formation.cabinet_social_deadlines'
+  ).subtitle);
+  const rural = choiceById(
+    run.engine,
+    'poland_government_formation.cabinet_rural_priority'
+  );
+  const ruralText = choiceText(rural.title) + ' ' +
+    choiceText(rural.subtitle);
+  assert.strictEqual(social.includes('Poland 2050'), route[1] > 0,
+    'Social-deadline prose leaked or omitted Poland 2050');
+  assert.strictEqual(social.includes('PSL'), route[2] > 0,
+    'Social-deadline prose leaked or omitted PSL');
+  if (route[2] === 0) {
+    assert(!ruralText.includes('PSL'), 'Rural prose leaked absent PSL');
+  }
+  run.engine.goToScene(
+    'poland_government_formation.cabinet_social_deadlines'
+  );
+  const p2050Loss = Math.min(2, route[1]);
+  const pslLoss = Math.min(12, route[2]);
+  assert.strictEqual(run.Q.p2050_coalition_dissent,
+    20 + (route[0].includes('p2050') ? p2050Loss : 0));
+  assert.strictEqual(run.Q.psl_coalition_dissent,
+    20 + (route[0].includes('psl') ? pslLoss : 0));
+  assert.strictEqual(run.Q.p2050_relation,
+    50 - (route[0].includes('p2050') ? 0 : Math.min(3, p2050Loss)));
+  assert.strictEqual(run.Q.psl_relation,
+    50 - (route[0].includes('psl') ? 0 : Math.min(6, pslLoss)));
+}
+
+for (const choice of [
+  'cabinet_minimum_text', 'cabinet_rural_priority'
+]) {
+  const run = cabinetProgrammeRun(['ko', 'lewica'], 0, 0);
+  run.engine.goToScene('poland_government_formation.' + choice);
+  assert.strictEqual(run.Q.psl_coalition_dissent, 20,
+    choice + ' moved absent PSL coalition dissent');
+  assert.strictEqual(run.Q.p2050_coalition_dissent, 20,
+    choice + ' moved absent Poland 2050 coalition dissent');
+  assert.strictEqual(run.Q.psl_relation, 50,
+    choice + ' moved the relation with non-supporting PSL');
+  assert.strictEqual(run.Q.p2050_relation, 50,
+    choice + ' moved the relation with non-supporting Poland 2050');
 }
 
 console.log('coalition-gate-check: all assertions passed');
