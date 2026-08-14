@@ -15749,6 +15749,17 @@ function runSmoke(game) {
       secondCampaignStart + 1
     );
     choose('poland_events_2026.snap_campaign_social');
+    choose('poland_regional_campaign.snap_open');
+    assert.strictEqual(
+      engine.state.sceneId,
+      'poland_regional_campaign.board'
+    );
+    globalThis.polandElectionModel.setCampaignIssue(
+      qualities,
+      'living_standards'
+    );
+    globalThis.polandElectionModel.setCampaignProvince(qualities, '14');
+    choose('poland_regional_campaign.confirm');
     assert.strictEqual(
       qualities.snap_election_cycle,
       1,
@@ -15768,7 +15779,17 @@ function runSmoke(game) {
       ['poland_events_2026.snap_campaign_result_due_2026']
     );
     choose('poland_events_2026.snap_campaign_result_due_2026');
-    choose('poland_events_2026.snap_campaign_count');
+    choose('poland_regional_campaign.snap_close');
+    assert.strictEqual(
+      engine.state.sceneId,
+      'poland_regional_campaign.board'
+    );
+    globalThis.polandElectionModel.setCampaignIssue(
+      qualities,
+      'living_standards'
+    );
+    globalThis.polandElectionModel.setCampaignProvince(qualities, '14');
+    choose('poland_regional_campaign.confirm');
     assert.strictEqual(qualities.snap_election_cycle, 2);
     assert.strictEqual(qualities.senate_snap_election_cycle, 2);
     assert.strictEqual(
