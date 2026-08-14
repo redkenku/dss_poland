@@ -1,0 +1,870 @@
+title: Load the regional Sejm election model
+on-arrival: {!
+const regionalElectionHost = typeof window !== "undefined"
+    ? window
+    : (typeof globalThis !== "undefined" ? globalThis : this);
+if (!regionalElectionHost.polandElectionModel ||
+    regionalElectionHost.polandElectionModel.version != 2) {
+    const geography = regionalElectionHost.polandElectionGeographyData;
+    const finiteRegional = function(value, fallback) {
+        const parsed = Number(value);
+        return Number.isFinite(parsed) ? parsed : fallback;
+    };
+    const clampRegional = function(value, low, high) {
+        return Math.max(low, Math.min(high, finiteRegional(value, low)));
+    };
+    const copyRegional = function(value) {
+        return JSON.parse(JSON.stringify(value));
+    };
+    const emptyRegional = function(ids) {
+        const result = {};
+        for (const id of ids) result[id] = 0;
+        return result;
+    };
+    const sumRegional = function(object) {
+        return Object.keys(object || {}).reduce(function(total, id) {
+            return total + finiteRegional(object[id], 0);
+        }, 0);
+    };
+    const familyForRegional = function(id) {
+        if ([
+            "left", "sld_breakaway", "social_patriot", "spring_breakaway",
+            "labor_left", "young_left", "razem", "pps", "tak_rozwoj"
+        ].includes(id)) return "left";
+        if (["ko", "ko_splinter", "centrum"].includes(id)) return "ko";
+        if ([
+            "pis", "rozwoj", "suwerenna", "republikanie", "odnowa",
+            "duda", "social_conservative"
+        ].includes(id)) return "pis";
+        if (["konf", "korona", "new_hope", "national_movement"].includes(id)) {
+            return "konf";
+        }
+        if (["porozumienie", "kukiz"].includes(id)) return "psl";
+        if (id == "p2050" || id == "p0") return "p2050";
+        return "other";
+    };
+    const profileShareRegional = function(profile, family) {
+        if (family == "p2050") {
+            return finiteRegional(profile.ko, 0) * 0.62 +
+                finiteRegional(profile.psl, 0) * 0.38;
+        }
+        return finiteRegional(profile[family], profile.other || 0.02);
+    };
+    const apportionRegional = function(total, ids, weightFor) {
+        const result = emptyRegional(ids);
+        const safeTotal = Math.max(0, Math.round(finiteRegional(total, 0)));
+        if (!ids.length || !safeTotal) return result;
+        const divisor = ids.reduce(function(sum, id) {
+            return sum + Math.max(0, finiteRegional(weightFor(id), 0));
+        }, 0) || 1;
+        const rows = ids.map(function(id) {
+            const exact = safeTotal * Math.max(
+                0, finiteRegional(weightFor(id), 0)
+            ) / divisor;
+            return {
+                id: id, value: Math.floor(exact),
+                remainder: exact - Math.floor(exact)
+            };
+        });
+        let used = rows.reduce(function(sum, row) { return sum + row.value; }, 0);
+        rows.sort(function(a, b) {
+            return b.remainder - a.remainder || a.id.localeCompare(b.id);
+        });
+        let cursor = 0;
+        while (used < safeTotal) {
+            rows[cursor % rows.length].value += 1;
+            cursor += 1;
+            used += 1;
+        }
+        for (const row of rows) result[row.id] = row.value;
+        return result;
+    };
+    const dhondtRegional = function(votes, qualified, seatCount) {
+        const result = emptyRegional(Object.keys(votes));
+        if (!qualified.length || seatCount <= 0) return result;
+        for (let seat = 0; seat < seatCount; seat += 1) {
+            let winner = qualified[0];
+            for (const id of qualified) {
+                const candidate = finiteRegional(votes[id], 0) /
+                    ((result[id] || 0) + 1);
+                const current = finiteRegional(votes[winner], 0) /
+                    ((result[winner] || 0) + 1);
+                if (candidate > current ||
+                    (candidate == current && id.localeCompare(winner) < 0)) {
+                    winner = id;
+                }
+            }
+            result[winner] += 1;
+        }
+        return result;
+    };
+    const issueDataRegional = {
+        living_standards: {
+            label: "Living standards and public services",
+            moods: ["social_spending"],
+            affinity: {left: 0.45, pis: 0.35, psl: 0.20}
+        },
+        health_care: {
+            label: "Health and care",
+            moods: ["vaccination", "social_spending"],
+            affinity: {left: 0.42, pis: 0.28, psl: 0.16, ko: 0.14}
+        },
+        equality: {
+            label: "Equal rights and a secular state",
+            moods: ["abortion_rights", "lgbt_equality", "secular_state"],
+            affinity: {left: 0.42, ko: 0.58, pis: -0.20, konf: -0.12}
+        },
+        institutions: {
+            label: "Democratic institutions and the rule of law",
+            moods: ["rule_of_law"],
+            affinity: {left: 0.30, ko: 0.62, pis: -0.18}
+        },
+        security: {
+            label: "Borders, defence and allied security",
+            moods: ["border_security", "national_security"],
+            affinity: {pis: 0.56, konf: 0.22, psl: 0.12, left: 0.10}
+        },
+        solidarity: {
+            label: "Refugees and international solidarity",
+            moods: ["refugee_solidarity"],
+            affinity: {left: 0.42, ko: 0.54, pis: -0.16, konf: -0.18}
+        }
+    };
+    const issueAffinityRegional = function(profile, issue) {
+        const weights = issueDataRegional[issue].affinity;
+        return Object.keys(weights).reduce(function(total, family) {
+            return total + finiteRegional(profile[family], 0) * weights[family];
+        }, 0);
+    };
+    const issueEffectivenessRegional = function(state, issue) {
+        const moods = issueDataRegional[issue].moods;
+        const ownership = moods.reduce(function(sum, mood) {
+            return sum + finiteRegional(state[mood + "_left_ownership"], 35);
+        }, 0) / moods.length;
+        const backlash = moods.reduce(function(sum, mood) {
+            return sum + finiteRegional(state[mood + "_backlash"], 45);
+        }, 0) / moods.length;
+        return clampRegional(0.50 + ownership / 100 - backlash / 200, 0.25, 1);
+    };
+    const campaignMultiplierRegional = function(state, row, affinities, log) {
+        let issueMultiplier = 1;
+        for (const entry of log) {
+            if (!issueDataRegional[entry.issue]) continue;
+            const range = affinities[entry.issue];
+            const raw = issueAffinityRegional(row.profile, entry.issue);
+            const centred = range.high > range.low
+                ? ((raw - range.low) / (range.high - range.low)) * 2 - 1
+                : 0;
+            issueMultiplier *= 1 + 0.03 * centred *
+                issueEffectivenessRegional(state, entry.issue);
+        }
+        issueMultiplier = clampRegional(issueMultiplier, 0.90, 1.10);
+        const visits = log.filter(function(entry) {
+            return String(entry.provinceId) == String(row.provinceId);
+        }).length;
+        let tourMultiplier = 1;
+        if (visits > 0) tourMultiplier *= 1.04;
+        if (visits > 1) tourMultiplier *= 1.02;
+        for (let visit = 2; visit < visits; visit += 1) tourMultiplier *= 1.01;
+        return issueMultiplier * Math.min(1.08, tourMultiplier);
+    };
+    const seedHashRegional = function(value) {
+        let hash = 2166136261;
+        const text = String(value || "regional-sejm");
+        for (let index = 0; index < text.length; index += 1) {
+            hash ^= text.charCodeAt(index);
+            hash = Math.imul(hash, 16777619);
+        }
+        return hash >>> 0;
+    };
+    const randomRegional = function(seed) {
+        let value = seed || 1;
+        return function() {
+            value ^= value << 13;
+            value ^= value >>> 17;
+            value ^= value << 5;
+            return (value >>> 0) / 4294967296;
+        };
+    };
+    const gaussianRegional = function(random) {
+        const first = Math.max(0.000001, random());
+        const second = random();
+        return Math.sqrt(-2 * Math.log(first)) * Math.cos(2 * Math.PI * second);
+    };
+    const quantileRegional = function(values, quantile) {
+        const sorted = values.slice().sort(function(a, b) { return a - b; });
+        return sorted[Math.max(0, Math.min(
+            sorted.length - 1, Math.floor((sorted.length - 1) * quantile)
+        ))];
+    };
+    const districtRowsRegional = function(system) {
+        if (system == "mixed_230") return geography.mixedDistricts;
+        if (system == "fptp_460") return geography.fptpDistricts;
+        return geography.districts;
+    };
+    const priorProfileRegional = function(state, system, row) {
+        const prior = state.poland_election_geographic_prior;
+        if (prior && prior.system == system && Array.isArray(prior.profiles)) {
+            const saved = prior.profiles.find(function(profile) {
+                return String(profile.id) == String(row.id);
+            });
+            if (saved && saved.profile) return saved.profile;
+        }
+        return row.profile;
+    };
+    const regionalVoteMatrix = function(
+        state, system, rows, committees, committeeVotes,
+        membersFor, componentVotes, campaignLog
+    ) {
+        const totalElectorate = rows.reduce(function(sum, row) {
+            return sum + finiteRegional(row.electorate, 1);
+        }, 0);
+        const nationalTotal = committees.reduce(function(sum, committee) {
+            return sum + finiteRegional(committeeVotes[committee], 0);
+        }, 0) || 1;
+        const targets = {};
+        for (const committee of committees) {
+            targets[committee] = totalElectorate *
+                finiteRegional(committeeVotes[committee], 0) / nationalTotal;
+        }
+        const workingRows = rows.map(function(row) {
+            return Object.assign({}, row, {
+                profile: priorProfileRegional(state, system, row)
+            });
+        });
+        const affinities = {};
+        for (const issue of Object.keys(issueDataRegional)) {
+            const values = workingRows.map(function(row) {
+                return issueAffinityRegional(row.profile, issue);
+            });
+            affinities[issue] = {
+                low: Math.min.apply(Math, values),
+                high: Math.max.apply(Math, values)
+            };
+        }
+        const matrix = workingRows.map(function(row) {
+            const votes = {};
+            for (const committee of committees) {
+                const members = membersFor(committee);
+                const memberTotal = members.reduce(function(sum, id) {
+                    return sum + finiteRegional(componentVotes[id], 0);
+                }, 0) || 1;
+                let prior = members.reduce(function(sum, id) {
+                    return sum + profileShareRegional(
+                        row.profile, familyForRegional(id)
+                    ) * finiteRegional(componentVotes[id], 0) / memberTotal;
+                }, 0);
+                if (members.includes("left")) {
+                    prior *= campaignMultiplierRegional(
+                        state, row, affinities, campaignLog
+                    );
+                }
+                votes[committee] = row.electorate * Math.max(0.00001, prior);
+            }
+            return {row: row, votes: votes};
+        });
+        // Iterative proportional fitting preserves both the national polling
+        // columns and each district's electorate without erasing geography.
+        for (let iteration = 0; iteration < 32; iteration += 1) {
+            for (const committee of committees) {
+                const current = matrix.reduce(function(sum, entry) {
+                    return sum + entry.votes[committee];
+                }, 0) || 1;
+                const factor = targets[committee] / current;
+                for (const entry of matrix) entry.votes[committee] *= factor;
+            }
+            for (const entry of matrix) {
+                const current = sumRegional(entry.votes) || 1;
+                const factor = entry.row.electorate / current;
+                for (const committee of committees) {
+                    entry.votes[committee] *= factor;
+                }
+            }
+        }
+        return matrix;
+    };
+    const allocateRegional = function(options) {
+        const state = options.state || {};
+        const system = ["mixed_230", "fptp_460"].includes(options.system)
+            ? options.system : "proportional";
+        const partyIds = (options.partyIds || []).slice();
+        const committeeFor = options.committeeFor || {};
+        const componentVotes = options.componentVotes || {};
+        const committeeVotes = options.committeeVotes || {};
+        const negotiatedShares = options.negotiatedShares || {};
+        const committees = Object.keys(committeeVotes).filter(function(id) {
+            return finiteRegional(committeeVotes[id], 0) > 0;
+        });
+        let qualified = (options.qualifiedCommittees || []).filter(function(id) {
+            return committees.includes(id);
+        });
+        if (!qualified.length && committees.length) {
+            qualified = committees.slice().sort(function(a, b) {
+                return committeeVotes[b] - committeeVotes[a];
+            }).slice(0, 1);
+        }
+        const membersFor = function(committee) {
+            return partyIds.filter(function(id) {
+                return finiteRegional(componentVotes[id], 0) > 0 &&
+                    (committeeFor[id] || id) == committee;
+            });
+        };
+        const memberWeights = function(committee) {
+            const members = membersFor(committee);
+            const negotiated = members.length > 1 && members.every(function(id) {
+                return finiteRegional(negotiatedShares[id], 0) > 0;
+            });
+            const weights = {};
+            for (const id of members) {
+                weights[id] = negotiated
+                    ? finiteRegional(negotiatedShares[id], 0)
+                    : finiteRegional(componentVotes[id], 0);
+            }
+            return weights;
+        };
+        let campaignLog = Array.isArray(options.campaignLog)
+            ? options.campaignLog.slice()
+            : (Array.isArray(state.regional_campaign_log)
+                ? state.regional_campaign_log.slice() : []);
+        if (options.includeDraft && state.regional_campaign_draft &&
+            state.regional_campaign_draft.issue &&
+            state.regional_campaign_draft.provinceId) {
+            campaignLog.push(state.regional_campaign_draft);
+        }
+        const primaryRows = districtRowsRegional(system);
+        const primaryMatrix = regionalVoteMatrix(
+            state, system, primaryRows, committees, committeeVotes,
+            membersFor, componentVotes, campaignLog
+        );
+        const listRows = system == "mixed_230" ? geography.districts :
+            (system == "proportional" ? geography.districts : []);
+        const listMatrix = system == "mixed_230"
+            ? regionalVoteMatrix(
+                state, "proportional", listRows, committees, committeeVotes,
+                membersFor, componentVotes, campaignLog
+            ) : primaryMatrix;
+        const listDistrictResults = [];
+        const directDistrictResults = [];
+        const listPartySeats = emptyRegional(partyIds);
+        const urbanPartySeats = emptyRegional(partyIds);
+        const ruralPartySeats = emptyRegional(partyIds);
+        const listCommitteeSeats = emptyRegional(committees);
+        const districtCommitteeSeats = {};
+        for (const committee of committees) {
+            districtCommitteeSeats[committee] = {urban: 0, rural: 0};
+        }
+        const rowResult = function(entry, magnitude, kind, pool) {
+            const votes = entry.votes;
+            const percentages = {};
+            const voteTotal = sumRegional(votes) || 1;
+            for (const committee of committees) {
+                percentages[committee] = votes[committee] * 100 / voteTotal;
+            }
+            const winnerId = committees.slice().sort(function(a, b) {
+                return votes[b] - votes[a] || a.localeCompare(b);
+            })[0];
+            const seats = kind == "direct"
+                ? Object.assign(emptyRegional(committees), {[winnerId]: 1})
+                : dhondtRegional(votes, qualified, magnitude);
+            const partySeats = emptyRegional(partyIds);
+            for (const committee of committees) {
+                const members = membersFor(committee);
+                if (!members.length || !seats[committee]) continue;
+                const weights = memberWeights(committee);
+                const apportioned = apportionRegional(
+                    seats[committee], members, function(id) { return weights[id]; }
+                );
+                for (const id of members) partySeats[id] += apportioned[id] || 0;
+            }
+            const familyVotes = emptyRegional(geography.families);
+            for (const committee of committees) {
+                const members = membersFor(committee);
+                const total = members.reduce(function(sum, id) {
+                    return sum + finiteRegional(componentVotes[id], 0);
+                }, 0) || 1;
+                for (const id of members) {
+                    const family = familyForRegional(id);
+                    const target = family == "p2050" ? "ko" : family;
+                    familyVotes[target] = (familyVotes[target] || 0) +
+                        percentages[committee] * finiteRegional(componentVotes[id], 0) /
+                        total;
+                }
+            }
+            return {
+                id: entry.row.id,
+                name: entry.row.name,
+                provinceId: entry.row.provinceId,
+                baseDistrictId: entry.row.districtId || entry.row.id,
+                magnitude: magnitude,
+                kind: kind,
+                pool: pool || "list",
+                electorate: Math.round(entry.row.electorate),
+                votes: percentages,
+                voteCounts: votes,
+                seats: seats,
+                partySeats: partySeats,
+                familyVotes: familyVotes,
+                winnerId: winnerId
+            };
+        };
+        if (system != "fptp_460") {
+            for (let index = 0; index < listMatrix.length; index += 1) {
+                const magnitude = system == "mixed_230"
+                    ? listMatrix[index].row.mixedMagnitude
+                    : listMatrix[index].row.magnitude;
+                const result = rowResult(listMatrix[index], magnitude, "list", "list");
+                listDistrictResults.push(result);
+                for (const committee of committees) {
+                    listCommitteeSeats[committee] += result.seats[committee] || 0;
+                }
+                for (const id of partyIds) {
+                    listPartySeats[id] += result.partySeats[id] || 0;
+                }
+            }
+        }
+        if (system != "proportional") {
+            const winsByCommittee = {};
+            for (let index = 0; index < primaryMatrix.length; index += 1) {
+                const result = rowResult(
+                    primaryMatrix[index], 1, "direct", primaryMatrix[index].row.pool
+                );
+                directDistrictResults.push(result);
+                if (!winsByCommittee[result.winnerId]) winsByCommittee[result.winnerId] = [];
+                winsByCommittee[result.winnerId].push(result);
+            }
+            for (const committee of Object.keys(winsByCommittee)) {
+                const wins = winsByCommittee[committee];
+                const members = membersFor(committee);
+                const weights = memberWeights(committee);
+                const targets = apportionRegional(
+                    wins.length, members, function(id) { return weights[id]; }
+                );
+                const assigned = emptyRegional(members);
+                wins.sort(function(a, b) { return String(a.id).localeCompare(String(b.id)); });
+                for (const win of wins) {
+                    const nominee = members.slice().sort(function(a, b) {
+                        return (targets[b] - assigned[b]) -
+                            (targets[a] - assigned[a]) || a.localeCompare(b);
+                    })[0];
+                    win.partySeats = emptyRegional(partyIds);
+                    if (nominee) {
+                        win.partySeats[nominee] = 1;
+                        assigned[nominee] += 1;
+                        const poolSeats = win.pool == "urban"
+                            ? urbanPartySeats : ruralPartySeats;
+                        poolSeats[nominee] += 1;
+                    }
+                    districtCommitteeSeats[committee][win.pool] += 1;
+                }
+            }
+        }
+        const districtResults = system == "proportional"
+            ? listDistrictResults : directDistrictResults;
+        const partySeats = emptyRegional(partyIds);
+        const committeeSeats = emptyRegional(committees);
+        for (const id of partyIds) {
+            partySeats[id] = listPartySeats[id] + urbanPartySeats[id] +
+                ruralPartySeats[id];
+        }
+        for (const committee of committees) {
+            committeeSeats[committee] = listCommitteeSeats[committee] +
+                districtCommitteeSeats[committee].urban +
+                districtCommitteeSeats[committee].rural;
+        }
+        const provinceResults = geography.provinces.map(function(province) {
+            const voteRows = (system == "fptp_460"
+                ? directDistrictResults : listDistrictResults).filter(function(row) {
+                return row.provinceId == province.id;
+            });
+            const seatRows = listDistrictResults.concat(directDistrictResults)
+                .filter(function(row) { return row.provinceId == province.id; });
+            const voteCounts = emptyRegional(committees);
+            const seats = emptyRegional(committees);
+            const regionalPartySeats = emptyRegional(partyIds);
+            for (const row of voteRows) {
+                for (const committee of committees) {
+                    voteCounts[committee] += row.voteCounts[committee] || 0;
+                }
+            }
+            for (const row of seatRows) {
+                for (const committee of committees) {
+                    seats[committee] += row.seats[committee] || 0;
+                }
+                for (const id of partyIds) {
+                    regionalPartySeats[id] += row.partySeats[id] || 0;
+                }
+            }
+            const voteTotal = sumRegional(voteCounts) || 1;
+            const votes = {};
+            for (const committee of committees) {
+                votes[committee] = voteCounts[committee] * 100 / voteTotal;
+            }
+            const winnerId = committees.slice().sort(function(a, b) {
+                return votes[b] - votes[a] || a.localeCompare(b);
+            })[0];
+            return {
+                id: province.id, name: province.name,
+                electorate: voteRows.reduce(function(sum, row) {
+                    return sum + row.electorate;
+                }, 0),
+                votes: votes, seats: seats, partySeats: regionalPartySeats,
+                winnerId: winnerId
+            };
+        });
+        return {
+            version: 2,
+            geographyVersion: geography.sourceVersion,
+            system: system,
+            partySeats: partySeats,
+            committeeSeats: committeeSeats,
+            listPartySeats: listPartySeats,
+            urbanPartySeats: urbanPartySeats,
+            ruralPartySeats: ruralPartySeats,
+            listCommitteeSeats: listCommitteeSeats,
+            districtCommitteeSeats: districtCommitteeSeats,
+            listSeatCount: system == "proportional" ? 460 :
+                (system == "mixed_230" ? 230 : 0),
+            urbanSeatCount: system == "mixed_230" ? 138 :
+                (system == "fptp_460" ? 276 : 0),
+            ruralSeatCount: system == "mixed_230" ? 92 :
+                (system == "fptp_460" ? 184 : 0),
+            leftStrongholdCount: directDistrictResults.filter(function(row) {
+                return Object.keys(row.partySeats).some(function(id) {
+                    return familyForRegional(id) == "left" && row.partySeats[id] > 0;
+                });
+            }).length,
+            districtResults: districtResults,
+            listDistrictResults: listDistrictResults,
+            provinceResults: provinceResults,
+            campaignLog: campaignLog,
+            committees: committees,
+            partyIds: partyIds
+        };
+    };
+    const snapshotRegional = function(result, key, label) {
+        return {
+            type: "sejm",
+            key: key,
+            label: label,
+            system: result.system,
+            geographyVersion: result.geographyVersion,
+            committees: result.committees.slice(),
+            partyIds: result.partyIds.slice(),
+            partySeats: copyRegional(result.partySeats),
+            committeeSeats: copyRegional(result.committeeSeats),
+            districts: copyRegional(result.districtResults),
+            listDistricts: copyRegional(result.listDistrictResults),
+            provinces: copyRegional(result.provinceResults),
+            profiles: result.districtResults.map(function(row) {
+                const total = sumRegional(row.familyVotes) || 1;
+                const profile = {};
+                for (const family of geography.families) {
+                    profile[family] = finiteRegional(row.familyVotes[family], 0) /
+                        total;
+                }
+                return {id: row.id, profile: profile};
+            })
+        };
+    };
+    const archiveSejmRegional = function(state, result, key, label) {
+        if (!Array.isArray(state.poland_election_map_archive)) {
+            state.poland_election_map_archive = [];
+        }
+        const snapshot = snapshotRegional(result, key, label);
+        state.poland_election_map_archive =
+            state.poland_election_map_archive.filter(function(row) {
+                return row.key != key || row.system != result.system;
+            });
+        state.poland_election_map_archive.push(snapshot);
+        state.poland_election_geographic_prior = {
+            system: snapshot.system,
+            profiles: copyRegional(snapshot.profiles)
+        };
+        return snapshot;
+    };
+    const allocatePresidentRegional = function(options) {
+        const candidates = (options.candidates || []).filter(function(row) {
+            return row && row.id && finiteRegional(row.share, 0) > 0;
+        }).map(function(row) {
+            return {
+                id: String(row.id),
+                name: String(row.name || row.id),
+                family: row.family || familyForRegional(row.id),
+                share: finiteRegional(row.share, 0)
+            };
+        });
+        const shareTotal = candidates.reduce(function(sum, row) {
+            return sum + row.share;
+        }, 0) || 1;
+        const electorate = geography.counties.reduce(function(sum, row) {
+            return sum + finiteRegional(row.electorate, 1);
+        }, 0);
+        const matrix = geography.counties.map(function(row) {
+            const votes = {};
+            for (const candidate of candidates) {
+                votes[candidate.id] = row.electorate * Math.max(
+                    0.00001,
+                    profileShareRegional(row.profile, candidate.family)
+                );
+            }
+            return {row: row, votes: votes};
+        });
+        for (let iteration = 0; iteration < 32; iteration += 1) {
+            for (const candidate of candidates) {
+                const target = electorate * candidate.share / shareTotal;
+                const current = matrix.reduce(function(sum, entry) {
+                    return sum + entry.votes[candidate.id];
+                }, 0) || 1;
+                const factor = target / current;
+                for (const entry of matrix) entry.votes[candidate.id] *= factor;
+            }
+            for (const entry of matrix) {
+                const current = sumRegional(entry.votes) || 1;
+                const factor = entry.row.electorate / current;
+                for (const candidate of candidates) {
+                    entry.votes[candidate.id] *= factor;
+                }
+            }
+        }
+        const regionResult = function(row, votes) {
+            const total = sumRegional(votes) || 1;
+            const percentages = {};
+            for (const candidate of candidates) {
+                percentages[candidate.id] = votes[candidate.id] * 100 / total;
+            }
+            const winnerId = candidates.slice().sort(function(a, b) {
+                return percentages[b.id] - percentages[a.id] ||
+                    a.id.localeCompare(b.id);
+            })[0];
+            return {
+                id: row.id,
+                name: row.name,
+                provinceId: row.provinceId || row.id,
+                electorate: Math.round(row.electorate),
+                votes: percentages,
+                voteCounts: votes,
+                winnerId: winnerId ? winnerId.id : ""
+            };
+        };
+        const counties = matrix.map(function(entry) {
+            return regionResult(entry.row, entry.votes);
+        });
+        const provinces = geography.provinces.map(function(province) {
+            const votes = emptyRegional(candidates.map(function(row) {
+                return row.id;
+            }));
+            const rows = counties.filter(function(row) {
+                return row.provinceId == province.id;
+            });
+            for (const row of rows) {
+                for (const candidate of candidates) {
+                    votes[candidate.id] += row.voteCounts[candidate.id] || 0;
+                }
+            }
+            return regionResult({
+                id: province.id,
+                name: province.name,
+                provinceId: province.id,
+                electorate: rows.reduce(function(sum, row) {
+                    return sum + row.electorate;
+                }, 0)
+            }, votes);
+        });
+        return {
+            type: "president",
+            key: options.key || "",
+            label: options.label || "Presidential election",
+            round: finiteRegional(options.round, 1),
+            geographyVersion: geography.sourceVersion,
+            candidates: candidates,
+            counties: counties,
+            provinces: provinces
+        };
+    };
+    const archivePresidentRegional = function(state, result) {
+        if (!Array.isArray(state.poland_presidential_map_archive)) {
+            state.poland_presidential_map_archive = [];
+        }
+        state.poland_presidential_map_archive =
+            state.poland_presidential_map_archive.filter(function(row) {
+                return row.key != result.key || row.round != result.round;
+            });
+        state.poland_presidential_map_archive.push(copyRegional(result));
+        return result;
+    };
+    const forecastRegional = function(options) {
+        const point = allocateRegional(options);
+        const state = options.state || {};
+        const margin = clampRegional(state.poll_margin_error, 1.5, 6);
+        const seed = seedHashRegional(
+            options.seed || [state.year, state.month, state.poll_last_updated,
+                options.system].join("|")
+        );
+        const random = randomRegional(seed);
+        const draws = 40;
+        const seatDraws = {};
+        const districtWins = {};
+        const provinceWins = {};
+        for (const committee of Object.keys(options.committeeVotes || {})) {
+            seatDraws[committee] = [];
+        }
+        for (const row of point.districtResults) districtWins[row.id] = {};
+        for (const row of point.provinceResults) provinceWins[row.id] = {};
+        for (let draw = 0; draw < draws; draw += 1) {
+            const votes = {};
+            let total = 0;
+            for (const committee of Object.keys(options.committeeVotes || {})) {
+                votes[committee] = Math.max(
+                    0.05,
+                    finiteRegional(options.committeeVotes[committee], 0) +
+                        gaussianRegional(random) * margin * 0.52
+                );
+                total += votes[committee];
+            }
+            for (const committee of Object.keys(votes)) {
+                votes[committee] = votes[committee] * 100 / Math.max(0.01, total);
+            }
+            const drawOptions = Object.assign({}, options, {committeeVotes: votes});
+            const result = allocateRegional(drawOptions);
+            for (const committee of Object.keys(seatDraws)) {
+                seatDraws[committee].push(result.committeeSeats[committee] || 0);
+            }
+            for (const row of result.districtResults) {
+                districtWins[row.id][row.winnerId] =
+                    (districtWins[row.id][row.winnerId] || 0) + 1;
+            }
+            for (const row of result.provinceResults) {
+                provinceWins[row.id][row.winnerId] =
+                    (provinceWins[row.id][row.winnerId] || 0) + 1;
+            }
+        }
+        const committeeRanges = {};
+        for (const committee of Object.keys(seatDraws)) {
+            committeeRanges[committee] = {
+                low: quantileRegional(seatDraws[committee], 0.10),
+                high: quantileRegional(seatDraws[committee], 0.90),
+                point: point.committeeSeats[committee] || 0
+            };
+        }
+        const districtConfidence = {};
+        for (const id of Object.keys(districtWins)) {
+            const ranked = Object.keys(districtWins[id]).sort(function(a, b) {
+                return districtWins[id][b] - districtWins[id][a];
+            });
+            const probability = ranked.length ? districtWins[id][ranked[0]] / draws : 0;
+            districtConfidence[id] = {
+                winnerId: ranked[0] || "",
+                probability: probability,
+                band: probability >= 0.80 ? "safe" :
+                    (probability >= 0.60 ? "lean" : "toss-up")
+            };
+        }
+        const provinceConfidence = {};
+        for (const id of Object.keys(provinceWins)) {
+            const ranked = Object.keys(provinceWins[id]).sort(function(a, b) {
+                return provinceWins[id][b] - provinceWins[id][a];
+            });
+            const probability = ranked.length ? provinceWins[id][ranked[0]] / draws : 0;
+            provinceConfidence[id] = {
+                winnerId: ranked[0] || "",
+                probability: probability,
+                band: probability >= 0.80 ? "safe" :
+                    (probability >= 0.60 ? "lean" : "toss-up")
+            };
+        }
+        return {
+            point: point,
+            committeeRanges: committeeRanges,
+            districtConfidence: districtConfidence,
+            provinceConfidence: provinceConfidence,
+            draws: draws,
+            seed: seed
+        };
+    };
+    const initialiseCampaignRegional = function(state, key) {
+        state.regional_campaign_draft = {
+            key: key,
+            issue: "",
+            provinceId: ""
+        };
+        return state.regional_campaign_draft;
+    };
+    const setCampaignIssueRegional = function(state, issue) {
+        if (issueDataRegional[issue] && state.regional_campaign_draft) {
+            state.regional_campaign_draft.issue = issue;
+        }
+    };
+    const setCampaignProvinceRegional = function(state, provinceId) {
+        if (geography.provinces.some(function(row) {
+            return String(row.id) == String(provinceId);
+        }) && state.regional_campaign_draft) {
+            state.regional_campaign_draft.provinceId = String(provinceId);
+        }
+    };
+    const submitCampaignRegional = function(state) {
+        const draft = state.regional_campaign_draft;
+        if (!draft || !issueDataRegional[draft.issue] || !draft.provinceId) {
+            return false;
+        }
+        if (!Array.isArray(state.regional_campaign_log)) {
+            state.regional_campaign_log = [];
+        }
+        state.regional_campaign_log.push(copyRegional(draft));
+        state.regional_campaign_last_key = draft.key;
+        state.regional_campaign_draft = null;
+        return true;
+    };
+    regionalElectionHost.polandElectionModel = {
+        version: 2,
+        geography: geography,
+        issues: issueDataRegional,
+        familyFor: familyForRegional,
+        allocateSejm: allocateRegional,
+        allocatePresident: allocatePresidentRegional,
+        forecastSejm: forecastRegional,
+        snapshot: snapshotRegional,
+        archiveSejm: archiveSejmRegional,
+        archivePresident: archivePresidentRegional,
+        initialiseCampaign: initialiseCampaignRegional,
+        setCampaignIssue: setCampaignIssueRegional,
+        setCampaignProvince: setCampaignProvinceRegional,
+        submitCampaign: submitCampaignRegional
+    };
+    if (Q.election_2023_certified &&
+        (!Array.isArray(Q.poland_election_map_archive) ||
+            !Q.poland_election_map_archive.length)) {
+        const savedIds = [
+            "left", "pis", "ko", "psl", "p2050", "konf", "other"
+        ];
+        const savedVotes = {};
+        for (const id of savedIds) {
+            savedVotes[id] = Math.max(0, finiteRegional(
+                Q["election_2023_" + id + "_vote"],
+                Q[id + "_vote_intent"]
+            ));
+        }
+        const activeSavedIds = savedIds.filter(function(id) {
+            return savedVotes[id] > 0;
+        });
+        if (activeSavedIds.length) {
+            const savedResult = allocateRegional({
+                state: Object.assign({}, Q, {regional_campaign_log: []}),
+                system: Q.sejm_electoral_system,
+                partyIds: activeSavedIds,
+                committeeFor: {},
+                componentVotes: savedVotes,
+                committeeVotes: savedVotes,
+                qualifiedCommittees: activeSavedIds.filter(function(id) {
+                    return id != "other" && savedVotes[id] >= 5;
+                }),
+                negotiatedShares: {},
+                campaignLog: []
+            });
+            archiveSejmRegional(
+                Q, savedResult, "2023-10",
+                "2023 parliamentary election (reconstructed)"
+            );
+        }
+    }
+}
+!}

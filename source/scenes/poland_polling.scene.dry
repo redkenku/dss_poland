@@ -2134,7 +2134,7 @@ for (const id of electionPartyIds) {
 }
 const pollingElectionModel = (typeof window !== "undefined"
     ? window : globalThis).polandElectionModel;
-const pollingAllocation = pollingElectionModel.allocateSejm({
+const pollingForecastOptions = {
     state: Q,
     system: Q.sejm_electoral_system,
     partyIds: electionPartyIds,
@@ -2143,7 +2143,40 @@ const pollingAllocation = pollingElectionModel.allocateSejm({
     committeeVotes: pollingCommitteeVotes,
     qualifiedCommittees: seatParties,
     negotiatedShares: pollingNegotiatedShares
-});
+};
+const pollingAllocation = pollingElectionModel.allocateSejm(
+    pollingForecastOptions
+);
+Q.poland_election_forecast_input = {
+    system: pollingForecastOptions.system,
+    partyIds: pollingForecastOptions.partyIds.slice(),
+    committeeFor: Object.assign({}, pollingForecastOptions.committeeFor),
+    componentVotes: Object.assign({}, pollingForecastOptions.componentVotes),
+    committeeVotes: Object.assign({}, pollingForecastOptions.committeeVotes),
+    qualifiedCommittees: pollingForecastOptions.qualifiedCommittees.slice(),
+    negotiatedShares: Object.assign({}, pollingForecastOptions.negotiatedShares)
+};
+const pollingForecast = pollingElectionModel.forecastSejm(Object.assign(
+    {}, pollingForecastOptions, {
+        seed: [Q.year, Q.month, Q.poll_last_updated,
+            Q.sejm_electoral_system].join("|")
+    }
+));
+Q.poland_election_current_forecast = {
+    type: "forecast",
+    key: Q.year + "-" + String(Q.month).padStart(2, "0"),
+    system: pollingAllocation.system,
+    point: pollingElectionModel.snapshot(
+        pollingForecast.point,
+        "forecast",
+        "Current uncertain forecast"
+    ),
+    committeeRanges: pollingForecast.committeeRanges,
+    districtConfidence: pollingForecast.districtConfidence,
+    provinceConfidence: pollingForecast.provinceConfidence,
+    seed: pollingForecast.seed,
+    draws: pollingForecast.draws
+};
 const committeeSeatProjection = pollingAllocation.committeeSeats;
 const componentSeatProjection = pollingAllocation.partySeats;
 const committeeSeatTotals = pollingAllocation.committeeSeats;

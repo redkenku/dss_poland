@@ -6962,6 +6962,9 @@ window.disableGrayMode = function() {
       var content = document.getElementById('content');
       window.enhancePartyElements(content);
       initializeBudgetBoards();
+      if (content && window.renderElectionMaps) {
+        window.renderElectionMaps(content);
+      }
       if (content) {
         var engine = window.dendryUI && window.dendryUI.dendryEngine;
         var state = engine && engine.state;

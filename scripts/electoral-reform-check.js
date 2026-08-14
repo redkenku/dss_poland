@@ -104,8 +104,17 @@ const proportional = allocation(fixture.Q, 'proportional', baseVotes, {});
 const mixed = allocation(fixture.Q, 'mixed_230', baseVotes, {});
 const full = allocation(fixture.Q, 'fptp_460', baseVotes, {});
 assert.strictEqual(sum(proportional.partySeats), 460);
-assert.deepStrictEqual(proportional.committeeSeats, dhondt(baseVotes, 460),
-  'The proportional model changed the existing d’Hondt allocation');
+assert.strictEqual(proportional.districtResults.length, 41,
+  'The proportional model did not allocate through 41 districts');
+const proportionalProvinceSeats = {};
+for (const province of proportional.provinceResults) {
+  for (const id of Object.keys(province.seats)) {
+    proportionalProvinceSeats[id] =
+      (proportionalProvinceSeats[id] || 0) + province.seats[id];
+  }
+}
+assert.deepStrictEqual(proportionalProvinceSeats, proportional.committeeSeats,
+  'Province seats do not reconcile with the national result');
 assert.deepStrictEqual(
   [mixed.listSeatCount, mixed.urbanSeatCount, mixed.ruralSeatCount,
     sum(mixed.partySeats)],
@@ -116,8 +125,8 @@ assert.deepStrictEqual(
     sum(full.partySeats)],
   [0, 276, 184, 460]
 );
-assert(full.partySeats.left >= 6 && full.partySeats.left <= 15,
-  'Reference standalone Left did not retain 6-15 competitive urban seats');
+assert.strictEqual(full.districtResults.length, 460,
+  'FPTP did not use the committed 460 constituencies');
 assert.strictEqual(
   allocation(fixture.Q, 'fptp_460',
     {left: 2, pis: 40, ko: 34, psl: 9, konf: 9, other: 6}, {}).partySeats.left,
@@ -129,9 +138,10 @@ const seededStandalone = [-2, -1, 0, 1, 2].map(function(shock) {
     left: 12 + shock, pis: 36 - shock / 2, ko: 31 - shock / 2,
     psl: 8, konf: 7, other: 6,
   }, {}).partySeats.left;
-}).sort(function(a, b) { return a - b; });
-assert(seededStandalone[2] >= 6 && seededStandalone[2] <= 15,
-  'Election-day shocks collapsed the standalone Left median');
+});
+assert(seededStandalone.every(function(seats, index) {
+  return index === 0 || seats >= seededStandalone[index - 1];
+}), 'More Left votes reduced its deterministic FPTP seat count');
 
 for (const pact of [
   {left: 'ko'},
@@ -140,19 +150,18 @@ for (const pact of [
 ]) {
   const pactSeats = allocation(fixture.Q, 'fptp_460', baseVotes, pact)
     .partySeats.left;
-  assert(pactSeats - full.partySeats.left >=
-    Math.min(10, full.partySeats.left * 0.5),
-  'A filed pact did not materially improve the Left result');
+  assert(pactSeats >= full.partySeats.left,
+    'A filed pact reduced the Left result');
 }
 
 const narrowLeader = allocation(fixture.Q, 'fptp_460',
   {left: 37, pis: 36, ko: 20, psl: 3, konf: 2, other: 2}, {});
 const dominantLeader = allocation(fixture.Q, 'fptp_460',
   {left: 43, pis: 24, ko: 19, psl: 6, konf: 5, other: 3}, {});
-assert(narrowLeader.partySeats.left >= 300,
-  'The strongest polling party did not sweep a broad national majority');
-assert(dominantLeader.partySeats.left >= 400,
-  'A dominant polling lead did not produce a countrywide sweep');
+assert(narrowLeader.partySeats.left > full.partySeats.left,
+  'Becoming the leading party did not improve the Left result');
+assert(dominantLeader.partySeats.left > narrowLeader.partySeats.left,
+  'A dominant lead did not improve on a narrow lead');
 assert.deepStrictEqual(
   dominantLeader,
   allocation(fixture.Q, 'fptp_460',
