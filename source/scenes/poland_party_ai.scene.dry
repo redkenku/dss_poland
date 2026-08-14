@@ -1317,11 +1317,22 @@ const queueMoodAI = function(
     const costScale = cost >= 2 ? 1.6 : 1;
     const difficultyScale = Q.hard_mode ? 1.25 : 1;
     const scale = costScale * difficultyScale;
-    const supportEffect = clampAI(finiteAI(support, 0) * scale, -1, 1);
+    // A rival's national campaign is a real force on the issue, not a rounding
+    // error. The old ±1 clamp meant PiS could campaign against refugees every
+    // month for four years and move the field by less than the monthly mean
+    // reversion pulled back, so the climate could only ever drift the player's
+    // way. `moodCampaignGain` is the dial: raise it for a more volatile
+    // country, lower it for a stickier one.
+    const moodCampaignGain = 6;
+    const supportEffect = clampAI(
+        finiteAI(support, 0) * scale * moodCampaignGain, -8, 8
+    );
     const ownershipEffect = 3 * scale;
-    const backlashEffect = clampAI(finiteAI(backlash, 0) * scale, -4, 4);
+    const backlashEffect = clampAI(
+        finiteAI(backlash, 0) * scale * 1.5, -8, 8
+    );
     const leftEffect = clampAI(
-        finiteAI(leftOwnership, -2) * scale, -4, 1
+        finiteAI(leftOwnership, -2) * scale, -6, 2
     );
     publicMoodModelAI.enqueue(Q, {
         id: "ai-" + actor + "-" + rivalAIMonthKey + "-" + issue,
@@ -1332,7 +1343,7 @@ const queueMoodAI = function(
         issue: issue,
         title: title,
         support: supportEffect,
-        salience: 2 * scale,
+        salience: 4 * scale,
         backlash: backlashEffect,
         blocOwnership: ownershipEffect,
         leftOwnership: leftEffect
