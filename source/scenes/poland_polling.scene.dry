@@ -1811,13 +1811,14 @@ const pollingRecordIds = {
     ko_splinter: "ko_splinter", centrum: "unia_centrum",
     new_hope: "nowa_nadzieja",
     national_movement: "ruch_narodowy", duda: "duda_movement",
-    social_conservative: "pis_welfare"
+    social_conservative: "pis_welfare", kukiz: "kukiz15"
 };
 for (const id of Object.keys(pollingRecordIds)) {
     const record = rivalRecord(pollingRecordIds[id]);
     if (!record || !record.active || !record.contesting) continue;
     const committee = String(record.list_committee || id);
-    if (["right_2027", "common_centre_2027", "third_way_2027",
+    if ((id == "kukiz" && ["pis", "psl", "ko", "third_way"].includes(committee)) ||
+        ["right_2027", "common_centre_2027", "third_way_2027",
         "social_conservative_2027", "new_hope", "national_movement",
         "duda"].includes(committee)) {
         committeeFor[id] = committee;
@@ -1829,18 +1830,62 @@ if (Q.prawica_formed) {
             committeeFor[id] = "right_2027";
         }
     }
+    for (const id of electionPartyIds) {
+        if (committeeFor[id] == "right_2027" &&
+            !(Q.prawica_member_source_ids || []).includes(id)) {
+            committeeFor[id] = id;
+        }
+    }
 }
 const componentCorrected = {};
 for (const id of electionPartyIds) {
     componentCorrected[id] = Math.max(0, corrected[id] || 0);
 }
-for (const id of electionPartyIds) {
-    const committee = committeeFor[id] || id;
-    if (committee != id && componentCorrected[id] > 0) {
-        corrected[committee] =
-            Math.max(0, corrected[committee] || 0) + componentCorrected[id];
-        corrected[id] = 0;
+const pollingElectionModel = (typeof window !== "undefined"
+    ? window : globalThis).polandElectionModel;
+const pollingCommitteeThresholds = {
+    left: 5, razem: 5, ko: sejmListOutcome == "ko_5" ? 5 : 8,
+    psl: 5, p2050: 5, pis: 5,
+    konf: Number(Q.konf_list_threshold) == 8 ? 8 : 5,
+    left_coalition: 8, democratic_list: 8, third_way: 8,
+    right_2027: 8, common_centre_2027: 8, third_way_2027: 8,
+    social_conservative_2027: 5
+};
+const pollingCommitteeHosts = {
+    left: "left", razem: "razem", ko: "ko", psl: "psl",
+    p2050: "p2050", pis: "pis", konf: "konf",
+    social_conservative_2027: "social_conservative"
+};
+const eligiblePollingParties = electionPartyIds.filter(function(id) {
+    if (committeeFor[id] == "right_2027" && Q.prawica_formed) {
+        return (Q.prawica_member_source_ids || []).includes(id);
     }
+    return activeSourceParty(id) && (componentCorrected[id] > 0 ||
+        (committeeFor[id] || id) != id);
+});
+Object.assign(committeeFor, pollingElectionModel.reconcileCommittees({
+    partyIds: electionPartyIds,
+    committeeFor: committeeFor,
+    componentVotes: componentCorrected,
+    eligiblePartyIds: eligiblePollingParties,
+    committeeThresholds: pollingCommitteeThresholds,
+    committeeHosts: pollingCommitteeHosts
+}));
+if (["right_2027", "common_centre_2027", "third_way_2027"].includes(
+    committeeFor.psl
+) || ["right_2027", "common_centre_2027", "third_way_2027"].includes(
+    committeeFor.p2050
+)) {
+    thirdWayJoint = false;
+} else if (committeeFor.psl == "third_way" &&
+    committeeFor.p2050 == "third_way") {
+    thirdWayJoint = true;
+}
+const correctedByCommittee = pollingElectionModel.aggregateCommitteeVotes(
+    electionPartyIds, committeeFor, componentCorrected
+);
+for (const id of electionPartyIds) {
+    corrected[id] = Math.max(0, correctedByCommittee[id] || 0);
 }
 // Keep the alternate 2023 campaign recognisably Polish without hard-coding
 // its result. Above each party's historical shoulder, only part of another
@@ -1990,6 +2035,10 @@ const activeElectionParty = function(id) {
 const correctedTotal = electionPartyIds.reduce(function(total, id) {
     return total + corrected[id];
 }, 0);
+Q.konf_list_threshold = pollingElectionModel.konfederacjaListThreshold(
+    corrected.konf * 100 / Math.max(1, correctedTotal),
+    Q.poll_margin_error
+);
 for (const id of electionPartyIds) {
     Q[id + "_component_vote_intent"] =
         componentCorrected[id] * 100 / Math.max(1, correctedTotal);
@@ -2063,7 +2112,7 @@ const thresholds = {
     pis: 5,
     ko: 8,
     psl: 5,
-    konf: 5,
+    konf: Q.konf_list_threshold,
     p2050: 5,
     p0: 5,
     sld_breakaway: 5,
@@ -2132,8 +2181,6 @@ for (const id of electionPartyIds) {
         ? Math.max(0, Number(record.negotiated_list_share) || 0)
         : 0;
 }
-const pollingElectionModel = (typeof window !== "undefined"
-    ? window : globalThis).polandElectionModel;
 const pollingForecastOptions = {
     state: Q,
     system: Q.sejm_electoral_system,
@@ -2142,7 +2189,10 @@ const pollingForecastOptions = {
     componentVotes: componentCorrected,
     committeeVotes: pollingCommitteeVotes,
     qualifiedCommittees: seatParties,
-    negotiatedShares: pollingNegotiatedShares
+    negotiatedShares: pollingNegotiatedShares,
+    eligiblePartyIds: eligiblePollingParties,
+    committeeThresholds: thresholds,
+    committeeHosts: pollingCommitteeHosts
 };
 const pollingAllocation = pollingElectionModel.allocateSejm(
     pollingForecastOptions
@@ -2154,7 +2204,10 @@ Q.poland_election_forecast_input = {
     componentVotes: Object.assign({}, pollingForecastOptions.componentVotes),
     committeeVotes: Object.assign({}, pollingForecastOptions.committeeVotes),
     qualifiedCommittees: pollingForecastOptions.qualifiedCommittees.slice(),
-    negotiatedShares: Object.assign({}, pollingForecastOptions.negotiatedShares)
+    negotiatedShares: Object.assign({}, pollingForecastOptions.negotiatedShares),
+    eligiblePartyIds: pollingForecastOptions.eligiblePartyIds.slice(),
+    committeeThresholds: Object.assign({}, pollingForecastOptions.committeeThresholds),
+    committeeHosts: Object.assign({}, pollingForecastOptions.committeeHosts)
 };
 const pollingForecast = pollingElectionModel.forecastSejm(Object.assign(
     {}, pollingForecastOptions, {

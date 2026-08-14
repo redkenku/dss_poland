@@ -62,7 +62,7 @@ function allocation(model, state, system, votes, campaignLog) {
 const run = engine();
 const state = run.state.qualities;
 const model = globalThis.polandElectionModel;
-assert.strictEqual(model.version, 2);
+assert.strictEqual(model.version, 4);
 const data = model.geography;
 const geometry = globalThis.polandElectionGeography;
 
@@ -75,6 +75,12 @@ assert.deepStrictEqual(
   [geometry.provinces.features.length, geometry.counties.features.length,
     geometry.municipalities.features.length],
   [16, 380, 2477]
+);
+assert.deepStrictEqual(
+  [geometry.sejmDistricts.features.length,
+    geometry.mixedConstituencies.features.length,
+    geometry.fptpConstituencies.features.length],
+  [41, 230, 460]
 );
 assert.strictEqual(total(Object.fromEntries(data.districts.map(function(row) {
   return [row.id, row.magnitude];

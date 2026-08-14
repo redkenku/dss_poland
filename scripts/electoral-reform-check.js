@@ -78,7 +78,7 @@ function sejmTotal(Q, ids) {
   }, 0);
 }
 
-function allocation(Q, system, votes, mapping) {
+function allocation(Q, system, votes, mapping, listOptions) {
   const ids = ['left', 'pis', 'ko', 'psl', 'konf', 'other'];
   const committeeFor = Object.assign({}, mapping);
   const committeeVotes = {};
@@ -95,10 +95,17 @@ function allocation(Q, system, votes, mapping) {
     committeeVotes: committeeVotes,
     qualifiedCommittees: Object.keys(committeeVotes),
     negotiatedShares: {},
+    eligiblePartyIds: ids,
+    committeeThresholds: listOptions && listOptions.thresholds || {},
+    committeeHosts: listOptions && listOptions.hosts || {},
   });
 }
 
 const fixture = newEngine('electoral-model');
+assert.strictEqual(globalThis.polandElectionModel.konfederacjaListThreshold(
+  10.5, 2.6), 5);
+assert.strictEqual(globalThis.polandElectionModel.konfederacjaListThreshold(
+  10.7, 2.6), 8);
 const baseVotes = {left: 12, pis: 36, ko: 31, psl: 8, konf: 7, other: 6};
 const proportional = allocation(fixture.Q, 'proportional', baseVotes, {});
 const mixed = allocation(fixture.Q, 'mixed_230', baseVotes, {});
@@ -125,6 +132,34 @@ assert.deepStrictEqual(
     sum(full.partySeats)],
   [0, 276, 184, 460]
 );
+
+const coalitionMapping = {
+  left: 'democratic_list', ko: 'democratic_list', psl: 'democratic_list',
+};
+const coalitionOptions = {thresholds: {democratic_list: 8}};
+for (const system of ['proportional', 'mixed_230', 'fptp_460']) {
+  const result = allocation(fixture.Q, system,
+    {left: 20, pis: 10, ko: 50, psl: 15, konf: 3, other: 2},
+    coalitionMapping, coalitionOptions);
+  const memberSeats = ['left', 'ko', 'psl'].map(function(id) {
+    return result.partySeats[id];
+  });
+  const committeeSeats = result.committeeSeats.democratic_list;
+  assert(memberSeats.every(function(seats) {
+    return seats >= committeeSeats * 0.25 && seats <= committeeSeats * 0.42;
+  }), 'An 8% coalition did not divide mandates roughly equally under ' + system);
+}
+
+const hostResult = allocation(fixture.Q, 'proportional',
+  {left: 35, pis: 35, ko: 15, psl: 7, konf: 6, other: 2},
+  {left: 'pis'}, {
+    thresholds: {pis: 5},
+    hosts: {pis: 'pis'},
+  });
+assert(hostResult.partySeats.pis >= hostResult.committeeSeats.pis * 0.80,
+  'A 5% host list did not leave the lion\'s share to its host');
+assert(hostResult.partySeats.left <= hostResult.committeeSeats.pis * 0.20,
+  'A 5% host-list guest received more than scraps');
 assert.strictEqual(full.districtResults.length, 460,
   'FPTP did not use the committed 460 constituencies');
 assert.strictEqual(
@@ -257,12 +292,67 @@ const formationIds = [
   'pis', 'ko', 'p2050', 'psl', 'left', 'konf', 'other',
   'sld_breakaway', 'social_patriot', 'spring_breakaway', 'labor_left',
   'young_left', 'razem', 'pps', 'centrum', 'rozwoj', 'korona', 'ko_splinter',
+  'kukiz',
 ];
 assert.strictEqual(sejmTotal(enactedFull.Q, formationIds), 460);
 
+const kukizReturn = newEngine('electoral-kukiz-third-way');
+Object.assign(kukizReturn.Q, {
+  year: 2023,
+  p2050_emerged: 1,
+  third_way_active: 1,
+  third_way_2023_done: 1,
+  third_way_split: 0,
+  third_way_joint_list: 1,
+  kukiz_left_kp: 1,
+  kukiz_active: 1,
+  kukiz_list_committee: 'psl',
+  election_2023_certified: 0,
+});
+const kukizRecord = kukizReturn.Q.rival_group_records.find(function(record) {
+  return record.id === 'kukiz15';
+});
+kukizRecord.list_committee = 'psl';
+kukizRecord.contesting = 1;
+kukizReturn.engine.goToScene('poland_normalize');
+assert.strictEqual(kukizReturn.Q.kukiz_list_committee, 'third_way',
+  'Kukiz scalar list did not follow his live record into Third Way');
+kukizReturn.engine.goToScene('poland_government_formation.campaign_entry');
+assert.strictEqual(sejmTotal(kukizReturn.Q, formationIds), 460,
+  'Kukiz survived certification as phantom MPs');
+assert(kukizReturn.Q.kukiz_seats > 0,
+  'Kukiz was ejected from the Third Way candidate allocation');
+assert.strictEqual(kukizRecord.exclusive_seats, kukizReturn.Q.kukiz_seats,
+  'Kukiz party record disagrees with the certified result');
+
+const kukizAlone = newEngine('electoral-kukiz-alone');
+Object.assign(kukizAlone.Q, {
+  year: 2023,
+  kukiz_left_kp: 1,
+  kukiz_active: 1,
+  kukiz_list_committee: 'kukiz',
+  kukiz_vote_intent: 2,
+  kukiz_component_vote_intent: 2,
+  kukiz_seats: 6,
+  election_2023_certified: 0,
+});
+const loneKukizRecord = kukizAlone.Q.rival_group_records.find(
+  function(record) { return record.id === 'kukiz15'; }
+);
+loneKukizRecord.list_committee = 'kukiz';
+loneKukizRecord.contesting = 1;
+loneKukizRecord.exclusive_seats = 6;
+loneKukizRecord.mp_count = 6;
+kukizAlone.engine.goToScene('poland_government_formation.campaign_entry');
+assert.strictEqual(kukizAlone.Q.kukiz_seats, 0,
+  'A failed independent Kukiz list retained MPs from the outgoing Sejm');
+assert.strictEqual(loneKukizRecord.exclusive_seats, 0,
+  'The Kukiz party record retained phantom MPs after certification');
+assert.strictEqual(sejmTotal(kukizAlone.Q, formationIds), 460);
+
 const snapIds = formationIds.concat([
   'p0', 'tak_rozwoj', 'suwerenna', 'porozumienie', 'republikanie', 'odnowa',
-  'kukiz', 'new_hope', 'national_movement', 'duda', 'social_conservative',
+  'new_hope', 'national_movement', 'duda', 'social_conservative',
 ]);
 for (const year of [2023, 2024, 2025, 2026, 2027]) {
   const snap = newEngine('electoral-snap-' + year);
@@ -286,5 +376,65 @@ for (const year of [2023, 2024, 2025, 2026, 2027]) {
     100
   );
 }
+
+const commonCentre = newEngine('electoral-live-common-centre');
+Object.assign(commonCentre.Q, {
+  year: 2027,
+  month: 6,
+  continuous_campaign: 1,
+  p2050_emerged: 1,
+  third_way_active: 1,
+  third_way_2023_done: 1,
+  third_way_split: 0,
+  third_way_joint_list: 1,
+  third_way_alternative_outcome:
+    'Common-centre list preserving autonomous components',
+  sejm_list_outcome: 'democratic_8',
+  sejm_list_host: 'democratic_list',
+  poll_state_month_key: -1,
+});
+commonCentre.engine.goToScene('poland_normalize');
+commonCentre.engine.goToScene('poland_polling');
+assert.strictEqual(
+  commonCentre.Q.poland_election_forecast_input.committeeFor.left,
+  'left',
+  'A dissolved broad list left Lewica stranded on a ghost 8% committee'
+);
+commonCentre.engine.goToScene('poland_events_2026.snap_result_2026');
+assert.strictEqual(sejmTotal(commonCentre.Q, snapIds), 460,
+  'A live common-centre list orphaned seats from the certified Sejm');
+assert.strictEqual(commonCentre.Q.snap_third_way_joint_list, 0,
+  'The obsolete 2023 Third Way committee survived the common-centre filing');
+
+const konfFamily = newEngine('electoral-konf-family');
+Object.assign(konfFamily.Q, {
+  election_2023_certified: 1,
+  konf_seats: 90,
+  senate_konf_seats: 9,
+  konf_list_threshold: 5,
+  far_right_split: 0,
+});
+konfFamily.engine.goToScene('poland_normalize');
+assert(Math.abs(konfFamily.Q.result_member_nowa_nadzieja_sejm -
+  konfFamily.Q.result_member_ruch_narodowy_sejm) <= 1,
+  'The 5% Konfederacja list did not balance New Hope and National Movement');
+assert(konfFamily.Q.result_member_kkp_sejm <= 10,
+  'Braun did not receive the thin share of a 5% Konfederacja list');
+assert.strictEqual(
+  konfFamily.Q.result_member_nowa_nadzieja_sejm +
+    konfFamily.Q.result_member_ruch_narodowy_sejm +
+    konfFamily.Q.result_member_kkp_sejm,
+  90
+);
+konfFamily.Q.konf_list_threshold = 8;
+konfFamily.engine.goToScene('poland_normalize');
+const equalKonfSeats = [
+  konfFamily.Q.result_member_nowa_nadzieja_sejm,
+  konfFamily.Q.result_member_ruch_narodowy_sejm,
+  konfFamily.Q.result_member_kkp_sejm,
+];
+assert(Math.max.apply(null, equalKonfSeats) -
+  Math.min.apply(null, equalKonfSeats) <= 1,
+  'A reliable 8% Konfederacja list did not use equal member shares');
 
 console.log('Electoral reform check passed.');

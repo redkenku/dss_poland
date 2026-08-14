@@ -5911,7 +5911,7 @@ const seatQuality = function(id) {
     return id + "_seats";
 };
 const sejmListOutcome = String(Q.sejm_list_outcome || "left_5");
-const thirdWayJoint =
+let thirdWayJoint =
     Number(Q.third_way_joint_list) == 1 || (
         (Q.third_way_active || Q.third_way_2023_done) &&
         !Q.third_way_split &&
@@ -5940,11 +5940,7 @@ const liveVote = function(id) {
     if (Number.isFinite(poll) && poll > 0) return poll;
     return Math.max(0, Number(Q[seatQuality(id)]) || 0) * 100 / 460;
 };
-const countIds = ids.filter(function(id) {
-    return id != "other" &&
-        (!thirdWayJoint || (id != "psl" && id != "p2050"));
-});
-if (thirdWayJoint) countIds.push("third_way");
+const countIds = ids.filter(function(id) { return id != "other"; });
 const activeCountIds = countIds.filter(function(id) {
     return liveVote(id) > 0.02;
 });
@@ -5983,7 +5979,7 @@ for (const id of activeCountIds) {
 }
 
 const committeeFor = {};
-for (const id of ids.concat(["third_way"])) committeeFor[id] = id;
+for (const id of ids) committeeFor[id] = id;
 if (thirdWayJoint) {
     committeeFor.psl = "third_way";
     committeeFor.p2050 = "third_way";
@@ -6066,26 +6062,34 @@ if (Q.prawica_formed) {
             committeeFor[id] = "right_2027";
         }
     }
+    for (const id of ids) {
+        if (committeeFor[id] == "right_2027" &&
+            !(Q.prawica_member_source_ids || []).includes(id)) {
+            committeeFor[id] = id;
+        }
+    }
 }
 const componentBaseVotes = {};
 for (const id of ids) {
     if (id == "other") continue;
     componentBaseVotes[id] = Math.max(0, liveVote(id));
 }
-const committeeVotes = {};
-for (const id of activeCountIds) {
-    const committee = committeeFor[id] || id;
-    committeeVotes[committee] =
-        Math.max(0, committeeVotes[committee] || 0) + shockedVotes[id];
-}
 
+const snapElectionModel = (typeof window !== "undefined"
+    ? window : globalThis).polandElectionModel;
+if (![5, 8].includes(Number(Q.konf_list_threshold))) {
+    Q.konf_list_threshold = snapElectionModel.konfederacjaListThreshold(
+        liveVote("konf"),
+        Q.poll_margin_error
+    );
+}
 const thresholds = {
     pis: 5,
     ko: Q.ko_consolidated || sejmListOutcome == "ko_5" ? 5 : 8,
     p2050: 5,
     psl: 5,
     left: 5,
-    konf: 5,
+    konf: Q.konf_list_threshold,
     p0: 5,
     sld_breakaway: 5,
     social_patriot: 5,
@@ -6117,6 +6121,42 @@ thresholds.common_centre_2027 = 8;
 thresholds.third_way_2027 = 8;
 thresholds.social_conservative_2027 = 5;
 
+const snapCommitteeHosts = {
+    left: "left", razem: "razem", ko: "ko", psl: "psl",
+    p2050: "p2050", pis: "pis", konf: "konf", kukiz: "kukiz",
+    social_conservative_2027: "social_conservative"
+};
+const eligibleSnapParties = ids.filter(function(id) {
+    const record = electionRecord(id);
+    if (committeeFor[id] == "right_2027" && Q.prawica_formed) {
+        return (Q.prawica_member_source_ids || []).includes(id);
+    }
+    return id != "other" && (componentBaseVotes[id] > 0.02 ||
+        ((committeeFor[id] || id) != id && record && record.active &&
+            record.contesting));
+});
+Object.assign(committeeFor, snapElectionModel.reconcileCommittees({
+    partyIds: ids,
+    committeeFor: committeeFor,
+    componentVotes: componentBaseVotes,
+    eligiblePartyIds: eligibleSnapParties,
+    committeeThresholds: thresholds,
+    committeeHosts: snapCommitteeHosts
+}));
+if (["right_2027", "common_centre_2027", "third_way_2027"].includes(
+    committeeFor.psl
+) || ["right_2027", "common_centre_2027", "third_way_2027"].includes(
+    committeeFor.p2050
+)) {
+    thirdWayJoint = false;
+} else if (committeeFor.psl == "third_way" &&
+    committeeFor.p2050 == "third_way") {
+    thirdWayJoint = true;
+}
+const committeeVotes = snapElectionModel.aggregateCommitteeVotes(
+    activeCountIds, committeeFor, shockedVotes
+);
+
 let qualifiedCommittees = Object.keys(committeeVotes).filter(function(id) {
     return committeeVotes[id] >= (thresholds[id] || 5);
 });
@@ -6143,8 +6183,6 @@ if (normalizedOther > 0) {
     snapModelVotes.other = normalizedOther;
     componentBaseVotes.other = normalizedOther;
 }
-const snapElectionModel = (typeof window !== "undefined"
-    ? window : globalThis).polandElectionModel;
 const snapAllocation = snapElectionModel.allocateSejm({
     state: Q,
     system: Q.sejm_electoral_system,
@@ -6153,7 +6191,10 @@ const snapAllocation = snapElectionModel.allocateSejm({
     componentVotes: componentBaseVotes,
     committeeVotes: snapModelVotes,
     qualifiedCommittees: qualifiedCommittees,
-    negotiatedShares: snapNegotiatedShares
+    negotiatedShares: snapNegotiatedShares,
+    eligiblePartyIds: eligibleSnapParties,
+    committeeThresholds: thresholds,
+    committeeHosts: snapCommitteeHosts
 });
 const committeeSeats = snapAllocation.committeeSeats;
 for (const committee of [

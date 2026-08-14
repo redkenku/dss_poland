@@ -68,6 +68,14 @@
     return colors.other;
   }
 
+  function mapCode(snapshot, id) {
+    var codes = {
+      ko: 'PO', pis: 'PiS', left: 'Lewica', p2050: 'PL2050',
+      konf: 'Konf', psl: 'PSL', minority: 'MN', other: 'Other'
+    };
+    return codes[family(snapshot, id)] || label(snapshot, id).slice(0, 4).toUpperCase();
+  }
+
   function winner(row) {
     if (row.winnerId) return row.winnerId;
     return Object.keys(row.votes || {}).sort(function(left, right) {
@@ -80,6 +88,28 @@
       return (Number(row.votes[right]) || 0) - (Number(row.votes[left]) || 0) ||
         left.localeCompare(right);
     }).slice(0, 4);
+  }
+
+  function marginStyle(row) {
+    var winnerId = winner(row);
+    var runnerId = Object.keys(row.votes || {}).filter(function(id) {
+      return id !== winnerId;
+    }).sort(function(left, right) {
+      return (Number(row.votes[right]) || 0) - (Number(row.votes[left]) || 0) ||
+        left.localeCompare(right);
+    })[0];
+    var winnerShare = Number((row.votes || {})[winnerId]) || 0;
+    var runnerShare = Number((row.votes || {})[runnerId]) || 0;
+    var margin = winnerShare - runnerShare;
+    return {
+      winnerId: winnerId,
+      runnerId: runnerId,
+      // Winner-share opacity is paused while the close-margin styling is tuned.
+      // opacity: Math.max(0.65, Math.min(1, 0.45 + winnerShare / 100)),
+      direction: winnerId.localeCompare(runnerId || '') < 0 ? 'forward' : 'reverse',
+      tier: runnerId && margin < 3 ? 'heavy' :
+        (runnerId && margin < 5 ? 'light' : '')
+    };
   }
 
   function official2019() {
@@ -202,7 +232,8 @@
         property: 'id'
       };
     }
-    var collection = snapshot.system === 'proportional' ? geo.municipalities : geo.units;
+    var collection = snapshot.system === 'proportional' ? geo.sejmDistricts :
+      (snapshot.system === 'mixed_230' ? geo.mixedConstituencies : geo.fptpConstituencies);
     var property = snapshot.system === 'mixed_230' ? 'mixed' :
       (snapshot.system === 'fptp_460' ? 'fptp' : 'district');
     return {
@@ -224,7 +255,8 @@
     if (!row) return '<p>Point to or focus a region to inspect it.</p>';
     var prediction = confidence(forecast, view, String(row.id));
     var html = '<h3>' + text(row.name) + '</h3>' +
-      '<p><b>Leader:</b> ' + text(label(snapshot, prediction ? prediction.winnerId : winner(row))) + '</p>';
+      '<p><b>Leader:</b> ' + text(label(snapshot, prediction ? prediction.winnerId : winner(row))) +
+      '</p><div class="map-detail-grid"><div>';
     if (forecast) {
       html += prediction
         ? '<p><b>Win confidence:</b> ' + Math.round(prediction.probability * 100) +
@@ -238,16 +270,16 @@
       }).join('') + '</ol>';
     }
     html += '<p><b>Electorate:</b> ' + Math.round(Number(row.electorate) || 0)
-      .toLocaleString('en-GB') + '</p>';
+      .toLocaleString('en-GB') + '</p></div>';
     var seats = row.partySeats || row.seats || {};
     var elected = Object.keys(seats).filter(function(id) { return Number(seats[id]) > 0; })
       .sort(function(left, right) { return seats[right] - seats[left]; });
     if (elected.length) {
-      html += '<h4>MPs elected</h4><ul class="map-mp-list">' + elected.map(function(id) {
+      html += '<section><h4>MPs elected</h4><ul class="map-mp-list">' + elected.map(function(id) {
         return '<li><span>' + text(label(snapshot, id)) + '</span><b>' + seats[id] + '</b></li>';
-      }).join('') + '</ul>';
+      }).join('') + '</ul></section>';
     }
-    return html;
+    return html + '</div>';
   }
 
   function rangeSummary(snapshot, forecast, heading) {
@@ -264,7 +296,7 @@
   }
 
   function textualTable(snapshot, rows, forecast, view) {
-    return '<details class="map-text-results"><summary>Accessible textual results table</summary>' +
+    return '<section class="map-text-results" aria-label="Accessible textual results table">' +
       '<div class="map-table-scroll"><table><thead><tr><th>Region</th><th>Leader</th>' +
       (forecast ? '<th>Confidence</th>' : '<th>Top four</th>') +
       '<th>MPs</th></tr></thead><tbody>' + rows.map(function(row) {
@@ -278,7 +310,7 @@
         return '<tr><th scope="row">' + text(row.name) + '</th><td>' +
           text(label(snapshot, lead)) + '</td><td>' + text(top) + '</td><td>' +
           Math.round(sum(row.partySeats || row.seats || {})) + '</td></tr>';
-      }).join('') + '</tbody></table></div></details>';
+      }).join('') + '</tbody></table></div></section>';
   }
 
   function campaignControls(host, qualities, snapshot, forecast) {
@@ -363,12 +395,26 @@
       var id = String(properties[data.property] == null ? '' : properties[data.property]);
       return rowById[id] && (!ui.province || String(properties.province || properties.id) === ui.province);
     });
+    // D3's spherical ring winding is the reverse of standard GeoJSON.
+    var rewindPolygon = function(polygon) {
+      return polygon.map(function(ring) { return ring.slice().reverse(); });
+    };
+    features = features.map(function(feature) {
+      var geometry = feature.geometry;
+      var coordinates = geometry.type === 'Polygon'
+        ? rewindPolygon(geometry.coordinates)
+        : geometry.coordinates.map(rewindPolygon);
+      return Object.assign({}, feature, {
+        geometry: Object.assign({}, geometry, {coordinates: coordinates})
+      });
+    });
     var svg = d3.select(host.querySelector('svg'));
     var width = 720;
     var height = 650;
     svg.attr('viewBox', '0 0 ' + width + ' ' + height);
     var collection = {type: 'FeatureCollection', features: features};
-    var projection = d3.geoMercator().fitExtent([[10, 10], [width - 10, height - 10]], collection);
+    var projection = d3.geoMercator()
+      .fitExtent([[10, 10], [width - 10, height - 10]], collection);
     var path = d3.geoPath(projection);
     var visibleWinners = [];
     data.rows.forEach(function(row) {
@@ -376,30 +422,19 @@
         ? confidence(forecast, ui.view, String(row.id)).winnerId : winner(row);
       if (!visibleWinners.includes(id)) visibleWinners.push(id);
     });
-    var defs = svg.append('defs');
-    visibleWinners.forEach(function(id, index) {
-      var pattern = defs.append('pattern').attr(
-        'id', 'winner-' + host._electionMapId + '-' + index
-      )
-        .attr('patternUnits', 'userSpaceOnUse').attr('width', 8).attr('height', 8);
-      pattern.append('rect').attr('width', 8).attr('height', 8).attr('fill', color(snapshot, id));
-      pattern.append('path').attr('d', index % 3 === 0 ? 'M-2,2 L2,-2 M0,8 L8,0 M6,10 L10,6' :
-        (index % 3 === 1 ? 'M0,2 L8,2 M0,6 L8,6' : 'M2,0 L2,8 M6,0 L6,8'))
-        .attr('stroke', 'rgba(255,255,255,.48)').attr('stroke-width', 1.15);
-    });
-    var patternFor = function(id) {
-      return 'url(#winner-' + host._electionMapId + '-' + visibleWinners.indexOf(id) + ')';
-    };
     var details = host.querySelector('.map-details');
     var show = function(row) {
       details.innerHTML = resultDetails(snapshot, row, forecast, ui.view);
     };
+    var rowForFeature = function(feature) {
+      return rowById[String(feature.properties[data.property])];
+    };
     var paths = svg.append('g').selectAll('path').data(features).enter().append('path')
       .attr('d', path).attr('class', 'election-region')
       .attr('fill', function(feature) {
-        var row = rowById[String(feature.properties[data.property])];
+        var row = rowForFeature(feature);
         var prediction = row && confidence(forecast, ui.view, String(row.id));
-        return patternFor(prediction ? prediction.winnerId : winner(row));
+        return color(snapshot, prediction ? prediction.winnerId : winner(row));
       })
       .attr('data-region', function(feature) { return feature.properties[data.property]; })
       .attr('tabindex', function(feature, index, nodes) {
@@ -444,6 +479,42 @@
         show(row);
       });
 
+    var marginTiers = {heavy: false, light: false};
+    if (!forecast) {
+      var defs = svg.append('defs');
+      var patterns = {};
+      var patternFor = function(style) {
+        var key = style.runnerId + '-' + style.tier + '-' + style.direction;
+        if (patterns[key]) return patterns[key];
+        var size = style.tier === 'heavy' ? 6 : 9;
+        var id = 'runner-' + host._electionMapId + '-' + Object.keys(patterns).length;
+        var pattern = defs.append('pattern').attr('id', id)
+          .attr('patternUnits', 'userSpaceOnUse').attr('width', size).attr('height', size);
+        pattern.append('path')
+          .attr('d', style.direction === 'forward'
+            ? 'M-2,2 L2,-2 M0,' + size + ' L' + size + ',0 M' +
+              (size - 2) + ',' + (size + 2) + ' L' + (size + 2) + ',' + (size - 2)
+            : 'M-2,' + (size - 2) + ' L2,' + (size + 2) + ' M0,0 L' + size +
+              ',' + size + ' M' + (size - 2) + ',-2 L' + (size + 2) + ',2')
+          .attr('stroke', color(snapshot, style.runnerId))
+          .attr('stroke-width', style.tier === 'heavy' ? 1.5 : 1)
+          .attr('opacity', style.tier === 'heavy' ? 0.95 : 0.58);
+        patterns[key] = 'url(#' + id + ')';
+        return patterns[key];
+      };
+      var marginalFeatures = features.filter(function(feature) {
+        return Boolean(marginStyle(rowForFeature(feature)).tier);
+      });
+      marginalFeatures.forEach(function(feature) {
+        marginTiers[marginStyle(rowForFeature(feature)).tier] = true;
+      });
+      svg.append('g').attr('class', 'map-margin-overlays').attr('aria-hidden', 'true')
+        .selectAll('path').data(marginalFeatures).enter().append('path')
+        .attr('d', path).attr('fill', function(feature) {
+          return patternFor(marginStyle(rowForFeature(feature)));
+        });
+    }
+
     if (data.rows.length <= 41) {
       var firstFeature = {};
       features.forEach(function(feature) {
@@ -456,14 +527,17 @@
         .text(function(id) {
           var row = rowById[id];
           var prediction = confidence(forecast, ui.view, id);
-          return label(snapshot, prediction ? prediction.winnerId : winner(row)).slice(0, 4).toUpperCase();
+          return mapCode(snapshot, prediction ? prediction.winnerId : winner(row));
         });
     }
-    host.querySelector('.map-legend').innerHTML = visibleWinners.map(function(id, index) {
-      return '<span><i style="--winner-color:' + color(snapshot, id) +
-        ';--pattern-angle:' + (45 + index * 45) + 'deg"></i>' +
+    var marginLegend = (marginTiers.heavy
+      ? '<span><i class="map-margin-heavy"></i>Runner-up: under 3 pp</span>' : '') +
+      (marginTiers.light
+        ? '<span><i class="map-margin-light"></i>Runner-up: 3–5 pp</span>' : '');
+    host.querySelector('.map-legend').innerHTML = visibleWinners.map(function(id) {
+      return '<span><i style="--winner-color:' + color(snapshot, id) + '"></i>' +
         text(label(snapshot, id)) + '</span>';
-    }).join('');
+    }).join('') + marginLegend;
     host.querySelector('.map-text-host').innerHTML = textualTable(snapshot, data.rows, forecast, ui.view);
 
     host.querySelectorAll('[data-map-view]').forEach(function(button) {

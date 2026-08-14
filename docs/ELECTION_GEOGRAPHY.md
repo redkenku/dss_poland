@@ -8,6 +8,10 @@ SHA-256-verifies:
 
 - GUGiK PRG 2023 administrative boundaries: voivodeships, powiats,
   municipalities, and cadastral units;
+- Natural Earth 10m land geometry, used only to clip PRG's maritime
+  administrative envelope back to the Baltic coastline. Its mask receives a
+  1.2 km cartographic buffer so narrow features such as Hel remain visible at
+  national-map scale;
 - PKW 2019 Sejm district and municipality results; and
 - PKW 2023 Sejm district magnitudes, electorates, and municipality assignments.
 

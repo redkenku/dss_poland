@@ -129,7 +129,7 @@ const partyIds = [
     "pis", "ko", "p2050", "psl", "left", "konf", "other",
     "sld_breakaway", "social_patriot", "spring_breakaway", "labor_left", "young_left",
     "razem", "pps", "centrum", "rozwoj", "korona", "ko_splinter",
-    "left_coalition", "democratic_list", "third_way"
+    "kukiz", "left_coalition", "democratic_list", "third_way"
 ];
 if (!Q.election_2023_certified) {
     const thirdWayJoint = Boolean(Q.third_way_joint_list) &&
@@ -162,6 +162,15 @@ if (!Q.election_2023_certified) {
         ) {
             committeeForFormation[id] = breakawayCommittees[id];
         }
+    }
+    const formationKukiz = (Q.rival_group_records || []).find(function(record) {
+        return record && record.id == "kukiz15";
+    });
+    const kukizCommittee = String(formationKukiz &&
+        formationKukiz.list_committee || Q.kukiz_list_committee || "kukiz");
+    if (Q.kukiz_left_kp && Q.kukiz_active &&
+        ["pis", "psl", "ko", "third_way"].includes(kukizCommittee)) {
+        committeeForFormation.kukiz = kukizCommittee;
     }
     const listOutcome = String(Q.sejm_list_outcome || "left_5");
     if (listOutcome == "left_coalition_8") {
@@ -243,13 +252,23 @@ if (!Q.election_2023_certified) {
         electionVotes[id] = electionVotes[id] * 100 / Math.max(1, voteTotal);
     }
     const normalizedOther = otherVote * 100 / Math.max(1, voteTotal);
+    const formationElectionModel = (typeof window !== "undefined"
+        ? window : globalThis).polandElectionModel;
+    if (![5, 8].includes(Number(Q.konf_list_threshold))) {
+        Q.konf_list_threshold =
+            formationElectionModel.konfederacjaListThreshold(
+                Q.konf_poll,
+                Q.poll_margin_error
+            );
+    }
     const thresholds = {
         pis: 5, ko: Q.ko_consolidated || listOutcome == "ko_5" ? 5 : 8,
         p2050: 5, psl: 5,
-        left: 5, konf: 5, sld_breakaway: 5, social_patriot: 5,
+        left: 5, konf: Q.konf_list_threshold,
+        sld_breakaway: 5, social_patriot: 5,
         spring_breakaway: 5,
         labor_left: 5, young_left: 5, razem: 5, pps: 5,
-        centrum: 5, rozwoj: 5, korona: 5, ko_splinter: 5,
+        centrum: 5, rozwoj: 5, korona: 5, ko_splinter: 5, kukiz: 5,
         left_coalition: 8, democratic_list: 8, third_way: 8
     };
     let qualified = countIds.filter(function(id) {
@@ -263,8 +282,22 @@ if (!Q.election_2023_certified) {
     const formationCommitteeVotes = {};
     for (const id of countIds) formationCommitteeVotes[id] = electionVotes[id];
     if (normalizedOther > 0) formationCommitteeVotes.other = normalizedOther;
-    const formationElectionModel = (typeof window !== "undefined"
-        ? window : globalThis).polandElectionModel;
+    const activeFormationParties = {
+        p2050: !!Q.p2050_emerged && !Q.p2050_joined_left,
+        sld_breakaway: !!Q.barons_party_formed,
+        social_patriot: !!Q.social_patriot_party_formed,
+        spring_breakaway: !!Q.spring_party_formed,
+        labor_left: !!Q.labor_party_formed,
+        young_left: !!Q.progressives_party_formed,
+        razem: !!Q.razem_party_formed,
+        pps: !!Q.pps_party_formed,
+        kukiz: !!Q.kukiz_left_kp && !!Q.kukiz_active
+    };
+    const eligibleFormationParties = sourcePartyIds.filter(function(id) {
+        if (componentBaseVotes[id] > 0) return true;
+        if ((committeeForFormation[id] || id) == id) return false;
+        return !!activeFormationParties[id];
+    });
     const formationAllocation = formationElectionModel.allocateSejm({
         state: Q,
         system: Q.sejm_electoral_system,
@@ -273,7 +306,13 @@ if (!Q.election_2023_certified) {
         componentVotes: componentBaseVotes,
         committeeVotes: formationCommitteeVotes,
         qualifiedCommittees: qualified,
-        negotiatedShares: {}
+        negotiatedShares: {},
+        eligiblePartyIds: eligibleFormationParties,
+        committeeThresholds: thresholds,
+        committeeHosts: {
+            left: "left", razem: "razem", ko: "ko", psl: "psl",
+            p2050: "p2050", pis: "pis", konf: "konf", kukiz: "kukiz"
+        }
     });
     const certified = formationAllocation.committeeSeats;
     const certifiedComponents = formationAllocation.partySeats;
@@ -326,6 +365,12 @@ if (!Q.election_2023_certified) {
     Q.porozumienie_seats = 0;
     Q.suwerenna_seats = 0;
     Q.tak_rozwoj_seats = 0;
+    if (formationKukiz) {
+        formationKukiz.projected_seats = certifiedComponents.kukiz || 0;
+        formationKukiz.exclusive_seats = formationKukiz.projected_seats;
+        formationKukiz.mp_count = formationKukiz.projected_seats;
+        formationKukiz.sejm_mps = formationKukiz.projected_seats;
+    }
     const largestShock = countIds.slice().sort(function(a, b) {
         return Math.abs(electionShocks[b]) - Math.abs(electionShocks[a]);
     })[0];

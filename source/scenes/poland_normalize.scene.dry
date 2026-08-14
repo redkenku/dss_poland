@@ -5,7 +5,7 @@ const budgetHost = typeof window !== "undefined"
     ? window
     : (typeof globalThis !== "undefined" ? globalThis : this);
 if ((!budgetHost.polandElectionModel ||
-        budgetHost.polandElectionModel.version != 2) &&
+        budgetHost.polandElectionModel.version != 4) &&
     this.game && this.game.scenes.poland_election_geography &&
     typeof this._runActions == "function") {
     this._runActions(this.game.scenes.poland_election_geography.onArrival);
@@ -3676,6 +3676,7 @@ if (Q.started) {
             member.active) {
             member.list_committee = kpCommitteeId;
             member.parent = thirdWayFormed ? "Trzecia Droga" : "Koalicja Polska";
+            if (returningKukiz) Q.kukiz_list_committee = kpCommitteeId;
         }
     }
     if (p2050Party.active && thirdWayFormed) {
@@ -3853,6 +3854,12 @@ if (Q.started) {
             : 400 + Math.min(200,
                 (Q.prawica_fragmentation_score - 55) * 10));
     if (String(Q.third_way_alternative_outcome || "").startsWith("Common-centre")) {
+        const commonCentreKo = rivalGroup("ko_party");
+        if (commonCentreKo) {
+            commonCentreKo.active = 1;
+            commonCentreKo.legal_status =
+                "electoral alliance component on the common-centre list";
+        }
         const centreIds = [
             "ko_party", "psl_party", "p2050_party", "unia_centrum",
             "ko_splinter"
@@ -3861,20 +3868,12 @@ if (Q.started) {
             return record && record.active &&
                 !Q.prawica_member_ids.includes(record.id);
         });
-        const totalSeats = liveCentre.reduce(function(total, record) {
-            return total + Math.max(1, Number(record.exclusive_seats) ||
-                Number(record.mp_count) || 0);
-        }, 0);
-        for (const record of liveCentre) {
+        for (let index = 0; index < liveCentre.length; index += 1) {
+            const record = liveCentre[index];
             record.list_committee = "common_centre_2027";
             record.contesting = 1;
-            if (!record.negotiated_list_share) {
-                record.negotiated_list_share = Math.round(
-                    Math.max(1, Number(record.exclusive_seats) ||
-                        Number(record.mp_count) || 0) * 100 /
-                    Math.max(1, totalSeats)
-                );
-            }
+            record.negotiated_list_share = Math.floor(100 / liveCentre.length) +
+                (index < 100 % liveCentre.length ? 1 : 0);
         }
     }
     if (String(Q.third_way_alternative_outcome || "").startsWith("Permanent Third Way")) {
@@ -3884,7 +3883,7 @@ if (Q.started) {
                 Q.prawica_member_ids.includes(record.id)) continue;
             record.list_committee = "third_way_2027";
             record.contesting = 1;
-            record.negotiated_list_share = id == "psl_party" ? 55 : 45;
+            record.negotiated_list_share = 50;
         }
     }
 
@@ -4347,10 +4346,13 @@ if (Q.started) {
         kpEntries
     );
 
+    const konfWeights = Number(Q.konf_list_threshold) == 8
+        ? {nowa_nadzieja: 1, ruch_narodowy: 1, kkp: 1}
+        : {nowa_nadzieja: 45, ruch_narodowy: 45, kkp: 10};
     const konfEntries = externalPartyEntries(
         "konf",
         { nowa_nadzieja: 1, ruch_narodowy: 2, kkp: 3 },
-        {}
+        konfWeights
     );
     for (const entry of konfEntries) entry.senate_weight = entry.sejm_weight;
     addFamily(

@@ -901,15 +901,12 @@ if (succeeds) {
     }
     Q.prawica_member_party_keys = Array.from(new Set(Q.prawica_member_party_keys));
     Q.prawica_member_ids = Array.from(new Set(Q.prawica_member_ids));
-    const totalWeight = accepted.reduce(function(total, decision) {
-        return total + decision.organisation;
-    }, 0) + Math.max(1, Number(Q.duda_organisation || 1));
+    const totalWeight = accepted.length + 1;
     const shares = accepted.map(function(decision) {
-        const exact = decision.organisation * 100 / Math.max(1, totalWeight);
+        const exact = 100 / totalWeight;
         return {decision: decision, share: Math.floor(exact), remainder: exact % 1};
     });
-    const dudaExact = Math.max(1, Number(Q.duda_organisation || 1)) * 100 /
-        Math.max(1, totalWeight);
+    const dudaExact = 100 / totalWeight;
     shares.push({
         decision: {id: "duda_movement", record_id: "duda_movement", source_id: "duda"},
         share: Math.floor(dudaExact), remainder: dudaExact % 1
@@ -1104,8 +1101,8 @@ if (Q.third_way_active && Number(Q.third_way_cohesion || 0) >= 65 && psl && p205
     p2050.list_committee = "third_way_2027";
     psl.contesting = 1;
     p2050.contesting = 1;
-    psl.negotiated_list_share = 55;
-    p2050.negotiated_list_share = 45;
+    psl.negotiated_list_share = 50;
+    p2050.negotiated_list_share = 50;
 } else if (p2050 && Number(Q.p2050_poll || 0) < 4 && ko && Number(Q.ko_poll || 0) >= 22) {
     const declared = Math.min(3, Math.max(0, Number(Q.p2050_seats || 0)));
     Q.p2050_seats -= declared;
@@ -1125,18 +1122,12 @@ if (Q.third_way_active && Number(Q.third_way_cohesion || 0) >= 65 && psl && p205
         return record && record.active &&
             !(Q.prawica_member_ids || []).includes(record.id);
     });
-    const centreSeats = centreRecords.reduce(function(total, record) {
-        return total + Math.max(1, Number(record.exclusive_seats) ||
-            Number(record.mp_count) || 0);
-    }, 0);
-    for (const record of centreRecords) {
+    for (let index = 0; index < centreRecords.length; index += 1) {
+        const record = centreRecords[index];
         record.list_committee = "common_centre_2027";
         record.contesting = 1;
-        record.negotiated_list_share = Math.round(
-            Math.max(1, Number(record.exclusive_seats) ||
-                Number(record.mp_count) || 0) * 100 /
-            Math.max(1, centreSeats)
-        );
+        record.negotiated_list_share = Math.floor(100 / centreRecords.length) +
+            (index < 100 % centreRecords.length ? 1 : 0);
     }
     Q.third_way_alternative_outcome = "Common-centre list preserving autonomous components";
 }

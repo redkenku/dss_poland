@@ -17,6 +17,10 @@ const outputBrowser = path.join(
 );
 
 const sources = {
+  naturalEarthLand: {
+    url: 'https://naturalearth.s3.amazonaws.com/10m_physical/ne_10m_land.zip',
+    sha256: 'e547d749445eaa0964aba76738090ec88f5e63c4585122170f98c67a7ea922dc',
+  },
   prg2023: {
     url: 'https://opendata.geoportal.gov.pl/prg/granice_archiwalne/' +
       'PRG_jednostki_administracyjne_2023.zip',
@@ -517,14 +521,26 @@ function compactGeometry(collection, propertyNames) {
   return collection;
 }
 
-function mapshaperFile(shapefile, output, simplify) {
+function mapshaperFile(shapefile, output, simplify, landMask) {
   run(mapshaper, [
     shapefile,
+    '-clip', landMask,
     '-filter-fields', 'JPT_KOD_JE,JPT_NAZWA_',
     '-rename-fields', 'teryt=JPT_KOD_JE,name=JPT_NAZWA_',
     '-simplify', simplify, 'keep-shapes',
-    '-o', output, 'format=geojson', 'precision=0.002',
+    '-o', output, 'format=geojson', 'precision=0.0005',
   ], {stdio: 'inherit'});
+}
+
+function dissolveGeometry(collection, temp, name, field, copyFields) {
+  const input = path.join(temp, name + '-parts.geojson');
+  const output = path.join(temp, name + '.geojson');
+  fs.writeFileSync(input, JSON.stringify(collection));
+  run(mapshaper, [
+    input, '-dissolve', field, 'copy-fields=' + copyFields.join(','),
+    '-o', output, 'format=geojson', 'precision=0.0005',
+  ], {stdio: 'inherit'});
+  return JSON.parse(fs.readFileSync(output, 'utf8'));
 }
 
 function sceneSource(data) {
@@ -555,6 +571,9 @@ function browserSource(geometry, metadata) {
       counties: geometry.counties,
       municipalities: geometry.municipalities,
       units: geometry.units,
+      sejmDistricts: geometry.sejmDistricts,
+      mixedConstituencies: geometry.mixedConstituencies,
+      fptpConstituencies: geometry.fptpConstituencies,
     }) + ';\n' +
     '}(typeof window !== "undefined" ? window : globalThis));\n';
 }
@@ -584,6 +603,7 @@ function main() {
   try {
     const archives = {};
     Object.keys(sources).forEach(function(id) { archives[id] = download(temp, id); });
+    run('unzip', ['-q', archives.naturalEarthLand, 'ne_10m_land.*', '-d', temp]);
     run('unzip', [
       '-q', archives.prg2023,
       '*/A01_Granice_wojewodztw.*',
@@ -599,15 +619,20 @@ function main() {
         fs.existsSync(path.join(candidate, 'A03_Granice_gmin.shp'));
     });
     assert(prgDirectory, 'PRG shapefiles missing');
+    const landSource = path.join(temp, 'ne_10m_land.shp');
+    const landMask = path.join(temp, 'land-mask.shp');
+    assert(fs.existsSync(landSource), 'Natural Earth land mask missing');
+    // Keep sub-pixel peninsulas such as Hel visible on the national map.
+    run(mapshaper, [landSource, '-buffer', '1200m', '-o', landMask], {stdio: 'inherit'});
 
     const provinceFile = path.join(temp, 'provinces.geojson');
     const countyFile = path.join(temp, 'counties.geojson');
     const municipalityFile = path.join(temp, 'municipalities.geojson');
     const unitFile = path.join(temp, 'units.geojson');
-    mapshaperFile(path.join(prgDirectory, 'A01_Granice_wojewodztw.shp'), provinceFile, '1%');
-    mapshaperFile(path.join(prgDirectory, 'A02_Granice_powiatow.shp'), countyFile, '0.75%');
-    mapshaperFile(path.join(prgDirectory, 'A03_Granice_gmin.shp'), municipalityFile, '0.5%');
-    mapshaperFile(path.join(prgDirectory, 'A05_Granice_jednostek_ewidencyjnych.shp'), unitFile, '0.5%');
+    mapshaperFile(path.join(prgDirectory, 'A01_Granice_wojewodztw.shp'), provinceFile, '5%', landMask);
+    mapshaperFile(path.join(prgDirectory, 'A02_Granice_powiatow.shp'), countyFile, '2%', landMask);
+    mapshaperFile(path.join(prgDirectory, 'A03_Granice_gmin.shp'), municipalityFile, '1%', landMask);
+    mapshaperFile(path.join(prgDirectory, 'A05_Granice_jednostek_ewidencyjnych.shp'), unitFile, '1%', landMask);
 
     const provinces = JSON.parse(fs.readFileSync(provinceFile, 'utf8'));
     const counties = JSON.parse(fs.readFileSync(countyFile, 'utf8'));
@@ -1014,6 +1039,20 @@ function main() {
       return {id: id, url: sources[id].url, sha256: sources[id].sha256};
     });
     const metadata = {version: data.version, sources: sourceMetadata};
+    const sejmDistricts = dissolveGeometry(
+      municipalities, temp, 'sejm-districts', 'district', ['province']
+    );
+    const mixedConstituencies = dissolveGeometry(
+      units, temp, 'mixed-constituencies', 'mixed', ['province', 'district']
+    );
+    const fptpConstituencies = dissolveGeometry(
+      units, temp, 'fptp-constituencies', 'fptp', ['province', 'district', 'mixed']
+    );
+    assert.deepStrictEqual([
+      sejmDistricts.features.length,
+      mixedConstituencies.features.length,
+      fptpConstituencies.features.length,
+    ], [41, 230, 460]);
     compactGeometry(provinces, ['id', 'name']);
     compactGeometry(counties, ['id', 'name', 'province']);
     compactGeometry(municipalities, ['id', 'name', 'province', 'county', 'district']);
@@ -1022,6 +1061,9 @@ function main() {
     fs.writeFileSync(outputBrowser, browserSource({
       provinces: provinces, counties: counties,
       municipalities: municipalities, units: units,
+      sejmDistricts: sejmDistricts,
+      mixedConstituencies: mixedConstituencies,
+      fptpConstituencies: fptpConstituencies,
     }, metadata));
     console.log('Wrote ' + path.relative(projectRoot, outputScene));
     console.log('Wrote ' + path.relative(projectRoot, outputBrowser));
