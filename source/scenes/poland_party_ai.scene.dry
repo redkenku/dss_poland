@@ -612,6 +612,7 @@ Q.party_system_left_pull = clampAI(
 Q.party_system_konf_pull = clampAI(
     (konfVoteSignal - 6) * 5 +
         (finiteAI(Q.far_right_agenda, 32) - 30) * 0.8 +
+        finiteAI(Q.konf_normalisation, 0) * 0.35 +
         Q.covid_anti_system_pressure * 0.6 +
         Math.max(
             0,
@@ -1190,6 +1191,12 @@ const passiveRelationTargetAI = function(first, second) {
             Math.max(0, Q.party_system_pendulum) * 0.03;
     } else if (key == "rival_relation_ko_konf") {
         target -= 13 + Q.konf_braunist_share * 0.08;
+        if (Q.ko_konf_partner_line != "closed") {
+            target += Math.min(
+                28,
+                finiteAI(Q.konf_normalisation, 0) * 0.45
+            );
+        }
     } else if (key == "rival_relation_ko_p2050") {
         target +=
             Q.p2050_state_capacity_share * 0.05 -
@@ -1199,6 +1206,12 @@ const passiveRelationTargetAI = function(first, second) {
             Q.psl_conservative_share * 0.06 -
             Q.konf_braunist_share * 0.13 -
             electoralCompetition * 0.4;
+        if (Q.psl_konf_partner_line != "closed") {
+            target += Math.min(
+                20,
+                finiteAI(Q.konf_normalisation, 0) * 0.30
+            );
+        }
     } else if (key == "rival_relation_psl_p2050") {
         target +=
             Q.psl_coalition_manager_share * 0.08 +
@@ -1742,8 +1755,54 @@ if (randomAI() <= actChance("psl")) {
     );
 }
 
-if (randomAI() <= actChance("konf")) {
-    if (Q.konf_dominant_wing == "Braunists") {
+const freebieRightsAction =
+    Q.trz_freebie_law && Q.trz_freebie_realign_stage >= 2 &&
+    currentRivalMonthIndex % 3 == 0;
+if (freebieRightsAction || randomAI() <= actChance("konf")) {
+    if (freebieRightsAction) {
+        const rightsIssue = Q.trz_freebie_law == "marriage"
+            ? "lgbt_equality" : "abortion_rights";
+        const braunistAction = Q.konf_dominant_wing == "Braunists";
+        const mentzenAction =
+            Q.konf_dominant_wing == "Mentzenites and Korwinists";
+        const headline = braunistAction
+            ? "Braunists turn the Trzaskowski law into a street provocation"
+            : (mentzenAction
+                ? "Mentzen ties the Trzaskowski law to taxes and public spending"
+                : "National Movement coordinates local resistance to the Trzaskowski law");
+        takeActionAI(
+            "konf",
+            "Make the Trzaskowski law ordinary culture-war business",
+            1,
+            headline,
+            function() {
+                addMomentumAI("konf", braunistAction ? 0.28 : 0.22);
+                shiftBlocAI("anti_establishment_youth", "konf", 1.2);
+                shiftBlocAI("provincial_welfare", "konf", 0.7);
+                shiftBlocAI("rural_localists", "konf", 0.5);
+                Q.far_right_agenda += braunistAction ? 2.2 : 1.4;
+                Q.far_right_fragmentation += 0.8;
+                Q.minority_safety -= 1;
+                Q.konf_normalisation += braunistAction ? -1 : 1;
+                if (braunistAction) {
+                    adjustRelationAI("ko", "konf", -1);
+                    adjustRelationAI("psl", "konf", -1);
+                }
+                queueMoodAI(
+                    "konf", rightsIssue, "conservative", 1,
+                    headline,
+                    -0.5, 2, -2
+                );
+                if (mentzenAction) {
+                    queueMoodAI(
+                        "konf", "social_spending", "conservative", 1,
+                        "Mentzen makes equal rights part of the tax revolt",
+                        -0.25, 1, -1
+                    );
+                }
+            }
+        );
+    } else if (Q.konf_dominant_wing == "Braunists") {
         takeActionAI(
             "konf",
             "Stage a Braunite anti-system rupture",
@@ -2774,6 +2833,51 @@ Q.konf_ideology =
 Q.p2050_ideology = Q.p2050_emerged
     ? "Centrist movement · " + Q.p2050_dominant_wing.toLowerCase()
     : "Movement not yet formed";
+
+// Outside the freebie branch, the Toruń sequence remains the authored route
+// by which KO and PSL can begin treating Konfederacja as a usable partner.
+if (!Q.trz_freebie_law && Q.year >= 2025 && Q.mentzen_kingmaker_active) {
+    if (Q.ko_konf_partner_line == "closed" &&
+        Q.coalition_viable_ko_konf &&
+        (Number(Q.konf_normalisation) || 0) >= 45) {
+        Q.ko_konf_partner_line = "talks";
+    }
+    if (Q.psl_konf_partner_line == "closed" &&
+        Q.coalition_viable_psl_konf &&
+        (Number(Q.konf_normalisation) || 0) >= 40) {
+        Q.psl_konf_partner_line = "conditional";
+    }
+}
+
+// Once a rival party has opened a channel, ordinary committee work does more
+// normalising than another exceptional summit. These offsets keep the two
+// partner tracks visible without replacing either party's normal monthly move.
+if (Q.trz_freebie_law && currentRivalMonthIndex % 4 == 1 &&
+    Q.psl_konf_partner_line != "closed") {
+    adjustRelationAI("psl", "konf", 1);
+    Q.konf_normalisation += 1;
+    shiftBlocAI("rural_localists", "konf", 0.5);
+    queueMoodAI(
+        "psl", Q.trz_freebie_law == "marriage"
+            ? "lgbt_equality" : "abortion_rights",
+        "conservative", 1,
+        "PSL and Konfederacja make a county agreement routine",
+        -0.25, 1, -1
+    );
+    headlines.push("PSL and Konfederacja make a county agreement routine");
+}
+if (Q.trz_freebie_law && currentRivalMonthIndex % 4 == 3 &&
+    Q.ko_konf_partner_line != "closed") {
+    adjustRelationAI("ko", "konf", 1);
+    Q.konf_normalisation += 1.5;
+    shiftBlocAI("liberal_professionals", "konf", 0.4);
+    queueMoodAI(
+        "ko", "social_spending", "centrist", 1,
+        "KO and Konfederacja present a joint economic vote as normal procedure",
+        -0.25, 0.5, -1
+    );
+    headlines.push("KO and Konfederacja normalize a joint committee vote");
+}
 
 if (publicMoodModelAI) {
     publicMoodModelAI.resolve(Q, {advance: false, finalize: true});

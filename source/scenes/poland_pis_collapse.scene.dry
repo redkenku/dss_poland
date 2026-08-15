@@ -20,13 +20,18 @@ const cohesion = Number(Q.united_right_cohesion) || 0;
 // that no longer supports one list, a rival that has overtaken it on the same
 // electorate, or a succession nobody could force while Kaczyński was alive to
 // prevent it.
-Q.pis_collapse_cause = Q.pis_split
+const konfFamilyPoll = Q.mentzen_bosak_split
+    ? (Number(Q.new_hope_poll) || 0) +
+        (Number(Q.national_movement_poll) || 0)
+    : (Number(Q.konf_poll) || 0);
+Q.pis_collapse_cause = Q.trz_freebie_konf_hegemon ||
+    konfFamilyPoll >= (Number(Q.pis_poll) || 0)
+    ? "outbid"
+    : Q.pis_split
     ? "rupture"
     : (Number(Q.pis_poll) || 0) < 26
         ? "polling"
-        : (Number(Q.konf_poll) || 0) >= (Number(Q.pis_poll) || 0)
-            ? "outbid"
-            : "succession";
+        : "succession";
 const taken = function(name) {
     return name == Q.president_name || name == Q.prime_minister;
 };
@@ -301,8 +306,16 @@ Q.pis_welfare_destination = Q.pis_successor_leader == "Beata Szydło"
     ? "kept inside the party that kept the name"
     : "left without a natural home on the right";
 Q.pis_poll = Math.max(6, (Number(Q.pis_poll) || 30) - 3.2);
-Q.konf_poll = (Number(Q.konf_poll) || 0) +
-    (stance == "Put the record to every camp" ? 1.1 : 0.6);
+const konfCollapseGain = stance == "Put the record to every camp" ? 1.1 : 0.6;
+if (Q.mentzen_bosak_split) {
+    Q.new_hope_poll = (Number(Q.new_hope_poll) || 0) +
+        konfCollapseGain * 0.55;
+    Q.national_movement_poll =
+        (Number(Q.national_movement_poll) || 0) +
+        konfCollapseGain * 0.45;
+} else {
+    Q.konf_poll = (Number(Q.konf_poll) || 0) + konfCollapseGain;
+}
 Q.pis_collapse_outcome = "PiS keeps the name under " + Q.pis_leader +
     " and stops being the only address on the Polish right";
 Q.pis_collapse_result = departing + " MPs leave the party that won 2015" +

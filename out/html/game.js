@@ -6676,13 +6676,25 @@ window.disableGrayMode = function() {
       (disabled ? ' disabled' : '') + '>' + budgetEscape(label) + '</button>';
   };
 
+  var budgetSubmitErrors = {
+    revision: 'Change at least two decisions before resubmitting.',
+    unaffordable: 'The draft does not balance against its funding source.',
+    resource: 'That route needs one party resource.',
+    strategy: 'Choose an opposition route first.',
+    demand: 'A bargain needs at least one amendment.',
+    wedge: 'Target one unmet governing demand first.'
+  };
+
   var renderBudgetBoard = function(host) {
     var engine = window.dendryUI && window.dendryUI.dendryEngine;
     var Q = engine && engine.state && engine.state.qualities;
     var model = window.polandBudgetModel;
     var budget = Q && Q.budget_game;
-    if (!model || !budget) return;
     var mode = host.getAttribute('data-budget-board');
+    // A board that cannot render must leave the scene's own choice links
+    // visible, otherwise the page has no way out at all.
+    if (!model || !budget) return false;
+    if (mode === 'execution' && !budget.execution) return false;
     var p = model.preview(Q);
     var tierOrder = ['cut', 'maintain', 'fund', 'flagship'];
     var html = '<section class="budget-board" aria-label="State budget dossier">';
@@ -6705,7 +6717,7 @@ window.disableGrayMode = function() {
           'poland_budget_2023_2026.senate_reject', false,
           !senate.canOverride) + '</div></section>';
       host.innerHTML = html;
-      return;
+      return true;
     }
 
     if (mode === 'execution') {
@@ -6745,7 +6757,7 @@ window.disableGrayMode = function() {
           'poland_budget_2023_2026.finish_execution', false, false) +
         '</div></section>';
       host.innerHTML = html;
-      return;
+      return true;
     }
 
     var source = model.financing.find(function(item) {
@@ -6760,12 +6772,21 @@ window.disableGrayMode = function() {
       (p.vote.passed ? 'budget-pass' : 'budget-fail') + '">' + p.vote.yes + ' yes · ' +
       p.vote.no + ' no · ' + p.vote.abstain + ' abstain</b></div></div>';
 
-    var cards = model.pressure[budget.year] || [];
+    var cards = model.pressureStatus
+      ? model.pressureStatus(budget)
+      : (model.pressure[budget.year] || []).map(function(card) {
+        return {label: card[0], need: card[2], met: false,
+          lineLabel: model.lines.find(function(line) {
+            return line.id === card[1];
+          }).label};
+      });
     html += '<div class="budget-pressure" aria-label="Annual pressures">' +
       cards.map(function(card) {
-        return '<span><b>' + budgetEscape(card[0]) + '</b><small>' +
-          budgetEscape(model.lines.find(function(line) { return line.id === card[1]; }).label) +
-          ' · ' + (card[2] === 2 ? 'Flagship' : 'Fund') + '</small></span>';
+        return '<span class="' + (card.met ? 'is-met' : 'is-broken') + '"><b>' +
+          budgetEscape(card.label) + '</b><small>' +
+          budgetEscape(card.lineLabel) + ' · ' +
+          (card.need === 2 ? 'Flagship' : 'Fund') + ' · ' +
+          (card.met ? 'answered' : 'ignored') + '</small></span>';
       }).join('') + '</div>';
 
     if (budget.role === 'government') {
@@ -6775,25 +6796,67 @@ window.disableGrayMode = function() {
             preset.id === budget.presetId, false);
         }).join('') + '</fieldset>';
     } else {
+      var leadParty = model.partyData[model.partyId(Q.government_party) || 'pis'];
+      var leadName = leadParty ? leadParty.label : 'the cabinet';
+      var unmetDemands = p.demands.filter(function(demand) { return !demand.met; });
       var strategies = [
-        ['no', 'Vote no; this is their budget', 'Free, immediate, no programme credit.'],
-        ['bargain', 'Bargain', 'Spend visible leverage on up to two amendments.'],
-        ['shadow', 'Publish a shadow budget · 1 resource', 'Own a coherent alternative, not state spending.'],
-        ['wedge', 'Exploit a coalition wedge · 1 resource', 'Target one genuinely unmet partner demand.']
+        ['no', '1 · Vote it down',
+          'Free. Lewica votes no, wins nothing and owes nothing.'],
+        ['bargain', '2 · Bargain for amendments',
+          'Free. Spend leverage to write up to two lines into ' + leadName +
+            '’s budget, then choose how Lewica votes.'],
+        ['shadow', '3 · Publish a shadow budget · 1 resource',
+          'Rewrite all nine lines as Lewica’s own text. It never becomes ' +
+            'state spending; it wins programme ownership and press.'],
+        ['wedge', '4 · Split the coalition · 1 resource',
+          'Expose one governing party’s broken red line so its MPs abstain. ' +
+            (unmetDemands.length ? unmetDemands.length + ' available this year.'
+              : 'None available: every governing party is satisfied.')]
       ];
-      html += '<fieldset class="budget-card-row"><legend>Opposition route</legend>' +
+      html += '<fieldset class="budget-card-row"><legend>Opposition route — pick one</legend>' +
         strategies.map(function(item) {
+          var costly = item[0] === 'shadow' || item[0] === 'wedge';
+          var blocked = (costly && Number(Q.resources || 0) < 1) ||
+            (item[0] === 'wedge' && !unmetDemands.length);
           return '<button type="button" class="budget-strategy' +
             (budget.strategy === item[0] ? ' is-active' : '') +
             '" data-budget-action="strategy" data-budget-value="' + item[0] +
             '" aria-pressed="' + (budget.strategy === item[0]) + '"' +
-            ((item[0] === 'shadow' || item[0] === 'wedge') && Number(Q.resources || 0) < 1
-              ? ' disabled' : '') + '><b>' + budgetEscape(item[1]) + '</b><small>' +
-            budgetEscape(item[2]) + '</small></button>';
+            (blocked ? ' disabled' : '') + '><b>' + budgetEscape(item[1]) +
+            '</b><small>' + budgetEscape(item[2]) + '</small></button>';
         }).join('') + '</fieldset>';
-      if (budget.strategy === 'bargain') {
-        html += '<p class="budget-note">Leverage: <b>' + model.leverage(Q) +
-          ' points</b>. A maintained-line amendment costs 1; restoring a cut costs 2.</p>';
+      if (!budget.strategy) {
+        html += '<p class="budget-note">This is <b>' + budgetEscape(leadName) +
+          '’s</b> budget. Lewica cannot write it, only answer it. ' +
+          'Pick a route above; the exact roll call below updates as you do.</p>';
+      } else if (budget.strategy === 'no') {
+        html += '<p class="budget-note">Lewica votes against the whole text. ' +
+          'No amendment, no resource, no share of the result — and no ' +
+          'accusation of sustaining ' + budgetEscape(leadName) + '.</p>';
+      } else if (budget.strategy === 'bargain') {
+        var spent = model.leverageSpent(budget);
+        html += '<p class="budget-note"><b>Leverage ' + model.leverage(Q) +
+          ' · spent ' + spent + ' · left ' + (model.leverage(Q) - spent) +
+          '.</b> Leverage comes from Lewica’s seats being pivotal and from ' +
+          'negotiating capital. Raising a maintained line costs 1; restoring a ' +
+          'cut line costs 2; two amendments is the limit. Amendments you win are ' +
+          'written into the enacted budget. Then choose Lewica’s vote below — ' +
+          'supporting ' + budgetEscape(leadName) + ' angers Razem and the ' +
+          'progressives.</p>';
+      } else if (budget.strategy === 'shadow') {
+        html += '<p class="budget-note">Edit all nine lines and the funding card ' +
+          'freely: this is Lewica’s published alternative, so it must balance, ' +
+          'but it never moves state money. The cabinet’s own draft is what the ' +
+          'Sejm votes on, and Lewica abstains on it unless you change the posture ' +
+          'below.</p>';
+      } else if (budget.strategy === 'wedge') {
+        html += '<p class="budget-note">Name one governing party whose red line ' +
+          'this budget breaks. Its whole delegation abstains at the roll call, ' +
+          'which can defeat the budget outright. Lewica votes no and the targeted ' +
+          'party’s relation falls.' +
+          (unmetDemands.length ? '' :
+            ' No governing party has an unmet red line this year, so this route ' +
+            'cannot be used — pick another.') + '</p>';
       }
     }
 
@@ -6816,9 +6879,14 @@ window.disableGrayMode = function() {
             tier === id, id === 'cut' && floor);
         });
       } else if (budget.strategy === 'bargain') {
-        html += '<span class="budget-current">' + budgetEscape(model.tierNames[tier]) + '</span>' +
-          budgetButton(budget.demands.includes(line.id) ? 'Demanded' : 'Amend',
-            'demand', line.id, budget.demands.includes(line.id), false);
+        var demand = model.demandState(Q, line.id);
+        html += '<span class="budget-current">' +
+          budgetEscape(model.tierNames[tier]) + '</span>' +
+          budgetButton(demand.chosen
+            ? 'Demanded · ' + demand.cost
+            : (demand.allowed ? 'Amend · ' + demand.cost + ' leverage'
+              : budgetEscape(demand.reason)),
+            'demand', line.id, demand.chosen, !demand.chosen && !demand.allowed);
       } else {
         html += '<span class="budget-current">' + budgetEscape(model.tierNames[tier]) + '</span>';
       }
@@ -6860,43 +6928,64 @@ window.disableGrayMode = function() {
             '"><span><b>' + budgetEscape(demand.label) + ' · ' + demand.seats +
             ' MPs</b><small>' + budgetEscape(demand.redLine) + '</small></span>' +
             budgetButton(demand.met ? 'Met' : 'Stamp deal', 'deal', demand.id,
-              budget.deals.includes(demand.id), false) + '</div>';
+              budget.deals.includes(demand.id),
+              demand.met && !budget.deals.includes(demand.id)) + '</div>';
         }).join('') + currentCards + outsideDeals.map(function(id) {
           var party = model.partyData[id];
           return '<div class="budget-demand"><span><b>Outside deal: ' +
             budgetEscape(party.label) + ' · ' + model.partySeats(Q, id) +
-            ' MPs</b><small>' + budgetEscape(party.redLine) +
+            ' MPs</b><small>' + budgetEscape(party.redLine) + ' — ' +
+            budgetEscape(model.dealPrice(Q, id).label) +
             '</small></span>' + budgetButton('Stamp whole-club deal', 'deal', id,
               budget.deals.includes(id), false) + '</div>';
         }).join('') + '</fieldset>';
     } else if (budget.strategy === 'wedge') {
+      var wedgeTargets = p.demands.filter(function(demand) { return !demand.met; });
       html += '<fieldset class="budget-demands"><legend>Target one unmet governing demand</legend>' +
-        p.demands.filter(function(demand) { return !demand.met; }).map(function(demand) {
+        (wedgeTargets.length ? wedgeTargets.map(function(demand) {
           return '<div class="budget-demand is-broken"><span><b>' +
             budgetEscape(demand.label) + ' · ' + demand.seats + ' MPs</b><small>' +
-            budgetEscape(demand.redLine) + '</small></span>' +
+            budgetEscape(demand.redLine) + ' — exposing this moves ' +
+            demand.seats + ' MPs to abstention</small></span>' +
             budgetButton('Target', 'wedge', demand.id, budget.wedge === demand.id, false) +
             '</div>';
-        }).join('') + '</fieldset>';
+        }).join('') : '<p class="budget-note">Nothing to expose: every governing ' +
+          'delegation’s red line is met by this draft.</p>') + '</fieldset>';
     }
 
-    if (budget.role === 'opposition' && budget.strategy === 'bargain') {
-      html += '<fieldset class="budget-tier-group"><legend>Final posture</legend>' +
+    if (budget.role === 'opposition' &&
+        (budget.strategy === 'bargain' || budget.strategy === 'shadow')) {
+      var postureNotes = {
+        support: 'Lewica’s ' + model.partySeats(Q, 'left') +
+          ' MPs vote yes and the budget is partly Lewica’s.',
+        abstain: 'Lewica’s MPs abstain: the budget can still pass, and Lewica ' +
+          'owns neither its money nor its blame.',
+        no: 'Lewica’s MPs vote against the text.'
+      };
+      html += '<fieldset class="budget-demands"><legend>How Lewica votes</legend>' +
+        '<div class="budget-tier-group">' +
         budgetButton('Support', 'posture', 'support', budget.posture === 'support', false) +
         budgetButton('Abstain', 'posture', 'abstain', budget.posture === 'abstain', false) +
-        budgetButton('Reject', 'posture', 'no', budget.posture === 'no', false) + '</fieldset>';
+        budgetButton('Reject', 'posture', 'no', budget.posture === 'no', false) +
+        '</div><p class="budget-note">' +
+        budgetEscape(postureNotes[budget.posture] || postureNotes.abstain) +
+        '</p></fieldset>';
     }
 
     var reasons = p.vote.reasons.length
       ? p.vote.reasons.map(function(reason) { return '<li>' + budgetEscape(reason) + '</li>'; }).join('')
       : '<li>Every displayed governing delegation supports the draft.</li>';
     html += '<div class="budget-tally" role="status" aria-live="polite"><b>' +
-      (p.vote.passed ? 'PASSING' : 'DEFEATED') + ': ' + p.vote.yes + '–' + p.vote.no +
+      (budget.role === 'government'
+        ? (p.vote.passed ? 'PASSING' : 'DEFEATED')
+        : 'The cabinet’s budget ' + (p.vote.passed ? 'PASSES' : 'FALLS')) +
+      ': ' + p.vote.yes + '–' + p.vote.no +
       ', ' + p.vote.abstain + ' abstain</b><ul>' + reasons + '</ul></div>';
-    if (p.breaches.length || Q.budget_submit_error) {
+    var submitError = budgetSubmitErrors[Q.budget_submit_error] || '';
+    if (p.breaches.length || submitError) {
       html += '<div class="budget-errors" role="alert">' +
-        p.breaches.map(budgetEscape).join(' · ') +
-        (Q.budget_submit_error === 'revision' ? 'Change at least two decisions before resubmitting.' : '') +
+        p.breaches.map(budgetEscape).concat(submitError ? [submitError] : [])
+          .join(' · ') +
         '</div>';
     }
     var strategyReady = budget.role === 'government' || Boolean(budget.strategy);
@@ -6905,26 +6994,43 @@ window.disableGrayMode = function() {
     var affordable = budget.strategy === 'shadow' || budget.role === 'government'
       ? p.affordable : true;
     var revisionReady = !budget.failedDraft || p.changeCount >= 2;
-    html += '<div class="budget-actions">' +
+    var submitLabels = {
+      no: 'Vote no and move on',
+      bargain: 'Table the amendments and record Lewica’s vote',
+      shadow: 'Publish the shadow budget and record Lewica’s vote',
+      wedge: 'Expose the red line and force the roll call'
+    };
+    var blockedWhy = !strategyReady
+      ? 'Pick an opposition route first.'
+      : (!specialReady
+        ? (budget.strategy === 'bargain'
+          ? 'Demand at least one amendment, or switch to voting it down.'
+          : 'Name the delegation you are targeting.')
+        : (!affordable
+          ? 'This draft does not balance against its funding card.'
+          : (!revisionReady
+            ? 'A revision must change at least two decisions.' : '')));
+    html += (blockedWhy
+      ? '<p class="budget-note">' + budgetEscape(blockedWhy) + '</p>' : '') +
+      '<div class="budget-actions">' +
       (editable ? budgetButton('Reset proposal', 'reset', '', false, false) : '') +
-      budgetButton(budget.role === 'opposition' && budget.strategy === 'no'
-        ? 'Vote no and move on' : 'Submit to the Sejm', 'scene',
+      budgetButton(budget.role === 'government'
+        ? 'Submit to the Sejm'
+        : (submitLabels[budget.strategy] || 'Record Lewica’s answer'), 'scene',
         'poland_budget_2023_2026.submit_budget', false,
         !strategyReady || !specialReady || !affordable || !revisionReady) +
       '</div></section>';
     host.innerHTML = html;
+    return true;
   };
 
   var initializeBudgetBoards = function() {
     var hosts = document.querySelectorAll('.budget-board-host');
     if (!hosts.length) return;
-    var choices = document.querySelectorAll('#content ul.choices');
-    for (var choiceIndex = 0; choiceIndex < choices.length; choiceIndex++) {
-      choices[choiceIndex].classList.add('budget-native-choices');
-    }
+    var rendered = false;
     for (var hostIndex = 0; hostIndex < hosts.length; hostIndex++) {
       var host = hosts[hostIndex];
-      renderBudgetBoard(host);
+      rendered = renderBudgetBoard(host) || rendered;
       host.onclick = function(event) {
         var button = event.target.closest('[data-budget-action]');
         if (!button || button.disabled) return;
@@ -6952,6 +7058,11 @@ window.disableGrayMode = function() {
         }
         renderBudgetBoard(event.currentTarget);
       };
+    }
+    if (!rendered) return;
+    var choices = document.querySelectorAll('#content ul.choices');
+    for (var choiceIndex = 0; choiceIndex < choices.length; choiceIndex++) {
+      choices[choiceIndex].classList.add('budget-native-choices');
     }
   };
 

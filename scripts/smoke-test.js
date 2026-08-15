@@ -2442,6 +2442,14 @@ function runSmoke(game) {
       choose('poland_porozumienie_war.kukiz_resolution');
       choose('poland_hub');
     }
+    if (engine.state.sceneId === 'poland_kwasniewski.congress_2021') {
+      chooseFirstAvailable([
+        'poland_kwasniewski.congress_concede',
+        'poland_kwasniewski.congress_answer',
+        'poland_kwasniewski.congress_break',
+      ]);
+      choose('poland_hub');
+    }
     assert.strictEqual(engine.state.sceneId, 'poland_hub');
   }
 
@@ -3621,7 +3629,7 @@ function runSmoke(game) {
       },
       {
         scene: 'poland_merger_events.merger',
-        choice: 'poland_merger_events.merger_assets',
+        choice: 'poland_merger_events.merger_central',
         gain: 2,
       },
       {
@@ -4176,7 +4184,7 @@ function runSmoke(game) {
     qualities.government_support_seats = 260;
     qualities.coalition_seats = 260;
     qualities.left_seats = 260;
-    assert.strictEqual(globalThis.polandBudgetModel.version, 2);
+    assert.strictEqual(globalThis.polandBudgetModel.version, 4);
     const first = globalThis.polandBudgetModel.preview(qualities);
     assert(first.affordable);
     assert(first.vote.passed);
@@ -5955,7 +5963,7 @@ function runSmoke(game) {
     );
   }
 
-  function runHistoricalPresidentialElection(seed) {
+  function runHistoricalPresidentialElection(seed, fightForTrzaskowski) {
     startStandard(seed);
     engine.goToScene('poland_presidential_election.setup');
     checkNumbers();
@@ -6039,12 +6047,26 @@ function runSmoke(game) {
     checkNumbers();
     assert.strictEqual(qualities.pres_support_actions_remaining, 2);
     choose('poland_presidential_election.endorsement_choice');
-    choose('poland_presidential_election.endorse_free');
+    choose(
+      fightForTrzaskowski
+        ? 'poland_presidential_election.endorse_accord'
+        : 'poland_presidential_election.endorse_free'
+    );
     choose('poland_presidential_election.support_market');
-    choose('poland_presidential_election.support_turnout');
+    chooseFirstAvailable(fightForTrzaskowski
+      ? [
+        'poland_presidential_election.support_holownia',
+        'poland_presidential_election.support_movements',
+      ]
+      : ['poland_presidential_election.support_turnout']);
     assert.strictEqual(qualities.pres_support_actions_remaining, 1);
     choose('poland_presidential_election.support_next');
-    choose('poland_presidential_election.support_release');
+    chooseFirstAvailable(fightForTrzaskowski
+      ? [
+        'poland_presidential_election.support_movements',
+        'poland_presidential_election.support_turnout',
+      ]
+      : ['poland_presidential_election.support_release']);
     assert.strictEqual(qualities.pres_support_actions_remaining, 0);
     choose('poland_presidential_election.support_done');
     assert.strictEqual(
@@ -6056,16 +6078,23 @@ function runSmoke(game) {
       100
     );
     if (qualities.pres_runoff_support_key === 'trzaskowski') {
-      assert(
-        qualities.pres_razem_trzaskowski_reluctance >= 5,
-        'Razem reluctance did not strand a meaningful share of Left voters'
-      );
-      assert(
-        qualities.pres_transfer_left_target < 65,
-        'A free vote transferred implausibly many Left voters to Trzaskowski'
-      );
+      if (fightForTrzaskowski) {
+        assert.strictEqual(qualities.pres_razem_trzaskowski_reluctance, 20);
+      } else {
+        assert(
+          qualities.pres_razem_trzaskowski_reluctance >= 50 &&
+            qualities.pres_razem_trzaskowski_reluctance <= 70,
+          'Unpromised Razem abstention escaped its 50-70% range'
+        );
+        assert(
+          qualities.pres_transfer_left_target < 65,
+          'A free vote transferred implausibly many Left voters to Trzaskowski'
+        );
+      }
     }
-    choose('poland_presidential_election.final_push_safe');
+    choose(fightForTrzaskowski
+      ? 'poland_presidential_election.final_push_gamble'
+      : 'poland_presidential_election.final_push_safe');
     choose('poland_presidential_election.runoff_count');
     assertRunoffAccounting(qualities);
     assert.deepStrictEqual(
@@ -6082,7 +6111,10 @@ function runSmoke(game) {
       ['poland_hub']
     );
     choose('poland_hub');
-    return qualities.pres_runoff_winner_key;
+    return {
+      margin: qualities.pres_runoff_margin,
+      winner: qualities.pres_runoff_winner_key,
+    };
   }
 
   function testPresidentialElectionCorpora() {
@@ -6145,36 +6177,56 @@ function runSmoke(game) {
     let historicalDudaWins = 0;
     let historicalTrzaskowskiWins = 0;
     let historicalHolowniaWins = 0;
-    const historicalSeedCount = 40;
+    const historicalSeedCount = 100;
     for (let index = 0; index < historicalSeedCount; index += 1) {
-      const winner = runHistoricalPresidentialElection(
+      const result = runHistoricalPresidentialElection(
         'presidential-historical-' + index
       );
-      if (winner === 'duda') {
+      if (result.winner === 'duda') {
         historicalDudaWins += 1;
-      } else if (winner === 'trzaskowski') {
+      } else if (result.winner === 'trzaskowski') {
         historicalTrzaskowskiWins += 1;
-      } else if (winner === 'holownia') {
+      } else if (result.winner === 'holownia') {
         historicalHolowniaWins += 1;
       }
     }
     assert(
-      historicalDudaWins >= 30,
+      historicalDudaWins >= 90,
       'Duda won only ' + historicalDudaWins +
         ' of ' + historicalSeedCount + ' historical-line seeds'
     );
     assert(
-      historicalDudaWins < historicalSeedCount,
-      'Historical-line slack disappeared: Duda won all ' +
-        historicalSeedCount + ' seeded runoffs'
+      historicalTrzaskowskiWins >= historicalHolowniaWins,
+      'Passive play favoured Hołownia over Trzaskowski'
+    );
+    let fightDudaWins = 0;
+    let fightTrzaskowskiWins = 0;
+    let largestTrzaskowskiMargin = 0;
+    for (let index = 0; index < 20; index += 1) {
+      const result = runHistoricalPresidentialElection(
+        'presidential-fight-for-trzaskowski-' + index,
+        true
+      );
+      if (result.winner === 'duda') fightDudaWins += 1;
+      if (result.winner === 'trzaskowski') {
+        fightTrzaskowskiWins += 1;
+        largestTrzaskowskiMargin = Math.max(
+          largestTrzaskowskiMargin,
+          result.margin
+        );
+      }
+    }
+    assert(
+      fightTrzaskowskiWins > 0,
+      'Maximum effort could not elect Trzaskowski'
     );
     assert(
-      historicalTrzaskowskiWins > 0,
-      'Trzaskowski disappeared from the historical-line winner corpus'
+      fightDudaWins > fightTrzaskowskiWins,
+      'Trzaskowski stopped being the maximum-effort underdog'
     );
     assert(
-      historicalHolowniaWins > 0,
-      'Hołownia never converted a saved first-round breakout'
+      largestTrzaskowskiMargin <= 7,
+      'Trzaskowski won a maximum-effort seed by an implausible landslide'
     );
 
     const nominees = [
@@ -10458,6 +10510,7 @@ function runSmoke(game) {
         'poland_events_2021_2023.jul23_cordon',
         'poland_events_2021_2023.jul23_copy',
       ]);
+      choose('poland_events_2021_2023.router');
       assert.strictEqual(
         engine.state.sceneId,
         'poland_porozumienie_after.porozumienie_list_2023'
@@ -14495,7 +14548,7 @@ function runSmoke(game) {
     engine.goToScene(
       'poland_events_2026.constructive_motion_2026'
     );
-    choose('poland_events_2026.constructive_morawiecki');
+    choose('poland_events_2026.constructive_szydlo');
     choose('poland_events_2026.constructive_roll_2026');
     assert.strictEqual(qualities.constructive_passed, 0);
     assert.strictEqual(qualities.government_has_confidence, 1);
@@ -14530,6 +14583,10 @@ function runSmoke(game) {
       psl_relation: 22,
       p2050_relation: 24,
       centrum_relation: 20,
+      coalition_viable_ko_konf: 1,
+      konf_normalisation: 55,
+      ko_konf_partner_line: 'governing',
+      psl_konf_partner_line: 'open',
       abortion_reform_stage: 4,
       abortion_reform_settled: 1,
       abortion_law_enacted: 1,
@@ -16352,6 +16409,7 @@ function runSmoke(game) {
       'poland_events_2021_2023.july_2023'
     );
     choose('poland_events_2021_2023.jul23_material');
+    choose('poland_events_2021_2023.router');
     assert.strictEqual(
       engine.state.sceneId,
       'poland_porozumienie_after.porozumienie_list_2023',
@@ -17719,6 +17777,9 @@ function runSmoke(game) {
       'poland_scenario_shocks.constitutional_shock': 3,
     };
     const unlimitedDatedEvents = new Set([
+      // Every enacted budget opens its own implementation ledger, so this card
+      // recurs once per enactment and is gated by budget_execution_pending.
+      'poland_budget_2023_2026.execution_event',
       'poland_events_2026.snap_election_2026',
       'poland_pressure_events.admin_collapse',
       'poland_pressure_events.climate_energy_failure',

@@ -49,6 +49,8 @@ function buildFederation(seed, leadership, finance, registration, candidate,
   const ctx = start(seed);
   openMerger(ctx);
   ctx.choose('poland_merger_events.merger_convention');
+  assert.strictEqual(ctx.Q.sejm_list_threshold, 8);
+  assert.strictEqual(ctx.Q.sejm_list_structure, 'Coalition committee');
   ctx.choose('poland_merger_events.federation_joint_convention');
   ctx.choose('poland_merger_events.' + leadership);
   ctx.choose('poland_merger_events.' + finance);
@@ -69,10 +71,25 @@ function buildFederation(seed, leadership, finance, registration, candidate,
 
 function resolveLeftCoalitionList(ctx) {
   ctx.engine.goToScene('poland_events_2023_2024.august_lists');
+  const choices = (ctx.engine.getCurrentChoices() || []).map(function(choice) {
+    return choice.id;
+  });
+  for (const forbidden of [
+    'poland_events_2023_2024.list_target_left_host',
+    'poland_events_2023_2024.list_target_razem_host',
+    'poland_events_2023_2024.list_target_ko_host',
+    'poland_events_2023_2024.list_target_third_host',
+    'poland_events_2023_2024.list_target_pis_host',
+    'poland_events_2023_2024.list_target_alone',
+  ]) {
+    assert(!choices.includes(forbidden), forbidden + ' remained available');
+  }
   ctx.choose('poland_events_2023_2024.list_target_left_coalition');
   ctx.choose('poland_events_2023_2024.list_terms');
   ctx.choose('poland_events_2023_2024.list_terms_equal');
   ctx.choose('poland_events_2023_2024.list_resolution');
+  assert.strictEqual(ctx.Q.sejm_list_threshold, 8);
+  assert.strictEqual(ctx.Q.sejm_list_structure, 'Coalition committee');
 }
 
 // Historical peaceful unity and the loose alliance remain direct outcomes.
@@ -143,6 +160,42 @@ assert(weak.Q.sejm_list_federal_bonus < 0,
   'A captured, parallel federation should hurt later list bargaining');
 assert(strong.Q.sejm_list_partner_score > weak.Q.sejm_list_partner_score,
   'The early structural choices did not alter the later list result');
+
+// A failed outside bargain still leaves the legal federation on its own 8%
+// coalition committee; it cannot silently fall back to a 5% party list.
+{
+  const ctx = buildFederation(
+    'federal-list-lock',
+    'federation_rotating_presidium',
+    'federation_matching_grants',
+    'rename_federal_compact',
+    'federation_delegate_candidate',
+    'federation_parallel_branches'
+  );
+  Object.assign(ctx.Q, {
+    sejm_list_outcome: 'left_5',
+    sejm_list_structure: 'Host-party list',
+    sejm_list_threshold: 5,
+  });
+  ctx.engine.goToScene('poland_normalize');
+  assert.strictEqual(ctx.Q.sejm_list_outcome, 'left_coalition_8');
+  assert.strictEqual(ctx.Q.sejm_list_threshold, 8);
+  ctx.engine.goToScene('status');
+  assert.strictEqual(ctx.Q.status_sejm_list_visible, 1);
+  assert.strictEqual(ctx.Q.status_sejm_list_threshold, 8);
+  assert(ctx.Q.status_sejm_list_result.includes('8% coalition committee'));
+  ctx.Q.razem_cooperation = -100;
+  ctx.Q.internal_dissent = 100;
+  ctx.Q.faction_vetoes = 10;
+  ctx.engine.goToScene('poland_events_2023_2024.august_lists');
+  ctx.choose('poland_events_2023_2024.list_target_left_coalition');
+  ctx.choose('poland_events_2023_2024.list_terms');
+  ctx.choose('poland_events_2023_2024.list_terms_command');
+  ctx.choose('poland_events_2023_2024.list_resolution');
+  assert.strictEqual(ctx.Q.sejm_list_outcome, 'left_coalition_8');
+  assert.strictEqual(ctx.Q.sejm_list_threshold, 8);
+  assert(ctx.Q.sejm_list_result.includes('federation files'));
+}
 
 // A functioning federation may later unify by member consent while retaining
 // constitutionally meaningful internal currents.

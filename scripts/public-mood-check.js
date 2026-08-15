@@ -231,8 +231,8 @@ function configureRivalMoodTest(engine, Q) {
   });
   assert(effect, 'A funded one-resource rival campaign produced no mood effect');
   assert.strictEqual(effect.blocOwnership, 3);
-  assert.strictEqual(effect.salience, 2);
-  assert.strictEqual(effect.backlash, 2);
+  assert.strictEqual(effect.salience, 4);
+  assert.strictEqual(effect.backlash, 3);
   assert.strictEqual(effect.leftOwnership, -2);
   assert(Q.rival_month_headline.includes('Mood contest:'),
     'The rival headline omitted the resolved mood target and effect');
@@ -257,9 +257,9 @@ function configureRivalMoodTest(engine, Q) {
   });
   assert(effect, 'A funded hard-mode rival campaign produced no mood effect');
   assert.strictEqual(effect.blocOwnership, 6);
-  assert.strictEqual(effect.salience, 4);
-  assert.strictEqual(effect.support, 1);
-  assert.strictEqual(effect.backlash, 1);
+  assert.strictEqual(effect.salience, 8);
+  assert.strictEqual(effect.support, 6);
+  assert.strictEqual(effect.backlash, 1.5);
   assert.strictEqual(effect.leftOwnership, -4);
 }
 

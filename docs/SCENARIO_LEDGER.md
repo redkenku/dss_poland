@@ -15,7 +15,7 @@ every audited ID has exactly one authored scene or explicit dossier owner.
 
 | State | Ledger coverage |
 | --- | --- |
-| **Implemented** | FAR 01–02, 04–09; PSL 07–09, 11–13; BOR 03–05, 11–14, 17–21; PRE 11, 19–20; DIP 05–11, 13–14; MED 06–08, 16–26; KO 01, 07–10, 13; PIS 03, 06–10, 13–14; TD 03, 06, 09–10; SHK 04–06, 13, 16–17, 19, 21–22, 24–25, 27–28; ISS-COV-06; ISS-REL-04; ISS-LGBT-06; ISS-LGBT-08. |
+| **Implemented** | FAR 01–02, 04–09; TRZ-FR 01–05; PSL 07–09, 11–13; BOR 03–05, 11–14, 17–21; PRE 11, 19–20; DIP 05–11, 13–14; MED 06–08, 16–26; KO 01, 07–10, 13; PIS 03, 06–10, 13–14; TD 03, 06, 09–10; SHK 04–06, 13, 16–17, 19, 21–22, 24–25, 27–28; ISS-COV-06; ISS-REL-04; ISS-LGBT-06; ISS-LGBT-08. |
 | **Fixed prehistory** | Black Monday, Black Friday and the 2019 teachers' strike seed movement autonomy, repression memory and union state. They are not replayed as flashbacks. |
 | **Partial** | Rows outside the audited target may already have historical anchors or fragments in the current campaign but have not received the same metadata-and-downstream audit. |
 | **Still planned** | The remainder of the 310-row research inventory, the 41-district Sejm model and any post-election playable campaign remain outside this pass. |
@@ -431,6 +431,32 @@ into one catch-all prosecution.
 | **FAR-10 — Anti-lockdown harvest** | **H/P** | Restrictions, vaccine mandates or health passes let Konfederacja bind small-business anger to anti-system politics. | Patient health messaging and compensation reduce the harvest; coercion without trust enlarges it for years. |
 | **FAR-11 — Respectability bargain** | **P** | Bosak/Mentzen offer confidence to PiS or PSL while excluding Braun and moderating Russia/Ukraine rhetoric. | Entry into government can split activists, expose inexperience and hand KKP the anti-system brand. |
 | **FAR-12 — Radical-right plurality** | **P** | Konfederacja, KKP and a harder PiS all remain viable. | Competition pushes rhetoric rightward even without coalition; tactical voting and threshold fear create late list negotiations. |
+
+### Trzaskowski freebie: far-right realignment
+
+This counterfactual exists only after Trzaskowski signs abortion-rights or
+marriage-equality legislation. A failed bill, campaign pledge or judicial-repair
+law does not activate it. Marriage begins five pressure points higher and gains
+25 percent more base pressure per month. A 2023 PiS loss normally exposes the
+crossover in 2025–26; a confident PiS cabinet can defer it into 2027 or the
+epilogue without reversing it.
+
+| ID | Label | Trigger and branches | Follow-ups |
+| --- | --- | --- | --- |
+| **TRZ-FR-01 — A defeat chooses an heir** | **P** | The first post-election cabinet either releases PiS cadres quickly or keeps them attached to a surviving PiS government. | United Right cohesion, New Hope organisation and the speed of the existing PiS-collapse chain diverge. |
+| **TRZ-FR-02 — The last office changes its sign** | **P** | A surviving legal Suwerenna federates whole; a federated member detaches its recorded caucus; an already merged party yields only Jaki's declared current. | Every added Konfederacja mandate is subtracted from its actual source; legal identity, club and cabinet support remain consistent. |
+| **TRZ-FR-03 — County arithmetic** | **P** | At pressure 55 PSL opens public or Braun-excluding cooperation according to Konfederacja's dominant wing. | Repeated county votes make later cabinet arithmetic ordinary unless exposed or displaced by a rural-services compact. |
+| **TRZ-FR-04 — The invitation** | **P/E** | After the Mentzen kingmaker sequence and pressure 65, KO opens issue talks; a classical-liberal KO can give Sikorski a governing channel. | Costings and a firewall slow normalisation; tactical acceptance preserves the route to a KO–PSL–Konfederacja compact. |
+| **TRZ-FR-05 — The queue moves** | **P** | The Konfederacja family beats PiS in two consecutive published polls. | PiS becomes the junior right claimant; local non-enforcement precedes repeal; the PiS congress uses its stronger outbid cause and the rights law becomes the Sikorski compact's first repeal target. |
+
+The recurring threat is institutional rather than a random violence shock:
+registrars and hospitals test refusal, intimidation is processed as routine
+administration, and KO or PSL describe radical-right votes as ordinary
+committee work. The dominant Konfederacja wing determines whether this is sold
+through austerity, local “family” resolutions or Braunite provocation. Braun's
+exclusion improves coalition acceptability while accelerating the
+Mentzen–Bosak contest; retaining him increases radicalisation and slows the
+mainstream channel.
 
 ## Poland 2050 and the Marshal crisis
 
@@ -1045,6 +1071,59 @@ resignation, nomination and confidence vote separate stages.
 | **TOP-03 — Declarations** | **P** | Deputies, ministers and regions are asked which leader they serve. | A real rupture feeds each camp's existing collapse or dissent machinery; mediation can still prevent an organisational split. |
 | **TOP-04 — The Belka manoeuvre** | **P** | After a resignation, the president nominates Domański, Zawisza or Szefernaker; Bodnar is the truce and eligibility fallback. | The roll call can install the nominee, fail like 14 May 2004, isolate the Palace or carry two organisations into 2027. |
 | **TOP-05 — Electoral inheritance** | **P** | The settlement and Lewica's recorded side are read when the 2027 campaign closes. | The campaign modifier reaches the filed-list threshold count; the same record appears in the final assessment. |
+
+### 14. Aleksander Kwaśniewski — implemented
+
+Implemented in `poland_kwasniewski.scene.dry` (five appearances) plus two
+party-relations cards, `cards/poland_kwasniewski_call.scene.dry` and
+`cards/poland_kwasniewski_reproach.scene.dry`. The divergence is **P**
+throughout: none of it changes a recorded historical outcome, and the 2020 and
+2021 appearances are gated on the game's own state rather than on the calendar
+alone.
+
+The factual baseline is narrow and deliberately so. Kwaśniewski was President
+of the Republic from 23 December 1995 to 23 December 2005 and chaired SdRP
+before that; he holds no office, no party membership and no parliamentary
+following today. He is the last person to have won a national election for the
+Polish left, and the presidential results the left has posted since — Magdalena
+Ogórek's 2.38% in 2015 and Robert Biedroń's 2.22% in 2020 — are the standing
+comparison every commentator reaches for. His public interventions in this
+period have consistently pushed the left toward consolidation, toward the
+democratic camp and away from any accommodation with the radical right, and his
+2003–04 conflict with Leszek Miller is already the baseline for chain 13 above.
+([Presidency archive](https://www.prezydent.pl/kancelaria/archiwum/archiwum-aleksandra-kwasniewskiego);
+PKW published results for the 2015 and 2020 presidential elections.)
+
+Everything beyond that — the specific meetings, the wording of his
+interventions, the brokerage and the break — is counterfactual and is written
+as such.
+
+**He is not a takeover route and not a bureau adviser.** He cannot chair the
+party, cannot be appointed to the three-seat leadership bureau, cannot select a
+candidate and cannot defeat Miller: the road-sign event is gated so that it can
+never block `poland_sld_populist.list_filing`. What he supplies is
+legitimation, brokerage and public condemnation, none of which is worth a vote
+in the Sejm.
+
+`kwasniewski_alignment` is derived monthly in `poland_normalize` from the four
+things he argues about in public — the democratic bloc, constitutional
+restraint, the European anchor, and the absence of a bargain with the right —
+plus `kwasniewski_alignment_bias`, the running memory of what the party has
+said to his face. It rests at 52 for a party simply inside the democratic camp.
+At 50 and above the aligned card is drawn; below 40 the hostile one is; between
+40 and 49 he says nothing. `kwasniewski_estranged` zeroes it permanently.
+
+| ID | Label | Decision points | Follow-ups |
+| --- | --- | --- | --- |
+| **AK-01 — The Bristol call (July 2020)** | **P** | Only after a first round at `pres_performance_level >= 1`; take the endorsement, accept it without the photograph, or refuse the Third Republic outright. | Opens the channel and sets the first alignment bias. A disaster result means he never calls, and the 2021 congress becomes the only opener. |
+| **AK-02 — The congress verdict (July 2021)** | **P** | Fires on every merger landing with three faces: condemnation of a disciplinary or restoration settlement, endorsement of a member-ratified one, or mockery of a left that built no party. Concede an appeals procedure, answer him publicly, or tell the salon it has no jurisdiction. | Conceding rewrites `left_mandate` from `disciplinary` to `negotiated_truce`. Breaking sets the first `kwasniewski_reproach_debt`, which compounds. |
+| **AK-03 — Words about our candidate (2025)** | **P** | Between the rounds, his verdict is computed from `pres_2025_candidate_level`. Send him to the electorates the campaign cannot reach, spend him on a written commitment from the finalist, or run the fortnight alone. | The written route banks `negotiation_capital` and constitutional restraint that outlive the campaign; the warm route does not. |
+| **AK-04 — At the President's office** | **P** | One brokerage, once, when the coalition, the list question or the camp is actually breaking. Take the agreement, host the next one ourselves, or refuse to negotiate through an unelected intermediary. | Hosting transfers the convening function to Lewica at a smaller immediate payoff; refusing leaves the quarrel intact and costs the next attempt. |
+| **AK-05 — The last road sign** | **P** | Reachable only on the SPS route once an orientation is chosen. Partially reverse the transformation, refuse politely, or break permanently. | The break helps the rural transformation, raises international isolation and factional capture, removes the urban social democrats, and ends him: no cards, no brokerage, alignment fixed at zero. It never touches ballot access. |
+| **AK-06 — The aligned deck** | **P** | Seven faces chosen from the worst live problem: candidate credibility, a democratic-bloc crisis, a KO slide, partners who stopped answering, the post-2005 electorate, a polling surge, or the party's own factions. Each offers one tailored intervention, a route that banks his goodwill instead, and a decline. | Title and face are resolved in normalisation before the hand is dealt; the year supplies the framing. Five-month cooldown. |
+| **AK-07 — The hostile deck** | **P** | Six charges: the radical-right bargain, the populist road, the institutions, a rival social-democratic tendency, mild public "concerns", and the metropolitan broadcast. Damage lands on arrival; mitigation costs two resources, answering him publicly is free and extends the story, silence compounds the debt. | Rarer (frequency 45 against 110) and seven-month cooldown. `kwasniewski_reproach_debt` lowers alignment further, so the hostile deck gets rarer and more expensive the longer it is ignored. |
+
+Regression cover: `npm run check:kwasniewski`.
 
 ## Guardrails for later writing
 

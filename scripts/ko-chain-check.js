@@ -139,6 +139,15 @@ q.month += 1;
 q.date_label = 'November 2019';
 engine.goToScene('poland_polling');
 assert(q.ko_splinter_poll > 0, 'KO breakaway received no polling share');
+assert(q.ko_fracture_poll_loss > 0,
+  'KO collapse did not leak any support outside the broken family');
+assert(q.left_vote_intent > q.ko_vote_intent,
+  'a strong Left did not overtake the KO rump: ' + JSON.stringify({
+    left: q.left_vote_intent,
+    ko: q.ko_vote_intent,
+    splinter: q.ko_splinter_vote_intent,
+    lost: q.ko_fracture_poll_loss,
+  }));
 engine.goToScene('status.polls');
 const pollingLedger = pageText();
 assert(

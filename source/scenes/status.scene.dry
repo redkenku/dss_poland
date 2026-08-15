@@ -1309,13 +1309,17 @@ Q.status_right_turn_visible =
 
 Q.status_sejm_list_result = statusText(
     Q.sejm_list_result,
-    "The Left plans its own 5% party list"
+    Q.left_merger_structure == "federation"
+        ? "The federation must file an 8% coalition committee"
+        : "The Left plans its own 5% party list"
 );
 Q.status_sejm_list_negotiation_done =
     Q.sejm_list_negotiation_done ? 1 : 0;
 Q.status_sejm_list_structure = statusText(
     Q.sejm_list_structure,
-    "Host-party list"
+    Q.left_merger_structure == "federation"
+        ? "Coalition committee"
+        : "Host-party list"
 );
 Q.status_sejm_list_members = statusText(
     Q.sejm_list_members,
@@ -1325,7 +1329,10 @@ Q.status_sejm_list_control = statusText(
     Q.sejm_list_control,
     "Lewica controls nominations and subsidy"
 );
-Q.status_sejm_list_threshold = statusNumber(Q.sejm_list_threshold, 5);
+Q.status_sejm_list_threshold = statusNumber(
+    Q.sejm_list_threshold,
+    Q.left_merger_structure == "federation" ? 8 : 5
+);
 Q.status_sejm_electoral_system = statusText(
     Q.sejm_electoral_system_label,
     "460 proportional-list MPs"
@@ -1494,7 +1501,8 @@ Q.status_left_breakaways_visible =
     Q.pps_party_formed ||
     Q.tak_dla_rozwoju_party_formed ? 1 : 0;
 Q.status_sejm_list_visible =
-    Q.status_sejm_list_negotiation_done || Q.status_year >= 2023 ? 1 : 0;
+    Q.status_sejm_list_negotiation_done || Q.status_year >= 2023 ||
+    Q.left_merger_structure == "federation" ? 1 : 0;
 
 Q.status_ko_relation = statusNumber(Q.ko_relation, 44);
 Q.status_psl_relation = statusNumber(Q.psl_relation, 24);
@@ -2208,9 +2216,9 @@ for (const group of voterGroupsForStatus) {
 <div class="pulse-heading"><span class="party party-lewica pulse-party-name">[+ status_left_party_name +]</span><span class="role-badge">[+ status_position +]</span></div>
 
 <div class="pulse-grid">
-<div class="pulse-card pulse-poll" data-meter="100" data-tone="party" data-threshold="5">
+<div class="pulse-card pulse-poll" data-meter="100" data-tone="party" data-threshold="[+ status_sejm_list_threshold +]">
 <span class="pulse-label">Poll</span>
-<div><strong class="pulse-number">[+ status_left_poll +]%</strong><span class="seat-badge">[+ status_left_seats +] seats</span></div>
+<div><strong class="pulse-number">[+ status_left_poll +]%</strong><span class="seat-badge">[+ status_left_seats +] seats · [+ status_sejm_list_threshold +]% threshold</span></div>
 </div>
 
 <div class="pulse-card pulse-unity" data-meter="100" data-tone="positive">
@@ -2390,7 +2398,7 @@ call: status
 [? if status_organised_splits > 0: <div class="ledger-row"><span>Organised splits</span><b>[+ status_organised_splits +]</b></div>?]
 [? if status_visible_damage: </div>?]
 
-[? if status_sejm_list_visible: <div class="ledger-section"><div class="ledger-title">Sejm electoral arrangement</div><div class="ledger-row"><span>Electoral law</span><b>[+ status_sejm_electoral_system +]</b></div><div class="ledger-subrow">[+ status_sejm_electoral_summary +]. [+ status_electoral_reform_result +].</div><div class="ledger-row"><span>Filed committee</span><b>[+ status_sejm_list_result +]</b></div><div class="ledger-row"><span>Legal form</span><b>[? if sejm_electoral_system = "fptp_460": District candidate pact?][? if sejm_electoral_system != "fptp_460": [+ status_sejm_list_structure +] · [+ status_sejm_list_threshold +]% threshold?]</b></div><div class="ledger-subrow">[+ status_sejm_list_members +]. [+ status_sejm_list_control +].</div><div class="ledger-row"><span>Partner floor · internal ratification</span><b>[+ status_sejm_list_partner_score +] · [+ status_sejm_list_internal_score +]</b></div><div class="ledger-row"><span>Razem alliance</span><b>[+ status_razem_alliance_members +]</b></div><div class="ledger-subrow">[+ status_razem_alliance_arithmetic +]</div></div>?]
+[? if status_sejm_list_visible: <div class="ledger-section"><div class="ledger-title">Sejm electoral arrangement</div><div class="ledger-row"><span>Electoral law</span><b>[+ status_sejm_electoral_system +]</b></div><div class="ledger-subrow">[+ status_sejm_electoral_summary +]. [+ status_electoral_reform_result +].</div><div class="ledger-row"><span>[? if status_sejm_list_negotiation_done: Filed committee?][? if not status_sejm_list_negotiation_done: Required committee?]</span><b>[+ status_sejm_list_result +]</b></div><div class="ledger-row"><span>Legal form</span><b>[? if sejm_electoral_system = "fptp_460": District candidate pact?][? if sejm_electoral_system != "fptp_460": [+ status_sejm_list_structure +] · [+ status_sejm_list_threshold +]% threshold?]</b></div><div class="ledger-subrow">[+ status_sejm_list_members +]. [+ status_sejm_list_control +].</div><div class="ledger-row"><span>Partner floor · internal ratification</span><b>[+ status_sejm_list_partner_score +] · [+ status_sejm_list_internal_score +]</b></div><div class="ledger-row"><span>Razem alliance</span><b>[+ status_razem_alliance_members +]</b></div><div class="ledger-subrow">[+ status_razem_alliance_arithmetic +]</div></div>?]
 
 [? if status_left_breakaways_visible: <div class="ledger-section"><div class="ledger-title">Breakaway parties</div>?]
 [? if barons_party_formed: <div class="faction-row"><span class="party party-sld"><b>[+ status_barons_party_name +]</b></span><span>[+ status_sld_breakaway_seats +] seats · [+ status_barons_departed +] departed / [+ status_barons_retained +] stayed</span></div>?]
@@ -2524,9 +2532,9 @@ call: status
 [? if status_rival_greens_active and not greens_joined_left: <div class="ledger-row"><span class="party party-ko"><b>[+ status_rival_greens_name +]</b></span><b>[+ status_rival_greens_relation : relationships +]</b></div>?]
 [? if status_rival_ipl_active and ko_splinter_active = 1 and ko_break_leader = "Barbara Nowacka" and ko_splinter_type = "Progressive": <div class="ledger-row"><span class="party party-ko"><b>[+ status_rival_ipl_name +]</b></span><b>[+ status_rival_ipl_relation : relationships +]</b></div>?]
 [? if status_rival_ko_splinter_active: <div class="ledger-row"><span class="party [+ ko_splinter_class +]"><b>[+ status_rival_ko_splinter_name +]</b></span><b>[+ status_rival_ko_splinter_relation : relationships +]</b></div>?]
-<div class="ledger-row"><span class="party party-psl"><b>PSL</b></span><b>[+ status_psl_relation : relationships +]</b></div>
+<div class="ledger-row"><span class="party party-psl"><b>PSL[? if status_third_way_visible:  · [+ status_third_way_display_name +]?]</b></span><b>[+ status_psl_relation : relationships +]</b></div>
 [? if status_rival_kukiz15_active and kukiz_left_kp = 1: <div class="ledger-row"><span class="party party-kukiz"><b>[+ status_rival_kukiz15_name +]</b></span><b>[+ status_rival_kukiz15_relation : relationships +]</b></div>?]
-[? if status_p2050_visible: <div class="ledger-row"><span class="party party-p2050"><b>Poland 2050</b></span><b>[+ status_p2050_relation : relationships +]</b></div>?]
+[? if status_p2050_visible or status_third_way_visible: <div class="ledger-row"><span class="party party-p2050"><b>Poland 2050[? if status_third_way_visible:  · [+ status_third_way_display_name +]?]</b></span><b>[+ status_p2050_relation : relationships +]</b></div>?]
 <div class="ledger-row"><span class="party party-pis"><b>PiS</b></span><b>[+ status_pis_relation : relationships +]</b></div>
 [? if suwerenna_walkout or suwerenna_merger_result = "Merger refused": <div class="ledger-row"><span class="party party-sovereign-poland"><b>Suwerenna Polska</b></span><b>[+ status_rival_solidarna_relation : relationships +]</b></div>?]
 [? if porozumienie_exit_done and status_rival_porozumienie_active: <div class="ledger-row"><span class="party party-agreement"><b>[+ status_rival_porozumienie_name +]</b></span><b>[+ status_rival_porozumienie_relation : relationships +]</b></div>?]

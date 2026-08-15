@@ -436,12 +436,19 @@ Annual pressure cards are:
 | 2025 | defence, schools, labour/housing delivery |
 | 2026 | Labour Inspection, equality, municipal services/KPO |
 
+The board marks each card answered or ignored, and a cabinet that enacts a
+budget ignoring them loses one point of public trust and delivery for every
+unanswered card.
+
 Government edits a coalition proposal and may stamp disclosed allocation/deal
-terms. A defeat permits one revision changing at least two decisions, followed
-only by separate confidence, resignation or lawful two-thirds dissolution
-routes. The compact Senate screen accepts its named amendment, spends one
-party resource on compromise, or rejects it only when 231 Sejm votes are
-already displayed.
+terms; cancelling a stamp returns the points it spent unless the player has
+since edited those lines. A defeat permits one revision changing at least two
+decisions, after which the cabinet may continue on its submitted draft while
+the Article 225 clock runs, or take the separate confidence, resignation or
+lawful two-thirds dissolution routes. The compact Senate screen accepts its
+named amendment, spends one party resource on a narrower text that restores a
+cut line and no more, or rejects the amendment only when 231 Sejm votes are
+already displayed. Every answer is recorded in `annual_budget_senate`.
 
 Opposition chooses one of four routes: a free immediate no; a bargain of up to
 two affordable amendments using visible leverage; a one-resource shadow
@@ -451,8 +458,10 @@ shadow budget earns programme ownership but never changes state spending.
 
 ### January execution
 
-Enactment applies revenue, deficit and debt once. Implementation opens in
-January, or in the first month after a historically delayed enactment.
+Enactment applies revenue, deficit and debt once, and hands the cabinet any
+financed budget-room points it did not allocate as spendable `budget` for the
+fiscal year. Implementation opens in January, or in the first month after a
+historically delayed enactment, once for every enacted budget.
 Government capacity is 2, plus one at delivery 55, plus one when state
 capacity is funded, minus one at fiscal stress 70, clamped to 1–4. Maintained
 lines need no assignment; funded and flagship commitments cost one and two.
@@ -695,6 +704,41 @@ Replace a single “NSDAP support” track with:
 
 The dangerous outcome is often that other parties adopt the radical right's
 issues while it remains outside cabinet.
+
+### Trzaskowski freebie realignment
+
+Only a successfully enacted abortion-rights or marriage-equality bill activates
+this counterfactual. `trz_freebie_law` records the statute;
+`trz_freebie_realign_pressure` starts at 15 for abortion or 20 for marriage and
+cannot fall. It gains 1 or 1.25 monthly, plus 0.75 after a non-PiS government
+forms and another 0.75 after a PiS split, collapse or external Rozwój+. A
+confident PiS cabinet multiplies that month's total by 0.45. Pressure is capped
+at 100, with authored stages at 35, 55 and 75.
+
+Polling transfers no more than 0.25 points per month for abortion or 0.32 for
+marriage from PiS to the Konfederacja family. Its target share of the combined
+PiS–Konfederacja vote is `12% + pressure × 0.44%`, capped at 56%; choices can
+slow normalisation but never reverse the saved
+`trz_freebie_poll_transfer_total`. After a
+Mentzen–Bosak rupture, `konf_family_poll` and `konf_family_seats` aggregate New
+Hope and National Movement only. The defunct common committee and Braun's
+independent Korona are excluded.
+
+Two consecutive published polls with the family at least level with PiS latch
+`trz_freebie_konf_hegemon`. That latch strengthens the existing PiS-collapse
+congress and selects its outbid account rather than creating a second collapse
+system. `konf_normalisation` also strengthens the ordinary party-system pull.
+The autonomous `ko_konf_partner_line` and `psl_konf_partner_line` save whether
+each party has passed through its authored consideration event; their relation
+bonuses then survive passive monthly drift.
+
+At pressure 75, viable New Hope and National Movement organisations may split
+from 2025 with only 35 fragmentation if the family is already right leader or
+in government. Cabinet arithmetic temporarily aggregates the family, but the
+larger component supplies either Mentzen or Bosak as its nominee and the sibling
+component can defect from that nominee. The Sikorski constructive route requires
+KO–Konfederacja viability, normalisation and both saved partner lines. Coalition
+repair or publication of its annex can still defeat the named motion.
 
 ## Voters are segmented, intentional and capable of abstaining
 

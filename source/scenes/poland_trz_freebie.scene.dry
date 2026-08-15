@@ -1,0 +1,393 @@
+title: The Trzaskowski freebie realignment
+
+@freebie_2023_aftermath
+# scenario-ledger: TRZ-FR-01
+# prose-audit: Grade A — The government result, enacted law and competing right-wing organisations are established before Lewica responds, and each response has a distinct institutional aftermath.
+title: The right decides who failed it
+subtitle: The 2023 government determines whether succession becomes a rout or a long siege
+face-image: img/poland/events/sejm-benches.webp
+new-page: true
+tags: poland_event
+priority: 27
+order: 18
+max-visits: 1
+view-if: continuous_campaign = 1 and year = 2023 and month >= 11 and formation_complete = 1 and trz_freebie_law != "" and trz_freebie_2023_aftermath = 0
+on-arrival: {!
+Q.trz_freebie_2023_aftermath = 1;
+const pisCabinet = Q.government_party == "pis" &&
+    Q.government_has_confidence && !Q.caretaker_government;
+Q.trz_freebie_2023_pis_cabinet = pisCabinet ? 1 : 0;
+if (pisCabinet) {
+    Q.united_right_cohesion -= 5;
+    Q.trz_freebie_realign_pressure += 4;
+    Q.konf_normalisation += 2;
+    Q.konf_poll_momentum += 0.35;
+    Q.news_headline =
+        "The PiS cabinet survives while its younger right-wing movement leaves";
+} else {
+    Q.united_right_cohesion -= 14;
+    Q.suwerenna_merge_dissent += 12;
+    Q.trz_freebie_realign_pressure += 10;
+    Q.konf_normalisation += 4;
+    Q.konf_poll_momentum += 1.0;
+    Q.pis_poll_momentum -= 0.45;
+    Q.news_headline =
+        "The 2023 defeat makes Konfederacja the claimant to the Polish right";
+}
+Q.far_right_fragmentation += pisCabinet ? 3 : 6;
+const newHope = (Q.rival_group_records || []).find(function(record) {
+    return record && record.id == "nowa_nadzieja";
+});
+const national = (Q.rival_group_records || []).find(function(record) {
+    return record && record.id == "ruch_narodowy";
+});
+if (newHope) newHope.organisation = Math.max(28, newHope.organisation + 2);
+if (national) national.organisation = Math.max(30, national.organisation + 1);
+!}
+
+= [? if trz_freebie_2023_pis_cabinet: A cabinet survives; its movement does not?][? if not trz_freebie_2023_pis_cabinet: A defeat chooses an heir?]
+
+[? if trz_freebie_2023_pis_cabinet: PiS still controls the ministries, the
+calendar and a confidence majority. Outside the Chancellery, the people who
+turned the **[? if trz_freebie_law = "marriage": marriage-equality law?][? if
+trz_freebie_law = "abortion": abortion-restoration law?]** into their test of
+loyalty are moving elsewhere. Konfederacja receives the younger broadcasters,
+legal defence funds and county organisers while PiS receives another month in
+office.?]
+
+[? if not trz_freebie_2023_pis_cabinet: PiS has lost the government and the
+argument over why. Its apparatus says the electorate wanted competence;
+Suwerenna says the party tolerated a liberal President; Konfederacja says both
+claims prove that the old party cannot protect anything. The last explanation
+is the one acquiring members.?]
+
+The enacted law remains in force. What changes tonight is which party the
+right trusts to organize its repeal.
+
+- @freebie_2023_material
+- @freebie_2023_cordon
+- @freebie_2023_copy
+
+@freebie_2023_material
+title: Follow the organisers with a material-security campaign
+subtitle: Contest their recruits without pretending the rights law caused their bills.
+on-arrival: labor_credibility += 4; household_policy_pressure += 4; industrial_logistics_left_affinity += 1.5; provincial_welfare_left_affinity += 1; konf_poll_momentum -= 0.2; public_trust += 2; news_headline = "The Left follows the right-wing succession into workplaces and county services"
+go-to: poland_event_queue
+
+@freebie_2023_cordon
+title: Put every coalition leader on record again
+subtitle: Slow normalization while giving Konfederacja another national audience.
+on-arrival: konf_normalisation -= 4; institutional_issue_salience += 3; ko_relation += 2; p2050_relation += 2; psl_relation -= 3; konf_poll_momentum += 0.1; news_headline = "The democratic cordon survives another recorded vote"
+go-to: poland_event_queue
+
+@freebie_2023_copy
+title: Compete to administer the backlash
+subtitle: A short defensive gain makes local obstruction look like normal policy.
+on-arrival: social_patriot_support += 5; left_cultural_position += 4; minority_safety -= 5; progressive_credibility -= 4; konf_normalisation += 6; far_right_agenda += 4; public_mood_pending_abortion_rights_support -= 5 if trz_freebie_law = "abortion"; public_mood_pending_lgbt_equality_support -= 5 if trz_freebie_law = "marriage"; news_headline = "The Left accepts the right's account of the Trzaskowski law"
+go-to: poland_event_queue
+
+@freebie_suwerenna_crossing
+# scenario-ledger: TRZ-FR-02
+# prose-audit: Grade A — Suwerenna's legal state and recorded mandates determine what can cross, while both responses preserve the seat ledger and expose administrative consequences.
+title: The last United Right office changes its sign
+subtitle: A legal party may cross whole; a dissolved party can send only the MPs who declare themselves
+face-image: img/poland/events/jaroslaw-kaczynski-2023.webp
+new-page: true
+tags: poland_event
+priority: 29
+order: 19
+max-visits: 1
+view-if: continuous_campaign = 1 and year >= 2024 and trz_freebie_law != "" and trz_freebie_realign_pressure >= 45 and trz_freebie_suwerenna_done = 0 and (suwerenna_walkout = 1 or suwerenna_merged = 1 or suwerenna_merger_result != "No merger talks yet")
+on-arrival: {!
+const solidarna = (Q.rival_group_records || []).find(function(record) {
+    return record && record.id == "solidarna";
+});
+const recorded = Math.max(
+    0,
+    Math.round(Number(solidarna && solidarna.sejm_mps !== undefined
+        ? solidarna.sejm_mps
+        : solidarna && solidarna.mp_count) || 0)
+);
+const standalone = Math.max(0, Math.round(Number(Q.suwerenna_seats) || 0));
+const mergedRoute = Q.suwerenna_merged ||
+    Q.suwerenna_merger_result == "Full merger into PiS";
+let moving = standalone;
+if (moving <= 0) {
+    moving = mergedRoute
+        ? Math.round(recorded / 3)
+        : recorded;
+    moving = Math.min(
+        Math.max(0, Math.round(Number(Q.pis_seats) || 0)),
+        moving
+    );
+    Q.pis_seats = Math.max(0, Number(Q.pis_seats) - moving);
+} else {
+    Q.suwerenna_seats = Math.max(0, standalone - moving);
+}
+Q.konf_seats = Math.max(0, Number(Q.konf_seats) || 0) + moving;
+Q.trz_freebie_suwerenna_done = 1;
+Q.trz_freebie_suwerenna_route = mergedRoute ? "jaki_current" : "whole_party";
+Q.trz_freebie_suwerenna_seats = moving;
+Q.suwerenna_own_list = 0;
+if (!mergedRoute) Q.suwerenna_walkout = 1;
+if (solidarna) {
+    solidarna.active = 1;
+    solidarna.allied = 1;
+    solidarna.independent = 0;
+    solidarna.bloc = "konf";
+    solidarna.parent = "Konfederacja";
+    solidarna.list_committee = "konf";
+    solidarna.club = "konf";
+    solidarna.in_cabinet = 0;
+    solidarna.support_mode = "opposition";
+    solidarna.exclusive_seats = 0;
+    solidarna.sejm_mps = moving;
+    solidarna.mp_count = moving;
+    if (mergedRoute) {
+        solidarna.kind = "caucus";
+        solidarna.name = "Jaki sovereigntist current";
+        solidarna.leader = "Patryk Jaki";
+        solidarna.legal_status =
+            "declared current inside the Konfederacja parliamentary family";
+    } else {
+        solidarna.kind = "party";
+        solidarna.name = "Suwerenna Polska";
+        solidarna.legal_status =
+            "federated legal party inside Konfederacja";
+    }
+}
+if (Q.government_party == "pis" && Q.government_has_confidence &&
+    !Q.caretaker_government) {
+    Q.government_support_seats = Math.max(
+        0,
+        (Number(Q.government_support_seats) || 0) - moving
+    );
+    Q.coalition_seats = Math.max(
+        0,
+        (Number(Q.coalition_seats) || 0) - moving
+    );
+}
+Q.united_right_cohesion -= mergedRoute ? 7 : 12;
+Q.konf_nationalist_share += 5;
+Q.konf_normalisation += 4;
+Q.far_right_fragmentation += 10;
+Q.trz_freebie_realign_pressure += 8;
+Q.news_headline = mergedRoute
+    ? "Patryk Jaki's declared MPs leave PiS for the Konfederacja family"
+    : "Suwerenna Polska federates with Konfederacja";
+!}
+
+= A party office, a prosecutors' network and [+ trz_freebie_suwerenna_seats +] mandates
+
+[? if trz_freebie_suwerenna_route = "whole_party": Suwerenna Polska keeps its
+legal treasury and internal board but exchanges the United Right for the
+Konfederacja federation. Its **[+ trz_freebie_suwerenna_seats +] MPs** enter
+the Konf parliamentary count; no second Suwerenna line remains beside them.?]
+
+[? if trz_freebie_suwerenna_route = "jaki_current": The party dissolved into
+PiS, so it cannot walk out whole. Patryk Jaki publishes signatures from **[+
+trz_freebie_suwerenna_seats +] MPs** and takes only that declared current into
+Konfederacja. The former party's remaining networks stay where they were.?]
+
+The transfer matters beyond the chamber. Lawyers who learned to turn ministry
+instructions into disciplinary proceedings now teach county councillors how
+to turn refusal of the Trzaskowski law into paperwork. Konfederacja gains a
+state-trained culture-war machine and another faction that expects list places.
+
+- @freebie_suwerenna_ledger
+- @freebie_suwerenna_services
+
+@freebie_suwerenna_ledger
+title: Publish every mandate and institutional office that moved
+subtitle: Slows normalization by making the federation's state-trained network visible.
+on-arrival: media_capacity += 4; public_trust += 2; minority_safety += 1; konf_normalisation -= 2; news_headline = "The Suwerenna transfer is recorded office by office"
+go-to: poland_event_queue
+
+@freebie_suwerenna_services
+title: Build legal support where refusals have begun
+subtitle: Protects implementation locally, but consumes media capacity.
+on-arrival: local_network += 4; minority_safety += 4; feminist_trust += 2 if trz_freebie_law = "abortion"; progressive_credibility += 2 if trz_freebie_law = "marriage"; media_capacity -= 1; news_headline = "Rights organisations prepare for administrative obstruction"
+go-to: poland_event_queue
+
+@freebie_psl_channel
+# scenario-ledger: TRZ-FR-03
+# prose-audit: Grade A — PSL opens its own state-derived channel, Braunite strength limits its terms, and Lewica can expose, compete with or normalise the agreement without choosing PSL's decision.
+title: County arithmetic learns a new partner
+subtitle: PSL decides whether Konfederacja is an emergency or another party with councillors
+face-image: img/poland/events/sejm-column-hall.webp
+new-page: true
+tags: poland_event
+priority: 30
+order: 20
+max-visits: 1
+view-if: continuous_campaign = 1 and year >= 2025 and trz_freebie_law != "" and trz_freebie_realign_pressure >= 55 and psl_konf_partner_line = "closed"
+on-arrival: {!
+const openChannel = Q.konf_dominant_wing != "Braunists" &&
+    (Number(Q.konf_braunist_share) || 0) <= 25;
+Q.psl_konf_partner_line = openChannel ? "open" : "conditional";
+Q.rival_relation_psl_konf += openChannel ? 6 : 3;
+Q.konf_normalisation += openChannel ? 5 : 2;
+Q.news_headline = openChannel
+    ? "PSL authorises county and parliamentary talks with Konfederacja"
+    : "PSL makes cooperation conditional on excluding Braunists";
+!}
+
+= A budget vote without a photograph
+
+PSL councillors begin with roads, school buses and the chair of an audit
+committee. The national board calls each agreement local. By the fifth county,
+the same lawyers are using the same template.
+
+[? if psl_konf_partner_line = "open": PSL authorises an open parliamentary
+channel and includes future cabinet arithmetic in its brief.?][? if
+psl_konf_partner_line = "conditional": Braun's current remains too expensive
+to defend, so PSL offers cooperation only after its exclusion. Konfederacja is
+being asked to become acceptable, not being kept outside.?]
+
+- @freebie_psl_expose
+- @freebie_psl_rural_offer
+- @freebie_psl_dismiss
+
+@freebie_psl_expose
+title: Audit the county agreements as one national bargain
+subtitle: Damages the PSL relationship while slowing Konfederacja's normalization.
+on-arrival: media_capacity += 4; public_trust += 2; psl_relation -= 4; konf_normalisation -= 6; news_headline = "The Left publishes the common template behind the county deals"
+go-to: poland_event_queue
+
+@freebie_psl_rural_offer
+title: Offer PSL a rural services compact instead
+subtitle: Cost: 1 resource. Replace some of the arithmetic without choosing PSL's line for it.
+choose-if: resources >= 1
+unavailable-subtitle: The party lacks the organisation for a competing county compact.
+on-arrival: resources -= 1; psl_relation += 5; rural_support += 4; local_network += 3; konf_poll_momentum -= 0.2; government_coalition_dissent -= 3 if left_in_government = 1; news_headline = "A rural services compact gives PSL another majority to use"
+go-to: poland_event_queue
+
+@freebie_psl_dismiss
+title: Treat it as ordinary local arithmetic
+subtitle: Preserves room with PSL while making the new partnership routine.
+on-arrival: konf_normalisation += 6; coalition_blur += 3; government_coalition_dissent += 4 if left_in_government = 1; minority_safety -= 2; news_headline = "County cooperation with Konfederacja passes without a national dispute"
+go-to: poland_event_queue
+
+@freebie_ko_channel
+# scenario-ledger: TRZ-FR-04
+# prose-audit: Grade A — The Toruń sequence, KO's internal balance and accumulated normalisation determine the invitation before Lewica chooses how to answer it.
+title: The invitation that stopped being scandalous
+subtitle: KO moves from appearing on Mentzen's channel to testing votes with his party
+face-image: img/poland/events/pres-candidate-sikorski.webp
+new-page: true
+tags: poland_event
+priority: 31
+order: 21
+max-visits: 1
+view-if: continuous_campaign = 1 and year >= 2025 and trz_freebie_law != "" and trz_freebie_realign_pressure >= 65 and ko_konf_partner_line = "closed" and (mentzen_kingmaker_active = 1 or trz_freebie_konf_hegemon = 1)
+on-arrival: {!
+const governingChannel =
+    (Number(Q.ko_classical_liberal_share) || 0) >=
+        (Number(Q.ko_social_liberal_share) || 0) &&
+    (Number(Q.konf_normalisation) || 0) >= 35;
+Q.ko_konf_partner_line = governingChannel ? "governing" : "talks";
+Q.rival_relation_ko_konf += governingChannel ? 8 : 4;
+Q.konf_normalisation += governingChannel ? 6 : 3;
+Q.news_headline = governingChannel
+    ? "KO authorises Sikorski's governing channel to Konfederacja"
+    : "KO authorises issue-by-issue talks with Konfederacja";
+!}
+
+= The exception becomes a procedure
+
+The first interview was defended as access to an electorate. The first common
+vote was defended as arithmetic. KO now circulates a note explaining which
+economic and security portfolios could be negotiated without accepting
+Konfederacja's whole programme.
+
+[? if ko_konf_partner_line = "governing": Sikorski's office owns the channel.
+Its proposition is that Atlanticism, ministerial discipline and a published
+compact can make the radical right usable.?][? if ko_konf_partner_line =
+"talks": KO still refuses a cabinet commitment, but no longer treats talks
+themselves as a breach of the democratic firewall.?]
+
+- @freebie_ko_cost
+- @freebie_ko_firewall
+- @freebie_ko_tactical
+
+@freebie_ko_cost
+title: Publish the programme behind every apparently technical vote
+subtitle: Costs some access to KO, but strips the votes of their technical disguise.
+on-arrival: media_capacity += 4; public_trust += 2; konf_normalisation -= 6; ko_relation -= 2; government_coalition_dissent -= 3 if left_in_government = 1; news_headline = "The Left attaches Konfederacja's full programme to each common vote"
+go-to: poland_event_queue
+
+@freebie_ko_firewall
+title: Demand a recorded firewall vote from every democratic club
+subtitle: Forces clarity at the cost of relations with KO and PSL.
+on-arrival: institutional_issue_salience += 4; constitutional_restraint += 2; ko_relation -= 5; psl_relation -= 3; konf_normalisation -= 4; turnout_readiness += 2; news_headline = "Every democratic deputy votes on the Konfederacja firewall"
+go-to: poland_event_queue
+
+@freebie_ko_tactical
+title: Accept tactical coordination and reserve judgment on a cabinet
+subtitle: Improves partner relations while sharply accelerating normalization and Left dissent.
+on-arrival: ko_relation += 4; psl_relation += 2; konf_normalisation += 8; coalition_blur += 5; progressives_dissent += 6; government_coalition_dissent += 7 if left_in_government = 1; news_headline = "The Left accepts the first KO-Konfederacja tactical bargain"
+go-to: poland_event_queue
+
+@freebie_konf_crossover
+# scenario-ledger: TRZ-FR-05
+# prose-audit: Grade A — Two published polls establish the succession, and the responses distinguish rights enforcement, record-based opposition and a renewed institutional cordon.
+title: The queue moves to another door
+subtitle: Two consecutive polls make PiS the junior claimant on the Polish right
+face-image: img/poland/events/pres-candidate-mentzen.webp
+new-page: true
+tags: poland_event
+priority: 34
+order: 22
+max-visits: 1
+view-if: continuous_campaign = 1 and year >= 2025 and trz_freebie_law != "" and trz_freebie_konf_hegemon = 1 and trz_freebie_crossover_done = 0
+on-arrival: {!
+Q.trz_freebie_crossover_done = 1;
+Q.united_right_cohesion -= 8;
+Q.konf_normalisation += 10;
+Q.far_right_fragmentation += 8;
+Q.suwerenna_merge_dissent += 5;
+// Public coalition discussion is not a saved partner line; only each party's
+// authored consideration scene may open that gate.
+Q.news_headline =
+    "Konfederacja outpolls PiS twice and becomes the leading party of the right";
+!}
+
+= The old address keeps the sign
+
+PiS still owns offices, loyal councils and the name that won 2015. It no longer
+owns the queue. Candidates, donors and broadcasters who once waited for a
+place on its lists now ask Mentzen and Bosak first.
+
+The change reaches people before it reaches statute books. A hospital director
+delays guidance because a future minister has promised reversal. A registry
+calls equal marriage a disputed procedure. Police describe intimidation
+outside both buildings as a public-order disagreement. No national repeal has
+passed; institutions are already rehearsing one.
+
+KO and PSL spokespeople reject the word "cordon" and ask instead which wing of
+Konfederacja can sign a stable agreement. PiS has become another bidder for
+the same coalition.
+
+- @freebie_crossover_services
+- @freebie_crossover_ledger
+- @freebie_crossover_isolate
+
+@freebie_crossover_services
+title: Fund a national rights-enforcement network
+subtitle: Cost: 2 resources. Protect implementation without reversing the polling succession.
+choose-if: resources >= 2
+unavailable-subtitle: The party cannot sustain clinics, registries and counsel nationally.
+on-arrival: resources -= 2; local_network += 5; minority_safety += 6; feminist_trust += 4 if trz_freebie_law = "abortion"; progressive_credibility += 4 if trz_freebie_law = "marriage"; news_headline = "A national network records and contests every refusal of the Trzaskowski law"
+go-to: poland_event_queue
+
+@freebie_crossover_ledger
+title: Treat PiS and every successor as one governing record
+subtitle: Denies a clean rebrand, but gives the right-wing succession another common opponent.
+on-arrival: media_capacity += 4; public_trust += 2; pis_relation -= 5; konf_relation -= 5; konf_poll_momentum += 0.1; news_headline = "The Left denies every party of the right a clean beginning"
+go-to: poland_event_queue
+
+@freebie_crossover_isolate
+title: Rebuild the democratic cordon around public institutions
+subtitle: Slows normalization while reopening conflict with PSL.
+on-arrival: constitutional_restraint += 4; institutional_issue_salience += 4; ko_relation += 2; p2050_relation += 2; psl_relation -= 3; konf_normalisation -= 5; news_headline = "The Left rebuilds a narrower institutional cordon"
+go-to: poland_event_queue

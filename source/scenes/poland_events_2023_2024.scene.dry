@@ -73,7 +73,7 @@ step toward right-wing conflict frames.
 # prose-audit: Grade A — Nine routes that each cost something nameable: shelter inside somebody else's registration, dignity bought at eight percent, a request to Razem that reverses twenty years of the same conversation, or a PiS list that has to be explained to everyone who joined after the Tribunal ruling. The terms step and the committees' answer are now written rather than tabulated.
 title: The October list negotiation
 subtitle: Host-party control at 5%, coalition autonomy at 8%, and partners who can walk away
-face-image: img/poland/events/sejm-chamber.webp
+face-image: img/poland/events/sejm-column-hall.webp
 new-page: true
 tags: poland_event
 priority: 20
@@ -106,9 +106,9 @@ has already left.
 
 [? if left_merger_structure = "federation": Our federal constitution already
 contains a candidate rule, finance formula and local organising settlement.
-Using a coalition committee can turn those rules into an acceptance advantage;
-seeking a host-party list means breaking the autonomy they were written to
-protect.?]
+Because its member parties retain separate legal identities, it **must file an
+8% coalition committee**. The 5% host-list routes are not available unless the
+federation first becomes one party.?]
 
 - @list_target_left_host
 - @list_target_left_coalition
@@ -123,6 +123,7 @@ protect.?]
 @list_target_left_host
 title: Host compatible partners on Lewica's party list
 subtitle: 5% threshold and maximum control; autonomous parties will demand expensive guarantees.
+view-if: left_merger_structure != "federation"
 on-arrival: sejm_list_target = "Lewica host list"; sejm_list_candidate_outcome = "left_5"; sejm_list_candidate_structure = "Host-party list"; sejm_list_candidate_host = "left"; sejm_list_candidate_threshold = 5; sejm_list_candidate_members = "Lewica with any partners willing to accept host control"
 
 We offer to be the host. Everyone stands on Lewica's registered list, we clear
@@ -154,6 +155,7 @@ our partners to accept it with us.
 @list_target_razem_host
 title: Ask to enter independent Razem's party list
 subtitle: 5% threshold; Razem controls the list. SLD and PPS remain outside.
+view-if: left_merger_structure != "federation"
 choose-if: razem_party_formed = 1
 unavailable-subtitle: Razem has not broken free as an independent electoral party.
 on-arrival: sejm_list_target = "Razem host list"; sejm_list_candidate_outcome = "razem_5"; sejm_list_candidate_structure = "Host-party list"; sejm_list_candidate_host = "razem"; sejm_list_candidate_threshold = 5; sejm_list_candidate_members = "Razem, the coordinating Left and compatible breakaways"
@@ -187,6 +189,7 @@ the thing he has demanded and the version of it he likes least.
 @list_target_ko_host
 title: Seek places on KO's party list
 subtitle: 5% threshold and a strong ballot; KO controls nominations and subsidy.
+view-if: left_merger_structure != "federation"
 on-arrival: sejm_list_target = "KO host list"; sejm_list_candidate_outcome = "ko_5"; sejm_list_candidate_structure = "Host-party list"; sejm_list_candidate_host = "ko"; sejm_list_candidate_threshold = 5; sejm_list_candidate_members = "KO with Lewica candidates"
 
 We ask KO for places on its list. Five percent, a strong ballot line and the
@@ -217,6 +220,7 @@ covers three electorates that share no obvious voter.
 @list_target_third_host
 title: Seek a 5% host list from PSL or Poland 2050
 subtitle: The friendlier host gains control, while the other Third Way partner may veto the rupture.
+view-if: left_merger_structure != "federation"
 on-arrival: sejm_list_target = "Third Way host-party list"; sejm_list_candidate_outcome = "third_host_5"; sejm_list_candidate_structure = "Host-party list"; sejm_list_candidate_host = "third_host"; sejm_list_candidate_threshold = 5; sejm_list_candidate_members = "Lewica and the more receptive Third Way party"
 
 We approach whichever half of Third Way is likelier to take us — a five percent
@@ -232,6 +236,7 @@ decide that the pact is worth less than the insult.
 @list_target_pis_host
 title: Negotiate places on the PiS party list
 subtitle: 5% threshold and host control; only a far-right Lewica can ratify the bargain.
+view-if: left_merger_structure != "federation"
 on-arrival: sejm_list_target = "PiS host list"; sejm_list_candidate_outcome = "pis_5"; sejm_list_candidate_structure = "Host-party list"; sejm_list_candidate_host = "pis"; sejm_list_candidate_threshold = 5; sejm_list_candidate_members = "PiS with Lewica candidates"
 
 We ask Kaczyński's committee for places. Five percent, host control, and a
@@ -247,6 +252,7 @@ through the people who caused it.
 @list_target_alone
 title: End the talks and run an independent Lewica party list
 subtitle: 5% threshold, full control and no partner transfers.
+view-if: left_merger_structure != "federation"
 on-arrival: sejm_list_target = "Independent Lewica list"; sejm_list_candidate_outcome = "left_5"; sejm_list_candidate_structure = "Host-party list"; sejm_list_candidate_host = "left"; sejm_list_candidate_threshold = 5; sejm_list_candidate_members = "Lewica alone"; sejm_list_terms_code = 5
 
 We end the talks. Lewica registers its own party list, clears five percent or
@@ -354,9 +360,17 @@ const fit = function(otherRight) {
         (Number(Q.left_right_score) || 35) - otherRight
     );
 };
+const liveFederation = String(Q.left_merger_structure) == "federation";
+if (liveFederation && Number(Q.sejm_list_candidate_threshold) != 8) {
+    Q.sejm_list_target = "Autonomous Left coalition";
+    Q.sejm_list_candidate_outcome = "left_coalition_8";
+    Q.sejm_list_candidate_structure = "Coalition committee";
+    Q.sejm_list_candidate_host = "left_coalition";
+    Q.sejm_list_candidate_threshold = 8;
+    Q.sejm_list_candidate_members = "Lewica's federated member parties";
+}
 const outcome = String(Q.sejm_list_candidate_outcome || "left_5");
 const coalitionForm = Number(Q.sejm_list_candidate_threshold) == 8;
-const liveFederation = String(Q.left_merger_structure) == "federation";
 let federalListBonus = 0;
 if (liveFederation && coalitionForm) {
     federalListBonus += Q.federation_candidate_rule == "Joint federal primary"
@@ -552,7 +566,8 @@ const partnerScore = requiredPartnerScores.length
 const accepted = outcome == "left_5" ||
     (partnerScore >= 50 && internalScore >= 45);
 const pisFriendlyFollowup =
-    outcome == "pis_5" && !accepted && relation("pis_relation", 8) >= 45;
+    !liveFederation && outcome == "pis_5" && !accepted &&
+    relation("pis_relation", 8) >= 45;
 
 Q.spring_joined_razem = 0;
 Q.labor_joined_razem = 0;
@@ -655,15 +670,23 @@ if (accepted) {
     Q.news_headline =
         "PiS asks Lewica to revise host-list terms before filing";
 } else {
-    Q.sejm_list_outcome = "left_5";
-    Q.sejm_list_structure = "Host-party list";
-    Q.sejm_list_host = "left";
-    Q.sejm_list_threshold = 5;
-    Q.sejm_list_members = "Lewica alone after failed talks";
-    Q.sejm_list_control = "Lewica controls nominations and subsidy";
-    Q.sejm_list_result =
-        Q.sejm_list_target + " rejected; Lewica files its own party list";
-    Q.sejm_list_has_partners = 0;
+    Q.sejm_list_outcome = liveFederation ? "left_coalition_8" : "left_5";
+    Q.sejm_list_structure = liveFederation
+        ? "Coalition committee"
+        : "Host-party list";
+    Q.sejm_list_host = liveFederation ? "left_coalition" : "left";
+    Q.sejm_list_threshold = liveFederation ? 8 : 5;
+    Q.sejm_list_members = liveFederation
+        ? "Lewica's federated member parties after failed outside talks"
+        : "Lewica alone after failed talks";
+    Q.sejm_list_control = liveFederation
+        ? "Member parties retain identity and subsidy claims"
+        : "Lewica controls nominations and subsidy";
+    Q.sejm_list_result = Q.sejm_list_target +
+        (liveFederation
+            ? " rejected; the federation files its own coalition committee"
+            : " rejected; Lewica files its own party list");
+    Q.sejm_list_has_partners = liveFederation ? 1 : 0;
     Q.party_unity -= 3;
     Q.left_poll_momentum -= 0.2;
     Q.news_headline = Q.sejm_list_result;
@@ -1127,7 +1150,7 @@ of whether Lewica wants a democratic majority or only its own result.?]
 # prose-audit: Grade B — The framing paragraph is well-judged and correctly defers the count to the formation chapter, but the scene is a single Continue: the largest election in the game passes without a Lewica decision, a result or a named reaction of its own.
 title: The 2023 parliamentary election
 subtitle: Election night, certification and coalition arithmetic
-face-image: img/poland/events/election-2023-ballot.webp
+face-image: img/poland/events/polling-station-2023.webp
 new-page: true
 tags: poland_event
 priority: 50
@@ -5636,7 +5659,7 @@ them to applaud the headline and absorb the schedule.
 # prose-audit: Grade B — The four questions, the turnout threshold and the ballot-refusal tactic are all on the page with named consequences; the campaign-finance argument still needs a scene of its own.
 title: The four-question referendum
 subtitle: A state-funded PiS campaign shares the ballot box with the election
-face-image: img/poland/events/election-2023-ballot.webp
+face-image: img/poland/events/polling-station-2023.webp
 new-page: true
 tags: poland_event
 priority: 19
@@ -6086,7 +6109,7 @@ politicised the army.
 # prose-audit: Grade C — The audience phenomenon and its decay are described with a real choice attached, but the chamber itself is not staged and no named deputy carries the scene.
 title: Parliament becomes popular television
 subtitle: Record audiences for Sejm broadcasts change what a speech is for
-face-image: img/poland/events/sejm-chamber.webp
+face-image: img/poland/events/sejm-press-gallery.webp
 new-page: true
 tags: poland_event
 priority: 12

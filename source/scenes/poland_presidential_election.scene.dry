@@ -89,7 +89,7 @@ Q.pres_breakout_key = breakoutRoll < 0.22
     ? "holownia"
     : (breakoutRoll < 0.31 ? "bosak" : "none");
 Q.pres_breakout_size = Q.pres_breakout_key == "holownia"
-    ? 7 + breakoutScale * 18
+    ? 6 + breakoutScale * 11
     : (Q.pres_breakout_key == "bosak" ? 4 + breakoutScale * 12 : 0);
 Q.pres_debate_roll = this.random.uint32() / 4294967296;
 Q.pres_debate_upset_roll =
@@ -1922,7 +1922,7 @@ go-to: poland_hub
 @runoff_setup
 # prose-audit: Grade A — The endorsement fork was always correct; the fortnight beneath it now reads. Each of the four lines reports what was signed and what it cost inside the party, and every seat in the support market says who was in the room, what they could actually deliver and who paid for it.
 title: The second ballot
-face-image: img/poland/events/election-2023-ballot.webp
+face-image: img/poland/events/polling-station-2025.webp
 new-page: true
 on-arrival: {!
 Q.reckoning_event_done = 1;
@@ -2462,7 +2462,16 @@ const vectorFor = function(source) {
     };
     if (commonDudaTrz) {
         if (source == "holownia") {
-            return orient("duda", 0.14, "trzaskowski", 0.76, 0.10);
+            const breakoutAbstention = Q.pres_breakout_key == "holownia"
+                ? Math.min(0.20, (Number(Q.pres_breakout_size) || 0) * 0.01)
+                : 0;
+            return orient(
+                "duda",
+                0.14,
+                "trzaskowski",
+                0.76 - breakoutAbstention,
+                0.10 + breakoutAbstention
+            );
         }
         if (source == "kosiniak") {
             return orient("duda", 0.24, "trzaskowski", 0.64, 0.12);
@@ -2555,36 +2564,6 @@ let abstentionRaw = 0;
 for (const source of sources) {
     let vector = vectorFor(source);
     if (source == "left" && source != a && source != b) {
-        if (commonDudaTrz) {
-            const trzField = a == "trzaskowski" ? "a" : "b";
-            const razemShare = clampRunoff(
-                (Number(Q.razem_strength) || 20) / 100,
-                0.05,
-                0.45
-            );
-            let reluctance =
-                0.045 + razemShare * 0.25 +
-                Math.max(0, (Number(Q.razem_dissent) || 0) - 20) *
-                    0.0015;
-            if (Q.pres_runoff_endorsement ==
-                "Negotiated social-constitutional accord") {
-                reluctance *= 0.35;
-            } else if (Q.pres_runoff_endorsement ==
-                "Immediate lesser-evil endorsement") {
-                reluctance *= 0.65;
-            }
-            reluctance -=
-                Math.min(
-                    0.025,
-                    (Number(Q.pres_trade_left_boost) || 0) * 0.35
-                );
-            reluctance = clampRunoff(reluctance, 0.015, 0.14);
-            const stranded = Math.min(vector[trzField], reluctance);
-            vector[trzField] -= stranded;
-            vector.abstain += stranded;
-            Q.pres_razem_trzaskowski_reluctance =
-                Math.round(stranded * 1000) / 10;
-        }
         let endorsementBoost = 0;
         if (Q.pres_runoff_endorsement ==
             "Negotiated social-constitutional accord") {
@@ -2598,6 +2577,35 @@ for (const source of sources) {
         }
         endorsementBoost += Number(Q.pres_trade_left_boost) || 0;
         vector = boostToward(vector, target, endorsementBoost);
+        if (commonDudaTrz) {
+            const razemShare = clampRunoff(
+                (Number(Q.razem_strength) || 20) / 100,
+                0.05,
+                0.45
+            );
+            const promisesSecured = Q.pres_runoff_endorsement ==
+                "Negotiated social-constitutional accord";
+            const razemStayHomeRate = promisesSecured
+                ? 0.20
+                : clampRunoff(
+                    0.50 +
+                        ((Number(Q.razem_dissent) || 20) - 20) * 0.004,
+                    0.50,
+                    0.70
+                );
+            const active = vector.a + vector.b;
+            const stranded = Math.min(
+                active,
+                razemShare * razemStayHomeRate
+            );
+            if (active > 0) {
+                vector.a -= stranded * vector.a / active;
+                vector.b -= stranded * vector.b / active;
+                vector.abstain += stranded;
+            }
+            Q.pres_razem_trzaskowski_reluctance =
+                Math.round(razemStayHomeRate * 1000) / 10;
+        }
     }
     if (source == "holownia" && source != a && source != b) {
         vector = boostToward(
@@ -2665,7 +2673,8 @@ Q.pres_transfer_abstention =
     Math.round(abstentionRaw * 100) / 100;
 
 const newTurnout = {
-    duda: 2.20,
+    // The incumbent starts favoured; only a full inter-round operation closes it.
+    duda: 5.20,
     trzaskowski: 1.10,
     holownia: 1.35,
     bosak: 0.90,
@@ -2855,8 +2864,10 @@ people whose preferred name is no longer on the ballot.
 We are asking our voters to support **[+ pres_runoff_support_name +]** under
 **[+ pres_runoff_endorsement +]**. [? if pres_finalist_a_key = "trzaskowski" or
 pres_finalist_b_key = "trzaskowski": Razem organisers remain reluctant to
-campaign for [+ pres_2020_ko_surname +]; a leadership endorsement will not
-make every Left voter follow.?] Hołownia's volunteers, PSL's local networks and Bosak's
+campaign for [+ pres_2020_ko_surname +].[? if pres_runoff_endorsement !=
+"Negotiated social-constitutional accord": Without written promises, **[+
+pres_razem_trzaskowski_reluctance +]%** of Razem-leaning first-round voters are
+expected to stay home rather than vote for either finalist.?]?] Hołownia's volunteers, PSL's local networks and Bosak's
 anti-system electorate are making their own choices too.
 
 - @final_push_safe

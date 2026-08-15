@@ -10,7 +10,7 @@ tags: poland_event
 priority: 38
 order: 40
 max-visits: 1
-view-if: continuous_campaign = 1 and year >= 2026 and far_right_fragmentation >= 60 and mentzen_bosak_split = 0 and konf_seats >= 4 and election_2027_terminal = 0
+view-if: continuous_campaign = 1 and year >= 2025 and mentzen_bosak_split = 0 and konf_seats >= 4 and election_2027_terminal = 0 and (far_right_fragmentation >= 60 or (trz_freebie_law != "" and trz_freebie_realign_pressure >= 75 and far_right_fragmentation >= 35 and (trz_freebie_konf_hegemon = 1 or ministry_konf_in_cabinet = 1 or government_party = "konf")))
 on-arrival: {!
 const group = function(id) {
     return (Q.rival_group_records || []).find(function(record) {
@@ -24,10 +24,22 @@ const canRupture = newHope && national &&
     Number(national.organisation) >= 28;
 Q.mentzen_bosak_split = canRupture ? 1 : -1;
 if (canRupture) {
-    const movable = Math.min(4, Math.max(2, Math.floor(Number(Q.konf_seats) * 0.16)));
-    const mentzenSeats = Math.ceil(movable / 2);
+    const movable = Math.max(0, Math.round(Number(Q.konf_seats) || 0));
+    const mentzenWeight = Math.max(1, Number(newHope.organisation) || 0);
+    const bosakWeight = Math.max(1, Number(national.organisation) || 0);
+    const mentzenSeats = Math.max(
+        1,
+        Math.min(
+            movable - 1,
+            Math.round(movable * mentzenWeight /
+                Math.max(1, mentzenWeight + bosakWeight))
+        )
+    );
     const bosakSeats = movable - mentzenSeats;
-    Q.konf_seats -= movable;
+    Q.konf_seats = 0;
+    Q.new_hope_seats = mentzenSeats;
+    Q.national_movement_seats = bosakSeats;
+    Q.konf_family_seats = movable;
     newHope.active = 1;
     newHope.contesting = 1;
     newHope.leader = "Sławomir Mentzen";
@@ -56,10 +68,10 @@ if (canRupture) {
 = [+ date_label +] — The federation counts its component parties
 
 [? if mentzen_bosak_split = 1: **Sławomir Mentzen's New Hope** and **Krzysztof
-Bosak's National Movement** file separate committees. Only MPs who signed the
-two declarations move; Korona remains a third organisation if it previously
-left. The old Konfederacja committee does not appear as an extra line beside
-its components.?][? if mentzen_bosak_split = -1: Both currents possess an
+Bosak's National Movement** file separate committees. Every remaining
+Konfederacja MP signs one of the two parliamentary declarations; Korona
+remains a third organisation if it previously left. The old Konfederacja
+committee does not appear as an extra line beside its components.?][? if mentzen_bosak_split = -1: Both currents possess an
 organisation, but not enough independent finance and signatures to survive a
 three-way ballot. The congress preserves the shared committee while recording
 separate list quotas.?]

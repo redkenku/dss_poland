@@ -4,7 +4,7 @@ title: Budget dossier
 # prose-audit: Grade A — The routing card hands the inherited draft to a live allocation, financing, red-line and exact-vote board.
 title: The inherited 2024 budget
 subtitle: Build the transition budget on one live dossier.
-face-image: img/poland/events/sejm-chamber.webp
+face-image: img/poland/events/sejm-voting-device.webp
 new-page: true
 tags: poland_event
 priority: 5
@@ -18,7 +18,7 @@ go-to: annual_budget
 # prose-audit: Grade A — Reconstruction and KPO pressure enter the same editable dossier as coalition promises and fiscal room.
 title: The 2025 state budget
 subtitle: Reconstruction, KPO and coalition promises share one ledger.
-face-image: img/poland/events/sejm-chamber.webp
+face-image: img/poland/events/sejm-voting-device.webp
 new-page: true
 tags: poland_event
 priority: 5
@@ -32,7 +32,7 @@ go-to: annual_budget
 # prose-audit: Grade A — The post-presidential conflict is resolved through named allocations, funding and deterministic delegations.
 title: The post-presidential budget
 subtitle: Defence, schools, labour and housing compete for room.
-face-image: img/poland/events/sejm-chamber.webp
+face-image: img/poland/events/sejm-voting-device.webp
 new-page: true
 tags: poland_event
 priority: 5
@@ -46,7 +46,7 @@ go-to: annual_budget
 # prose-audit: Grade A — The pre-election offer binds labour, municipal and KPO promises to a visible executable budget.
 title: The pre-election budget
 subtitle: The final full budget before 2027 is a delivery test.
-face-image: img/poland/events/sejm-chamber.webp
+face-image: img/poland/events/sejm-voting-device.webp
 new-page: true
 tags: poland_event
 priority: 5
@@ -58,14 +58,14 @@ go-to: annual_budget
 
 @annual_budget
 title: Open the annual budget dossier
-on-arrival: budget_open_new = 1
+on-arrival: budget_open_new = 1; budget_submit_error = ""
 call: poland_normalize
 go-to: budget_open
 
 @budget_open
 title: The annual budget dossier
 subtitle: Every allocation, funding source, promise and vote updates in place.
-face-image: img/poland/cards/government-affairs.webp
+face-image: img/poland/events/finance-ministry-corridor.webp
 new-page: true
 on-arrival: {!
 if (Q.budget_open_new || !Q.budget_game) {
@@ -80,7 +80,6 @@ Q.budget_authority = Q.budget_game.role == "government"
     : "Parliamentary opposition — no state spending authority";
 Q.annual_budget_left_cabinet_authority =
     Q.budget_game.role == "government" ? 1 : 0;
-Q.budget_submit_error = "";
 !}
 
 <div class="budget-board-host" data-budget-board="main"></div>
@@ -101,7 +100,7 @@ go-to: budget_open if budget_submit_ok = 0; senate if budget_submit_ok = 1 and a
 @defeat
 title: The budget is defeated
 subtitle: The tally names every abstaining delegation and its broken red line.
-face-image: img/poland/events/sejm-chamber.webp
+face-image: img/poland/events/sejm-voting-device.webp
 new-page: true
 on-arrival: government_coalition_dissent += 6; public_trust -= 2; early_election_risk += 10; budget_deadline_active = 1; budget_deadline_time = time + 4; news_headline = "The exact budget roll call defeats the bill"
 
@@ -121,6 +120,7 @@ Lewica's posture is recorded. It does not acquire authorship of the cabinet's
 failed bill.?]
 
 - @revise_budget
+- @limp_on
 - @confidence_vote
 - @resign_after_budget
 - @self_dissolution
@@ -135,12 +135,32 @@ go-to: board
 @board
 title: Material budget revision
 subtitle: Change at least two displayed decisions before resubmission.
-face-image: img/poland/cards/government-affairs.webp
+face-image: img/poland/events/finance-ministry-corridor.webp
 new-page: true
 
 <div class="budget-board-host" data-budget-board="main"></div>
 
 - @submit_budget: Submit the revised text
+
+@limp_on
+title: Keep negotiating on the submitted draft
+subtitle: No constitutional act; the four-month deadline keeps running.
+view-if: annual_budget_left_cabinet_authority = 1
+new-page: true
+on-arrival: {!
+Q["annual_budget_done_" + Q.budget_game.year] = 1;
+Q.annual_budget_result =
+    "Budget defeated; the cabinet continues on its submitted draft";
+Q.coalition_status = "Governing without an enacted budget";
+Q.news_headline =
+    "The cabinet stays in office and keeps negotiating its defeated budget";
+!}
+
+The bill is not withdrawn and no confidence question is put. The cabinet
+governs on the submitted draft while the four-month clock in Article 225 runs
+towards the President's power to shorten the Sejm's term.
+
+- @return_queue
 
 @confidence_vote
 title: Ask the Sejm for confidence under Article 160
@@ -265,7 +285,7 @@ go-to: enact
 
 @enact
 title: The final budget becomes law
-face-image: img/poland/events/presidential-palace.webp
+face-image: img/poland/events/presidential-palace-2023.webp
 new-page: true
 on-arrival: {! polandBudgetModel.enact(Q); !}
 
@@ -287,7 +307,6 @@ new-page: true
 tags: poland_event
 priority: 82
 order: 1
-max-visits: 1
 view-if: continuous_campaign = 1 and budget_execution_pending = 1 and (year > budget_execution_due_year or (year = budget_execution_due_year and month >= budget_execution_due_month))
 call: poland_normalize
 go-to: execution_open

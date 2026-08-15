@@ -681,7 +681,8 @@ function validateCorrectnessInvariants() {
   }
   for (const country of [
     'El Salvador', 'South Africa', 'Thailand', 'Japan',
-    'Israel', 'South Korea', 'Turkey',
+    'Israel', 'South Korea', 'Turkey', 'Transnistria', 'Syria',
+    'Kazakhstan', 'Burkina Faso', 'United Arab Emirates',
   ]) {
     assert(
       ziobroWorldTour.includes('["' + country + '"'),
@@ -690,10 +691,94 @@ function validateCorrectnessInvariants() {
   }
   assert(
     ziobroWorldTour.includes('< 0.20 ? 1 : 0') &&
+      ziobroWorldTour.includes('< 0.01 ? [') &&
       ziobroWorldTour.includes('["Philippines"') &&
       ziobroWorldTour.includes('["India"') &&
+      ziobroWorldTour.includes('["Bhutan"') &&
+      ziobroWorldTour.includes('["Mongolia"') &&
+      ziobroWorldTour.includes('["Edinburgh of the Seven Seas"') &&
+      ziobroWorldTour.includes('["Kunlun Station, Antarctica"') &&
       ziobroWorldTour.includes('ziobro_final_escape_triggered = 1'),
-    'The second Ziobro sighting needs its 20% Philippines/India epilogue'
+    'The final escape needs its standard and 1% extreme epilogues'
+  );
+
+  const lukasiewiczAudit = sectionNamed(
+    'poland_scandals_2025_2026.scene.dry', 'lukasiewicz_audit_2025'
+  );
+  const lukasiewiczPartisan = sectionNamed(
+    'poland_scandals_2025_2026.scene.dry', 'lukasiewicz_partisan'
+  );
+  assert(
+    lukasiewiczAudit.includes('PLN 2.8 billion') &&
+      lukasiewiczAudit.includes('PLN 8.4 million') &&
+      lukasiewiczAudit.includes('Q.lukasiewicz_audit_prepared') &&
+      lukasiewiczPartisan.includes('left_poll_momentum += 0.5') &&
+      lukasiewiczPartisan.includes('pis_poll_momentum -= 0.55'),
+    'The Łukasiewicz audit must retain its sourced scale and poll consequence'
+  );
+  const ncbrFastTrack = sectionNamed(
+    'poland_scandals_2025_2026.scene.dry', 'ncbr_fast_track_2023'
+  );
+  const willaPlus = sectionNamed(
+    'poland_scandals_2025_2026.scene.dry', 'willa_plus_audit_2024'
+  );
+  const rarsRedIsBad = sectionNamed(
+    'poland_scandals_2025_2026.scene.dry', 'rars_red_is_bad_2024'
+  );
+  const lotosSale = sectionNamed(
+    'poland_scandals_2025_2026.scene.dry', 'lotos_sale_audit_2025'
+  );
+  const horeca = sectionNamed(
+    'poland_scandals_2025_2026.scene.dry', 'kpo_horeca_2025'
+  );
+  const rarsCoal = sectionNamed(
+    'poland_scandals_2025_2026.scene.dry', 'rars_coal_2026'
+  );
+  const cleanAir = sectionNamed(
+    'poland_scandals_2025_2026.scene.dry', 'clean_air_eppo_2026'
+  );
+  assert(
+    ncbrFastTrack.includes('PLN 801 million') &&
+      willaPlus.includes('Q.ncbr_response') &&
+      rarsRedIsBad.includes('Q.emergency_procurement_standard') &&
+      lotosSale.includes('Q.state_company_governance_pressure') &&
+      horeca.includes('Q.kpo_delivery') &&
+      rarsCoal.includes('Q.rars_response_2024') &&
+      cleanAir.includes('Q.horeca_response_2025'),
+    'The added scandal chain must retain its sourced scale and prior-choice callbacks'
+  );
+  const mercosur = sectionNamed(
+    'poland_scandals_2025_2026.scene.dry', 'mercosur_2026'
+  );
+  const mercosurSupply = sectionNamed(
+    'poland_scandals_2025_2026.scene.dry', 'mercosur_supply_chain'
+  );
+  const mercosurSafeguards = sectionNamed(
+    'poland_scandals_2025_2026.scene.dry', 'mercosur_safeguards'
+  );
+  assert(
+    mercosur.includes('only **16%** in') &&
+      mercosur.includes('public_mood_pending_social_spending_salience += 11') &&
+      mercosurSupply.includes('left_poll_momentum += 0.55') &&
+      mercosurSafeguards.includes('konf_poll_momentum += 0.5'),
+    'Mercosur must remain a major public-mood and multi-party polling shock'
+  );
+  const romanowskiTransnistria = sectionNamed(
+    'poland_scandals_2025_2026.scene.dry',
+    'romanowski_transnistria_2026'
+  );
+  const romanowskiShow = sectionNamed(
+    'poland_scandals_2025_2026.scene.dry', 'romanowski_transnistria_show'
+  );
+  assert(
+    readProperty(romanowskiTransnistria, 'view-if').includes(
+      'romanowski_case_stage >= 2'
+    ) &&
+      romanowskiTransnistria.includes('Q.romanowski_case_stage = 3') &&
+      romanowskiTransnistria.includes('personally signed application') &&
+      romanowskiShow.includes('left_poll_momentum += 0.65') &&
+      romanowskiShow.includes('pis_poll_momentum -= 0.75'),
+    'The Tyraspol update must follow Hungary, stay evidential and move polling'
   );
 
   assert.strictEqual(

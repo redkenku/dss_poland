@@ -279,7 +279,287 @@ for (let year = 2019; year <= 2026; year += 1) {
     'A delayed budget was executable in its enactment month');
 }
 
+{
+  const deals = engineAtBudget('deal-round-trip', {
+    left_in_government: 1,
+    government_party: 'ko',
+    prime_minister_party: 'ko',
+    finance_minister_party: 'KO',
+    ministry_ko_in_cabinet: 1,
+    ministry_psl_in_cabinet: 1,
+  });
+  const Q = deals.Q;
+  const before = JSON.stringify(Q.budget_game.tiers);
+  const roomBefore = deals.model.preview(Q).remaining;
+  deals.model.toggleDeal(Q, 'psl');
+  assert.notStrictEqual(JSON.stringify(Q.budget_game.tiers), before,
+    'Stamping a deal changed no allocation');
+  deals.model.setTier(Q, 'energy', 'fund');
+  deals.model.toggleDeal(Q, 'psl');
+  assert.strictEqual(Q.budget_game.tiers.energy, 'fund',
+    'Cancelling a deal discarded a later manual edit');
+  deals.model.setTier(Q, 'energy', 'maintain');
+  assert.strictEqual(JSON.stringify(Q.budget_game.tiers), before,
+    'Cancelling a deal did not return the points it spent');
+  assert.strictEqual(deals.model.preview(Q).remaining, roomBefore);
+}
+
+{
+  // An outside club does not lend its votes for free.
+  const politics = engineAtBudget('deal-politics', {
+    left_in_government: 1,
+    government_party: 'ko',
+    prime_minister_party: 'ko',
+    finance_minister_party: 'KO',
+    government_support_seats: 220,
+    coalition_seats: 220,
+    ko_seats: 220,
+    psl_seats: 30,
+    pis_seats: 150,
+    konf_seats: 20,
+    ministry_ko_in_cabinet: 1,
+  });
+  const Q = politics.Q;
+  const before = {
+    konf: Q.konf_relation,
+    dissent: Q.government_coalition_dissent,
+    razem: Q.razem_dissent,
+    progressives: Q.progressives_dissent,
+    blur: Q.coalition_blur,
+    credibility: Q.progressive_credibility,
+    favors: Q.government_favors,
+  };
+  politics.model.toggleDeal(Q, 'konf');
+  assert.strictEqual(Q.konf_relation, before.konf,
+    'Stamping alone moved a relation before the roll call');
+  politics.model.setFinancing(Q, 'broad');
+  assert(politics.model.preview(Q).affordable,
+    JSON.stringify(politics.model.preview(Q).breaches));
+  assert(politics.model.submit(Q).ok);
+  assert(Q.konf_relation > before.konf, 'A whole-club deal bought nothing');
+  assert(Q.government_coalition_dissent > before.dissent,
+    'An outside deal produced no coalition dissent');
+  assert(Q.razem_dissent > before.razem, 'Razem ignored a deal with the right');
+  assert(Q.progressives_dissent > before.progressives);
+  assert(Q.coalition_blur > before.blur);
+  assert(Q.progressive_credibility < before.credibility);
+  assert(Q.government_favors > before.favors);
+  const afterFirst = Q.government_coalition_dissent;
+  politics.model.startRevision(Q);
+  politics.model.setTier(Q, 'energy', 'fund');
+  politics.model.setFinancing(Q, 'progressive');
+  politics.model.submit(Q);
+  assert.strictEqual(Q.government_coalition_dissent, afterFirst,
+    'An unchanged deal was charged twice across a revision');
+}
+
+{
+  // Sustaining someone else's budget from opposition is also a public act.
+  const posture = engineAtBudget('posture-politics', {
+    negotiation_leverage: 70,
+    government_support_seats: 220,
+    coalition_seats: 220,
+  });
+  const Q = posture.Q;
+  const before = {
+    pis: Q.pis_relation,
+    razem: Q.razem_dissent,
+    blur: Q.coalition_blur,
+    credibility: Q.progressive_credibility,
+  };
+  posture.model.selectStrategy(Q, 'bargain');
+  assert(posture.model.toggleDemand(Q, 'health'));
+  posture.model.setPosture(Q, 'support');
+  assert(posture.model.submit(Q).ok);
+  assert(Q.pis_relation > before.pis,
+    'Sustaining the cabinet moved no relation');
+  assert(Q.razem_dissent > before.razem,
+    'Razem accepted a vote for a PiS budget without complaint');
+  assert(Q.coalition_blur > before.blur);
+  assert(Q.progressive_credibility < before.credibility);
+
+  const refusal = engineAtBudget('posture-refusal');
+  refusal.model.selectStrategy(refusal.Q, 'no');
+  const pisBefore = refusal.Q.pis_relation;
+  const razemBefore = refusal.Q.razem_dissent;
+  assert(refusal.model.submit(refusal.Q).ok);
+  assert(refusal.Q.pis_relation < pisBefore, 'A no vote cost nothing');
+  assert(refusal.Q.razem_dissent < razemBefore,
+    'Razem did not notice the refusal');
+}
+
+{
+  // The board must be able to print the reason the model would refuse with.
+  const amend = engineAtBudget('amendment-reasons', {
+    negotiation_leverage: 0,
+    negotiation_capital: 0,
+    government_support_seats: 260,
+    coalition_seats: 260,
+  });
+  const Q = amend.Q;
+  amend.model.selectStrategy(Q, 'bargain');
+  assert.strictEqual(amend.model.leverage(Q), 1);
+  const funded = amend.model.lines.find(function(line) {
+    return amend.model.tiers[Q.budget_game.tiers[line.id]] >= 1;
+  });
+  if (funded) {
+    const state = amend.model.demandState(Q, funded.id);
+    assert.strictEqual(state.allowed, false);
+    assert(/already funds/.test(state.reason));
+  }
+  assert(amend.model.toggleDemand(Q, 'health'));
+  assert.strictEqual(amend.model.leverageSpent(Q.budget_game), 1);
+  const second = amend.model.demandState(Q, 'education');
+  assert.strictEqual(second.allowed, false);
+  assert(/leverage/.test(second.reason), second.reason);
+  assert.strictEqual(amend.model.toggleDemand(Q, 'education'), false);
+}
+
+{
+  const billing = engineAtBudget('strategy-billing');
+  const Q = billing.Q;
+  const resources = Q.resources;
+  billing.model.selectStrategy(Q, 'wedge');
+  assert.strictEqual(billing.model.submit(Q).error, 'wedge');
+  assert.strictEqual(Q.resources, resources,
+    'An unsubmittable wedge was billed a resource');
+  billing.model.selectStrategy(Q, 'bargain');
+  assert.strictEqual(billing.model.submit(Q).error, 'demand');
+  assert.strictEqual(Q.resources, resources);
+}
+
+{
+  const pressures = engineAtBudget('pressure-effects', {
+    left_in_government: 1,
+    government_party: 'ko',
+    prime_minister_party: 'ko',
+    finance_minister_party: 'KO',
+    ministry_ko_in_cabinet: 1,
+    year: 2026,
+    annual_budget_year: 2026,
+  });
+  const Q = pressures.Q;
+  const model = pressures.model;
+  const cards = model.pressureStatus(Q.budget_game);
+  assert.strictEqual(cards.length, 3);
+  for (const card of cards) model.setTier(Q, card.line, 'maintain');
+  assert(model.pressureStatus(Q.budget_game).every(function(card) {
+    return !card.met;
+  }), 'Maintained lines still answered their pressure cards');
+  model.setFinancing(Q, 'progressive');
+  const trust = Q.public_trust;
+  const delivery = Q.government_delivery;
+  assert(model.preview(Q).affordable);
+  const budgetRoom = Number(Q.budget) || 0;
+  assert(model.submit(Q).ok);
+  model.resolveSenate(Q, 'accept');
+  const room = model.preview(Q).remaining;
+  assert(model.enact(Q));
+  assert.strictEqual(Q.annual_budget_pressures_met, 0);
+  assert.strictEqual(Q.public_trust, trust - 3,
+    'Ignored annual pressures cost nothing');
+  assert.strictEqual(Q.government_delivery, delivery - 3);
+  assert(Q.budget >= budgetRoom + Math.max(0, room),
+    'Unspent budget room did not reach the spendable position');
+  assert(/accepted in full|No Senate/.test(Q.annual_budget_senate),
+    'The Senate answer was not recorded');
+}
+
+{
+  const senate = engineAtBudget('senate-compromise', {
+    left_in_government: 1,
+    government_party: 'ko',
+    prime_minister_party: 'ko',
+    finance_minister_party: 'KO',
+    ministry_ko_in_cabinet: 1,
+  });
+  const Q = senate.Q;
+  assert(senate.model.submit(Q).ok);
+  const resources = Q.resources;
+  assert(senate.model.resolveSenate(Q, 'compromise'));
+  assert.strictEqual(Q.resources, resources - 1);
+  assert(/compromise/i.test(Q.annual_budget_senate),
+    'A narrower Senate compromise left no record');
+}
+
+{
+  // Every enacted budget must open its own implementation ledger, not just the
+  // first one in a campaign.
+  const ledger = engineAtBudget('two-ledgers', {
+    left_in_government: 1,
+    government_party: 'ko',
+    prime_minister_party: 'ko',
+    finance_minister_party: 'KO',
+    ministry_ko_in_cabinet: 1,
+  });
+  const Q = ledger.Q;
+  const model = ledger.model;
+  const executionScene = game.scenes['poland_budget_2023_2026.execution_event'];
+  assert.strictEqual(executionScene.maxVisits, undefined,
+    'The implementation ledger can only be visited once per campaign');
+  for (const year of [2024, 2025]) {
+    Q.year = year;
+    Q.month = 12;
+    Q.annual_budget_year = year;
+    ledger.engine.goToScene('poland_budget_2023_2026.annual_budget');
+    assert(model.submit(Q).ok);
+    model.resolveSenate(Q, 'accept');
+    assert(model.enact(Q), 'Budget ' + year + ' did not enact');
+    Q.year = year + 1;
+    Q.month = 1;
+    ledger.engine.goToScene('poland_budget_2023_2026.execution_event');
+    assert.strictEqual(ledger.engine.state.sceneId,
+      'poland_budget_2023_2026.execution_open',
+      'Budget ' + year + ' never reached its implementation ledger');
+    const choices = ledger.engine.getCurrentChoices()
+      .map(function(choice) { return choice.id; });
+    assert(choices.includes('poland_budget_2023_2026.finish_execution'));
+    ledger.engine.choose(choices.indexOf(
+      'poland_budget_2023_2026.finish_execution'));
+  }
+  assert.strictEqual(Q.budget_history.filter(function(item) {
+    return item.executionStatus === 'Pending';
+  }).length, 0, 'An enacted budget was left permanently pending');
+}
+
+{
+  // A rejected submission has to keep its reason long enough to display it.
+  const errors = engineAtBudget('submit-error-visible', {
+    left_in_government: 1,
+    government_party: 'ko',
+    prime_minister_party: 'ko',
+    finance_minister_party: 'KO',
+    government_support_seats: 220,
+    coalition_seats: 220,
+    ko_seats: 220,
+    psl_seats: 30,
+    ministry_ko_in_cabinet: 1,
+  });
+  const Q = errors.Q;
+  errors.model.selectPreset(Q, 'ko_proposal');
+  function choose(id) {
+    const choices = errors.engine.getCurrentChoices();
+    const index = choices.findIndex(function(choice) { return choice.id === id; });
+    assert(index >= 0, 'Missing choice ' + id);
+    errors.engine.choose(index);
+  }
+  choose('poland_budget_2023_2026.submit_budget');
+  assert.strictEqual(errors.engine.state.sceneId,
+    'poland_budget_2023_2026.defeat');
+  assert(errors.engine.getCurrentChoices().some(function(choice) {
+    return choice.id === 'poland_budget_2023_2026.limp_on';
+  }), 'A defeated cabinet cannot continue on its submitted draft');
+  choose('poland_budget_2023_2026.revise_budget');
+  errors.model.setFinancing(Q, 'progressive');
+  choose('poland_budget_2023_2026.submit_budget');
+  assert.strictEqual(errors.engine.state.sceneId,
+    'poland_budget_2023_2026.budget_open');
+  assert.strictEqual(Q.budget_submit_error, 'revision',
+    'The rejection reason was cleared before the board could show it');
+}
+
 for (const id of [
+  'poland_budget_2023_2026.limp_on',
   'poland_events.budget_2019_sejm_vote_2020',
   'poland_events.budget_2020',
   'poland_events_2021_2023.budget_2021',

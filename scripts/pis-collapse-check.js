@@ -114,6 +114,27 @@ assert.strictEqual(group(q, 'solidarna').exclusive_seats, q.suwerenna_seats);
 console.log('  result:', q.pis_collapse_result);
 console.log('  successor:', q.pis_leader, '·', q.pis_ideology);
 
+// The next monthly poll must read the organisational collapse, not rebuild the
+// old PiS electorate around the successor who kept the registration.
+q.month += 1;
+q.date_label = 'October 2026';
+engine.goToScene('poland_polling');
+assert(q.pis_fracture_poll_loss > 0,
+  'PiS collapse did not leak any support outside the broken family');
+assert(q.konf_vote_intent > q.pis_vote_intent,
+  'the collapsed PiS rump remained the right-wing hegemon: ' +
+    JSON.stringify({
+      pis: q.pis_vote_intent,
+      konf: q.konf_vote_intent,
+      suwerenna: q.suwerenna_vote_intent,
+      pisSeats: q.pis_seats,
+      suwerennaSeats: q.suwerenna_seats,
+      contested: q.pis_contested_caucus,
+      rate: q.pis_fracture_poll_rate,
+      suwerennaShare: q.suwerenna_poll_family_share,
+      lost: q.pis_fracture_poll_loss,
+    }));
+
 // 4. A collapsed party stops reporting collapse pressure and does not fire
 //    the congress twice.
 engine.goToScene('poland_normalize');
@@ -126,4 +147,44 @@ assert(
   'the congress must not return after the split'
 );
 
-console.log('PiS collapse checks passed');
+// 5. A complete Konfederacja rupture loses family support and publishes the
+//    two successor parties instead of preserving an invisible federation.
+q = start('konf-fracture-poll');
+q.year = 2026;
+q.month = 10;
+q.poll_state_month_key = -1;
+engine.goToScene('poland_polling');
+const intactKonfVote = q.konf_vote_intent;
+
+q = start('konf-fracture-poll');
+q.year = 2026;
+q.month = 10;
+q.mentzen_bosak_split = 1;
+q.poll_state_month_key = -1;
+const newHope = group(q, 'nowa_nadzieja');
+const national = group(q, 'ruch_narodowy');
+const konfCommittee = group(q, 'konf_committee');
+for (const party of [newHope, national]) {
+  party.active = 1;
+  party.contesting = 1;
+  party.organisation = 50;
+}
+newHope.list_committee = 'new_hope';
+national.list_committee = 'national_movement';
+konfCommittee.contesting = 0;
+engine.goToScene('poland_polling');
+const fracturedKonfVote =
+  q.new_hope_vote_intent + q.national_movement_vote_intent;
+assert(q.konf_fracture_poll_loss > 0,
+  'Konfederacja rupture did not lose any family support');
+assert(fracturedKonfVote < intactKonfVote,
+  'the split Konfederacja family kept its intact poll: ' + JSON.stringify({
+    intact: intactKonfVote,
+    fractured: fracturedKonfVote,
+    newHope: q.new_hope_vote_intent,
+    national: q.national_movement_vote_intent,
+  }));
+assert.strictEqual(q.konf_vote_intent, 0,
+  'the old Konfederacja line survived its complete rupture');
+
+console.log('PiS collapse and right-family fracture checks passed');

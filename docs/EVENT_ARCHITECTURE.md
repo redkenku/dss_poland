@@ -166,6 +166,14 @@ The links it currently protects:
 | April 2024 transport bill (`transport_bill_2024_filed`) | 2026 gmina service floor, which inherits its costing |
 | 2023 referendum answer (`pension_defence_credit`) | May 2026 SAFE veto, where it unlocks the social-floor bargain |
 | Breaking a host list at the 2023 march (`campaign_march_broke_host_discipline`) | 2023 seat arithmetic: the host cannot whip the deputies, and KO counts them only if it still trusts them |
+| November 2024 mayoral term-limit stance (`mayor_term_limit_stance`) | March 2027 Trzaskowski crossing: third-term mayors bring their machines to the party that removed the cap, and bring nothing to the party that kept it |
+
+The local-affairs desk has its own reachability check,
+[`local-affairs-check.js`](../scripts/local-affairs-check.js)
+(`npm run check:local-affairs`): it drives all six municipal files from every
+live role, proves each one is dispatched and opens its own scene, that none
+dead-ends at zero resources, and that no substantive choice routes into the
+desk's clean page before its result can be read.
 
 When adding to a chain, prefer wiring an existing later event over authoring a
 new terminal one, and make at least one branch of the earlier decision change

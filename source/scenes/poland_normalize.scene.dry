@@ -56,16 +56,31 @@ if (Q.president_name == "Rafał Trzaskowski" &&
 }
 const localMonthIndex = (Number(Q.year) || 0) * 12 + (Number(Q.month) || 1);
 const localAffairsDue = [];
+// The Warsaw files are scheduled in `time` (months since the campaign began)
+// and the dated files in absolute month indices. Convert the first to the
+// second before sorting, or every Warsaw entry compares as older than every
+// calendar entry and jumps a file that has been waiting a year.
+const localAffairsMonthOf = function(dueTime) {
+    return localMonthIndex - (Number(Q.time) - Number(dueTime));
+};
 if (!Q.warsaw_succession_campaign_done &&
     Number(Q.warsaw_succession_due_time) >= 0 &&
     Number(Q.time) >= Number(Q.warsaw_succession_due_time)) {
-    localAffairsDue.push({id: "warsaw_campaign", due: Number(Q.warsaw_succession_due_time), priority: 0});
+    localAffairsDue.push({
+        id: "warsaw_campaign",
+        due: localAffairsMonthOf(Q.warsaw_succession_due_time),
+        priority: 0
+    });
 }
 if (Q.warsaw_succession_campaign_done &&
     !Q.warsaw_succession_result_done &&
     Number(Q.warsaw_succession_result_due_time) >= 0 &&
     Number(Q.time) >= Number(Q.warsaw_succession_result_due_time)) {
-    localAffairsDue.push({id: "warsaw_result", due: Number(Q.warsaw_succession_result_due_time), priority: 1});
+    localAffairsDue.push({
+        id: "warsaw_result",
+        due: localAffairsMonthOf(Q.warsaw_succession_result_due_time),
+        priority: 1
+    });
 }
 if (!Q.sutryk_term_limit_done && localMonthIndex >= 2024 * 12 + 11) {
     localAffairsDue.push({id: "sutryk", due: 2024 * 12 + 11, priority: 2});
@@ -98,7 +113,7 @@ if (july2021ChainPending) {
     Q.poland_historical_event_phase =
         historicalCalendar && Q.polling_has_dated_route ? 1 : 0;
 }
-if (!budgetHost.polandBudgetModel || budgetHost.polandBudgetModel.version < 2) {
+if (!budgetHost.polandBudgetModel || budgetHost.polandBudgetModel.version < 4) {
     const number = function(value, fallback) {
         return Number.isFinite(Number(value)) ? Number(value) : fallback;
     };
@@ -433,6 +448,15 @@ if (!budgetHost.polandBudgetModel || budgetHost.polandBudgetModel.version < 2) {
             };
         });
     };
+    const pressureStatus = function(game) {
+        return (pressure[game.year] || []).map(function(card) {
+            return {
+                label: card[0], line: card[1], need: card[2],
+                lineLabel: lineById[card[1]].label,
+                met: lineTier(game, card[1]) >= card[2]
+            };
+        });
+    };
     const preview = function(q, gameOverride) {
         const game = gameOverride || q.budget_game;
         const source = financeById[game.financingId] || financeById.none;
@@ -626,10 +650,27 @@ if (!budgetHost.polandBudgetModel || budgetHost.polandBudgetModel.version < 2) {
         if (!partyData[id]) return;
         const data = partyData[id];
         if (!game.deals.includes(id)) game.deals.push(id);
+        if (!game.dealEdits) game.dealEdits = {};
+        const undo = {};
         for (const line of data.preferred.slice(0, 2)) {
-            if (lineTier(game, line) < 1) game.tiers[line] = "fund";
+            if (lineTier(game, line) < 1) {
+                undo[line] = game.tiers[line];
+                game.tiers[line] = "fund";
+            }
         }
-        if (id == "pis") game.tiers.defence = "fund";
+        game.dealEdits[id] = undo;
+    };
+    const removePartyDeal = function(game, id) {
+        game.deals = game.deals.filter(function(item) { return item != id; });
+        const undo = (game.dealEdits || {})[id];
+        if (!undo) return;
+        for (const line of Object.keys(undo)) {
+            // Only unwind lines the stamp itself raised and that the player has
+            // not edited since, so cancelling a deal returns its points without
+            // discarding later work.
+            if (game.tiers[line] == "fund") game.tiers[line] = undo[line];
+        }
+        delete game.dealEdits[id];
     };
     const initialise = function(q, year) {
         const budgetYear = integer(year, integer(q.year, 2019));
@@ -641,7 +682,7 @@ if (!budgetHost.polandBudgetModel || budgetHost.polandBudgetModel.version < 2) {
             version: 2, year: budgetYear, fiscalYear: budgetYear + 1,
             role: role, phase: role == "government" ? "proposal" : "strategy",
             presetId: first.id, financingId: first.financingId,
-            tiers: copy(first.tiers), deals: [], strategy: "",
+            tiers: copy(first.tiers), deals: [], dealEdits: {}, strategy: "",
             demands: [], posture: role == "government" ? "support" : "no",
             sejm: null, senate: null, execution: null,
             presets: generated, revisionUsed: false, failedDraft: null,
@@ -665,6 +706,7 @@ if (!budgetHost.polandBudgetModel || budgetHost.polandBudgetModel.version < 2) {
         game.financingId = preset.financingId;
         game.tiers = copy(preset.tiers);
         game.deals = [];
+        game.dealEdits = {};
         return true;
     };
     const setTier = function(q, id, tier) {
@@ -686,7 +728,7 @@ if (!budgetHost.polandBudgetModel || budgetHost.polandBudgetModel.version < 2) {
         const game = q.budget_game;
         if (!partyData[id]) return false;
         if (game.deals.includes(id)) {
-            game.deals = game.deals.filter(function(item) { return item != id; });
+            removePartyDeal(game, id);
         } else {
             applyPartyDeal(game, id);
         }
@@ -729,6 +771,42 @@ if (!budgetHost.polandBudgetModel || budgetHost.polandBudgetModel.version < 2) {
         }
         return true;
     };
+    const demandCost = function(game, lineId) {
+        return lineTier(game, lineId) < 0 ? 2 : 1;
+    };
+    const leverageSpent = function(game) {
+        return (game.demands || []).reduce(function(sum, id) {
+            return sum + demandCost(game, id);
+        }, 0);
+    };
+    // One place decides whether an amendment can be demanded, so the board can
+    // print the same reason the model would have refused with.
+    const demandState = function(q, lineId) {
+        const game = q.budget_game;
+        const cost = demandCost(game, lineId);
+        const chosen = game.demands.includes(lineId);
+        const left = leverage(q) - leverageSpent(game);
+        if (chosen) return {chosen: true, cost: cost, allowed: true, reason: ""};
+        if (lineTier(game, lineId) >= 1) {
+            return {chosen: false, cost: cost, allowed: false,
+                reason: "The cabinet already funds this line"};
+        }
+        if (game.demands.length >= 2) {
+            return {chosen: false, cost: cost, allowed: false,
+                reason: "Two amendments is the published limit"};
+        }
+        if (cost > left) {
+            return {chosen: false, cost: cost, allowed: false,
+                reason: "Needs " + cost + " leverage; " + left + " left"};
+        }
+        const simulated = copy(game);
+        simulated.tiers[lineId] = "fund";
+        if (!preview(q, simulated).affordable) {
+            return {chosen: false, cost: cost, allowed: false,
+                reason: "The cabinet cannot finance it from this draft"};
+        }
+        return {chosen: false, cost: cost, allowed: true, reason: ""};
+    };
     const toggleDemand = function(q, lineId) {
         const game = q.budget_game;
         if (!lineById[lineId]) return false;
@@ -736,16 +814,7 @@ if (!budgetHost.polandBudgetModel || budgetHost.polandBudgetModel.version < 2) {
             game.demands = game.demands.filter(function(id) { return id != lineId; });
             return true;
         }
-        if (lineTier(game, lineId) >= 1) return false;
-        if (game.demands.length >= 2) return false;
-        const cost = lineTier(game, lineId) < 0 ? 2 : 1;
-        const used = game.demands.reduce(function(sum, id) {
-            return sum + (lineTier(game, id) < 0 ? 2 : 1);
-        }, 0);
-        if (used + cost > leverage(q)) return false;
-        const simulated = copy(game);
-        simulated.tiers[lineId] = "fund";
-        if (!preview(q, simulated).affordable) return false;
+        if (!demandState(q, lineId).allowed) return false;
         game.demands.push(lineId);
         return true;
     };
@@ -763,6 +832,108 @@ if (!budgetHost.polandBudgetModel || budgetHost.polandBudgetModel.version < 2) {
         q.budget_game.wedge = id;
         return true;
     };
+    const relationKey = {
+        ko: "ko_relation", psl: "psl_relation", p2050: "p2050_relation",
+        pis: "pis_relation", konf: "konf_relation"
+    };
+    const rightPartners = ["pis", "konf"];
+    const move = function(q, key, amount) {
+        q[key] = number(q[key], 0) + amount;
+    };
+    // A deal is a public bargain: it moves the bought party's relation, stirs
+    // the Left's own currents and blurs the coalition line. The board prints
+    // this from the same table before the player stamps anything.
+    const dealPrice = function(q, id) {
+        const cabinet = cabinetParties(q);
+        if (cabinet.includes(id)) {
+            return {
+                inside: true,
+                label: "Cabinet concession: " + partyData[id].label +
+                    " relation up, coalition dissent up",
+                effects: {relation: 3, dissent: 2, blur: 0, razem: 2,
+                    progressives: 1, credibility: 0, trust: 0}
+            };
+        }
+        if (rightPartners.includes(id)) {
+            return {
+                inside: false,
+                label: "Whole-club deal with the right: Razem and the " +
+                    "progressives revolt, the coalition line blurs",
+                effects: {relation: 6, dissent: 5, blur: 4, razem: 8,
+                    progressives: 5, credibility: -3, trust: -1}
+            };
+        }
+        return {
+            inside: false,
+            label: "Outside deal: " + partyData[id].label +
+                " relation up, coalition dissent up",
+            effects: {relation: 5, dissent: 3, blur: 2, razem: 3,
+                progressives: 2, credibility: 0, trust: 0}
+        };
+    };
+    const applyDealPrice = function(q, id) {
+        const price = dealPrice(q, id);
+        const effects = price.effects;
+        if (relationKey[id]) move(q, relationKey[id], effects.relation);
+        move(q, "government_coalition_dissent", effects.dissent);
+        move(q, "coalition_blur", effects.blur);
+        move(q, "razem_dissent", effects.razem);
+        move(q, "progressives_dissent", effects.progressives);
+        move(q, "progressive_credibility", effects.credibility);
+        move(q, "public_trust", effects.trust);
+        if (!price.inside) move(q, "government_favors", 1);
+        return price;
+    };
+    // Opposition postures are public too: sustaining or refusing someone else's
+    // budget moves the same relations and internal dissent ledgers.
+    const posturePrice = function(q, game) {
+        const lead = partyId(q.government_party) || "pis";
+        const right = rightPartners.includes(lead);
+        if (game.posture == "support") {
+            return {
+                lead: lead, label: "Sustaining the cabinet's budget",
+                relation: 4, razem: right ? 8 : 5,
+                progressives: right ? 5 : 3, blur: right ? 4 : 2,
+                credibility: right ? -3 : -1
+            };
+        }
+        if (game.posture == "abstain") {
+            return {
+                lead: lead, label: "Letting the budget pass without votes",
+                relation: 2, razem: right ? 4 : 2,
+                progressives: right ? 2 : 1, blur: 1, credibility: 0
+            };
+        }
+        return {
+            lead: lead, label: "Voting the budget down",
+            relation: -3, razem: -2, progressives: -1, blur: 0, credibility: 2
+        };
+    };
+    const applyPolitics = function(q, game) {
+        if (!Array.isArray(game.dealsCharged)) game.dealsCharged = [];
+        const stamped = [];
+        for (const id of game.deals) {
+            if (game.dealsCharged.includes(id) || !partyData[id]) continue;
+            game.dealsCharged.push(id);
+            stamped.push(applyDealPrice(q, id).label);
+        }
+        if (game.role == "opposition") {
+            const price = posturePrice(q, game);
+            if (relationKey[price.lead]) {
+                move(q, relationKey[price.lead], price.relation);
+            }
+            move(q, "razem_dissent", price.razem);
+            move(q, "progressives_dissent", price.progressives);
+            move(q, "coalition_blur", price.blur);
+            move(q, "progressive_credibility", price.credibility);
+            if (game.strategy == "wedge" && game.wedge &&
+                relationKey[game.wedge]) {
+                move(q, relationKey[game.wedge], -5);
+            }
+        }
+        q.annual_budget_deal_costs = stamped.join(" · ") || "No deals stamped";
+        return stamped;
+    };
     const applyFlatVote = function(q, game) {
         q.annual_budget_yes = game.sejm.yes;
         q.annual_budget_no = game.sejm.no;
@@ -778,6 +949,18 @@ if (!budgetHost.polandBudgetModel || budgetHost.polandBudgetModel.version < 2) {
     const submit = function(q) {
         const game = q.budget_game;
         if (game.role == "opposition") {
+            // Every rejection has to happen before the resource is billed, or a
+            // route the player cannot complete still costs them a resource.
+            if (!game.strategy) return {ok: false, error: "strategy"};
+            if (game.strategy == "bargain" && game.demands.length == 0) {
+                return {ok: false, error: "demand"};
+            }
+            if (game.strategy == "wedge" && !game.wedge) {
+                return {ok: false, error: "wedge"};
+            }
+            if (game.strategy == "shadow" && !preview(q).affordable) {
+                return {ok: false, error: "unaffordable"};
+            }
             if (game.strategy == "bargain") {
                 for (const id of game.demands) {
                     if (lineTier(game, id) < 1) game.tiers[id] = "fund";
@@ -793,16 +976,6 @@ if (!budgetHost.polandBudgetModel || budgetHost.polandBudgetModel.version < 2) {
                 q.resources -= 1;
                 game.strategyCostPaid = true;
             }
-            if (game.strategy == "shadow" && !preview(q).affordable) {
-                return {ok: false, error: "unaffordable"};
-            }
-            if (game.strategy == "bargain" && game.demands.length == 0) {
-                return {ok: false, error: "demand"};
-            }
-            if (game.strategy == "wedge" && !game.wedge) {
-                return {ok: false, error: "wedge"};
-            }
-            if (!game.strategy) return {ok: false, error: "strategy"};
             if (game.strategy == "shadow") {
                 game.shadow = {
                     presetId: game.presetId,
@@ -823,6 +996,7 @@ if (!budgetHost.polandBudgetModel || budgetHost.polandBudgetModel.version < 2) {
         game.sejm = p.vote;
         game.phase = game.sejm.passed ? "senate" : "defeat";
         applyFlatVote(q, game);
+        // TEMP-DISABLED applyPolitics(q, game);
         if (game.role == "opposition") {
             q.annual_budget_strategy = game.strategy;
             if (game.strategy == "no") {
@@ -893,10 +1067,28 @@ if (!budgetHost.polandBudgetModel || budgetHost.polandBudgetModel.version < 2) {
             if (integer(q.resources, 0) < 1) return false;
             q.resources -= 1;
         }
+        const targetLabel = senate.target ? lineById[senate.target].label : "";
         if (choice == "accept" && senate.target) {
             const current = lineTier(game, senate.target);
             game.tiers[senate.target] =
                 current < 0 ? "maintain" : (current < 1 ? "fund" : "flagship");
+            q.annual_budget_senate = "Senate amendment accepted in full: " +
+                targetLabel;
+        } else if (choice == "compromise") {
+            // A narrower text restores a cut line to its baseline and goes no
+            // further; against an already-maintained line it buys the Senate off
+            // without moving money.
+            if (senate.target && lineTier(game, senate.target) < 0) {
+                game.tiers[senate.target] = "maintain";
+            }
+            q.annual_budget_senate = senate.target
+                ? "Narrower compromise on " + targetLabel
+                : "Narrower compromise with the Senate majority";
+        } else if (choice == "reject") {
+            q.annual_budget_senate = senate.target
+                ? "Senate amendment rejected by an absolute majority: " +
+                    targetLabel
+                : "No Senate amendment to answer";
         }
         game.senate = copy(senate);
         game.senate.choice = choice;
@@ -928,6 +1120,21 @@ if (!budgetHost.polandBudgetModel || budgetHost.polandBudgetModel.version < 2) {
         if (game.financingId == "progressive") q.labor_credibility += 1;
         if (game.financingId == "kpo") {
             q.kpo_uncommitted = Math.max(0, integer(q.kpo_uncommitted, 1) - 1);
+        }
+        const pressures = pressureStatus(game);
+        const ignored = pressures.filter(function(card) { return !card.met; });
+        q.annual_budget_pressures_met = pressures.length - ignored.length;
+        q.annual_budget_pressures_ignored = ignored.map(function(card) {
+            return card.label;
+        }).join(" · ") || "None";
+        if (game.role == "government" && ignored.length) {
+            q.public_trust -= ignored.length;
+            q.government_delivery -= ignored.length;
+        }
+        if (game.role == "government") {
+            // Points the cabinet financed but did not allocate stay as usable
+            // room for the cards that spend `budget` during the fiscal year.
+            q.budget = integer(q.budget, 0) + Math.max(0, p.remaining);
         }
         q.annual_budget_done = 1;
         q["annual_budget_done_" + game.year] = 1;
@@ -1089,11 +1296,15 @@ if (!budgetHost.polandBudgetModel || budgetHost.polandBudgetModel.version < 2) {
         return item;
     };
     budgetHost.polandBudgetModel = {
-        version: 2, lines: lines, tiers: tiers, tierNames: tierNames,
+        version: 4, lines: lines, tiers: tiers, tierNames: tierNames,
         financing: financing, partyData: partyData, pressure: pressure,
+        pressureStatus: pressureStatus,
         partyId: partyId, partySeats: partySeats, cabinetParties: cabinetParties,
         hardFloors: hardFloors, kpoOpen: kpoOpen, presets: presets,
         currentBlocks: currentBlocks, preview: preview, vote: vote,
+        demandState: demandState, demandCost: demandCost,
+        leverageSpent: leverageSpent, dealPrice: dealPrice,
+        posturePrice: posturePrice,
         initialise: initialise, selectPreset: selectPreset, setTier: setTier,
         setFinancing: setFinancing, reset: reset, toggleDeal: toggleDeal,
         leverage: leverage, selectStrategy: selectStrategy,
@@ -3380,7 +3591,7 @@ if (Q.started) {
         solidarnaRecord.sejm_mps = solidarnaRecord.exclusive_seats;
         solidarnaRecord.mp_count = solidarnaRecord.exclusive_seats;
     }
-    if (Q.suwerenna_merged) {
+    if (Q.suwerenna_merged && !Q.trz_freebie_suwerenna_done) {
         solidarnaRecord.active = 0;
         solidarnaRecord.allied = 1;
         solidarnaRecord.kind = "caucus";
@@ -3389,6 +3600,31 @@ if (Q.started) {
         solidarnaRecord.legal_status = "merged current inside PiS";
     }
     solidarnaRecord.list_committee = Q.suwerenna_own_list ? "solidarna" : "pis";
+    if (Q.trz_freebie_suwerenna_done) {
+        const jakiRoute = Q.trz_freebie_suwerenna_route == "jaki_current";
+        solidarnaRecord.active = 1;
+        solidarnaRecord.allied = 1;
+        solidarnaRecord.independent = 0;
+        solidarnaRecord.bloc = "konf";
+        solidarnaRecord.kind = jakiRoute ? "caucus" : "party";
+        solidarnaRecord.name = jakiRoute
+            ? "Jaki sovereigntist current" : "Suwerenna Polska";
+        solidarnaRecord.leader = jakiRoute ? "Patryk Jaki" : solidarnaRecord.leader;
+        solidarnaRecord.parent = "Konfederacja";
+        solidarnaRecord.club = "konf";
+        solidarnaRecord.list_committee = "konf";
+        solidarnaRecord.in_cabinet = 0;
+        solidarnaRecord.support_mode = "opposition";
+        solidarnaRecord.legal_status = jakiRoute
+            ? "declared current inside the Konfederacja parliamentary family"
+            : "federated legal party inside Konfederacja";
+        solidarnaRecord.exclusive_seats = 0;
+        solidarnaRecord.sejm_mps = Math.max(
+            0,
+            Math.round(Number(Q.trz_freebie_suwerenna_seats) || 0)
+        );
+        solidarnaRecord.mp_count = solidarnaRecord.sejm_mps;
+    }
     const rozwojRecord = rivalGroup("rozwoj_plus");
     if (Q.rozwoj_association_active) {
         const morawieckiRecord = rivalGroup("morawiecki");
@@ -4541,6 +4777,7 @@ if (Q.started) {
         (Q.pis_split ? 14 : 0) +
         (Q.suwerenna_walkout ? 8 : 0) +
         ((Number(Q.konf_poll) || 0) >= (Number(Q.pis_poll) || 0) ? 12 : 0) +
+        (Q.trz_freebie_konf_hegemon ? 14 : 0) +
         (Q.pis_leader == "Jarosław Kaczyński" && Number(Q.year) >= 2026
             ? 10
             : 0) +
@@ -4561,6 +4798,39 @@ if (Q.started) {
                 : Q.pis_collapse_pressure >= 28
                     ? "strained but holding"
                     : "in working order";
+    Q.konf_normalisation = clamp(
+        Number(Q.konf_normalisation) || 0,
+        0,
+        100
+    );
+    Q.trz_freebie_realign_pressure = clamp(
+        Number(Q.trz_freebie_realign_pressure) || 0,
+        0,
+        100
+    );
+    Q.trz_freebie_realign_stage = Q.trz_freebie_law
+        ? (Q.trz_freebie_realign_pressure >= 75 ? 4 :
+            (Q.trz_freebie_realign_pressure >= 55 ? 3 :
+                (Q.trz_freebie_realign_pressure >= 35 ? 2 : 1)))
+        : 0;
+    Q.konf_family_seats = Q.mentzen_bosak_split == 1
+        ? Math.max(0, Math.round(Number(Q.new_hope_seats) || 0)) +
+            Math.max(0, Math.round(Number(Q.national_movement_seats) || 0))
+        : Math.max(0, Math.round(Number(Q.konf_seats) || 0));
+    Q.konf_family_label = Q.mentzen_bosak_split == 1
+        ? "New Hope + National Movement" : "Konfederacja";
+    const mentzenPMWeight = Q.mentzen_bosak_split == 1
+        ? Math.max(0, Number(Q.new_hope_seats) || 0)
+        : Math.max(0, Number(Q.konf_mentzenite_share) || 0);
+    const bosakPMWeight = Q.mentzen_bosak_split == 1
+        ? Math.max(0, Number(Q.national_movement_seats) || 0)
+        : Math.max(0, Number(Q.konf_nationalist_share) || 0);
+    Q.konf_pm_candidate = mentzenPMWeight > bosakPMWeight
+        ? "Sławomir Mentzen"
+        : (bosakPMWeight > mentzenPMWeight
+            ? "Krzysztof Bosak"
+            : (["Sławomir Mentzen", "Krzysztof Bosak"].includes(Q.konf_leader)
+                ? Q.konf_leader : "Krzysztof Bosak"));
     if (Q.greens_joined_left) {
         const greensRecord = rivalGroup("greens");
         if (greensRecord) {
@@ -4665,6 +4935,26 @@ if (Q.started) {
     }
     Q.sejm_list_negotiation_done = Q.sejm_list_negotiation_done ? 1 : 0;
     Q.sejm_list_has_partners = Q.sejm_list_has_partners ? 1 : 0;
+    if (
+        String(Q.left_merger_structure || "") == "federation" &&
+        (
+            Number(Q.sejm_list_threshold) != 8 ||
+            String(Q.sejm_list_structure || "") != "Coalition committee"
+        )
+    ) {
+        Q.sejm_list_target = "Autonomous Left coalition";
+        Q.sejm_list_outcome = "left_coalition_8";
+        Q.sejm_list_structure = "Coalition committee";
+        Q.sejm_list_host = "left_coalition";
+        Q.sejm_list_threshold = 8;
+        Q.sejm_list_members = "Lewica's federated member parties";
+        Q.sejm_list_control =
+            "Member parties retain identity and subsidy claims";
+        Q.sejm_list_result = Q.sejm_list_negotiation_done
+            ? "The federation files its 8% coalition committee"
+            : "The federation must file an 8% coalition committee";
+        Q.sejm_list_has_partners = 1;
+    }
     Q.sejm_list_threshold = Number(Q.sejm_list_threshold) == 8 ? 8 : 5;
     Q.sejm_list_partner_score = clamp(
         Number(Q.sejm_list_partner_score) || 0,
@@ -8399,6 +8689,135 @@ if (Q.started) {
     Q.advisor_action_timer = Math.max(0, Q.advisor_action_timer || 0);
     Q.leadership_reshuffle_timer =
         Math.max(0, Q.leadership_reshuffle_timer || 0);
+    Q.kwasniewski_card_timer =
+        Math.max(0, Number(Q.kwasniewski_card_timer) || 0);
+    Q.kwasniewski_reproach_debt =
+        Math.max(0, Number(Q.kwasniewski_reproach_debt) || 0);
+
+    // Aleksander Kwaśniewski's alignment score. He is not a faction and holds
+    // no quality of his own, so this is read off the four things he actually
+    // argues about in public — the democratic bloc, constitutional restraint,
+    // the European anchor, and the absence of a bargain with the right — plus
+    // the running memory of what we have said to him directly. It decides
+    // which of his two party-relations cards can appear, and nothing else.
+    const kwasBase = function(value, fallback) {
+        return Number.isFinite(Number(value)) ? Number(value) : fallback;
+    };
+    // 52 is the resting value of a party that is simply in the democratic
+    // camp and not doing anything he objects to: enough to keep the aligned
+    // deck live once the channel exists, with 40 as the floor below which he
+    // starts going on television instead.
+    let kwasAlignment = 52;
+    kwasAlignment += (kwasBase(Q.ko_relation, 44) - 44) * 0.22;
+    kwasAlignment += kwasBase(Q.p2050_relation, 0) * 0.06;
+    kwasAlignment += (kwasBase(Q.constitutional_restraint, 50) - 50) * 0.16;
+    kwasAlignment += (kwasBase(Q.institutional_trust, 44) - 44) * 0.10;
+    kwasAlignment +=
+        (kwasBase(Q.european_judgment_compliance, 34) - 34) * 0.12;
+    kwasAlignment -= Math.max(0, kwasBase(Q.konf_relation, 2) - 6) * 0.55;
+    kwasAlignment -= Math.max(0, kwasBase(Q.pis_relation, 8) - 20) * 0.35;
+    kwasAlignment -= Math.max(0, kwasBase(Q.coalition_blur, 8) - 12) * 0.30;
+    kwasAlignment -=
+        kwasBase(Q.sld_populist_international_isolation, 0) * 0.35;
+    if (Q.sld_populist_route_active) kwasAlignment -= 12;
+    if (
+        String(Q.left_mandate || "") == "disciplinary" ||
+        String(Q.left_mandate || "") == "administrative"
+    ) {
+        kwasAlignment -= 8;
+    }
+    if (
+        String(Q.sejm_list_host || "") == "konf" ||
+        String(Q.sejm_list_host || "") == "pis"
+    ) {
+        kwasAlignment -= 15;
+    }
+    kwasAlignment += kwasBase(Q.kwasniewski_alignment_bias, 0);
+    kwasAlignment -= Q.kwasniewski_reproach_debt * 4;
+    Q.kwasniewski_alignment = Q.kwasniewski_estranged
+        ? 0
+        : clamp(Math.round(kwasAlignment), 0, 100);
+    Q.kwasniewski_alignment_band =
+        Q.kwasniewski_estranged ? "Estranged" :
+        (Q.kwasniewski_alignment >= 70 ? "Ally" :
+        (Q.kwasniewski_alignment >= 50 ? "Approving" :
+        (Q.kwasniewski_alignment >= 40 ? "Watchful" :
+        (Q.kwasniewski_alignment >= 25 ? "Critical" : "Hostile"))));
+
+    // Both Kwaśniewski cards are one scene with many faces. The face has to be
+    // known before the card is drawn, because it decides the title the player
+    // reads in the hand, so it is chosen here rather than on arrival. The
+    // topic is the worst live problem he could plausibly help with; the frame
+    // is the year's own argument, and the two are combined in the card's prose.
+    const kwasYear = Number(Q.year) || 2020;
+    Q.kwasniewski_frame =
+        kwasYear <= 2020 ? "aftermath" :
+        (kwasYear == 2021 ? "primacy" :
+        (kwasYear == 2022 ? "war" :
+        (kwasYear == 2023 ? "count" :
+        (kwasYear == 2024 ? "repair" :
+        (kwasYear == 2025 ? "palace" :
+        (kwasYear == 2026 ? "third_winter" : "election_year"))))));
+    const kwasPresidentialLive =
+        (Q.pres_2025_active && !Q.pres_2025_runoff_done) ||
+        (Q.pres_2020_phase == "First-round campaign") ||
+        (Number(Q.year) == 2020 && Number(Q.month) <= 6 &&
+            !Q.pres_first_round_complete);
+    const kwasColdPartner =
+        (Number(Q.psl_relation) || 0) <= 18 ||
+        (Number(Q.p2050_relation) || 0) <= 12 ||
+        (Number(Q.government_coalition_dissent) || 0) >= 35;
+    const kwasBlocCrisis =
+        (Number(Q.opposition_list_pressure) || 0) >= 3 ||
+        (Number(Q.government_coalition_dissent) || 0) >= 45 ||
+        (Number(Q.coalition_break_threat) || 0) === 1;
+    const kwasSurging =
+        (Number(Q.left_poll_momentum) || 0) >= 0.3 ||
+        (Number(Q.left_poll) || 0) >= 16;
+    Q.kwasniewski_topic =
+        kwasPresidentialLive &&
+            (Number(Q.winner_reputation) || 54) < 58 ? "candidate" :
+        (kwasBlocCrisis ? "bloc" :
+        ((Number(Q.ko_relation) || 44) >= 18 &&
+            (Number(Q.ko_relation) || 44) <= 38 ? "ko" :
+        (kwasColdPartner ? "partner" :
+        ((Number(Q.pensioner_support) || 6) <= 8 ? "old_electorate" :
+        (kwasSurging ? "surge" : "unity")))));
+    Q.kwasniewski_call_title =
+        Q.kwasniewski_topic == "candidate" ? "A Presidential Endorsement" :
+        (Q.kwasniewski_topic == "bloc" ? "There Is More That Unites Us" :
+        (Q.kwasniewski_topic == "ko"
+            ? "A Word With " + String(Q.ko_leader || "Donald Tusk") :
+        (Q.kwasniewski_topic == "partner" ? "The President's Rolodex" :
+        (Q.kwasniewski_topic == "old_electorate" ? "The Old Electorate" :
+        (Q.kwasniewski_topic == "surge" ? "He Remembers 2001"
+            : "Call Aleksander")))));
+
+    // The hostile deck. Its face is the specific thing he has decided to say,
+    // and it is deliberately narrower than the aligned deck: he only goes on
+    // television when there is one nameable reason to.
+    const kwasRightBargain =
+        (Number(Q.konf_relation) || 2) >= 18 ||
+        String(Q.sejm_list_host || "") == "konf" ||
+        String(Q.sejm_list_host || "") == "pis" ||
+        (Q.formation_coalition_members || []).indexOf("konf") >= 0 ||
+        (Number(Q.coalition_opportunity_pis) || 0) >= 45;
+    Q.kwasniewski_charge =
+        kwasRightBargain ? "konf" :
+        (Q.sld_populist_route_active ||
+            (Number(Q.sld_populist_international_isolation) || 0) >= 20
+                ? "road" :
+        ((Number(Q.constitutional_restraint) || 50) <= 38 ||
+            (Number(Q.institutional_trust) || 44) <= 32 ? "institutions" :
+        ((Number(Q.party_unity) || 58) <= 42 ? "different_left" :
+        ((Number(Q.public_trust) || 43) <= 32 ? "concerns" : "tvn"))));
+    Q.kwasniewski_reproach_title =
+        Q.kwasniewski_charge == "konf" ? "You Cannot Govern With Them" :
+        (Q.kwasniewski_charge == "road" ? "Nie idźcie tą drogą" :
+        (Q.kwasniewski_charge == "institutions" ? "Old Friends Stop Calling" :
+        (Q.kwasniewski_charge == "different_left" ? "A Different Left" :
+        (Q.kwasniewski_charge == "concerns"
+            ? "The Former President Has Concerns" : "He Said It On TVN"))));
     for (const cabinetTimer of [
         "poland_labor_inspection_timer",
         "poland_housing_fund_timer",

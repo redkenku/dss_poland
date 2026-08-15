@@ -15,6 +15,35 @@ if (Q.month_actions > 0) {
     Q.razem_dissent += 2;
 }
 
+// A Trzaskowski-signed rights law becomes a durable succession pressure on
+// the Polish right. PiS can slow the transfer by retaining a viable cabinet,
+// but it cannot turn the clock backwards.
+if (Q.trz_freebie_law == "abortion" || Q.trz_freebie_law == "marriage") {
+    let freebieGain = Q.trz_freebie_law == "marriage" ? 1.25 : 1;
+    if (Number(Q.year) >= 2023 && Q.formation_complete &&
+        !(Q.government_party == "pis" && Q.government_has_confidence &&
+            !Q.caretaker_government)) {
+        freebieGain += 0.75;
+    }
+    if (Q.pis_split || Q.pis_collapsed ||
+        (Q.rozwoj_party_formed && !Q.rozwoj_internal_pis)) {
+        freebieGain += 0.75;
+    }
+    if (Q.government_party == "pis" && Q.government_has_confidence &&
+        !Q.caretaker_government) {
+        freebieGain *= 0.45;
+    }
+    Q.trz_freebie_realign_pressure = Math.min(
+        100,
+        Math.max(0, Number(Q.trz_freebie_realign_pressure) || 0) +
+            freebieGain
+    );
+    Q.trz_freebie_realign_stage =
+        Q.trz_freebie_realign_pressure >= 75 ? 4 :
+        (Q.trz_freebie_realign_pressure >= 55 ? 3 :
+            (Q.trz_freebie_realign_pressure >= 35 ? 2 : 1));
+}
+
 // Foreign-policy friction resolves on the next month turn. Risk meters are
 // consequences, not decorative numbers: coalition actors can overrule a
 // junior minister, a portfolio owner can resist the lead party, and a cabinet
@@ -222,6 +251,7 @@ const monthlyTimers = [
     "hostile_interview_cooldown",
     "razem_guarantee_cooldown",
     "advisor_action_timer",
+    "kwasniewski_card_timer",
     "leadership_reshuffle_timer",
     "poland_faction_congress_timer",
     "poland_local_structures_timer",

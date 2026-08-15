@@ -19,6 +19,18 @@ assert.strictEqual(
   'heading',
   'Prime Minister introduction has no visible event heading'
 );
+const previewPrimeMinister = new Function(
+  'Q',
+  intro.subtitle.stateDependencies[0].fn.$code
+);
+assert.strictEqual(
+  previewPrimeMinister({
+    prime_minister: 'Barbara Nowacka',
+    prime_minister_cabinet_label: 'The third Morawiecki cabinet',
+  }),
+  'Barbara Nowacka',
+  'the pre-click subtitle reuses the previous cabinet label'
+);
 const thirdMorawiecki = game.scenes[
   'poland_events_2021_2023.aug21_cabinet_result'
 ];

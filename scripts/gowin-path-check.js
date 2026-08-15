@@ -1578,6 +1578,15 @@ console.log('gowin-path-check: prime-ministerial family OK');
     familyOrder, 'Electoral families should render in the requested order');
   assert(!relationsPanel.includes('status_rival_kp_committee_name +]</b>'));
   assert(!relationsPanel.includes('status_rival_konf_committee_name +]</b>'));
+  const workingRelations = relationsPanel.split('Political weather')[0];
+  assert(workingRelations.includes(
+    'status_p2050_visible or status_third_way_visible'
+  ), 'Poland 2050 relation must remain visible inside Third Way');
+  assert.strictEqual(
+    (workingRelations.match(/status_third_way_display_name/g) || []).length,
+    2,
+    'Both Third Way component relations must identify the alliance'
+  );
 }
 
 console.log('gowin-path-check: electoral-family display OK');
