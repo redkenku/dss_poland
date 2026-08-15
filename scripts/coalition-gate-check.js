@@ -983,9 +983,11 @@ for (const choice of [
   });
   model.initialise(Q, {mode: 'replacement', sponsor: 'pis', seed_current: false,
     roles: {pis: 'cabinet', p2050: 'cabinet'}});
-  assert(model.preview(Q).blockers.some(function(reason) {
-    return reason.includes('Poland 2050') && reason.includes('relations are too low');
-  }), 'A relationship refusal must name the party and explain the low relations');
+  const lowRelation = model.preview(Q).decisions.p2050;
+  assert.strictEqual(lowRelation.accepted, 0);
+  assert(lowRelation.reason.includes('Polska 2050') &&
+    lowRelation.reason.includes('relations are too low'),
+  'A relationship refusal must name the party and explain the low relations');
 
   Object.assign(Q, {
     p2050_coalition_openness: 0, rival_relation_pis_p2050: 50,
@@ -1049,6 +1051,41 @@ for (const choice of [
   });
   assert.strictEqual(annex.annex, 'Coalition Annex');
   assert.strictEqual(annex.junior_office, 'Minister without portfolio');
+}
+
+{
+  const run = newEngine();
+  normalize(run.engine);
+  const Q = run.Q;
+  const model = globalThis.polandCoalitionModel;
+  Object.assign(Q, {
+    sejm_total: 460, left_seats: 200, ko_seats: 200,
+    pis_seats: 0, p2050_seats: 0, psl_seats: 0, konf_seats: 0,
+    ko_2020_alliance_broken: 1
+  });
+  Q.parliamentary_party_records = [
+    {id: 'left_party', name: 'Lewica', family: 'left', sejm_mps: 200},
+    {id: 'po', name: 'Platforma Obywatelska', family: 'ko', sejm_mps: 200},
+    {id: 'nowoczesna', name: 'Nowoczesna', family: 'independent', sejm_mps: 20},
+    {id: 'ipl', name: 'Inicjatywa Polska', family: 'independent', sejm_mps: 20},
+    {id: 'greens', name: 'Zieloni', family: 'independent', sejm_mps: 20}
+  ];
+  for (const id of ['nowoczesna', 'ipl', 'greens']) {
+    const record = Q.rival_group_records.find(function(item) { return item.id === id; });
+    Object.assign(record, {active: 1, independent: 1, relation: 60,
+      coalition_openness: 70, exclusive_seats: 20});
+  }
+  const parties = model.parties(Q);
+  const civicParent = parties.find(function(party) { return party.id === 'ko'; });
+  assert.strictEqual(civicParent.name, 'Platforma Obywatelska');
+  assert.strictEqual(civicParent.class_name, 'party-po');
+  for (const id of ['nowoczesna', 'ipl', 'greens']) {
+    assert(parties.some(function(party) { return party.id === id && party.seats === 20; }),
+      id + ' was not exposed after the KO alliance dissolved');
+  }
+  assert.strictEqual(parties.reduce(function(total, party) {
+    return total + party.seats;
+  }, 0), 460, 'Dissolved KO splinters were double-counted');
 }
 
 console.log('coalition-gate-check: all assertions passed');

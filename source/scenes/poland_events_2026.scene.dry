@@ -1745,10 +1745,14 @@ const relationshipContribution = Math.max(
 Q.partnership_presidential_roll =
     Math.floor((this.random.uint32() / 4294967296) * 17) - 8;
 Q.partnership_presidential_lobby_bonus = Q.partnership_palace_lobby ? 12 : 0;
+// A Left President can fight the cabinet over credit or implementation, but
+// will not randomly veto a limited equality bill already passed by the Sejm.
+Q.partnership_presidential_alignment_bonus = Q.left_president ? 20 : 0;
 Q.partnership_presidential_score = Math.round(
     48 +
     relationshipContribution +
     Q.partnership_presidential_lobby_bonus +
+    Q.partnership_presidential_alignment_bonus +
     (Q.pres_2025_hostile_president ? -10 : 8) +
     Math.max(-3, Math.min(3, (Number(Q.psl_relation) - 40) * 0.10)) +
     Q.partnership_presidential_roll
@@ -1768,12 +1772,18 @@ Q.public_mood_pending_lgbt_equality_backlash += 9;
         Q.president_name + " vetoes the partnership law";
 } else {
     Q.partnership_presidential_outcome = "Signed";
+    Q.partnership_signature_backlash = Q.left_president ? 8 : 4;
+    Q.partnership_signature_right_pressure = Q.left_president ? 4 : 2;
     Q.last_policy_implementation = "Enacted; implementation scheduled for the next monthly callback";
     Q.president_relation += 4;
     Q.minority_safety += 5;
     Q.partnership_implementation_pending = 1;
     Q.partnership_implementation_due_time = (Number(Q.time) || 0) + 1;
     Q.progressive_credibility += 2;
+    Q.public_mood_pending_lgbt_equality_salience += 8;
+    Q.public_mood_pending_lgbt_equality_backlash +=
+        Q.partnership_signature_backlash;
+    Q.far_right_agenda += Q.partnership_signature_right_pressure;
     Q.news_headline =
         Q.president_name + " signs the partnership law";
 }
@@ -1787,7 +1797,11 @@ legal status; the President has chosen to leave those couples without it.?]
 [? if partnership_presidential_outcome = "Signed": **[+ president_name +]
 signs the bill.** Parliamentary passage has become enacted law. Registries,
 hospitals and courts must still turn Kotula's compromise into ordinary
-practice.?]
+practice.
+[? if partnership_presidential_alignment_bonus > 0: The aligned Left presidency
+added **[+ partnership_presidential_alignment_bonus +]** points toward assent.?]
+**Backlash:** +[+ partnership_signature_backlash +] LGBT-equality backlash ·
++[+ partnership_signature_right_pressure +] far-right agenda pressure.?]
 
 [? if partnership_palace_lobby: The earlier Palace protocol gave the President
 a practical account of registration, hospital access and inheritance. It
@@ -4292,6 +4306,17 @@ Q.news_headline =
     "The opposition files a constructive motion naming " +
     Q.constructive_candidate;
 if (typeof polandCoalitionModel != "undefined") {
+    Q.constructive_sitting_agreement_snapshot = {
+        records: Array.isArray(Q.government_agreement_records)
+            ? JSON.parse(JSON.stringify(Q.government_agreement_records)) : null,
+        members: Array.isArray(Q.government_members)
+            ? Q.government_members.slice() : null,
+        supporters: Array.isArray(Q.government_supporters)
+            ? Q.government_supporters.slice() : null,
+        coalition_seats: Number(Q.coalition_seats) || 0,
+        support_seats: Number(Q.government_support_seats) || 0,
+        agreement_prime_minister: String(Q.government_agreement_prime_minister || "")
+    };
     polandCoalitionModel.reconcile(Q);
     const proposedRoles = {
         lewica: "out", ko: "out", p2050: "out",
@@ -4645,7 +4670,19 @@ if (Q.constructive_passed) {
     Q.news_headline = sikorskiReplacement
         ? "Sikorski replaces the Left with Konfederacja's decisive votes"
         : Q.constructive_candidate + " replaces the prime minister";
+    Q.constructive_sitting_agreement_snapshot = null;
 } else {
+    const sitting = Q.constructive_sitting_agreement_snapshot;
+    if (sitting) {
+        Q.government_agreement_records = sitting.records;
+        Q.government_members = sitting.members;
+        Q.government_supporters = sitting.supporters;
+        Q.coalition_seats = sitting.coalition_seats;
+        Q.government_support_seats = sitting.support_seats;
+        Q.government_agreement_prime_minister = sitting.agreement_prime_minister;
+    }
+    Q.coalition_builder = null;
+    Q.constructive_sitting_agreement_snapshot = null;
     Q.news_headline =
         "The constructive motion fails with " +
         Q.constructive_yes + " votes";
@@ -5994,6 +6031,45 @@ Q.government_support_seats = Math.max(
     formationNonLeftCabinetSeats,
     Math.max(0, Number(Q.snap_formation_base) || 0)
 );
+if (typeof polandCoalitionModel != "undefined") {
+    const independentCabinet = Q.government_party == "independent" ||
+        Q.government_party == "other";
+    const roles = {};
+    if (Q.government_party == "pis") {
+        roles.pis = "cabinet";
+        if (String(Q.snap_formation_pledge_basis || "").includes("Konfederacja")) {
+            roles.konf = "support";
+        }
+    } else {
+        roles.ko = independentCabinet ? "support" : "cabinet";
+    }
+    if (Q.snap_psl_cabinet_committed) {
+        roles.psl = independentCabinet ? "support" : "cabinet";
+    }
+    if (Q.snap_p2050_cabinet_committed) {
+        roles.p2050 = independentCabinet ? "support" : "cabinet";
+    }
+    if (Q.snap_centrum_cabinet_committed &&
+        polandCoalitionModel.parties(Q).some(function(party) {
+            return party.id == "unia_centrum";
+        })) {
+        roles.unia_centrum = independentCabinet ? "support" : "cabinet";
+    }
+    if (leftCabinetParticipation) roles.lewica = "cabinet";
+    else if ((Number(Q.snap_formation_left_votes) || 0) > 0) {
+        roles.lewica = "support";
+    }
+    polandCoalitionModel.initialise(Q, {
+        mode: "snap_formation", candidate: Q.confidence_candidate,
+        candidate_family: Q.government_party == "independent"
+            ? "left" : Q.government_party,
+        sponsor: Q.government_party == "pis"
+            ? "pis" : (leftCabinetParticipation ? "lewica" : "ko"),
+        seed_current: false, roles: roles
+    });
+    const snapAgreement = polandCoalitionModel.preview(Q);
+    if (snapAgreement.ok) polandCoalitionModel.commit(Q);
+}
 Q.caretaker_government = 0;
 Q.snap_election_requested = 0;
 Q.snap_election_held =

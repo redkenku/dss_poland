@@ -104,7 +104,12 @@ function formRivalMajority(fixture) {
     'poland_government_formation.formation_external_cabinet_program'
   );
   run.engine.goToScene('poland_government_formation.cabinet_confidence_roll');
-  assert.strictEqual(run.Q.cabinet_confidence_passed, 1);
+  assert.strictEqual(run.Q.cabinet_confidence_passed, 1,
+    fixture.code + ' confidence failed: yes=' + run.Q.confidence_yes +
+      ', present=' + run.Q.confidence_present +
+      ', threshold=' + run.Q.confidence_threshold +
+      ', contracted=' + run.Q.formation_coalition_support_seats +
+      ', formal=' + run.Q.formation_coalition_seats);
   assert.strictEqual(
     run.Q.confidence_yes,
     run.Q.formation_coalition_seats +

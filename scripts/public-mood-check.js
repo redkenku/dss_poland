@@ -334,6 +334,73 @@ function configureRivalMoodTest(engine, Q) {
     'Queued mood changes did not alter the reform mandate ceiling');
 }
 
+// Public pressure used to be a one-way ratchet: authored content raises issue
+// salience about 15 times more often than it lowers it, and the monthly
+// reversion was capped below that inflow, so every long campaign ended pinned
+// in the "public panic" band no matter how the government performed.
+const MOOD_ISSUES = [
+  'abortion_rights', 'refugee_solidarity', 'border_security', 'vaccination',
+  'social_spending', 'lgbt_equality', 'secular_state', 'rule_of_law',
+  'national_security',
+];
+
+{
+  const {Q} = newEngine('mood-v3-panic-recovers');
+  const model = globalThis.polandPublicMoodModel;
+  // A heavy but survivable event load: three salience-bearing events a month,
+  // at the mean magnitude of the authored writes, for five years.
+  let next = 0;
+  for (let month = 0; month < 60; month += 1) {
+    for (let event = 0; event < 3; event += 1) {
+      Q['public_mood_pending_' + MOOD_ISSUES[next % MOOD_ISSUES.length] +
+        '_salience'] += 8;
+      next += 1;
+    }
+    nextMonth(Q, model);
+  }
+  assert(Q.public_panic_index < 75,
+    'Sustained events pinned public pressure in the panic band: ' +
+      Q.public_panic_index);
+  assert(MOOD_ISSUES.every(function(issue) { return Q[issue + '_salience'] < 100; }),
+    'An issue saturated at maximum salience with no route back down');
+}
+
+{
+  const {Q} = newEngine('mood-v3-delivery-relieves');
+  const model = globalThis.polandPublicMoodModel;
+  // Same shock on one issue, resolved twice: once with the substance behind it
+  // delivered, once without. Delivery has to be the cheaper outcome.
+  const shock = function(state) {
+    state.public_mood_pending_rule_of_law_salience += 30;
+  };
+  shock(Q);
+  for (let month = 0; month < 24; month += 1) nextMonth(Q, model);
+  const neglected = Q.rule_of_law_salience;
+
+  const delivered = newEngine('mood-v3-delivery-relieves-b').Q;
+  shock(delivered);
+  delivered.judicial_legitimacy += 25;
+  delivered.institutional_trust += 15;
+  for (let month = 0; month < 24; month += 1) nextMonth(delivered, model);
+  assert(delivered.rule_of_law_salience < neglected - 5,
+    'Delivering rule-of-law repair did not cool the issue: ' +
+      delivered.rule_of_law_salience + ' vs ' + neglected);
+}
+
+{
+  const {Q} = newEngine('mood-v3-popularity-not-punished');
+  const model = globalThis.polandPublicMoodModel;
+  Q.lgbt_equality_support = 85;
+  const popular = newEngine('mood-v3-popularity-not-punished-b').Q;
+  popular.lgbt_equality_support = 15;
+  for (let month = 0; month < 24; month += 1) {
+    nextMonth(Q, model);
+    nextMonth(popular, model);
+  }
+  assert(Q.lgbt_equality_backlash < popular.lgbt_equality_backlash,
+    'A winning position drew as much counter-mobilisation as a losing one');
+}
+
 const source = fs.readFileSync(
   path.join(projectRoot, 'source', 'scenes', 'poland_advance.scene.dry'),
   'utf8'

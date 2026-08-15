@@ -1003,12 +1003,25 @@ polling momentum his return buys; it applies a standing drag to KO's score in
 every voter group; it reduces the 2022 one-list demand's pressure and
 tactical pull; it adds a permanent term to KO's structural collapse pressure;
 and it gives KO's eventual split a named cause — the years spent arguing about
-one number — rather than a generic succession. An annihilation additionally
-breaks the electoral alliance itself: Inicjatywa Polska and Zieloni leave the
-Civic committee with their mandates, KO's 2025 dissolution convention has no
-three parties left to dissolve, and Lewica chooses in the same scene whether
-to recruit the orphaned progressives, claim the vacancy rhetorically, or hold
-the democratic front together and leave the space open for Hołownia.
+one number — rather than a generic succession.
+
+An annihilation ends the alliance itself. Koalicja Obywatelska is an electoral
+committee rather than a party, and below eight per cent none of its components
+has a reason to stand on somebody else's list: Nowoczesna, Inicjatywa Polska
+and Zieloni all leave with their mandates, the committee record is retired,
+and what remains is Platforma Obywatelska standing alone. That is a
+presentation change as well as a structural one. The browser layer resolves
+every "KO" / "Koalicja Obywatelska" / "Civic Coalition" alias to PO's name,
+badge and colour; every politician still carrying KO's colour reverts to the
+party they actually belong to — PO for most of them, Inicjatywa Polska for
+Nowacka, Nowoczesna for Rosa, Zieloni for Zielińska — and authored prose that
+hard-codes a KO span falls back to PO through a `civic-coalition-dissolved`
+body class. KO's 2025 dissolution convention has no three parties left to
+dissolve and does not fire, Nowacka cannot contest the 2024 KO primary from
+outside KO, and Lewica chooses in the same 2020 scene whether to recruit the
+orphaned progressives (Nowoczesna is not available), claim the vacancy
+rhetorically, or hold the democratic front together and leave the space open
+for Hołownia.
 
 The 2025 count has two ledgers. One judges the player-backed candidate and one
 judges the complete Left field against Biejat and Zandberg's historical 9.09%.

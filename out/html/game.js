@@ -9,10 +9,219 @@
                  month: 'short',
                  day: 'numeric' };
 
+  var SAVE_PREFIX = 'Polish_Red_Autumn_save_v3';
+  var SAVE_FORMAT = 'polish-red-autumn-save';
+  var SAVE_VERSION = 1;
+  var LEGACY_SAVE_PREFIXES = [
+    'Polish Red Autumn_redkenku_save',
+    'Polish_Red_Autumn_budget_v2_save'
+  ];
+
+  var installSaveSystem = function(dendryUI) {
+    var storage = window.localStorage;
+    var autosaveErrorShown = false;
+
+    dendryUI.save_prefix = SAVE_PREFIX;
+
+    // Old, incompatible slots were hidden by earlier prefix changes but still
+    // occupied the same browser quota.
+    for (var index = storage.length - 1; index >= 0; index--) {
+      var key = storage.key(index);
+      if (LEGACY_SAVE_PREFIXES.some(function(prefix) {
+        return key && key.indexOf(prefix) === 0;
+      })) {
+        storage.removeItem(key);
+      }
+    }
+
+    var dataKey = function(slot) {
+      return dendryUI.save_prefix + '_' + slot;
+    };
+    var timestampKey = function(slot) {
+      return dendryUI.save_prefix + '_timestamp_' + slot;
+    };
+    var reportSaveError = function(error, once) {
+      if (once && autosaveErrorShown) return;
+      if (once) autosaveErrorShown = true;
+      var full = error && (error.name === 'QuotaExceededError' ||
+        error.name === 'NS_ERROR_DOM_QUOTA_REACHED');
+      window.alert(full
+        ? 'Browser storage is full. Delete an unused save slot and try again.'
+        : 'The game could not access browser storage. Check this site\'s storage permissions and try again.');
+    };
+    var serializeState = function() {
+      return JSON.stringify({
+        format: SAVE_FORMAT,
+        version: SAVE_VERSION,
+        ifid: dendryUI.game.ifid,
+        state: dendryUI.dendryEngine.getExportableState()
+      });
+    };
+    var parseState = function(serialized) {
+      var save = JSON.parse(serialized);
+      var state = save && save.state;
+      if (save.format !== SAVE_FORMAT || save.version !== SAVE_VERSION ||
+          save.ifid !== dendryUI.game.ifid || !state ||
+          typeof state.sceneId !== 'string' ||
+          !dendryUI.game.scenes[state.sceneId] ||
+          !state.qualities || !state.visits || !state.currentHands ||
+          !Array.isArray(state.currentRandomState) ||
+          !Array.isArray(state.currentContent)) {
+        throw new Error('Incompatible or damaged save file');
+      }
+      return state;
+    };
+    var timestamp = function() {
+      var date = new Date(Date.now()).toLocaleString(
+        undefined, DateOptions
+      );
+      return dendryUI.dendryEngine.state.sceneId + '\n(' + date + ')';
+    };
+    var store = function(slot, serialized) {
+      storage.setItem(dataKey(slot), serialized);
+      storage.setItem(timestampKey(slot), timestamp());
+      autosaveErrorShown = false;
+    };
+    var load = function(serialized) {
+      var state = parseState(serialized);
+      window.justLoaded = true;
+      dendryUI.dendryEngine.setState(state);
+    };
+
+    dendryUI.autosave = function() {
+      try {
+        var serialized = serializeState();
+        var previous = storage.getItem(dataKey('a0'));
+        if (previous) {
+          storage.setItem(dataKey('a1'), previous);
+          storage.setItem(
+            timestampKey('a1'),
+            storage.getItem(timestampKey('a0')) || ''
+          );
+        }
+        store('a0', serialized);
+        dendryUI.populateSaveSlots(dendryUI.max_slots, 2);
+        return true;
+      } catch (error) {
+        reportSaveError(error, true);
+        return false;
+      }
+    };
+
+    dendryUI.saveSlot = function(slot) {
+      try {
+        store(slot, serializeState());
+        dendryUI.populateSaveSlots(dendryUI.max_slots, 2);
+        return true;
+      } catch (error) {
+        reportSaveError(error, false);
+        return false;
+      }
+    };
+
+    dendryUI.loadSlot = function(slot) {
+      try {
+        var serialized = storage.getItem(dataKey(slot));
+        if (!serialized) throw new Error('No save available');
+        load(serialized);
+        dendryUI.hideSaveSlots();
+        window.alert('Loaded.');
+      } catch (error) {
+        window.alert(error && error.message === 'No save available'
+          ? error.message + '.'
+          : 'This save is damaged or belongs to another game version.');
+      }
+    };
+
+    dendryUI.deleteSlot = function(slot) {
+      try {
+        storage.removeItem(dataKey(slot));
+        storage.removeItem(timestampKey(slot));
+        dendryUI.populateSaveSlots(dendryUI.max_slots, 2);
+      } catch (error) {
+        reportSaveError(error, false);
+      }
+    };
+
+    dendryUI.exportSlot = function(slot) {
+      var serialized = storage.getItem(dataKey(slot));
+      if (!serialized) return window.alert('No save available.');
+      var link = document.createElement('a');
+      var url = URL.createObjectURL(new Blob([serialized], {
+        type: 'application/json'
+      }));
+      link.href = url;
+      link.download = 'polish-red-autumn-save.json';
+      link.click();
+      URL.revokeObjectURL(url);
+    };
+
+    dendryUI.importSave = function(inputId) {
+      var input = document.getElementById(inputId);
+      var file = input && input.files && input.files[0];
+      if (!file) return;
+      var reader = new FileReader();
+      reader.onload = function(event) {
+        try {
+          load(event.target.result);
+          dendryUI.hideSaveSlots();
+          window.alert('Loaded.');
+        } catch (error) {
+          window.alert('This save is damaged or belongs to another game version.');
+        } finally {
+          input.value = '';
+        }
+      };
+      reader.onerror = function() {
+        window.alert('The save file could not be read.');
+        input.value = '';
+      };
+      reader.readAsText(file);
+    };
+
+    dendryUI.populateSaveSlots = function(maxSlots, maxAutoSlots) {
+      var ids = [];
+      for (var slot = 0; slot < maxSlots; slot++) ids.push(slot);
+      for (var auto = 0; auto < maxAutoSlots; auto++) ids.push('a' + auto);
+      ids.forEach(function(id) {
+        var saved = Boolean(storage.getItem(dataKey(id)));
+        var saveButton = document.getElementById('save_button_' + id);
+        var deleteButton = document.getElementById('delete_button_' + id);
+        var exportButton = document.getElementById('export_button_' + id);
+        var info = document.getElementById('save_info_' + id);
+        if (!saveButton || !deleteButton || !info) return;
+        saveButton.textContent = saved ? 'Load' : 'Save';
+        saveButton.onclick = saved
+          ? function() { dendryUI.loadSlot(id); }
+          : function() { dendryUI.saveSlot(id); };
+        deleteButton.disabled = !saved;
+        deleteButton.onclick = saved
+          ? function() { dendryUI.deleteSlot(id); }
+          : null;
+        info.textContent = saved
+          ? storage.getItem(timestampKey(id)) || 'Saved game'
+          : 'Empty';
+        if (exportButton) {
+          exportButton.disabled = !saved;
+          exportButton.onclick = saved
+            ? function() { dendryUI.exportSlot(id); }
+            : null;
+        }
+      });
+    };
+
+    dendryUI.quickSave = function() {
+      if (dendryUI.saveSlot('q')) window.alert('Saved.');
+    };
+    dendryUI.quickLoad = function() {
+      dendryUI.loadSlot('q');
+    };
+  };
+
   var main = function(dendryUI) {
     ui = dendryUI;
-    ui.save_prefix = 'Polish_Red_Autumn_budget_v2_save';
     game = ui.game;
+    installSaveSystem(ui);
     var achievementEngine = ui.dendryEngine;
     var engineAchieve = achievementEngine.achieve.bind(achievementEngine);
     achievementEngine.achieve = function(achievementName) {
@@ -7706,7 +7915,7 @@ window.disableGrayMode = function() {
       window.updateMoodBackground();
       var content = document.getElementById('content');
       window.enhancePartyElements(content);
-      initializeCoalitionBuilders();
+      setTimeout(initializeCoalitionBuilders, 0);
       initializeBudgetBoards();
       if (content && window.renderElectionMaps) {
         window.renderElectionMaps(content);

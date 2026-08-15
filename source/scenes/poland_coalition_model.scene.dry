@@ -217,7 +217,10 @@ if (!coalitionHost.polandCoalitionModel ||
         if (!sponsor.major || !party.major) return party.relation;
         if (sponsor.id == "lewica") return number(q[party.id + "_relation"], party.relation);
         if (party.id == "lewica") return number(q[sponsor.id + "_relation"], sponsor.relation);
-        return number(q["rival_relation_" + pairKey(sponsor.id, party.id)], party.relation);
+        const pair = pairKey(sponsor.id, party.id);
+        const relation = number(q["rival_relation_" + pair], party.relation);
+        return pair == "psl_p2050" && !q.third_way_split
+            ? Math.max(62, relation) : relation;
     };
     const programmeDistance = function(first, second) {
         const economic = Math.abs(first.economic_position - second.economic_position) * 0.7;
@@ -490,6 +493,12 @@ if (!coalitionHost.polandCoalitionModel ||
         q.government_supporters = records.filter(function(record) {
             return record.accepted && record.role == "support";
         }).map(function(record) { return record.party_id; });
+        for (const id of ["pis", "ko", "p2050", "psl", "konf"]) {
+            q["ministry_" + id + "_in_cabinet"] =
+                q.government_members.includes(id) ? 1 : 0;
+        }
+        q.left_in_government = q.government_members.includes("lewica") ? 1 : 0;
+        q.left_cabinet_committed = q.left_in_government;
         q.coalition_seats = result.formal_seats;
         q.government_support_seats = result.effective_seats;
         q.formation_coalition_seats = result.formal_seats;
@@ -559,9 +568,11 @@ if (!coalitionHost.polandCoalitionModel ||
             })) continue;
             const additions = [];
             for (const party of corePreview.parties) {
-                if (core.includes(party.id) || party.id == "lewica") continue;
-                const preferredRole = party.major || party.support_only
-                    ? "support" : "cabinet";
+                // Every major-party cabinet core is already enumerated above;
+                // additions are only independent signatories or the
+                // non-aligned support pool.
+                if (party.major || party.id == "lewica") continue;
+                const preferredRole = party.support_only ? "support" : "cabinet";
                 q.coalition_builder.roles[party.id] = preferredRole;
                 let tested = preview(q);
                 let decision = tested.decisions[party.id];
@@ -599,8 +610,14 @@ if (!coalitionHost.polandCoalitionModel ||
             }
             const result = preview(q);
             if (!result.ok) continue;
+            const coreKey = core.slice().sort().join("+");
+            const legacyCode = {
+                "ko+p2050+psl": "ko_third",
+                "p2050+pis+psl": "pis_third",
+                "konf+pis+psl": "pis_konf_psl"
+            }[coreKey] || core.join("_");
             options.push({
-                code: core.join("_"), leader: leader, premier: premiers[leader],
+                code: legacyCode, leader: leader, premier: premiers[leader],
                 draft: JSON.parse(JSON.stringify(q.coalition_builder)), result: result
             });
         }

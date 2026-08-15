@@ -2291,6 +2291,39 @@ if (!publicMoodHost.polandPublicMoodModel) {
     const moveToward = function(value, target, rate, cap) {
         return value + clampMood((target - value) * rate, -cap, cap);
     };
+    // Which substantive trackers mean an issue is actually being handled.
+    // These are competence, capacity and safety measures, so higher is always
+    // better here, regardless of which way the same tracker pushes the support
+    // target: delivering household security lowers demand for social spending
+    // and still counts as delivery. Abortion rights has no delivery measure
+    // because it is a rights question, not a capacity one.
+    const deliveryDrivers = {
+        abortion_rights: [],
+        refugee_solidarity: ["migration_local_service_capacity"],
+        border_security: [
+            "migration_border_competence", "border_security_confidence"
+        ],
+        vaccination: ["health_capacity", "institutional_trust"],
+        social_spending: ["household_security", "health_capacity"],
+        lgbt_equality: ["minority_safety"],
+        secular_state: ["institutional_trust"],
+        rule_of_law: ["judicial_legitimacy", "institutional_trust"],
+        national_security: ["military_trust", "border_security_confidence"]
+    };
+    // How far above its scenario baseline the substance behind an issue sits.
+    // An answered demand stops being an emergency, so this pulls the issue's
+    // resting salience down rather than merely slowing its rise.
+    const deliveryLevel = function(state, issue) {
+        const drivers = deliveryDrivers[issue] || [];
+        if (!drivers.length) return 0;
+        const driverBaseline = driverBaselines[scenarioId(state)];
+        let sum = 0;
+        for (const driver of drivers) {
+            sum += finiteMood(state[driver], driverBaseline[driver]) -
+                driverBaseline[driver];
+        }
+        return Math.max(0, sum / drivers.length);
+    };
     const advanceMood = function(state) {
         state.story_salience_memory =
             clampMood(state.story_salience_memory, 0, 100) * 0.78;
@@ -2319,15 +2352,26 @@ if (!publicMoodHost.polandPublicMoodModel) {
                 state[issue + "_support"], supportTarget(state, issue),
                 0.025, 0.75
             );
+            // The old 1.5/month cap was slower than authored content adds
+            // salience, so every hot issue pinned at 100 and the pressure
+            // reading sat in "public panic" for the rest of the game.
+            const delivery = deliveryLevel(state, issue);
             state[issue + "_salience"] = moveToward(
-                state[issue + "_salience"], baseline[1], 0.05, 1.5
+                state[issue + "_salience"],
+                clampMood(baseline[1] - delivery * 0.8, 10, 100),
+                0.08, 4
             );
             const centrist = clampMood(
                 state[issue + "_centrist_ownership"], 0, 100
             );
+            // Counter-mobilisation scales with the size of the losing side, so
+            // it is not symmetric around 50: an unpopular position organises a
+            // majority against it, a popular one leaves a shrinking minority.
+            // The old absolute term punished winning an argument.
             const backlashTarget = clampMood(
                 20 + state[issue + "_salience"] * 0.25 +
-                Math.abs(state[issue + "_support"] - 50) * 0.35 +
+                Math.max(0, 50 - state[issue + "_support"]) * 0.35 +
+                Math.max(0, state[issue + "_support"] - 50) * 0.12 +
                 Math.max(0, 40 - centrist) * 0.25,
                 15, 85
             );
@@ -6945,6 +6989,17 @@ if (Q.started) {
     } else {
         Q.left_role =
             "in opposition, without ministers or control of public spending";
+    }
+
+    // Repair saves created before a separate Razem runoff winner was counted
+    // as a Left President. The office-holder, not the old ballot key, is the
+    // durable fact after inauguration.
+    if ([
+        "Robert Biedroń", "Adrian Zandberg", "Agnieszka Dziemianowicz-Bąk",
+        "Anna-Maria Żukowska", "Anna Maria Żukowska", "Katarzyna Kotula",
+        "Magdalena Biejat"
+    ].includes(String(Q.president_name || ""))) {
+        Q.left_president = 1;
     }
 
     // Foreign policy is routed through the office Lewica actually holds.

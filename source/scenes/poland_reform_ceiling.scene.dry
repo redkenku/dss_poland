@@ -105,11 +105,12 @@ if (model) {
         Q[model.field + "_conservative_ownership"], 0, 100
     );
     const referendum = Q[issue + "_referendum_mandate"] ? 1 : 0;
+    const backlashCost = Math.max(0, backlash - 50) * 0.28;
     const mandateRaw =
         (support - 50) * 0.40 +
         ownership * 0.10 -
         (conservativeOwnership - progressiveOwnership) * 0.08 -
-        Math.max(0, backlash - 50) * 0.28 +
+        backlashCost +
         (support >= 50 ? salience * 0.05 : -salience * 0.05) +
         (referendum ? 12 : 0);
     const mandate = clamp(mandateRaw, -16, 20);
@@ -301,6 +302,15 @@ if (model) {
     const palaceCommitment = palaceCommitmentValid
         ? clamp(Q[issue + "_palace_commitment"], 0, 4)
         : 0;
+    const palaceRelation = clamp(
+        (number(Q.president_relation, 30) - 45) * 0.30, -15, 18
+    );
+    // A Left President may quarrel with the cabinet, but does not need to be
+    // privately bought into the Left's own programme. The political price is
+    // still paid through the public backlash term above.
+    const leftPalaceAlignment = palaceCamp == "left" && model.progressive
+        ? 36
+        : 0;
     const palaceStance = Math.round(
         50 +
         (palaceCamp == "left"
@@ -308,7 +318,8 @@ if (model) {
             : (palaceCamp == "liberal"
                 ? 4
                 : (palaceCamp == "vacuum" ? -12 : -22))) +
-        clamp((number(Q.president_relation, 30) - 45) * 0.30, -15, 18) +
+        leftPalaceAlignment +
+        palaceRelation +
         palaceCommitment * 9 +
         mandate +
         pollTerm +
@@ -475,10 +486,22 @@ if (model) {
         " (support " + Math.round(support) +
         ", attention " + Math.round(salience) +
         ", backlash " + Math.round(backlash) +
+        ", backlash cost -" + Math.round(backlashCost) +
         (referendum ? ", referendum mandate" : "") +
         ") · polling " + (pollTerm >= 0 ? "+" : "") + Math.round(pollTerm) +
         " · preparation +" + Math.round(prep) +
         (headwind > 0 ? " · European headwind -" + Math.round(headwind) : "") +
+        (blocker == "president" || leftPalaceAlignment > 0
+            ? (leftPalaceAlignment > 0
+                ? " · left-President alignment +" +
+                    Math.round(leftPalaceAlignment)
+                : "") +
+                " · presidential relationship " +
+                (palaceRelation >= 0 ? "+" : "") +
+                Math.round(palaceRelation) +
+                " · Palace commitments +" +
+                Math.round(palaceCommitment * 9)
+            : "") +
         " · Lewica portfolios " + ministryCount +
         (leftHoldsPremiership ? " · Lewica holds the premiership" : "");
 } else {

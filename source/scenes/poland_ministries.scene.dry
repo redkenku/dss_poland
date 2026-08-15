@@ -354,8 +354,19 @@ const ministerRosters = {
         defence: "Władysław Kosiniak-Kamysz"
     },
     konf: {
+        labor: "Przemysław Wipler",
+        equality: "Artur Dziambor",
+        housing: "Ryszard Wilk",
+        health: "Dobromir Sośnierz",
+        digital: "Michał Wawer",
+        science: "Konrad Głębocki",
+        interior: "Jakub Kulesza",
         finance: "Sławomir Mentzen",
-        economy: "Konrad Berkowicz"
+        economy: "Konrad Berkowicz",
+        justice: "Marcin Sypniewski",
+        foreign: "Stanisław Tyszka",
+        agriculture: "Włodzimierz Skalik",
+        defence: "Krzysztof Bosak"
     },
     cabinet: {
         labor: "Gertruda Uścińska",
@@ -373,9 +384,168 @@ const ministerRosters = {
         defence: "Stanisław Koziej"
     }
 };
+// Wings send their own people. A variant lists only the portfolios where that
+// current would nominate somebody other than the party's default bench, so a
+// party the player has pushed left, right or apart arrives in the cabinet
+// table with a visibly different delegation.
+const rosterVariants = {
+    pis_social: {
+        equality: "Barbara Socha",
+        science: "Dariusz Piontkowski",
+        finance: "Artur Soboń",
+        economy: "Waldemar Buda",
+        justice: "Marek Ast",
+        foreign: "Szymon Szynkowski vel Sęk",
+        agriculture: "Henryk Kowalczyk"
+    },
+    pis_hard: {
+        labor: "Janusz Śniadek",
+        equality: "Anna Krupka",
+        health: "Bolesław Piecha",
+        interior: "Maciej Wąsik",
+        finance: "Zbigniew Kuźmiuk",
+        economy: "Janusz Kowalski",
+        justice: "Zbigniew Ziobro",
+        foreign: "Patryk Jaki",
+        agriculture: "Robert Telus",
+        defence: "Antoni Macierewicz"
+    },
+    ko_left: {
+        labor: "Aleksandra Gajewska",
+        equality: "Barbara Nowacka",
+        housing: "Hanna Gill-Piątek",
+        health: "Alicja Chybicka",
+        digital: "Michał Jaros",
+        science: "Katarzyna Lubnauer",
+        justice: "Kamila Gasiuk-Pihowicz",
+        finance: "Janusz Cichoń",
+        economy: "Dariusz Joński",
+        defence: "Cezary Tomczyk"
+    },
+    ko_right: {
+        labor: "Sławomir Nitras",
+        housing: "Waldy Dzikowski",
+        health: "Bartosz Arłukowicz",
+        science: "Andrzej Halicki",
+        interior: "Bartłomiej Sienkiewicz",
+        economy: "Adam Szłapka",
+        justice: "Barbara Dolniak",
+        foreign: "Paweł Kowal",
+        agriculture: "Kazimierz Plocke"
+    },
+    psl_conservative: {
+        equality: "Jarosław Kalinowski",
+        health: "Mieczysław Kasprzak",
+        science: "Andrzej Grzyb",
+        justice: "Marek Sawicki",
+        foreign: "Jan Łopata"
+    },
+    psl_manager: {
+        housing: "Jarosław Rzepa",
+        interior: "Dariusz Klimczak",
+        finance: "Adam Jarubas",
+        economy: "Krzysztof Paszyk",
+        agriculture: "Stefan Krajewski",
+        defence: "Paweł Bejda"
+    },
+    p2050_state: {
+        housing: "Mirosław Suchoń",
+        interior: "Michał Kobosko",
+        finance: "Paulina Hennig-Kloska",
+        economy: "Katarzyna Pełczyńska-Nałęcz",
+        agriculture: "Jarosław Rzepa"
+    },
+    p2050_chadecja: {
+        equality: "Paweł Śliz",
+        science: "Sławomir Ćwik",
+        justice: "Rafał Komarewicz",
+        foreign: "Michał Kobosko",
+        defence: "Paweł Zalewski"
+    },
+    konf_national: {
+        equality: "Karina Bosak",
+        interior: "Witold Tumanowicz",
+        economy: "Bartłomiej Pejo",
+        justice: "Krzysztof Tuduj",
+        foreign: "Robert Winnicki",
+        agriculture: "Andrzej Zapałowski"
+    },
+    konf_braun: {
+        health: "Włodzimierz Skalik",
+        justice: "Roman Fritz",
+        foreign: "Grzegorz Braun",
+        agriculture: "Andrzej Zapałowski"
+    }
+};
+const strongestShare = function(entries) {
+    let best = entries[0];
+    for (const entry of entries) {
+        if (finiteMinistry(Q[entry[0]], 0) > finiteMinistry(Q[best[0]], 0)) {
+            best = entry;
+        }
+    }
+    return best[1];
+};
+const wingFor = function(code) {
+    if (code == "pis") {
+        // A leadership the player helped produce outranks the share ledger:
+        // whoever holds Nowogrodzka picks the bench.
+        const leader = String(Q.pis_leader || "");
+        if (/Ziobro|Jaki|Czarnek|Nawrocki|Szefernaker|Macierewicz/.test(leader)) {
+            return "pis_hard";
+        }
+        if (/Szydło|Morawiecki/.test(leader)) return "pis_social";
+        return strongestShare([
+            ["pis_solidarist_share", "pis_social"],
+            ["pis_market_hardliner_share", "pis_hard"]
+        ]);
+    }
+    if (code == "ko") {
+        return strongestShare([
+            ["ko_classical_liberal_share", "ko_right"],
+            ["ko_social_liberal_share", "ko_left"]
+        ]);
+    }
+    if (code == "psl") {
+        return strongestShare([
+            ["psl_agrarian_pragmatist_share", ""],
+            ["psl_conservative_share", "psl_conservative"],
+            ["psl_coalition_manager_share", "psl_manager"]
+        ]);
+    }
+    if (code == "p2050") {
+        return strongestShare([
+            ["p2050_personalist_share", ""],
+            ["p2050_state_capacity_share", "p2050_state"],
+            ["p2050_christian_dem_share", "p2050_chadecja"]
+        ]);
+    }
+    if (code == "konf") {
+        return strongestShare([
+            ["konf_mentzenite_share", ""],
+            ["konf_nationalist_share", "konf_national"],
+            ["konf_braunist_share", "konf_braun"]
+        ]);
+    }
+    return "";
+};
+const wingLabels = {
+    pis_social: "welfare-conservative bench",
+    pis_hard: "sovereigntist bench",
+    ko_left: "social-liberal bench",
+    ko_right: "classical-liberal bench",
+    psl_conservative: "parliamentary conservatives",
+    psl_manager: "coalition managers",
+    p2050_state: "state-capacity reformers",
+    p2050_chadecja: "Christian democrats",
+    konf_national: "National Movement bench",
+    konf_braun: "Braunist bench"
+};
 const ministerFor = function(code, portfolio) {
+    const variant = rosterVariants[wingFor(code)] || {};
     const roster = ministerRosters[code] || ministerRosters.cabinet;
-    return roster[portfolio] || ministerRosters.cabinet[portfolio];
+    return variant[portfolio] || roster[portfolio] ||
+        ministerRosters.cabinet[portfolio];
 };
 const ownerForPortfolio = function(portfolio) {
     if (portfolio == "agriculture" && pslInCabinet) return "psl";
@@ -496,6 +666,29 @@ const nomineePools = {
     agriculture: ["Wiesław Buż", "Zdzisław Wolski", "Wojciech Konieczny"],
     defence: ["Marcin Kulasek", "Andrzej Szejna", "Tomasz Trela"]
 };
+// A tent is not a merger. The currents that came in keep their own people and
+// expect to be seated on the portfolios they joined over; their names go in
+// front of the Nowa Lewica bench there and nowhere else.
+const tentPools = [
+    [Boolean(Q.ipl_joined_left), {
+        equality: "Paulina Piechna-Więckiewicz",
+        health: "Barbara Nowacka",
+        science: "Barbara Nowacka",
+        justice: "Wanda Nowicka"
+    }],
+    [Boolean(Q.greens_joined_left), {
+        housing: "Urszula Zielińska",
+        science: "Marek Kossakowski",
+        economy: "Urszula Zielińska",
+        agriculture: "Małgorzata Tracz"
+    }],
+    [Boolean(Q.p2050_joined_left) || Boolean(Q.p2050_social_joined_left), {
+        digital: "Mirosław Suchoń",
+        science: "Joanna Mucha",
+        finance: "Paulina Hennig-Kloska",
+        economy: "Katarzyna Pełczyńska-Nałęcz"
+    }]
+];
 const factionPreferences = {
     barons: {
         labor: "Tomasz Trela", science: "Dariusz Wieczorek",
@@ -503,8 +696,13 @@ const factionPreferences = {
         economy: "Dariusz Wieczorek"
     },
     spring: {
-        equality: "Krzysztof Śmiszek", housing: "Joanna Scheuring-Wielgus",
-        digital: "Krzysztof Gawkowski", justice: "Krzysztof Śmiszek"
+        labor: "Magdalena Biejat", equality: "Krzysztof Śmiszek",
+        housing: "Joanna Scheuring-Wielgus", health: "Monika Falej",
+        digital: "Krzysztof Gawkowski", science: "Maciej Gdula",
+        interior: "Marcin Kulasek", finance: "Beata Maciejewska",
+        economy: "Dariusz Standerski", justice: "Anita Kucharska-Dziedzic",
+        foreign: "Robert Biedroń", agriculture: "Zdzisław Wolski",
+        defence: "Marcin Kulasek"
     },
     labor: {
         labor: "Agnieszka Dziemianowicz-Bąk", health: "Wojciech Konieczny",
@@ -513,8 +711,12 @@ const factionPreferences = {
     },
     progressives: {
         labor: "Agnieszka Dziemianowicz-Bąk", equality: "Katarzyna Kotula",
-        digital: "Łukasz Litewka", science: "Łukasz Litewka",
-        justice: "Katarzyna Ueberhan"
+        housing: "Magdalena Biejat", health: "Marek Rutka",
+        digital: "Łukasz Litewka", science: "Joanna Scheuring-Wielgus",
+        interior: "Tomasz Szymański", finance: "Dariusz Standerski",
+        economy: "Paulina Matysiak", justice: "Katarzyna Ueberhan",
+        foreign: "Krzysztof Śmiszek", agriculture: "Wiesław Buż",
+        defence: "Marcin Kulasek"
     },
     razem: {
         housing: "Magdalena Biejat", health: "Marcelina Zawisza",
@@ -544,12 +746,27 @@ if (preserveExisting) {
         if (existing) reservedNominees.add(existing);
     }
 }
+// Coalition partners have already named their own benches. Nobody sits in two
+// chairs, which also stops a tent current being nominated by us and by the
+// party it half left on the same day.
+for (const code of committedCodes) {
+    if (code == "lewica") continue;
+    for (const portfolio of portfolioKeys) {
+        reservedNominees.add(ministerFor(code, portfolio));
+    }
+}
 const usedNominees = new Set(reservedNominees);
 const chooseNominee = function(portfolio) {
     const preference =
         (factionPreferences[dominantLeftCaucus] || {})[portfolio];
     const candidates = [];
     if (preference) candidates.push(preference);
+    for (const entry of tentPools) {
+        if (entry[0] && entry[1][portfolio] &&
+            !candidates.includes(entry[1][portfolio])) {
+            candidates.push(entry[1][portfolio]);
+        }
+    }
     for (const candidate of nomineePools[portfolio]) {
         if (!candidates.includes(candidate)) candidates.push(candidate);
     }
@@ -584,6 +801,12 @@ Q.ministry_reshuffle_changes = 0;
 Q.ministry_coalition_partners = committedCodes
     .map(partyDisplay)
     .join(" · ");
+Q.ministry_partner_wings = committedCodes
+    .filter(function(code) { return wingLabels[wingFor(code)]; })
+    .map(function(code) {
+        return partyDisplay(code) + " sends its " + wingLabels[wingFor(code)];
+    })
+    .join("; ");
 
 for (const portfolio of portfolioKeys) {
     const partyKey = portfolio + "_minister_party";
@@ -699,6 +922,9 @@ and formal Konfederacja receives Finance and Development.?]
 ministry_coalition_partners +]**. KO treats Finance and Foreign Affairs as
 senior claims.[? if ministry_psl_in_cabinet = 1: PSL treats Agriculture and
 Defence as senior claims, but those claims can be negotiated.?]?]
+
+[? if ministry_partner_wings != "": Which faces arrive depends on who currently
+runs each partner: **[+ ministry_partner_wings +]**.?]
 
 <div class="ministry-grid">
 <div><span>Labour & Social Policy</span><b>[+ labor_minister_party +] · [+ labor_minister +]</b></div>

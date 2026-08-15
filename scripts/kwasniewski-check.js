@@ -45,6 +45,8 @@ function viewIf(ctx, id) {
 const sceneIds = [
   'poland_kwasniewski', 'poland_kwasniewski.approval_2020',
   'poland_kwasniewski.congress_2021', 'poland_kwasniewski.runoff_2025',
+  'poland_kwasniewski.presidential_victory',
+  'poland_kwasniewski.presidential_victory_continue',
   'poland_kwasniewski.broker', 'poland_kwasniewski.road_sign',
   'poland_kwasniewski.approval_take', 'poland_kwasniewski.congress_concede',
   'poland_kwasniewski.road_sign_break',
@@ -235,6 +237,93 @@ assert.strictEqual(ctx.Q.kwasniewski_2025_tone, 'vindicated');
 ctx.Q.resources = 5;
 ctx.choose('poland_kwasniewski.runoff_price');
 assert(!viewIf(ctx, 'poland_kwasniewski.runoff_2025'), 'runoff beat repeatable');
+
+// A neutral or aligned Kwaśniewski explicitly rewards a Left presidential win
+// in either election; hostile and estranged runs do not receive the payoff.
+const victoryCases = [
+  { year: 2020, winner: 'left', name: 'Robert Biedroń',
+    marker: "Poland's first openly gay" },
+  { year: 2025, winner: 'razem', name: 'Adrian Zandberg',
+    marker: 'disciplined critic' },
+  { year: 2025, winner: 'left', name: 'Agnieszka Dziemianowicz-Bąk',
+    marker: 'labour inspectorate' },
+  { year: 2020, winner: 'left', name: 'Anna-Maria Żukowska',
+    marker: 'museum' },
+  { year: 2020, winner: 'left', name: 'Katarzyna Kotula',
+    marker: 'petitioners' },
+  { year: 2025, winner: 'left', name: 'Magdalena Biejat',
+    marker: 'homes people can afford' },
+];
+for (const victory of victoryCases) {
+  const probe = newEngine();
+  probe.Q.continuous_campaign = 1;
+  probe.Q.year = victory.year;
+  probe.Q.kwasniewski_alignment = 40;
+  if (victory.year === 2020) {
+    probe.Q.pres_runoff_complete = 1;
+    probe.Q.pres_runoff_winner_key = victory.winner;
+    probe.Q.pres_runoff_winner_name = victory.name;
+  } else {
+    probe.Q.pres_2025_runoff_done = 1;
+    probe.Q.pres_2025_winner_key = victory.winner;
+    probe.Q.pres_2025_winner = victory.name;
+  }
+  assert(viewIf(probe, 'poland_kwasniewski.presidential_victory'),
+    victory.year + ' neutral victory payoff did not fire');
+  if (victory.year === 2025) {
+    const queued = probe.engine._compileChoices(
+      game.scenes['poland_event_queue.all_events']) || [];
+    assert(queued.some(function(choice) {
+      return choice.id === 'poland_kwasniewski.presidential_victory';
+    }), '2025 victory payoff did not reach the event desk');
+  }
+  const trustBeforeVictory = probe.Q.public_trust;
+  const unityBeforeVictory = probe.Q.party_unity;
+  probe.engine.goToScene('poland_kwasniewski.presidential_victory');
+  assert.strictEqual(probe.Q.kwasniewski_presidential_payoff_year,
+    victory.year);
+  assert.strictEqual(probe.Q.kwasniewski_victory_candidate, victory.name);
+  const renderedVictory = JSON.stringify(probe.engine.state.currentContent);
+  assert(renderedVictory.includes(victory.marker),
+    victory.name + ' did not render unique victory prose');
+  for (const other of victoryCases) {
+    if (other !== victory) assert(!renderedVictory.includes(other.marker),
+      victory.name + ' rendered ' + other.name + "'s victory prose");
+  }
+  assert(probe.Q.public_trust > trustBeforeVictory,
+    victory.year + ' victory gave no trust payoff');
+  assert(probe.Q.party_unity > unityBeforeVictory,
+    victory.year + ' victory gave no unity payoff');
+  assert(/Congratulated and endorsed/.test(probe.Q.kwasniewski_verdict),
+    victory.year + ' victory recorded no explicit endorsement');
+  assert(!viewIf(probe, 'poland_kwasniewski.presidential_victory'),
+    victory.year + ' victory payoff repeatable');
+}
+
+ctx = newEngine();
+ctx.Q.year = 2020;
+ctx.Q.pres_runoff_complete = 1;
+ctx.Q.pres_runoff_winner_key = 'left';
+ctx.Q.pres_runoff_winner_name = 'Robert Biedroń';
+ctx.Q.kwasniewski_alignment = 40;
+ctx.engine.goToScene(
+  'poland_presidential_election.runoff_consequences_continue');
+assert.strictEqual(ctx.engine.state.sceneId,
+  'poland_kwasniewski.presidential_victory',
+  '2020 runoff did not route to the victory payoff');
+
+ctx = newEngine();
+ctx.Q.continuous_campaign = 1;
+ctx.Q.year = 2025;
+ctx.Q.pres_2025_runoff_done = 1;
+ctx.Q.pres_2025_winner_key = 'left';
+ctx.Q.kwasniewski_alignment = 39;
+assert(!viewIf(ctx, 'poland_kwasniewski.presidential_victory'),
+  'hostile victory received Kwaśniewski payoff');
+ctx.Q.kwasniewski_alignment = 60;
+ctx.Q.kwasniewski_estranged = 1;
+assert(!viewIf(ctx, 'poland_kwasniewski.presidential_victory'),
+  'estranged victory received Kwaśniewski payoff');
 
 ctx = newEngine();
 ctx.Q.continuous_campaign = 1;

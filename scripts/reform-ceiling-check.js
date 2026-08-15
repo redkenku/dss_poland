@@ -226,7 +226,41 @@ function completeMajorReformVote(engine, choose, Q) {
   Q.reform_pressure_palace_override = 0;
 }
 
-// --- 3. partner conservatism survives the rework --------------------------
+// --- 3. an aligned Left President signs the Left's flagship programme -----
+{
+  const { engine, Q } = newEngine('reform-left-president-alignment');
+  leftLedCabinet(Q);
+  Q.ministry_ko_in_cabinet = 0;
+  Q.ministry_psl_in_cabinet = 0;
+  Q.president_name = 'Adrian Zandberg';
+  Q.left_president = 0;
+  Q.president_relation = 18;
+  Q.labor_reform_progress = 60;
+  Q.social_spending_support = 96;
+  Q.social_spending_salience = 100;
+  Q.social_spending_backlash = 100;
+  Q.social_spending_left_ownership = 6;
+  Q.social_spending_progressive_ownership = 0;
+  Q.social_spending_conservative_ownership = 100;
+  Q.eu_progressive_headwind = 6;
+  engine.goToScene('poland_normalize');
+  assert.strictEqual(Q.left_president, 1,
+    'An existing Zandberg save was not repaired as a Left presidency');
+
+  const labor = scoreCeiling(engine, Q, 'labor', 4);
+  assert.strictEqual(Q.reform_ceiling_palace_tier, 4,
+    'Zandberg vetoed the full Left labour programme despite an electoral mandate');
+  assert(labor.blocker !== 'president',
+    'The aligned Left Palace remained the labour bill\'s veto player');
+  assert(Q.reform_ceiling_breakdown.includes('backlash cost -14'),
+    'The score hid the public backlash cost');
+  assert(Q.reform_ceiling_breakdown.includes('left-President alignment +36'),
+    'The score hid the aligned Palace boost');
+  assert(Q.reform_ceiling_breakdown.includes('presidential relationship -8'),
+    'The score hid the separate relationship cost');
+}
+
+// --- 4. partner conservatism survives the rework --------------------------
 {
   const { engine, Q } = newEngine('reform-ceiling-partner-conservatism');
   leftLedCabinet(Q);
@@ -263,7 +297,7 @@ function completeMajorReformVote(engine, choose, Q) {
     'PSL must be named as the binding veto player, not the Palace');
 }
 
-// --- 4. "find the common line" lands on the reachable tier in one move ----
+// --- 5. "find the common line" lands on the reachable tier in one move ----
 {
   const { engine, choose, Q } = newEngine('reform-common-line');
   leftLedCabinet(Q);
@@ -320,7 +354,7 @@ function completeMajorReformVote(engine, choose, Q) {
   assert.strictEqual(Q.reform_pressure_pending, 0);
 }
 
-// --- 5. the negotiation is finite ----------------------------------------
+// --- 6. the negotiation is finite ----------------------------------------
 {
   const { engine, choose, Q } = newEngine('reform-rounds-finite');
   leftLedCabinet(Q);
@@ -362,7 +396,7 @@ function completeMajorReformVote(engine, choose, Q) {
     'The round counter must be exhausted after three paid rounds');
 }
 
-// --- 6. the slate is three of nine, and it is permanent -------------------
+// --- 7. the slate is three of nine, and it is permanent -------------------
 {
   const { engine, choose, Q } = newEngine('reform-slate-cap');
   engine.goToScene('poland_normalize');
@@ -426,7 +460,7 @@ function completeMajorReformVote(engine, choose, Q) {
   );
 }
 
-// --- 7. Trzaskowski's explicit signature pledge binds the Palace ----------
+// --- 8. Trzaskowski's explicit signature pledge binds the Palace ----------
 {
   const { engine, Q } = newEngine('reform-trzaskowski-signature-pledge');
   leftLedCabinet(Q);
@@ -446,7 +480,7 @@ function completeMajorReformVote(engine, choose, Q) {
     'Trzaskowski reneged on his abortion-restoration signature pledge');
 }
 
-// --- 8. enacted marriage equality supersedes the EU-recognition event -----
+// --- 9. enacted marriage equality supersedes the EU-recognition event -----
 {
   const { engine, Q } = newEngine('marriage-equality-supersedes-eu-event');
   Object.assign(Q, {
@@ -464,7 +498,7 @@ function completeMajorReformVote(engine, choose, Q) {
     'Signed marriage equality must suppress the obsolete EU ruling event');
 }
 
-// --- 9. a written coalition promise breaks one partner veto, up to tier 3 --
+// --- 10. a written coalition promise breaks one partner veto, up to tier 3 -
 {
   const { engine, choose, Q } = newEngine('reform-coalition-promise');
   leftLedCabinet(Q);
