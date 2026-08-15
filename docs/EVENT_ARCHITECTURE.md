@@ -146,6 +146,33 @@ silently change a party leader. The `poland_leadership_events` scenes establish
 the current full-event pattern: outgoing and incoming holder, incoming bloc,
 reason for timing, and at least two defensible Lewica responses.
 
+## Cross-event callbacks
+
+A chain is not a sequence of events on the same subject; it is a decision that
+is still being read years later. The manifest's `delayedCallbacks` field only
+records that a choice wrote something, so it cannot tell whether anything ever
+reads it. Cross-file callbacks are therefore asserted directly by
+[`chain-callback-check.js`](../scripts/chain-callback-check.js)
+(`npm run check:chains`), which drives the later scene from both branches of
+the earlier decision and fails when the two produce the same state.
+
+The links it currently protects:
+
+| Earlier decision | Later reader |
+| --- | --- |
+| January 2023 KPO bill price (`kpo_bill_quality`) | April 2024 payment, then the October 2025 review through `kpo_shortcut_debt` |
+| 2023–2024 Gaza line (`gaza_stance_score`, `gaza_chain_stage`) | February 2026 ambassador boycott: consistency, reversal, the gated committee inquiry and the procedural broker's route |
+| 2024 protest stance (`last_generation_stance`) | April 2027 repeal crackdown, where the escalating-penalty regime the party demanded is used against the Women's Strike |
+| April 2024 transport bill (`transport_bill_2024_filed`) | 2026 gmina service floor, which inherits its costing |
+| 2023 referendum answer (`pension_defence_credit`) | May 2026 SAFE veto, where it unlocks the social-floor bargain |
+| Breaking a host list at the 2023 march (`campaign_march_broke_host_discipline`) | 2023 seat arithmetic: the host cannot whip the deputies, and KO counts them only if it still trusts them |
+
+When adding to a chain, prefer wiring an existing later event over authoring a
+new terminal one, and make at least one branch of the earlier decision change
+what is *available* later rather than only what is written in the aftermath.
+A record that only produces a sentence is a callback; a record that opens or
+closes a route is a chain.
+
 ## Prose audit grades
 
 Every dated event carries a source comment in the form

@@ -1,0 +1,498 @@
+title: Local affairs
+
+@router
+# prose-audit: Grade R — Routing entry only; it selects the due local file and audits belong to the destination events.
+title: Local-affairs desk
+new-page: true
+tags: poland_event
+priority: 24
+order: 90
+max-visits: 6
+view-if: continuous_campaign = 1 and local_affairs_dispatchable = 1
+on-arrival: {!
+Q.last_local_affairs_time = Number(Q.time) || 0;
+!}
+go-to: warsaw_campaign if local_affairs_next = "warsaw_campaign"; warsaw_result if local_affairs_next = "warsaw_result"; sutryk_term_limit if local_affairs_next = "sutryk"; krakow_clean_transport if local_affairs_next = "krakow"; rural_bus_exclusion if local_affairs_next = "buses"; warsaw_alcohol_policy if local_affairs_next = "alcohol"; finish if local_affairs_next = ""
+
+@warsaw_campaign
+# prose-audit: Grade A — The vacancy follows Trzaskowski's actual oath, names every live candidate and gives Lewica a choice between its own organisation and a negotiated KO succession.
+title: Warsaw chooses a successor
+subtitle: Kierwiński, the PiS challenger, Hołownia and a local Left candidacy contest the capital
+face-image: img/poland/events/local-election-2024.webp
+new-page: true
+on-arrival: {!
+Q.warsaw_succession_campaign_done = 1;
+Q.warsaw_succession_result_due_time = (Number(Q.time) || 0) + 2;
+Q.warsaw_pis_candidate = Number(Q.warsaw_succession_oath_year) <= 2020
+    ? "Patryk Jaki" : "Tobiasz Bocheński";
+const biejatAligned = Q.biejat_party == "Razem" && Q.razem_active &&
+    Q.razem_in_left && (Q.left_dominant_current == "razem" ||
+        (Number(Q.razem_strength) || 0) >= 23);
+const springStatus = String(Q.spring_org_status || "");
+const wiosnaInside = (Q.spring_active && Q.spring_in_left) ||
+    Q.spring_merged || [
+        "merged_current", "federal_partner", "electoral_partner"
+    ].includes(springStatus);
+Q.warsaw_left_candidate = biejatAligned
+    ? "Magdalena Biejat"
+    : (wiosnaInside ? "Agata Diduszko-Zyglewska" : "Anna-Maria Żukowska");
+if (Number(Q.warsaw_succession_roll) < 0) {
+    Q.warsaw_succession_roll = Math.floor(
+        (this.random.uint32() / 4294967296) * 100
+    );
+}
+Q.news_headline = "Trzaskowski's presidency opens the succession to Warsaw City Hall";
+!}
+
+= Warsaw after the oath
+
+Rafał Trzaskowski has taken the presidential oath. The office he cannot carry
+with him is the presidency of Warsaw, and the capital now has to choose a
+successor without turning this into another full national campaign.
+
+KO puts forward **Marcin Kierwiński**. PiS answers with **[+
+warsaw_pis_candidate +]**. **Szymon Hołownia** offers Poland 2050 a city from
+which to survive the next national cycle. Our organisers can run **[+
+warsaw_left_candidate +]**, or accept that keeping City Hall out of PiS hands
+matters more than testing the Left's strength alone.
+
+- @warsaw_run_left
+- @warsaw_support_ko
+- @warsaw_support_pis
+
+@warsaw_run_left
+title: Run [+ warsaw_left_candidate +]
+subtitle: Build a Warsaw organisation even if the contest ends in another liberal mayoralty.
+on-arrival: warsaw_succession_strategy = "Run Left"; ko_relation -= 5; local_network += 3; turnout_readiness += 2; news_headline = "Lewica files its own Warsaw mayoral campaign"
+go-to: finish
+
+@warsaw_support_ko
+title: Endorse Marcin Kierwiński
+subtitle: Transfer the Left's ten-point winning chance to KO and make the anti-PiS bargain explicit.
+on-arrival: warsaw_succession_strategy = "Support KO"; ko_relation += 8; razem_dissent += 4; news_headline = "Lewica endorses Kierwiński for Warsaw mayor"
+go-to: finish
+
+@warsaw_support_pis
+title: Offer support to [+ warsaw_pis_candidate +]
+choose-if: 0 = 1
+unavailable-subtitle: PiS would not accept Lewica's support anyway.
+go-to: finish
+
+@warsaw_result
+# prose-audit: Grade A — One stored roll resolves a fixed four-way field, then the named winner changes Warsaw, inter-party relations and any incompatible office actually held.
+title: Warsaw has a new mayor
+face-image: img/poland/events/local-election-2024.webp
+new-page: true
+on-arrival: {!
+if (!Q.warsaw_succession_result_done) {
+    const roll = Math.max(0, Math.min(99, Number(Q.warsaw_succession_roll) || 0));
+    if (Q.warsaw_succession_strategy == "Support KO") {
+        Q.warsaw_succession_result = roll < 75
+            ? "ko" : (roll < 90 ? "pis" : "p2050");
+    } else {
+        Q.warsaw_succession_result = roll < 65
+            ? "ko" : (roll < 80 ? "pis" : (roll < 90 ? "left" : "p2050"));
+    }
+    const model = (typeof window !== "undefined"
+        ? window : globalThis).polandElectionModel;
+    if (Q.warsaw_succession_result == "ko") {
+        Q.warsaw_mayor = "Marcin Kierwiński";
+        Q.warsaw_mayor_party = "ko";
+        model.recordRegionalEffect(Q, {
+            key: "warsaw-mayor-ko", families: {ko: 0.15}, countyIds: ["1465"]
+        });
+    } else if (Q.warsaw_succession_result == "pis") {
+        Q.warsaw_mayor = Q.warsaw_pis_candidate;
+        Q.warsaw_mayor_party = "pis";
+        Q.pis_poll_momentum += 0.25;
+        model.recordRegionalEffect(Q, {
+            key: "warsaw-mayor-pis", families: {pis: 0.15}, countyIds: ["1465"]
+        });
+    } else if (Q.warsaw_succession_result == "left") {
+        Q.warsaw_mayor = Q.warsaw_left_candidate;
+        Q.warsaw_mayor_party = "left";
+        Q.ko_relation -= 18;
+        Q.local_network += 8;
+        Q.urban_progressive_support += 6;
+        Q.warsaw_mayoral_income_bonus = 1;
+        Q.party_income = (Number(Q.member_dues) || 0) +
+            (Number(Q.seat_subvention) || 0) + 1;
+        model.recordRegionalEffect(Q, {
+            key: "warsaw-mayor-left", families: {left: 0.15}, countyIds: ["1465"]
+        });
+    } else {
+        Q.warsaw_mayor = "Szymon Hołownia";
+        Q.warsaw_mayor_party = "p2050";
+        Q.holownia_warsaw_mayor = 1;
+        Q.holownia_sejm_eligible = 0;
+        Q.p2050_warsaw_mayor_poll_bonus = 2;
+        model.recordRegionalEffect(Q, {
+            key: "warsaw-mayor-p2050", families: {p2050: 0.15}, countyIds: ["1465"]
+        });
+        if (Q.formation_marshal_nominee == "Szymon Hołownia") {
+            Q.formation_marshal_nominee = "Marek Sawicki";
+        }
+        if (Q.democratic_candidate == "Szymon Hołownia") {
+            Q.democratic_candidate = "Katarzyna Pełczyńska-Nałęcz";
+            Q.confidence_candidate = Q.democratic_candidate;
+        }
+        if (Q.prime_minister == "Szymon Hołownia") {
+            Q.office_incompatibility_kind = "Prime Minister and Mayor of Warsaw";
+            Q.prime_minister = "Prime-ministerial succession pending";
+            Q.office_incompatibility_pending = 1;
+        } else if (Q.sejm_speaker == "Szymon Hołownia") {
+            Q.office_incompatibility_kind = "Sejm Marshal and Mayor of Warsaw";
+            Q.sejm_speaker = "Sejm election pending after Warsaw mayoral inauguration";
+            Q.office_incompatibility_pending = 1;
+        } else {
+            for (const portfolio of [
+                "labor", "equality", "housing", "health", "digital", "science",
+                "interior", "finance", "economy", "justice", "foreign",
+                "agriculture", "defence"
+            ]) {
+                if (Q[portfolio + "_minister"] != "Szymon Hołownia") continue;
+                Q.office_incompatibility_kind = "Cabinet minister and Mayor of Warsaw";
+                Q.office_incompatibility_portfolio = portfolio;
+                Q.office_incompatibility_previous_minister_party =
+                    Q[portfolio + "_minister_party"];
+                Q[portfolio + "_minister"] = "appointment pending after Warsaw mayoral inauguration";
+                Q.office_incompatibility_pending = 1;
+                break;
+            }
+        }
+    }
+    Q.warsaw_succession_result_done = 1;
+    Q.news_headline = Q.warsaw_mayor + " wins the Warsaw mayoralty";
+}
+!}
+
+= The capital counts
+
+[? if warsaw_succession_result = "ko": **Marcin Kierwiński** keeps Warsaw in
+KO hands. The endorsement is remembered as part of the majority which stopped
+PiS, while KO's city organisation gains the confidence of incumbency.?]
+
+[? if warsaw_succession_result = "pis": **[+ warsaw_pis_candidate +]** wins
+the upset. Warsaw returns to the political atmosphere of the years when a
+Kaczyński governed the capital: PiS treats City Hall as proof that no liberal
+stronghold is permanent.?]
+
+[? if warsaw_succession_result = "left": **[+ warsaw_left_candidate +]**
+breaks through. KO treats the separate campaign as a betrayal, but a Left mayor
+now supplies organisers, policy credibility and one additional resource every
+January and July.?]
+
+[? if warsaw_succession_result = "p2050": **Szymon Hołownia** wins City Hall.
+He cannot also sit in the Sejm, chair it, lead the cabinet or hold a ministry;
+Poland 2050 nevertheless gains a durable two-point national polling advantage
+from its municipal base.?]
+
+- @warsaw_result_vacancy
+- @warsaw_result_close
+
+@warsaw_result_vacancy
+title: Resolve Hołownia's incompatible office
+view-if: office_incompatibility_pending = 1
+go-to: poland_office_authority.resolve
+
+@warsaw_result_close
+title: Close the Warsaw count
+view-if: office_incompatibility_pending = 0
+go-to: finish
+
+@sutryk_term_limit
+# prose-audit: Grade A — Sutryk's charges are described as allegations, Bodnar's campaign baggage remains attributed, and the player must connect personal patronage to the general two-term rule.
+title: Wrocław after the runoff
+subtitle: Sutryk's legal exposure reaches the argument over mayoral term limits
+face-image: img/poland/events/local-election-2024.webp
+new-page: true
+on-arrival: sutryk_term_limit_done = 1; news_headline = "The Sutryk affair turns mayoral term limits into a Left decision"
+
+= November 2024 — A mandate under investigation
+
+Jacek Sutryk survived the Wrocław runoff against Third Way-backed **Izabela
+Bodnar**, after a campaign in which his municipal machine and Collegium Humanum
+connections met allegations concerning Bodnar's family business. Neither set
+of allegations is a verdict. The later charges against Sutryk are now a fact
+the coalition must answer.
+
+His allies also lobby to abolish the two-term mayoral limit. A rule applying to
+every mayor has become inseparable from one mayor's effort to remain in office.
+
+- @sutryk_resign
+- @sutryk_audit
+- @sutryk_defend
+
+@sutryk_resign
+title: Demand Sutryk's resignation and retain the two-term limit
+on-arrival: {!
+Q.mayor_term_limit_stance = "Retain two terms; Sutryk should resign";
+Q.institutional_trust += 6;
+Q.public_trust += 4;
+Q.local_network -= 4;
+Q.barons_dissent += 6;
+(typeof window !== "undefined" ? window : globalThis).polandElectionModel
+    .recordRegionalEffect(Q, {
+        key: "wroclaw-sutryk-resign", families: {left: -0.12}, countyIds: ["0264"]
+    });
+Q.news_headline = "Lewica breaks with Sutryk and keeps the mayoral term limit";
+!}
+go-to: finish
+
+@sutryk_audit
+title: Suspend cooperation and demand an independent audit
+on-arrival: {!
+Q.mayor_term_limit_stance = "Decide after an independent audit";
+Q.institutional_trust += 3;
+Q.local_network -= 2;
+(typeof window !== "undefined" ? window : globalThis).polandElectionModel
+    .recordRegionalEffect(Q, {
+        key: "wroclaw-sutryk-audit", families: {left: -0.06}, countyIds: ["0264"]
+    });
+Q.news_headline = "Lewica suspends the Wrocław bargain pending an independent audit";
+!}
+go-to: finish
+
+@sutryk_defend
+title: Defend Sutryk and support abolishing the limit
+on-arrival: {!
+Q.mayor_term_limit_stance = "Abolish the two-term mayoral limit";
+Q.local_network += 6;
+Q.barons_strength += 4;
+Q.institutional_trust -= 7;
+Q.public_trust -= 5;
+Q.ko_relation -= 6;
+(typeof window !== "undefined" ? window : globalThis).polandElectionModel
+    .recordRegionalEffect(Q, {
+        key: "wroclaw-sutryk-defend", families: {left: 0.08}, countyIds: ["0264"]
+    });
+Q.news_headline = "Lewica protects Sutryk and joins the campaign against term limits";
+!}
+go-to: finish
+
+@krakow_clean_transport
+# prose-audit: Grade A — Kraków's zone is treated as a distributional municipal policy with distinct city and rural constituencies, not as a generic climate thermometer.
+title: Kraków's clean-transport boundary
+subtitle: Cleaner air inside the city can move costs onto commuters outside it
+face-image: img/poland/cards/public-transport.webp
+new-page: true
+on-arrival: krakow_clean_transport_done = 1; news_headline = "Kraków's clean-transport zone divides the city from its commuter belt"
+
+= Early 2026 — Who pays for cleaner air?
+
+Kraków's clean-transport zone is now a practical rule: which vehicles enter,
+who receives an exemption and whether a worker outside the city can afford the
+replacement. The health case is strongest in Kraków; the distributional anger
+is strongest in rural Małopolska.
+
+- @krakow_defend
+- @krakow_narrow
+- @krakow_oppose
+
+@krakow_defend
+title: Fund replacement help and defend the full zone
+subtitle: Pay for scrappage, park-and-ride and regional buses instead of pretending every commuter owns a new car.
+on-arrival: {!
+Q.climate_state_capacity += 6;
+Q.climate_policy_pressure += 4;
+Q.rural_support += 2;
+Q.public_trust += 3;
+Q.urban_progressive_support += 5;
+const model = (typeof window !== "undefined" ? window : globalThis).polandElectionModel;
+model.recordRegionalEffect(Q, {key: "krakow-sct-city", families: {left: 0.08}, countyIds: ["1261"]});
+model.recordRegionalEffect(Q, {key: "krakow-sct-rural", families: {left: 0.04}, provinceIds: ["12"], settlement: "rural"});
+Q.news_headline = "Mitigation turns Kraków's clean zone into a regional transport programme";
+!}
+go-to: finish
+
+@krakow_narrow
+title: Narrow the zone and delay the strictest standard
+on-arrival: {!
+Q.climate_state_capacity -= 2;
+Q.rural_support += 3;
+Q.public_trust -= 2;
+Q.urban_progressive_support -= 2;
+const model = (typeof window !== "undefined" ? window : globalThis).polandElectionModel;
+model.recordRegionalEffect(Q, {key: "krakow-sct-narrow-city", families: {left: -0.04}, countyIds: ["1261"]});
+model.recordRegionalEffect(Q, {key: "krakow-sct-narrow-rural", families: {left: 0.06}, provinceIds: ["12"], settlement: "rural"});
+Q.news_headline = "Kraków's clean zone shrinks before its strictest rules begin";
+!}
+go-to: finish
+
+@krakow_oppose
+title: Oppose the zone as a regressive charge on ordinary cars
+on-arrival: {!
+Q.climate_state_capacity -= 5;
+Q.climate_policy_pressure -= 3;
+Q.rural_support += 5;
+Q.public_trust += 1;
+Q.urban_progressive_support -= 5;
+const model = (typeof window !== "undefined" ? window : globalThis).polandElectionModel;
+model.recordRegionalEffect(Q, {key: "krakow-sct-oppose-city", families: {left: -0.08}, countyIds: ["1261"]});
+model.recordRegionalEffect(Q, {key: "krakow-sct-oppose-rural", families: {left: 0.10}, provinceIds: ["12"], settlement: "rural"});
+Q.news_headline = "Lewica turns against Kraków's clean-transport zone";
+!}
+go-to: finish
+
+@rural_bus_exclusion
+# prose-audit: Grade A — The event reads prior Wiosna delivery and distinguishes a cabinet appropriation from an opposition bill.
+title: The counties the timetable left behind
+subtitle: Rural transport becomes a test of whether a gmina service floor is law, legislation or another grant contest
+face-image: img/poland/cards/rural-hinge.webp
+new-page: true
+on-arrival: rural_bus_exclusion_done = 1; news_headline = "Bus exclusion puts the gmina transport floor back on the desk"
+
+= Spring 2026 — A service measured by the missing bus
+
+The audit map is familiar to anyone who has campaigned beyond a large city:
+gminas where school, work, a clinic and a county office cannot all be reached
+by public transport on the same day.
+
+[? if gmina_transport_floor_enacted: Wiosna's transport floor is already law.
+The question is whether we defend its empty seats and weak routes as the cost
+of universal service.?][? if not gmina_transport_floor_enacted and
+left_in_government: Lewica has cabinet authority and can fund the floor now.?]
+[? if not gmina_transport_floor_enacted and not left_in_government: We can
+write and campaign for the floor; the cabinet still controls implementation.?]
+
+[? if transport_bill_2024_filed = 1: The costing already exists. In April 2024
+we answered Ostatnie Pokolenie's bridge blockades by turning their two demands
+— road money moved to regional rail and buses, and a PLN 50 monthly ticket —
+into a scored parliamentary bill. It was ridiculed as negotiating under
+blockade. Its annexes are the only up-to-date route-by-route costing anyone
+has, and the drafting is done.?]
+[? if transport_bill_2024_filed != 1 and climate_pressure_unmet >= 8: The
+organisers who spent 2024 demanding exactly this — regional buses instead of
+expressways — were told to clear the road and wait for the courts. They are
+not making calls for us in these counties now, and the costing has to start
+from nothing.?]
+
+- @bus_recognise
+- @bus_floor
+- @bus_grants
+
+@bus_recognise
+title: Recognise and defend the enacted gmina transport floor
+view-if: gmina_transport_floor_enacted = 1
+on-arrival: rural_support += 5; local_network += 4; public_trust += 3; spring_strength += 2; spring_dissent -= 4; news_headline = "Lewica defends useful empty seats as the price of universal transport"
+go-to: finish
+
+@bus_floor
+title: [? if left_in_government: Fund a daily service floor in every gmina?][? if not left_in_government: Table a daily gmina service floor from opposition?]
+subtitle: [? if transport_bill_2024_filed = 1: The 2024 blockade bill already carries the costing, so the floor is one point cheaper.?][? if transport_bill_2024_filed != 1: Cost: 2 budget in cabinet, 1 resource in opposition.?]
+view-if: gmina_transport_floor_enacted = 0
+choose-if: (left_in_government = 1 and (budget >= 2 or (budget >= 1 and transport_bill_2024_filed = 1))) or (left_in_government = 0 and (resources >= 1 or transport_bill_2024_filed = 1))
+unavailable-subtitle: The cabinet lacks two budget points, or the opposition lacks one campaigning resource.
+on-arrival: {!
+// The April 2024 bill answering Ostatnie Pokolenie's bridge blockades was a
+// scored road-to-rail and regional-ticket text. Whatever it cost then, it is
+// the drafting and costing work this floor would otherwise have to repeat.
+const transportBillReady = Number(Q.transport_bill_2024_filed) == 1;
+if (Q.left_in_government) Q.budget -= transportBillReady ? 1 : 2;
+else if (!transportBillReady) Q.resources -= 1;
+Q.gmina_transport_floor_enacted = Q.left_in_government ? 1 : 0;
+Q.rural_support += 5;
+Q.local_network += 4;
+Q.household_security += 4;
+Q.spring_strength += 3;
+Q.spring_dissent -= 5;
+if (transportBillReady) {
+    Q.climate_pressure_unmet = Math.max(
+        0, (Number(Q.climate_pressure_unmet) || 0) - 3
+    );
+    Q.climate_policy_pressure += 2;
+    Q.progressive_credibility += 2;
+} else if ((Number(Q.climate_pressure_unmet) || 0) >= 8) {
+    Q.rural_support -= 2;
+    Q.local_network -= 2;
+}
+Q.government_delivery += Q.left_in_government ? 4 : 0;
+Q.last_policy_stage = Q.left_in_government ? "Implementation" : "Proposal";
+Q.last_policy_authority = Q.left_in_government
+    ? "Council of Ministers" : "Parliamentary opposition";
+Q.last_policy_implementation = Q.left_in_government ? 1 : 0;
+Q.news_headline = Q.left_in_government
+    ? "Every gmina receives a daily public-transport floor"
+    : "Lewica files a national gmina transport floor from opposition";
+!}
+go-to: finish
+
+@bus_grants
+title: Keep competitive local grants and organise the excluded gminas
+on-arrival: rural_support += 1; local_network += 2; spring_dissent += 6; fiscal_stress -= 1; psl_relation += 2; news_headline = "Lewica maps transport exclusion without promising a universal floor"
+go-to: finish
+
+@warsaw_alcohol_policy
+# prose-audit: Grade A — The live mayor and actual municipal authority determine whether Lewica regulates or advocates, while health and nightlife constituencies remain visible.
+title: Warsaw after midnight
+subtitle: Night alcohol sales confront [+ warsaw_mayor +] with a citywide rule, a district pilot or the status quo
+face-image: img/poland/events/local-election-2024.webp
+new-page: true
+on-arrival: {!
+Q.warsaw_alcohol_policy_done = 1;
+Q.news_headline = Q.warsaw_mayor +
+    " faces Warsaw's night alcohol-sales dispute";
+!}
+
+= Summer 2026 — City Hall after midnight
+
+Residents asking for quieter streets and emergency doctors asking for fewer
+night admissions confront shopkeepers, club workers and young voters who hear
+another rule written for them by people already asleep. Mayor **[+
+warsaw_mayor +]** owns City Hall.
+
+[? if warsaw_mayor_party = "left": A Left mayor can implement the answer.?]
+[? if warsaw_mayor_party != "left": Lewica can advocate and organise council
+votes, but cannot pretend that advice to another mayor is implementation.?]
+
+- @alcohol_citywide
+- @alcohol_pilot
+- @alcohol_oppose
+
+@alcohol_citywide
+title: Introduce a citywide restriction on night alcohol sales
+choose-if: warsaw_mayor_party = "left"
+unavailable-subtitle: Only a Left mayoral administration can implement this citywide; from opposition it would be advocacy, not an order.
+on-arrival: {!
+Q.health_capacity += 4;
+Q.public_trust += 3;
+Q.young_support -= 3;
+Q.market_liberal_dissent += 6;
+(typeof window !== "undefined" ? window : globalThis).polandElectionModel
+    .recordRegionalEffect(Q, {key: "warsaw-alcohol-citywide", families: {left: 0.08}, countyIds: ["1465"]});
+Q.news_headline = "Warsaw adopts a citywide restriction on night alcohol sales";
+!}
+go-to: finish
+
+@alcohol_pilot
+title: Back a district pilot with published health and policing results
+on-arrival: {!
+Q.health_capacity += 2;
+Q.public_trust += 2;
+Q.institutional_trust += 2;
+Q.young_support -= 1;
+Q.market_liberal_dissent += 2;
+(typeof window !== "undefined" ? window : globalThis).polandElectionModel
+    .recordRegionalEffect(Q, {key: "warsaw-alcohol-pilot", families: {left: 0.04}, countyIds: ["1465"]});
+Q.news_headline = Q.warsaw_mayor_party == "left"
+    ? "Warsaw begins a district alcohol-sales pilot"
+    : "Lewica campaigns for a district alcohol-sales pilot under " + Q.warsaw_mayor;
+!}
+go-to: finish
+
+@alcohol_oppose
+title: Oppose the restriction and strengthen late-night enforcement instead
+on-arrival: {!
+Q.health_capacity -= 2;
+Q.public_trust -= 2;
+Q.young_support += 3;
+Q.market_liberal_support += 4;
+(typeof window !== "undefined" ? window : globalThis).polandElectionModel
+    .recordRegionalEffect(Q, {key: "warsaw-alcohol-oppose", families: {left: -0.06}, countyIds: ["1465"]});
+Q.news_headline = "Lewica opposes Warsaw's night sales restriction";
+!}
+go-to: finish
+
+@finish
+title: The local file closes
+go-to: poland_legacy_event_desk if year <= 2023; poland_event_queue if year > 2023

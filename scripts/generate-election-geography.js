@@ -858,9 +858,18 @@ function main() {
     assert.strictEqual(districtRows.length, 41);
     assert.strictEqual(districtRows.reduce(function(sum, row) { return sum + row.magnitude; }, 0), 460);
     districtRows.forEach(function(row) {
-      row.localElectorate = Math.round(unitRows.filter(function(unit) {
+      const localUnits = unitRows.filter(function(unit) {
         return unit.districtId === row.id;
-      }).reduce(function(sum, unit) { return sum + unit.electorate; }, 0));
+      });
+      row.localElectorate = Math.round(localUnits.reduce(function(sum, unit) {
+        return sum + unit.electorate;
+      }, 0));
+      row.urbanScore = localUnits.reduce(function(sum, unit) {
+        return sum + unit.urbanScore * unit.electorate;
+      }, 0) / Math.max(1, row.localElectorate);
+      row.countyIds = Array.from(new Set(localUnits.map(function(unit) {
+        return unit.municipalityId.slice(0, 4);
+      }))).sort();
     });
     const districtCounts = apportion(230, districtRows, function(row) {
       return row.localElectorate;
@@ -917,6 +926,9 @@ function main() {
           urbanScore: group.reduce(function(sum, row) {
             return sum + row.urbanScore * row.electorate;
           }, 0) / group.reduce(function(sum, row) { return sum + row.electorate; }, 0),
+          countyIds: Array.from(new Set(group.map(function(row) {
+            return row.municipalityId.slice(0, 4);
+          }))).sort(),
           contiguous: true,
           children: [],
         };
@@ -937,6 +949,12 @@ function main() {
             parentId: parentId,
             electorate: Math.round(child.reduce(function(sum, row) { return sum + row.electorate; }, 0)),
             profile: aggregateProfile(child),
+            urbanScore: child.reduce(function(sum, row) {
+              return sum + row.urbanScore * row.electorate;
+            }, 0) / child.reduce(function(sum, row) { return sum + row.electorate; }, 0),
+            countyIds: Array.from(new Set(child.map(function(row) {
+              return row.municipalityId.slice(0, 4);
+            }))).sort(),
             contiguous: true,
           };
           childSeat.targetElectorate = Math.round(parent.electorate / 2);
@@ -1001,6 +1019,15 @@ function main() {
         provinceId: id.slice(0, 2),
         electorate: electorate,
         profile: shares(votes),
+        districtIds: Array.from(new Set(rows.map(function(row) {
+          return row.districtId;
+        }))).sort(function(a, b) { return a - b; }),
+        countyIds: [id],
+        urbanScore: rows.reduce(function(sum, row) {
+          const score = ['1', '4', '8', '9'].includes(row.type)
+            ? 1 : (row.type === '3' ? 0.5 : 0);
+          return sum + score * row.electorate;
+        }, 0) / Math.max(1, electorate),
       };
     }).filter(function(row) { return row.electorate > 0; })
       .sort(function(a, b) { return a.id.localeCompare(b.id); });
@@ -1012,7 +1039,7 @@ function main() {
       'unexpected county count');
 
     const data = {
-      version: 2,
+      version: 3,
       sourceVersion: 'PRG-2023-PKW-2019-2023',
       families: ['left', 'ko', 'pis', 'psl', 'konf', 'other'],
       provinces: provinceRows,
@@ -1021,7 +1048,6 @@ function main() {
       mixedDistricts: parentSeats.map(function(row) {
         const result = Object.assign({}, row);
         delete result.children;
-        delete result.urbanScore;
         return result;
       }),
       fptpDistricts: childSeats,

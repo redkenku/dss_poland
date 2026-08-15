@@ -38,12 +38,23 @@ if (
     Q.left_committed_seats =
         Q.left_seats + Q.left_splinter_support_votes;
 }
+// A Left delegation that joined the March of a Million Hearts while filed on a
+// PiS or Konfederacja host list broke that list's discipline in public. Its
+// deputies are not whipped by the host afterwards, so they stop counting for
+// the right — but the democratic side only counts them if KO still trusts the
+// people it marched beside.
+const leftBrokeHostDiscipline2023 =
+    Number(Q.campaign_march_broke_host_discipline) == 1;
 const leftOnRightList2023 = ["pis_5", "konf_5"].includes(
     String(Q.sejm_list_outcome || "left_5")
-);
+) && !leftBrokeHostDiscipline2023;
+const leftDemocraticSeats2023 = leftOnRightList2023 ||
+    (leftBrokeHostDiscipline2023 && (Number(Q.ko_relation) || 0) < 50)
+    ? 0 : Q.left_committed_seats;
+Q.left_host_list_defection = leftBrokeHostDiscipline2023 ? 1 : 0;
 Q.coalition_democratic_seats =
     Q.ko_seats + Q.p2050_seats + Q.psl_seats +
-    Q.centrum_seats + (leftOnRightList2023 ? 0 : Q.left_committed_seats);
+    Q.centrum_seats + leftDemocraticSeats2023;
 Q.coalition_center_seats =
     Q.ko_seats + Q.p2050_seats + Q.psl_seats + Q.centrum_seats;
 Q.coalition_right_seats =
@@ -425,6 +436,16 @@ if (!Number.isFinite(Number(Q.coalition_pis_psl_score))) {
 <div class="coalition-option [? if coalition_center_seats >= 231: viable?]"><span>KO · PL2050 · PSL</span><b>[+ coalition_center_seats +]</b><small>[? if coalition_center_seats >= 231: Majority · ?]compatibility [+ coalition_center_score +]/100</small></div>
 <div class="coalition-option [? if coalition_pis_psl_seats >= 231: viable?]"><span>PiS · PSL</span><b>[+ coalition_pis_psl_seats +]</b><small>[? if coalition_pis_psl_seats >= 231: Majority · ?]compatibility [+ coalition_pis_psl_score +]/100</small></div>
 <div class="coalition-option [? if coalition_right_seats >= 231: viable?]"><span>PiS · Konfederacja[? if social_patriot_list_committee = "pis":  · Lewica Patriotyczna?]</span><b>[+ coalition_right_seats +]</b><small>[? if coalition_right_seats >= 231: Majority · ?]compatibility [+ coalition_right_score +]/100</small></div>
+
+[? if left_host_list_defection = 1 and ko_relation >= 50: Our deputies were
+elected on a host list whose discipline they broke in public on 1 October. The
+host cannot whip them and has stopped trying; KO, which watched them arrive at
+its own march, counts them in the democratic column. The seats were won on
+somebody else's ballot and are being spent against him.?]
+[? if left_host_list_defection = 1 and ko_relation < 50: Our deputies broke the
+host list's discipline at the march and are no longer whipped by it. KO does
+not trust them either. The delegation belongs to no bloc's arithmetic and will
+be courted, or ignored, one vote at a time.?]
 
 The numbers identify possibilities, not agreements. The formation sequence
 will test relations, party resources and caucus defections. The Senate does

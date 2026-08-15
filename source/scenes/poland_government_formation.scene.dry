@@ -617,7 +617,8 @@ Q.seat_subvention = Q.left_seats > 0
     ? Math.max(1, Math.round(Q.left_seats / 25))
     : 0;
 Q.party_income =
-    Math.max(0, finiteFormation(Q.member_dues, 0)) + Q.seat_subvention;
+    Math.max(0, finiteFormation(Q.member_dues, 0)) + Q.seat_subvention +
+    Math.max(0, finiteFormation(Q.warsaw_mayoral_income_bonus, 0));
 
 // Certify one winner in each of the Senate's 100 single-member districts.
 // A pact combines its members behind one district candidate. Lewica may be a
@@ -1723,11 +1724,14 @@ if (!viable.length) {
         pis: Number(Q.year) == 2023
             ? "Mateusz Morawiecki" : (Q.pis_leader || "PiS nominee"),
         ko: Q.ko_leader || "Donald Tusk",
-        p2050: Q.p2050_leader || "Szymon Hołownia",
+        p2050: Q.holownia_warsaw_mayor
+            ? "Katarzyna Pełczyńska-Nałęcz"
+            : (Q.p2050_leader || "Szymon Hołownia"),
         psl: Q.psl_leader || "Władysław Kosiniak-Kamysz",
         konf: Q.konf_leader || "Sławomir Mentzen"
     };
     let speaker = selected.members.includes("p2050") &&
+        !Q.holownia_warsaw_mayor &&
         premiers[leader] != "Szymon Hołownia"
         ? "Szymon Hołownia"
         : (selected.members.includes("psl")
@@ -1797,9 +1801,11 @@ if (!members.length && pisSeats >= majority) {
     seats = p2050Seats + pslSeats;
     leader = p2050Seats >= pslSeats ? "p2050" : "psl";
     premier = leader == "p2050"
-        ? (Q.p2050_leader || "Szymon Hołownia")
+        ? (Q.holownia_warsaw_mayor
+            ? "Katarzyna Pełczyńska-Nałęcz"
+            : (Q.p2050_leader || "Szymon Hołownia"))
         : (Q.psl_leader || "Władysław Kosiniak-Kamysz");
-    speaker = premier == "Szymon Hołownia"
+    speaker = premier == "Szymon Hołownia" || Q.holownia_warsaw_mayor
         ? "Marek Sawicki"
         : "Szymon Hołownia";
 }
@@ -3802,7 +3808,8 @@ if ([
     "left_pis_konf_p2050", "left_pis_konf_third",
     "pis_third", "pis_third_konf"
 ].includes(baseCoalitionCode)) {
-    Q.formation_marshal_nominee = "Szymon Hołownia";
+    Q.formation_marshal_nominee = Q.holownia_warsaw_mayor
+        ? "Marek Sawicki" : "Szymon Hołownia";
 } else if (
     baseCoalitionCode == "left_pis" ||
     ["left_pis_konf", "pis_konf", "pis_konf_third", "pis_konf_psl"].includes(
@@ -4164,7 +4171,8 @@ Q.formation_czarzasty_rotation = partnerTrust >= 48
     ? "Czarzasty can plausibly win a later rotation vote"
     : "Partners keep Hołownia to term end";
 if (partnerTrust < 48) {
-    Q.sejm_speaker = "Szymon Hołownia";
+    Q.sejm_speaker = Q.holownia_warsaw_mayor
+        ? "Marek Sawicki" : "Szymon Hołownia";
 }
 !}
 
@@ -4349,7 +4357,9 @@ Q.formation_pm_psl_name = Q.psl_leader || "PSL nominee";
 Q.formation_pm_pis_name = Number(Q.year) == 2023
     ? "Mateusz Morawiecki"
     : (Q.pis_leader || Q.formation_pm_default || "PiS nominee");
-Q.formation_pm_p2050_name = Q.p2050_leader || "Poland 2050 nominee";
+Q.formation_pm_p2050_name = Q.holownia_warsaw_mayor
+    ? "Katarzyna Pełczyńska-Nałęcz"
+    : (Q.p2050_leader || "Poland 2050 nominee");
 !}
 
 = Nominee after coalition and Marshal
@@ -4535,7 +4545,7 @@ responsibility. An outside supporter receives no nominee.
 @formation_pm_alt_p2050_leader
 title: Nominate [+ formation_pm_p2050_name +]
 subtitle: Later formations use Poland 2050's current leader rather than the fixed 2023 slate.
-view-if: year != 2023 and formation_pm_has_p2050 = 1 and formation_pm_p2050_name != president_name
+view-if: year != 2023 and formation_pm_has_p2050 = 1 and formation_pm_p2050_name != president_name and (holownia_warsaw_mayor = 0 or formation_pm_p2050_name != "Szymon Hołownia")
 choose-if: formation_pm_contract_support >= formation_pm_threshold
 unavailable-subtitle: The signed contract pledges [+ formation_pm_contract_support +] of the [+ formation_pm_threshold +] votes this cabinet needs.
 on-arrival: {!
@@ -4550,7 +4560,7 @@ go-to: formation_pm_holownia_replacement if democratic_candidate = "Szymon Hoło
 @formation_pm_p2050_holownia
 title: Nominate Szymon Hołownia
 subtitle: The party leader holds the contract together without nominee-specific defections.
-view-if: president_name != "Szymon Hołownia"
+view-if: president_name != "Szymon Hołownia" and holownia_warsaw_mayor = 0
 choose-if: formation_pm_contract_support >= formation_pm_threshold
 unavailable-subtitle: The coalition itself is below [+ formation_pm_threshold +].
 on-arrival: democratic_candidate = "Szymon Hołownia"; confidence_candidate = "Szymon Hołownia"; formation_pm_candidate_loss = 0; p2050_relation += 4; news_headline = "Poland 2050 nominates Hołownia for prime minister"
@@ -5730,8 +5740,9 @@ const rightSeats = Math.max(
         ? Number(Q.coalition_right_seats)
         : fallbackRightSeats
 );
-Q.formation_marshal_nominee =
-    democraticSeats >= rightSeats ? "Szymon Hołownia" : "Elżbieta Witek";
+Q.formation_marshal_nominee = democraticSeats >= rightSeats
+    ? (Q.holownia_warsaw_mayor ? "Marek Sawicki" : "Szymon Hołownia")
+    : "Elżbieta Witek";
 Q.formation_marshal_vote_choice = "Undecided";
 Q.formation_marshal_compromise = 0;
 Q.formation_marshal_ballot_passed = 0;

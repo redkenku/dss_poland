@@ -2199,6 +2199,11 @@ function testCheatMenu(game) {
     engine.state.qualities.left_poll,
     leftBeforeCheat + 11
   );
+  assert.strictEqual(
+    engine.state.qualities.left_vote_intent,
+    engine.state.qualities.left_poll,
+    'Cheated polling did not reach the electorate used by elections'
+  );
   assert(Math.abs(pollTotal() - 100) < 0.000001);
   choose('cheat_menu');
   engine.state.qualities.ko_relation = 95;
@@ -6081,15 +6086,76 @@ function runSmoke(game) {
   }
 
   function testPresidentialElectionCorpora() {
+    const leftResultAt = function(intent, candidate, candidateBase) {
+      candidate = candidate || 'Adrian Zandberg';
+      candidateBase = candidateBase || 3.2;
+      startStandard(
+        'presidential-left-conversion-' + intent + '-' + candidate
+      );
+      const qualities = engine.state.qualities;
+      Object.assign(qualities, {
+        presidential_candidate: candidate,
+        presidential_candidate_base: candidateBase,
+        left_vote_intent: intent,
+        pres_first_calc_mode: 'first_result',
+        pres_first_round_complete: 0,
+        pres_ko_joint_candidate: 0,
+        pres_breakout_key: 'none',
+        pres_bonus_left: 3.4,
+        pres_r1_turnout_shock: 0,
+      });
+      [
+        'duda',
+        'trzaskowski',
+        'holownia',
+        'bosak',
+        'kosiniak',
+        'left',
+        'other',
+      ].forEach(function(candidate) {
+        qualities['pres_r1_shock_' + candidate] = 0;
+      });
+      engine.goToScene('poland_presidential_election.calculate_first');
+      return qualities.presidential_result;
+    };
+    const squeezedLeft = leftResultAt(15);
+    const breakthroughLeft = leftResultAt(18);
+    const breakthroughBiedron = leftResultAt(18, 'Robert Biedroń', 2.2);
+    const majorLeft = leftResultAt(40);
+    assert(
+      squeezedLeft < 7,
+      'A sub-breakthrough Left campaign escaped the squeeze: ' +
+        squeezedLeft + '%'
+    );
+    assert(
+      breakthroughLeft >= 8,
+      'An 18% Lewica could not earn Eight Is Enough: ' +
+        breakthroughLeft + '%'
+    );
+    assert(
+      breakthroughBiedron >= 8,
+      'Biedroń could not earn Eight Is Enough at 18%: ' +
+        breakthroughBiedron + '%'
+    );
+    assert(
+      majorLeft >= 25,
+      'A 40% Lewica still produced only ' + majorLeft + '% for Zandberg'
+    );
+
     let historicalDudaWins = 0;
+    let historicalTrzaskowskiWins = 0;
+    let historicalHolowniaWins = 0;
     const historicalSeedCount = 40;
     for (let index = 0; index < historicalSeedCount; index += 1) {
-      if (
-        runHistoricalPresidentialElection(
-          'presidential-historical-' + index
-        ) === 'duda'
-      ) {
+      const winner = runHistoricalPresidentialElection(
+        'presidential-historical-' + index
+      );
+      if (winner === 'duda') {
         historicalDudaWins += 1;
+      } else if (winner === 'trzaskowski') {
+        historicalTrzaskowskiWins += 1;
+      } else if (winner === 'holownia') {
+        historicalHolowniaWins += 1;
       }
     }
     assert(
@@ -6101,6 +6167,14 @@ function runSmoke(game) {
       historicalDudaWins < historicalSeedCount,
       'Historical-line slack disappeared: Duda won all ' +
         historicalSeedCount + ' seeded runoffs'
+    );
+    assert(
+      historicalTrzaskowskiWins > 0,
+      'Trzaskowski disappeared from the historical-line winner corpus'
+    );
+    assert(
+      historicalHolowniaWins > 0,
+      'Hołownia never converted a saved first-round breakout'
     );
 
     const nominees = [
@@ -9589,8 +9663,23 @@ function runSmoke(game) {
         }
         assert.strictEqual(engine.state.sceneId, 'poland_hub');
       } else {
-        assert.strictEqual(engine.state.sceneId, 'poland_monthly_briefing');
-        choose('poland_monthly_briefing.briefing_return');
+        if (engine.state.sceneId ===
+            'poland_presidential_election.challenger_inauguration_2020') {
+          choose(
+            'poland_presidential_election.challenger_inauguration_record'
+          );
+          if (engine.state.sceneId === 'poland_office_authority.resolve') {
+            choose('poland_office_authority.accept');
+          }
+          if (engine.state.sceneId === 'poland_event_queue.events_choice') {
+            choose('poland_budget_2023_2026.execution_event');
+            choose('poland_budget_2023_2026.finish_execution');
+            choose('poland_budget_2023_2026.execution_return');
+          }
+        }
+        if (engine.state.sceneId === 'poland_monthly_briefing') {
+          choose('poland_monthly_briefing.briefing_return');
+        }
         assert.strictEqual(engine.state.sceneId, 'poland_hub');
         assert.strictEqual(
           engine.state.qualities.p2050_foundation_2020_done,
@@ -17621,6 +17710,10 @@ function runSmoke(game) {
       // Each audited shock hub resolves at most one independent persisted
       // shock per visit; recurrence lets multiple causally compatible shocks
       // coexist without adding another queue/router.
+      // One dispatch per local file: the Warsaw succession campaign and its
+      // result, Sutryk, Kraków, the rural buses and Warsaw night sales. Raise
+      // this when a seventh local file is added.
+      'poland_local_affairs.router': 6,
       'poland_scenario_shocks.security_shock': 5,
       'poland_scenario_shocks.domestic_shock': 5,
       'poland_scenario_shocks.constitutional_shock': 3,

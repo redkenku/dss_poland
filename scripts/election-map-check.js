@@ -62,7 +62,7 @@ function allocation(model, state, system, votes, campaignLog) {
 const run = engine();
 const state = run.state.qualities;
 const model = globalThis.polandElectionModel;
-assert.strictEqual(model.version, 4);
+assert.strictEqual(model.version, 5);
 const data = model.geography;
 const geometry = globalThis.polandElectionGeography;
 
@@ -104,6 +104,11 @@ data.mixedDistricts.concat(data.fptpDistricts).forEach(function(row) {
   }), row.id + ' crosses or lacks a province');
   assert(Number.isFinite(row.electorateDeviationPct), row.id + ' lacks deviation data');
 });
+data.counties.concat(data.districts, data.mixedDistricts, data.fptpDistricts)
+  .forEach(function(row) {
+    assert(Number.isFinite(row.urbanScore) && row.urbanScore >= 0 &&
+      row.urbanScore <= 1, row.id + ' lacks a valid urbanScore');
+  });
 geometry.counties.features.forEach(function(feature) {
   assert.strictEqual(feature.properties.province, feature.properties.id.slice(0, 2));
 });
@@ -163,6 +168,87 @@ for (const system of ['proportional', 'mixed_230', 'fptp_460']) {
   );
 }
 
+function aggregateShare(result, id, predicate) {
+  const rows = result.districtResults.filter(predicate);
+  const partyVotes = rows.reduce(function(sum, row) {
+    return sum + Number(row.voteCounts[id] || 0);
+  }, 0);
+  const allVotes = rows.reduce(function(sum, row) {
+    return sum + total(row.voteCounts);
+  }, 0);
+  return partyVotes / allVotes;
+}
+
+const cleanState = JSON.parse(JSON.stringify(state));
+cleanState.regional_effect_log = [];
+cleanState.poland_election_geographic_prior = null;
+const proportionalCleanBase = allocation(
+  model, cleanState, 'proportional', votes
+);
+const mixedBase = allocation(model, cleanState, 'mixed_230', votes);
+const ruralState = JSON.parse(JSON.stringify(cleanState));
+ruralState.rural_support = 25;
+ruralState.local_network = 62;
+const mixedRural = allocation(model, ruralState, 'mixed_230', votes);
+assert(aggregateShare(mixedRural, 'left', function(row) {
+  return row.urbanScore < 0.5;
+}) > aggregateShare(mixedBase, 'left', function(row) {
+  return row.urbanScore < 0.5;
+}), 'rural service gains did not move Left support outside cities');
+
+const eastState = JSON.parse(JSON.stringify(cleanState));
+Object.assign(eastState, {
+  border_security_support: 80,
+  refugee_solidarity_support: 30,
+  border_security_salience: 80,
+  refugee_solidarity_salience: 30,
+});
+const eastResult = allocation(model, eastState, 'proportional', votes);
+const eastIds = ['06', '18', '20', '28'];
+for (const id of ['konf', 'pis']) {
+  assert(aggregateShare(eastResult, id, function(row) {
+    return eastIds.includes(row.provinceId);
+  }) > aggregateShare(proportionalCleanBase, id, function(row) {
+    return eastIds.includes(row.provinceId);
+  }), 'anti-migrant dominance did not move ' + id + ' eastward');
+}
+const koronaVotes = Object.assign({}, votes, {korona: votes.konf});
+delete koronaVotes.konf;
+const koronaBase = allocation(model, cleanState, 'proportional', koronaVotes);
+const koronaEast = allocation(model, eastState, 'proportional', koronaVotes);
+assert(aggregateShare(koronaEast, 'korona', function(row) {
+  return eastIds.includes(row.provinceId);
+}) > aggregateShare(koronaBase, 'korona', function(row) {
+  return eastIds.includes(row.provinceId);
+}), 'anti-migrant dominance did not move Korona eastward');
+
+const selectorState = JSON.parse(JSON.stringify(cleanState));
+for (const effect of [
+  ['warsaw-check', '1465'], ['wroclaw-check', '0264'],
+  ['krakow-check', '1261'],
+]) {
+  assert(model.recordRegionalEffect(selectorState, {
+    key: effect[0], families: {left: 0.15}, countyIds: [effect[1]],
+  }));
+  assert(!model.recordRegionalEffect(selectorState, {
+    key: effect[0], families: {left: 0.15}, countyIds: [effect[1]],
+  }), 'regional effect key was not deduplicated');
+}
+const selectorBase = allocation(model, cleanState, 'fptp_460', votes);
+const selectorResult = allocation(model, selectorState, 'fptp_460', votes);
+for (const countyId of ['1465', '0264', '1261']) {
+  const targets = selectorResult.districtResults.filter(function(row) {
+    return row.countyIds.includes(countyId);
+  });
+  assert(targets.length, 'missing selector rows for ' + countyId);
+  assert(targets.every(function(row) {
+    const base = selectorBase.districtResults.find(function(candidate) {
+      return candidate.id === row.id;
+    });
+    return row.votes.left > base.votes.left;
+  }), countyId + ' effect missed its selected rows');
+}
+
 const unqualified = allocation(model, state, 'proportional', {
   left: 4.9, pis: 42, ko: 38, psl: 5.1, konf: 5, other: 5,
 });
@@ -213,7 +299,41 @@ assert.strictEqual(state.poland_election_geographic_prior.system, snapshot.syste
 const later = allocation(model, state, 'proportional', votes);
 assert.deepStrictEqual(later, allocation(model, state, 'proportional', votes));
 
+const archiveState = JSON.parse(JSON.stringify(cleanState));
+model.recordRegionalEffect(archiveState, {
+  key: 'archive-once', families: {left: 0.15}, countyIds: ['1465'],
+});
+const firstEffect = allocation(model, archiveState, 'proportional', votes);
+model.archiveSejm(archiveState, firstEffect, 'effect-archive', 'Effect archive');
+const reusedEffect = allocation(model, archiveState, 'proportional', votes);
+const firstWarsaw = firstEffect.districtResults.find(function(row) {
+  return row.countyIds.includes('1465');
+});
+const reusedWarsaw = reusedEffect.districtResults.find(function(row) {
+  return row.id === firstWarsaw.id;
+});
+assert(Math.abs(firstWarsaw.votes.left - reusedWarsaw.votes.left) < 0.00001,
+  'archived regional effect was applied twice');
+
+const p2050ArchiveState = JSON.parse(JSON.stringify(cleanState));
+model.recordRegionalEffect(p2050ArchiveState, {
+  key: 'p2050-warsaw-once', families: {p2050: 0.15}, countyIds: ['1465'],
+});
+const p2050First = allocation(model, p2050ArchiveState, 'proportional', votes);
+model.archiveSejm(p2050ArchiveState, p2050First,
+  'p2050-effect-archive', 'Poland 2050 effect archive');
+const p2050Reused = allocation(model, p2050ArchiveState, 'proportional', votes);
+const p2050Warsaw = p2050First.districtResults.find(function(row) {
+  return row.countyIds.includes('1465');
+});
+const p2050WarsawReused = p2050Reused.districtResults.find(function(row) {
+  return row.id === p2050Warsaw.id;
+});
+assert(Math.abs(p2050Warsaw.votes.p2050 - p2050WarsawReused.votes.p2050) <
+  0.00001, 'archived Poland 2050 effect was lost or compounded');
+
 const president = model.allocatePresident({
+  state: selectorState,
   key: 'president-check', round: 1,
   candidates: [
     {id: 'candidate-left', name: 'Left', family: 'left', share: 34},
@@ -222,6 +342,10 @@ const president = model.allocatePresident({
   ],
 });
 assert.strictEqual(president.counties.length, 380);
+president.counties.forEach(function(row) {
+  assert(Number.isFinite(row.urbanScore) && row.urbanScore >= 0 &&
+    row.urbanScore <= 1, row.id + ' presidential row lacks urbanScore');
+});
 const presidentialTotals = {};
 president.counties.forEach(function(row) {
   Object.keys(row.voteCounts).forEach(function(id) {

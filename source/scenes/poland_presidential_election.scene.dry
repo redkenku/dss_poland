@@ -85,11 +85,11 @@ Q.pres_2020_ko_surname = Q.pres_2020_ko_kidawa
 // that no poll in the chapter can be re-read until it says something else.
 const breakoutRoll = this.random.uint32() / 4294967296;
 const breakoutScale = this.random.uint32() / 4294967296;
-Q.pres_breakout_key = breakoutRoll < 0.17
+Q.pres_breakout_key = breakoutRoll < 0.22
     ? "holownia"
-    : (breakoutRoll < 0.26 ? "bosak" : "none");
+    : (breakoutRoll < 0.31 ? "bosak" : "none");
 Q.pres_breakout_size = Q.pres_breakout_key == "holownia"
-    ? 6 + breakoutScale * 16
+    ? 7 + breakoutScale * 18
     : (Q.pres_breakout_key == "bosak" ? 4 + breakoutScale * 12 : 0);
 Q.pres_debate_roll = this.random.uint32() / 4294967296;
 Q.pres_debate_upset_roll =
@@ -431,6 +431,25 @@ const ids = [
     "duda", "trzaskowski", "holownia", "bosak",
     "kosiniak", "left", "other"
 ];
+const leftIntent = Number.isFinite(Number(Q.left_vote_intent))
+    ? Number(Q.left_vote_intent) : 12.6;
+// Preserve the 2015/2020 presidential squeeze until Lewica becomes a visibly
+// larger electorate; above 16%, party support starts converting rapidly.
+const leftBreakthrough = Math.max(0, leftIntent - 16);
+const leftCampaignReach = clampPres(
+    0.45 + (leftIntent - 12) * 0.11,
+    0.35,
+    1
+);
+const leftCampaignLift =
+    ((Number(Q.party_unity) || 58) - 58) * 0.025 +
+    ((Number(Q.public_trust) || 43) - 43) * 0.020 +
+    ((Number(Q.media_capacity) || 16) - 16) * 0.018 +
+    ((Number(Q.turnout_readiness) || 58) - 58) * 0.012 +
+    ((Number(Q.primary_mandate) || 30) - 30) * 0.010 +
+    (Number(Q.pres_bonus_left) || 0);
+const leftSqueezed = leftIntent < 16 && !Q.pres_ko_joint_candidate;
+const leftCeiling = leftSqueezed ? 6.5 : Infinity;
 const raw = {
     duda:
         43.50 +
@@ -458,14 +477,13 @@ const raw = {
         ((Number(Q.psl_vote_intent) || 8.6) - 8.6) * 0.11 +
         (Number(Q.pres_bonus_kosiniak) || 0),
     left:
-        (Number(Q.presidential_candidate_base) || 2.2) +
-        ((Number(Q.left_vote_intent) || 12.6) - 12.6) * 0.22 +
-        ((Number(Q.party_unity) || 58) - 58) * 0.025 +
-        ((Number(Q.public_trust) || 43) - 43) * 0.020 +
-        ((Number(Q.media_capacity) || 16) - 16) * 0.018 +
-        ((Number(Q.turnout_readiness) || 58) - 58) * 0.012 +
-        ((Number(Q.primary_mandate) || 30) - 30) * 0.010 +
-        (Number(Q.pres_bonus_left) || 0),
+        Math.min(
+            leftCeiling,
+            (Number(Q.presidential_candidate_base) || 2.2) +
+                (leftIntent - 12.6) * 0.10 +
+                leftBreakthrough * 1.30 +
+                leftCampaignLift * leftCampaignReach
+        ),
     other:
         0.81 + (Number(Q.pres_bonus_other) || 0)
 };
@@ -548,6 +566,9 @@ for (const id of ids) {
             id == "other" ? 0.05 : 0.15,
             raw[id] + (Number(Q[noisePrefix + id]) || 0)
         );
+        if (id == "left" && leftSqueezed) {
+            raw[id] = Math.min(leftCeiling, raw[id]);
+        }
     }
 }
 const total = ids.reduce(function(sum, id) {
@@ -926,6 +947,7 @@ if (Q.pres_first_calc_mode == "first_result") {
         ? window : globalThis).polandElectionModel;
     presidentialMapModel.archivePresident(Q,
         presidentialMapModel.allocatePresident({
+            state: Q,
             key: "2020-06-r1",
             label: "2020 presidential election — first round",
             round: 1,
@@ -2643,7 +2665,7 @@ Q.pres_transfer_abstention =
     Math.round(abstentionRaw * 100) / 100;
 
 const newTurnout = {
-    duda: 1.70,
+    duda: 2.20,
     trzaskowski: 1.10,
     holownia: 1.35,
     bosak: 0.90,
@@ -2798,6 +2820,7 @@ if (Q.pres_runoff_calc_mode == "result") {
     };
     presidentialRunoffModel.archivePresident(Q,
         presidentialRunoffModel.allocatePresident({
+            state: Q,
             key: "2020-07-r2",
             label: "2020 presidential election — runoff",
             round: 2,

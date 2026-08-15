@@ -5,7 +5,7 @@ const budgetHost = typeof window !== "undefined"
     ? window
     : (typeof globalThis !== "undefined" ? globalThis : this);
 if ((!budgetHost.polandElectionModel ||
-        budgetHost.polandElectionModel.version != 4) &&
+        budgetHost.polandElectionModel.version != 5) &&
     this.game && this.game.scenes.poland_election_geography &&
     typeof this._runActions == "function") {
     this._runActions(this.game.scenes.poland_election_geography.onArrival);
@@ -17,9 +17,75 @@ if (!Array.isArray(Q.poland_presidential_map_archive)) {
     Q.poland_presidential_map_archive = [];
 }
 if (!Array.isArray(Q.regional_campaign_log)) Q.regional_campaign_log = [];
+if (!Array.isArray(Q.regional_effect_log)) Q.regional_effect_log = [];
 if (typeof Q.regional_campaign_last_key != "string") {
     Q.regional_campaign_last_key = "";
 }
+if (typeof Q.warsaw_mayor != "string") Q.warsaw_mayor = "Rafał Trzaskowski";
+if (typeof Q.warsaw_mayor_party != "string") Q.warsaw_mayor_party = "ko";
+if (!Number.isFinite(Number(Q.warsaw_succession_due_time))) {
+    Q.warsaw_succession_due_time = -1;
+}
+if (!Number.isFinite(Number(Q.warsaw_succession_result_due_time))) {
+    Q.warsaw_succession_result_due_time = -1;
+}
+if (!Number.isFinite(Number(Q.warsaw_succession_roll))) {
+    Q.warsaw_succession_roll = -1;
+}
+if (!Number.isFinite(Number(Q.last_local_affairs_time))) {
+    Q.last_local_affairs_time = -1;
+}
+if (!Number.isFinite(Number(Q.warsaw_mayoral_income_bonus))) {
+    Q.warsaw_mayoral_income_bonus = 0;
+}
+if (!Number.isFinite(Number(Q.p2050_warsaw_mayor_poll_bonus))) {
+    Q.p2050_warsaw_mayor_poll_bonus = 0;
+}
+if (!Number.isFinite(Number(Q.holownia_sejm_eligible))) {
+    Q.holownia_sejm_eligible = Q.holownia_warsaw_mayor ? 0 : 1;
+}
+if (typeof Q.mayor_term_limit_stance != "string") {
+    Q.mayor_term_limit_stance = "No position";
+}
+if (Q.president_name == "Rafał Trzaskowski" &&
+    Q.warsaw_mayor == "Rafał Trzaskowski" &&
+    !Q.warsaw_succession_campaign_done &&
+    Number(Q.warsaw_succession_due_time) < 0) {
+    Q.warsaw_succession_due_time = (Number(Q.time) || 0) + 1;
+    Q.warsaw_succession_oath_year = Number(Q.year) || 2020;
+}
+const localMonthIndex = (Number(Q.year) || 0) * 12 + (Number(Q.month) || 1);
+const localAffairsDue = [];
+if (!Q.warsaw_succession_campaign_done &&
+    Number(Q.warsaw_succession_due_time) >= 0 &&
+    Number(Q.time) >= Number(Q.warsaw_succession_due_time)) {
+    localAffairsDue.push({id: "warsaw_campaign", due: Number(Q.warsaw_succession_due_time), priority: 0});
+}
+if (Q.warsaw_succession_campaign_done &&
+    !Q.warsaw_succession_result_done &&
+    Number(Q.warsaw_succession_result_due_time) >= 0 &&
+    Number(Q.time) >= Number(Q.warsaw_succession_result_due_time)) {
+    localAffairsDue.push({id: "warsaw_result", due: Number(Q.warsaw_succession_result_due_time), priority: 1});
+}
+if (!Q.sutryk_term_limit_done && localMonthIndex >= 2024 * 12 + 11) {
+    localAffairsDue.push({id: "sutryk", due: 2024 * 12 + 11, priority: 2});
+}
+if (!Q.krakow_clean_transport_done && localMonthIndex >= 2026 * 12 + 1) {
+    localAffairsDue.push({id: "krakow", due: 2026 * 12 + 1, priority: 3});
+}
+if (!Q.rural_bus_exclusion_done && localMonthIndex >= 2026 * 12 + 2) {
+    localAffairsDue.push({id: "buses", due: 2026 * 12 + 2, priority: 4});
+}
+if (!Q.warsaw_alcohol_policy_done && localMonthIndex >= 2026 * 12 + 6) {
+    localAffairsDue.push({id: "alcohol", due: 2026 * 12 + 6, priority: 5});
+}
+localAffairsDue.sort(function(a, b) {
+    return a.due - b.due || a.priority - b.priority;
+});
+Q.local_affairs_next = localAffairsDue.length ? localAffairsDue[0].id : "";
+Q.local_affairs_dispatchable =
+    Number(Q.last_local_affairs_time) != Number(Q.time) &&
+    Q.local_affairs_next ? 1 : 0;
 const july2021ChainPending =
     Q.year == 2021 && Q.month == 7 &&
     (!Q.tusk_return_2021_done || !Q.left_revolt_event_done ||
@@ -6731,7 +6797,8 @@ if (Q.started) {
     Q.seat_subvention = Q.seat_subvention_seats > 0
         ? Math.max(1, Math.round(Q.seat_subvention_seats / 25))
         : 0;
-    Q.party_income = Q.member_dues + Q.seat_subvention;
+    Q.party_income = Q.member_dues + Q.seat_subvention +
+        Math.max(0, Number(Q.warsaw_mayoral_income_bonus) || 0);
     Q.last_dues_payout = Number.isFinite(Number(Q.last_dues_payout))
         ? Math.max(0, Number(Q.last_dues_payout))
         : 0;
@@ -6739,6 +6806,9 @@ if (Q.started) {
         Number.isFinite(Number(Q.last_subvention_payout))
             ? Math.max(0, Number(Q.last_subvention_payout))
             : 0;
+    Q.last_mayoral_income_payout = Number.isFinite(
+        Number(Q.last_mayoral_income_payout)
+    ) ? Math.max(0, Number(Q.last_mayoral_income_payout)) : 0;
     Q.last_annual_payout = Number.isFinite(Number(Q.last_annual_payout))
         ? Math.max(0, Number(Q.last_annual_payout))
         : 0;

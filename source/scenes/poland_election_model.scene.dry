@@ -4,7 +4,7 @@ const regionalElectionHost = typeof window !== "undefined"
     ? window
     : (typeof globalThis !== "undefined" ? globalThis : this);
 if (!regionalElectionHost.polandElectionModel ||
-    regionalElectionHost.polandElectionModel.version != 4) {
+    regionalElectionHost.polandElectionModel.version != 5) {
     const geography = regionalElectionHost.polandElectionGeographyData;
     const finiteRegional = function(value, fallback) {
         const parsed = Number(value);
@@ -49,6 +49,9 @@ if (!regionalElectionHost.polandElectionModel ||
     };
     const profileShareRegional = function(profile, family) {
         if (family == "p2050") {
+            if (Number.isFinite(Number(profile.p2050))) {
+                return Number(profile.p2050);
+            }
             return finiteRegional(profile.ko, 0) * 0.62 +
                 finiteRegional(profile.psl, 0) * 0.38;
         }
@@ -172,6 +175,85 @@ if (!regionalElectionHost.polandElectionModel ||
         for (let visit = 2; visit < visits; visit += 1) tourMultiplier *= 1.01;
         return issueMultiplier * Math.min(1.08, tourMultiplier);
     };
+    const demographicSignalsRegional = function(state) {
+        const rural = clampRegional(
+            ((finiteRegional(state.rural_support, 5) - 5) +
+                (finiteRegional(state.local_network, 42) - 42)) * 0.003,
+            -0.12,
+            0.12
+        );
+        const urban = clampRegional(
+            ((finiteRegional(state.urban_progressive_support, 27) - 27) +
+                (finiteRegional(state.public_sector_support, 18) - 18)) * 0.002,
+            -0.08,
+            0.08
+        );
+        const dominance =
+            finiteRegional(state.border_security_support, 50) -
+            finiteRegional(state.refugee_solidarity_support, 50) +
+            0.5 * (
+                finiteRegional(state.border_security_salience, 50) -
+                finiteRegional(state.refugee_solidarity_salience, 50)
+            );
+        return {
+            rural: rural,
+            urban: urban,
+            antiMigrant: clampRegional((dominance - 10) / 30, 0, 1)
+        };
+    };
+    const effectMatchesRegional = function(effect, row) {
+        const settlement = String(effect.settlement || "all");
+        const urbanScore = clampRegional(row.urbanScore, 0, 1);
+        if (settlement == "urban" && urbanScore < 0.5) return false;
+        if (settlement == "rural" && urbanScore >= 0.5) return false;
+        const provinces = Array.isArray(effect.provinceIds)
+            ? effect.provinceIds.map(String) : [];
+        const districts = Array.isArray(effect.districtIds)
+            ? effect.districtIds.map(String) : [];
+        const counties = Array.isArray(effect.countyIds)
+            ? effect.countyIds.map(String) : [];
+        if (!provinces.length && !districts.length && !counties.length) {
+            return true;
+        }
+        const rowCounties = Array.isArray(row.countyIds)
+            ? row.countyIds.map(String) : [String(row.id)];
+        const rowDistricts = Array.isArray(row.districtIds)
+            ? row.districtIds.map(String)
+            : [String(row.districtId || row.id), String(row.id)];
+        return provinces.includes(String(row.provinceId)) ||
+            districts.some(function(id) { return rowDistricts.includes(id); }) ||
+            counties.some(function(id) { return rowCounties.includes(id); });
+    };
+    const placementMultiplierRegional = function(
+        state, row, family, effects, signalDelta
+    ) {
+        let eventMultiplier = 1;
+        for (const effect of effects) {
+            if (!effectMatchesRegional(effect, row)) continue;
+            eventMultiplier *= 1 + finiteRegional(
+                (effect.families || {})[family],
+                0
+            );
+        }
+        eventMultiplier = clampRegional(eventMultiplier, 0.82, 1.18);
+        const urbanScore = clampRegional(row.urbanScore, 0, 1);
+        let demographicMultiplier = 1;
+        if (family == "left") {
+            demographicMultiplier +=
+                finiteRegional(signalDelta.rural, 0) * (1 - urbanScore) +
+                finiteRegional(signalDelta.urban, 0) * urbanScore;
+        }
+        if (["06", "18", "20", "28"].includes(String(row.provinceId))) {
+            if (family == "konf") {
+                demographicMultiplier +=
+                    finiteRegional(signalDelta.antiMigrant, 0) * 0.12;
+            } else if (family == "pis") {
+                demographicMultiplier +=
+                    finiteRegional(signalDelta.antiMigrant, 0) * 0.04;
+            }
+        }
+        return eventMultiplier * Math.max(0.75, demographicMultiplier);
+    };
     const seedHashRegional = function(value) {
         let hash = 2166136261;
         const text = String(value || "regional-sejm");
@@ -236,6 +318,23 @@ if (!regionalElectionHost.polandElectionModel ||
                 profile: priorProfileRegional(state, system, row)
             });
         });
+        const prior = state.poland_election_geographic_prior;
+        const samePrior = prior && prior.system == system;
+        const appliedKeys = samePrior && Array.isArray(prior.appliedEffectKeys)
+            ? prior.appliedEffectKeys.map(String) : [];
+        const effects = (Array.isArray(state.regional_effect_log)
+            ? state.regional_effect_log : []).filter(function(effect) {
+            return effect && !appliedKeys.includes(String(effect.key));
+        });
+        const currentSignals = demographicSignalsRegional(state);
+        const archivedSignals = samePrior && prior.demographicSignals
+            ? prior.demographicSignals : {rural: 0, urban: 0, antiMigrant: 0};
+        const signalDelta = {
+            rural: currentSignals.rural - finiteRegional(archivedSignals.rural, 0),
+            urban: currentSignals.urban - finiteRegional(archivedSignals.urban, 0),
+            antiMigrant: currentSignals.antiMigrant -
+                finiteRegional(archivedSignals.antiMigrant, 0)
+        };
         const affinities = {};
         for (const issue of Object.keys(issueDataRegional)) {
             const values = workingRows.map(function(row) {
@@ -258,6 +357,16 @@ if (!regionalElectionHost.polandElectionModel ||
                         row.profile, familyForRegional(id)
                     ) * finiteRegional(componentVotes[id], 0) / memberTotal;
                 }, 0);
+                const placement = members.reduce(function(sum, id) {
+                    return sum + placementMultiplierRegional(
+                        state,
+                        row,
+                        familyForRegional(id),
+                        effects,
+                        signalDelta
+                    ) * finiteRegional(componentVotes[id], 0) / memberTotal;
+                }, 0);
+                prior *= placement;
                 if (members.includes("left")) {
                     prior *= campaignMultiplierRegional(
                         state, row, affinities, campaignLog
@@ -403,7 +512,7 @@ if (!regionalElectionHost.polandElectionModel ||
             (system == "proportional" ? geography.districts : []);
         const listMatrix = system == "mixed_230"
             ? regionalVoteMatrix(
-                state, "proportional", listRows, committees, committeeVotes,
+                state, system, listRows, committees, committeeVotes,
                 membersFor, componentVotes, campaignLog
             ) : primaryMatrix;
         const listDistrictResults = [];
@@ -439,7 +548,9 @@ if (!regionalElectionHost.polandElectionModel ||
                 );
                 for (const id of members) partySeats[id] += apportioned[id] || 0;
             }
-            const familyVotes = emptyRegional(geography.families);
+            const familyVotes = emptyRegional(
+                geography.families.concat(["p2050"])
+            );
             for (const committee of committees) {
                 const members = membersFor(committee);
                 const total = members.reduce(function(sum, id) {
@@ -447,8 +558,7 @@ if (!regionalElectionHost.polandElectionModel ||
                 }, 0) || 1;
                 for (const id of members) {
                     const family = familyForRegional(id);
-                    const target = family == "p2050" ? "ko" : family;
-                    familyVotes[target] = (familyVotes[target] || 0) +
+                    familyVotes[family] = (familyVotes[family] || 0) +
                         percentages[committee] * finiteRegional(componentVotes[id], 0) /
                         total;
                 }
@@ -457,6 +567,9 @@ if (!regionalElectionHost.polandElectionModel ||
                 id: entry.row.id,
                 name: entry.row.name,
                 provinceId: entry.row.provinceId,
+                districtId: entry.row.districtId || entry.row.id,
+                countyIds: (entry.row.countyIds || []).slice(),
+                urbanScore: clampRegional(entry.row.urbanScore, 0, 1),
                 baseDistrictId: entry.row.districtId || entry.row.id,
                 magnitude: magnitude,
                 kind: kind,
@@ -599,12 +712,20 @@ if (!regionalElectionHost.polandElectionModel ||
             districtResults: districtResults,
             listDistrictResults: listDistrictResults,
             provinceResults: provinceResults,
+            appliedRegionalEffectKeys: (Array.isArray(state.regional_effect_log)
+                ? state.regional_effect_log : []).map(function(effect) {
+                return String(effect.key);
+            }),
+            demographicSignals: demographicSignalsRegional(state),
             campaignLog: campaignLog,
             committees: committees,
             partyIds: partyIds
         };
     };
     const snapshotRegional = function(result, key, label) {
+        const profileRows = result.system == "mixed_230"
+            ? result.districtResults.concat(result.listDistrictResults)
+            : result.districtResults;
         return {
             type: "sejm",
             key: key,
@@ -618,10 +739,12 @@ if (!regionalElectionHost.polandElectionModel ||
             districts: copyRegional(result.districtResults),
             listDistricts: copyRegional(result.listDistrictResults),
             provinces: copyRegional(result.provinceResults),
-            profiles: result.districtResults.map(function(row) {
+            appliedEffectKeys: (result.appliedRegionalEffectKeys || []).slice(),
+            demographicSignals: copyRegional(result.demographicSignals || {}),
+            profiles: profileRows.map(function(row) {
                 const total = sumRegional(row.familyVotes) || 1;
                 const profile = {};
-                for (const family of geography.families) {
+                for (const family of geography.families.concat(["p2050"])) {
                     profile[family] = finiteRegional(row.familyVotes[family], 0) /
                         total;
                 }
@@ -641,11 +764,14 @@ if (!regionalElectionHost.polandElectionModel ||
         state.poland_election_map_archive.push(snapshot);
         state.poland_election_geographic_prior = {
             system: snapshot.system,
-            profiles: copyRegional(snapshot.profiles)
+            profiles: copyRegional(snapshot.profiles),
+            appliedEffectKeys: snapshot.appliedEffectKeys.slice(),
+            demographicSignals: copyRegional(snapshot.demographicSignals)
         };
         return snapshot;
     };
     const allocatePresidentRegional = function(options) {
+        const state = options.state || {};
         const candidates = (options.candidates || []).filter(function(row) {
             return row && row.id && finiteRegional(row.share, 0) > 0;
         }).map(function(row) {
@@ -662,12 +788,18 @@ if (!regionalElectionHost.polandElectionModel ||
         const electorate = geography.counties.reduce(function(sum, row) {
             return sum + finiteRegional(row.electorate, 1);
         }, 0);
+        const effects = Array.isArray(state.regional_effect_log)
+            ? state.regional_effect_log : [];
+        const signals = demographicSignalsRegional(state);
         const matrix = geography.counties.map(function(row) {
             const votes = {};
             for (const candidate of candidates) {
                 votes[candidate.id] = row.electorate * Math.max(
                     0.00001,
-                    profileShareRegional(row.profile, candidate.family)
+                    profileShareRegional(row.profile, candidate.family) *
+                        placementMultiplierRegional(
+                            state, row, candidate.family, effects, signals
+                        )
                 );
             }
             return {row: row, votes: votes};
@@ -703,6 +835,8 @@ if (!regionalElectionHost.polandElectionModel ||
                 id: row.id,
                 name: row.name,
                 provinceId: row.provinceId || row.id,
+                countyIds: (row.countyIds || [row.id]).slice(),
+                urbanScore: clampRegional(row.urbanScore, 0, 1),
                 electorate: Math.round(row.electorate),
                 votes: percentages,
                 voteCounts: votes,
@@ -877,8 +1011,33 @@ if (!regionalElectionHost.polandElectionModel ||
         state.regional_campaign_draft = null;
         return true;
     };
+    const recordRegionalEffect = function(state, effect) {
+        if (!state || !effect || !String(effect.key || "").trim()) return false;
+        if (!Array.isArray(state.regional_effect_log)) {
+            state.regional_effect_log = [];
+        }
+        const key = String(effect.key).trim();
+        if (state.regional_effect_log.some(function(row) {
+            return row && String(row.key) == key;
+        })) return false;
+        const families = {};
+        for (const family of geography.families.concat(["p2050"])) {
+            const value = Number((effect.families || {})[family]);
+            if (Number.isFinite(value) && value != 0) families[family] = value;
+        }
+        state.regional_effect_log.push({
+            key: key,
+            families: families,
+            provinceIds: (effect.provinceIds || []).map(String),
+            districtIds: (effect.districtIds || []).map(String),
+            countyIds: (effect.countyIds || []).map(String),
+            settlement: ["urban", "rural"].includes(effect.settlement)
+                ? effect.settlement : "all"
+        });
+        return true;
+    };
     regionalElectionHost.polandElectionModel = {
-        version: 4,
+        version: 5,
         geography: geography,
         issues: issueDataRegional,
         familyFor: familyForRegional,
@@ -894,7 +1053,8 @@ if (!regionalElectionHost.polandElectionModel ||
         initialiseCampaign: initialiseCampaignRegional,
         setCampaignIssue: setCampaignIssueRegional,
         setCampaignProvince: setCampaignProvinceRegional,
-        submitCampaign: submitCampaignRegional
+        submitCampaign: submitCampaignRegional,
+        recordRegionalEffect: recordRegionalEffect
     };
     if (Q.election_2023_certified &&
         (!Array.isArray(Q.poland_election_map_archive) ||
