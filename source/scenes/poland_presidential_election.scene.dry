@@ -942,6 +942,80 @@ if (Q.pres_first_calc_mode == "first_result") {
             (Number(Q.psl_poll_momentum) || 0) - p2050Conversion * 0.15;
         Q.other_poll_momentum =
             (Number(Q.other_poll_momentum) || 0) - p2050Conversion * 0.20;
+
+        // KO's candidate missing the runoff is not a bad night. The whole
+        // Civic claim on the opposition is that only KO can reach the second
+        // round and therefore everybody else must stand aside; a first round
+        // that says otherwise ends the claim, and no later poll recovery
+        // gives it back. One scalar carries the size of the failure into
+        // every later model rather than each one re-reading the count.
+        const koShareR1 = Math.round(share.trzaskowski * 100) / 100;
+        if (!Q.pres_ko_joint_candidate && ordered[0] != "trzaskowski" &&
+            ordered[1] != "trzaskowski") {
+            Q.ko_2020_runoff_miss = 1;
+            Q.ko_2020_r1_share = koShareR1;
+            Q.ko_2020_r1_rank = ordered.indexOf("trzaskowski") + 1;
+            Q.ko_2020_r1_rank_label = Q.ko_2020_r1_rank == 3
+                ? "third"
+                : (Q.ko_2020_r1_rank == 4 ? "fourth" : "outside the first four");
+            Q.ko_2020_finalists =
+                Q.pres_r1_leader_name + " and " + Q.pres_r1_runner_name;
+            Q.ko_2020_miss_band = koShareR1 >= 14
+                ? "Beaten into third"
+                : (koShareR1 >= 8 ? "Humiliation" : "Annihilation");
+            Q.ko_2020_humiliation = Math.round(
+                Math.max(14, Math.min(60, (20 - koShareR1) * 4))
+            );
+            const koFall = Q.ko_2020_humiliation;
+            Q.ko_hegemony_broken = 1;
+            Q.ko_poll_momentum =
+                (Number(Q.ko_poll_momentum) || 0) - (1.8 + koFall * 0.06);
+            Q.ko_poll = Math.max(
+                6, (Number(Q.ko_poll) || 27.4) - koFall * 0.09
+            );
+            Q.ko_coalition_dissent = (Number(Q.ko_coalition_dissent) || 0) +
+                Math.round(9 + koFall * 0.35);
+            Q.ko_cohesion = Math.max(12, Math.round(
+                (Number(Q.ko_cohesion) || 62) - (7 + koFall * 0.30)
+            ));
+            Q.ko_collapse_shock = (Number(Q.ko_collapse_shock) || 0) +
+                Math.round(koFall * 0.55);
+            Q.ko_ai_resources = Math.max(
+                0, (Number(Q.ko_ai_resources) || 7) - 2
+            );
+            Q.ko_relation = Math.max(0, (Number(Q.ko_relation) || 0) - 4);
+            // The wing that chose the candidate loses the argument about who
+            // KO is for: a flopped primary winner vindicates the mayors, a
+            // flopped mayor vindicates the people who never wanted him.
+            Q.ko_social_liberal_share = Math.max(0, Math.min(100,
+                (Number(Q.ko_social_liberal_share) || 42) +
+                    (Q.pres_2020_ko_kidawa ? 9 : -9)
+            ));
+            Q.ko_classical_liberal_share = 100 - Q.ko_social_liberal_share;
+            // Nobody votes tactically for a party that has just proved it
+            // cannot reach a runoff. This is the hegemony, and it is the part
+            // that does not come back.
+            Q.tactical_desertion_to_ko = Math.max(
+                0, (Number(Q.tactical_desertion_to_ko) || 0) * 0.35
+            );
+            Q.pres_feedback_tactical_flight = Math.round(
+                (Number(Q.pres_feedback_tactical_flight) || 0) * 45
+            ) / 100;
+            Q.pres_feedback_tactical_current = Q.pres_feedback_tactical_flight;
+            Q.opposition_list_pressure = Math.max(
+                0,
+                (Number(Q.opposition_list_pressure) || 0) - (4 + koFall * 0.12)
+            );
+            Q.party_system_left_pull = (Number(Q.party_system_left_pull) || 0) +
+                Math.round(2 + koFall * 0.10);
+            Q.left_poll_momentum =
+                (Number(Q.left_poll_momentum) || 0) + koFall * 0.012;
+            Q.konf_poll_momentum =
+                (Number(Q.konf_poll_momentum) || 0) + koFall * 0.008;
+            Q.historical_pressure_last = "KO's " + koShareR1 +
+                "% leaves the Civic bloc out of the runoff between " +
+                Q.ko_2020_finalists;
+        }
     }
     const presidentialMapModel = (typeof window !== "undefined"
         ? window : globalThis).polandElectionModel;
@@ -1906,17 +1980,319 @@ no party can simply assign it.?]
 [? if pres_first_round_majority: **[+ pres_r1_leader_name +]** has crossed an
 absolute majority of valid votes. There will be no runoff.?]
 
+[? if ko_2020_runoff_miss: **[+ pres_2020_ko_name +]** finishes **[+
+ko_2020_r1_rank_label +]** on **[+ ko_2020_r1_share +]%**.
+The largest opposition party in Poland is not on the second ballot.?]
+
+- @ko_ballot_collapse
 - @wait_for_runoff
 - @first_round_finished
 
 @wait_for_runoff
 title: Return to the leadership table; the runoff is next month
-view-if: pres_first_round_majority = 0
+view-if: pres_first_round_majority = 0 and (ko_2020_runoff_miss = 0 or ko_2020_crisis_done = 1)
 go-to: poland_hub
 
 @first_round_finished
 title: Return to the leadership table with a president elected
-view-if: pres_first_round_majority = 1
+view-if: pres_first_round_majority = 1 and (ko_2020_runoff_miss = 0 or ko_2020_crisis_done = 1)
+go-to: poland_hub
+
+@ko_ballot_collapse
+# prose-audit: Grade A — The Civic bloc's collapse is caused by the count the player just produced and sized by it: the band, the wing that loses the internal argument and the fate of the junior parties are all fixed before any choice appears, so Lewica decides what to do with a hegemony that has already ended rather than whether to end it.
+title: The Civic bloc is not on the ballot
+subtitle: KO's claim to lead the opposition depended on reaching the runoff; Lewica decides what replaces it
+face-image: img/poland/events/borysbudka.jpg
+new-page: true
+view-if: ko_2020_runoff_miss = 1 and ko_2020_crisis_done = 0
+on-arrival: {!
+Q.ko_2020_crisis_done = 1;
+const koFall = Number(Q.ko_2020_humiliation) || 14;
+// A result this bad does not merely cost KO a campaign. Koalicja Obywatelska
+// is an electoral alliance rather than a party, and below eight per cent none
+// of its junior parties has a reason left to stand on somebody else's list.
+// All three leave, and what remains is Platforma Obywatelska under its own
+// name, badge and colour — the coalition simply stops existing.
+if (Q.ko_2020_miss_band == "Annihilation") {
+    const record = function(id) {
+        return (Q.rival_group_records || []).find(function(entry) {
+            return entry.id == id;
+        });
+    };
+    let leavers = 0;
+    for (const id of ["nowoczesna", "ipl", "greens"]) {
+        const party = record(id);
+        if (!party || !party.active) continue;
+        const seats = Math.max(0, Math.round(Number(party.mp_count) || 0));
+        party.allied = 0;
+        party.independent = 1;
+        party.parent = "No electoral committee";
+        party.legal_status = "registered party outside the Civic bloc";
+        party.list_committee = id;
+        party.club = id;
+        party.exclusive_seats = seats;
+        party.sejm_mps = seats;
+        party.relation = Math.min(100, (Number(party.relation) || 40) + 10);
+        leavers += seats;
+    }
+    // The committee record is retired and PO stops being a component of
+    // anything. The `ko` key stays as the internal handle for the surviving
+    // party; every name, badge and colour the player sees resolves to PO.
+    const koCommittee = record("ko_party");
+    if (koCommittee) {
+        koCommittee.active = 0;
+        koCommittee.allied = 0;
+        koCommittee.legal_status = "dissolved electoral alliance";
+        koCommittee.parent = "No electoral committee";
+        koCommittee.mp_count = 0;
+        koCommittee.sejm_mps = 0;
+        koCommittee.exclusive_seats = 0;
+    }
+    const po = record("po");
+    if (po) {
+        po.parent = "Platforma Obywatelska";
+        po.legal_status = "registered party";
+    }
+    Q.ko_2020_alliance_broken = 1;
+    Q.ko_2020_alliance_leavers = leavers;
+    Q.ko_seats = Math.max(0, (Number(Q.ko_seats) || 0) - leavers);
+    Q.ko_cohesion = Math.max(10, (Number(Q.ko_cohesion) || 40) - 6);
+    Q.ko_collapse_shock = (Number(Q.ko_collapse_shock) || 0) + 10;
+    Q.ko_leader = Q.ko_leader == "Barbara Nowacka" ||
+        Q.ko_leader == "Adam Szłapka"
+        ? "Borys Budka"
+        : Q.ko_leader;
+}
+Q.ko_2020_blamed_wing = Q.pres_2020_ko_kidawa
+    ? "the parliamentary old guard that defended the primary"
+    : "the metropolitan campaign that was supposed to be the safe choice";
+Q.news_headline = Q.ko_2020_alliance_broken
+    ? "Koalicja Obywatelska breaks up after KO's " +
+        Q.ko_2020_r1_share + "%"
+    : "KO's " + Q.ko_2020_r1_share +
+        "% ends its claim to lead the opposition";
+!}
+
+= June 2020 — [+ ko_2020_r1_share +]% and no second ballot
+
+For five years every conversation in the democratic camp began from the same
+premise: KO is the only opposition party large enough to beat PiS, therefore
+everybody else stands aside, moderates, endorses and waits. The premise was
+never a poll number. It was the runoff.
+
+[? if ko_2020_miss_band = "Beaten into third": **[+ pres_2020_ko_name +]** ran
+a real campaign and was beaten to the second ballot anyway. KO can survive [+
+ko_2020_r1_share +]% as an organisation. What it cannot do is repeat the
+sentence about being the only vehicle, because the country has just watched
+somebody else be that vehicle.?]
+[? if ko_2020_miss_band = "Humiliation": **[+ pres_2020_ko_name +]** finishes
+on [+ ko_2020_r1_share +]% — a number KO's own regional structures cannot
+explain to their members. The party that has claimed the anti-PiS electorate
+since 2015 did not come close to the ballot that decides who governs from the
+Palace.?]
+[? if ko_2020_miss_band = "Annihilation": **[+ pres_2020_ko_name +]** finishes
+on [+ ko_2020_r1_share +]%. This is not a defeat; it is a party ceasing to be
+the thing it said it was. Regional boards are meeting tonight without telling
+the national executive.?]
+
+**[+ pres_r1_leader_name +]** and **[+ pres_r1_runner_name +]** contest the
+runoff. The blame inside KO settles on [+ ko_2020_blamed_wing +], and it will
+not be settled quickly, because the wing being blamed controls the lists.
+
+[? if ko_2020_alliance_broken: <b>Koalicja Obywatelska stops existing.</b> It
+was never a party — it was a committee, and a committee is a promise about
+arithmetic. Nowoczesna, Inicjatywa Polska and Zieloni all announce they will
+not stand on a Civic list again: **[+ ko_2020_alliance_leavers +] MPs** leave
+the club and register their own. What is left keeps the offices, the debts and
+the old name it never stopped using in private — **Platforma Obywatelska**,
+alone on a ballot for the first time since 2018. Two of the departures are
+progressive parties with no floor under them, and both know exactly which
+party is calling by Tuesday.?]
+[? if not ko_2020_alliance_broken: The coalition holds — barely. Nowoczesna,
+Inicjatywa Polska and Zieloni stay inside the Civic committee because leaving
+in June costs more than staying, and every one of them says so out loud, which
+is its own kind of announcement.?]
+
+Whatever we do now, one thing is already finished: no Left voter in this
+country will be told again that a vote for us wastes the only realistic
+chance of removing PiS. That argument died at [+ ko_2020_r1_share +]%.
+
+- @ko_collapse_2020_inherit
+- @ko_collapse_2020_front
+- @ko_collapse_2020_absorb
+
+@ko_collapse_2020_inherit
+title: Claim the vacancy: the Left is now the opposition's centre of gravity
+subtitle: Maximum differentiation and the strongest pull on KO's orphaned voters; KO treats us as the party that buried it.
+on-arrival: {!
+Q.ko_2020_crisis_response = "Claim the vacancy";
+Q.party_system_left_pull = (Number(Q.party_system_left_pull) || 0) + 6;
+Q.left_poll_momentum = (Number(Q.left_poll_momentum) || 0) + 0.45;
+Q.media_capacity = (Number(Q.media_capacity) || 0) + 3;
+Q.leadership_authority = (Number(Q.leadership_authority) || 0) + 4;
+Q.tactical_desertion_to_ko = Math.max(
+    0, (Number(Q.tactical_desertion_to_ko) || 0) * 0.6
+);
+Q.ko_relation = Math.max(0, (Number(Q.ko_relation) || 0) - 9);
+Q.ko_coalition_dissent = (Number(Q.ko_coalition_dissent) || 0) + 6;
+Q.news_headline = "Lewica says the opposition has a new centre of gravity";
+!}
+
+We do not commiserate. Every appearance this week says the same sentence: the
+strategy of concentrating the anti-PiS vote in one liberal party was tested on
+Sunday and it failed, and the people who spent five years enforcing it owe an
+explanation to everybody they enforced it on.
+
+It is the most useful week the Left has had since 2015 and it costs us any
+pretence of a friendly relationship with what remains of KO's leadership, who
+will spend the rest of the term telling journalists we kicked a party that was
+already down. They are not entirely wrong.
+
+- @ko_collapse_2020_result: Read the settlement
+
+@ko_collapse_2020_front
+title: Hold the democratic front together and let KO keep its dignity
+subtitle: Protects the runoff coalition and the Senate pact; the vacancy stays open for somebody else to fill.
+on-arrival: {!
+Q.ko_2020_crisis_response = "Hold the front together";
+Q.ko_relation = (Number(Q.ko_relation) || 0) + 8;
+Q.public_trust = (Number(Q.public_trust) || 0) + 2;
+Q.constitutional_restraint = (Number(Q.constitutional_restraint) || 0) + 3;
+Q.pres_runoff_preparation = (Number(Q.pres_runoff_preparation) || 0) + 0.6;
+Q.party_unity = (Number(Q.party_unity) || 0) - 2;
+Q.razem_dissent = (Number(Q.razem_dissent) || 0) + 5;
+Q.p2050_poll_momentum = (Number(Q.p2050_poll_momentum) || 0) + 0.5;
+Q.news_headline = "Lewica declines to campaign against a collapsing KO";
+!}
+
+There is a runoff in four weeks and a Senate majority that only exists because
+these parties stopped competing in single-member seats. We say nothing about
+KO's result that a KO politician could quote against us, and we get a
+functioning democratic coalition for July in exchange.
+
+The vacancy does not stay empty because we were polite about it. Hołownia's
+volunteers are already in the towns we did not go to, and Razem's organisers
+want to know precisely what we were paid for the silence.
+
+- @ko_collapse_2020_result: Read the settlement
+
+@ko_collapse_2020_absorb
+title: Go for the progressive wing and the orphaned partners
+subtitle: Organisational rather than rhetorical: list places, staff and offices for the people KO can no longer pay.
+on-arrival: {!
+Q.ko_2020_crisis_response = "Recruit the progressive wing";
+Q.progressive_credibility = (Number(Q.progressive_credibility) || 0) + 4;
+Q.local_network = (Number(Q.local_network) || 0) + 4;
+Q.organiser_energy = (Number(Q.organiser_energy) || 0) - 3;
+Q.resources = (Number(Q.resources) || 0) - 1;
+Q.ko_relation = Math.max(0, (Number(Q.ko_relation) || 0) - 5);
+Q.ko_social_liberal_share = Math.max(
+    0, (Number(Q.ko_social_liberal_share) || 42) - 5
+);
+Q.ko_classical_liberal_share = 100 - Q.ko_social_liberal_share;
+Q.barons_dissent = (Number(Q.barons_dissent) || 0) + 4;
+Q.news_headline = "Lewica opens its lists to KO's progressive organisers";
+!}
+
+Nothing is said on television. Offers go out in writing instead: regional
+office space, staff contracts, winnable places in 2023 and a programme that
+does not need translating for anybody who spent the last five years losing KO
+internal votes on housing, schools and rights.
+
+Our own regional secretaries are told which of those places have just stopped
+being theirs, and say what regional secretaries always say. The gain is not
+visible this month. It is visible in every constituency where somebody else's
+structure used to be.
+
+- @ko_collapse_2020_result: Read the settlement
+
+@ko_collapse_2020_result
+title: The opposition after the Civic bloc
+new-page: true
+on-arrival: {!
+const recruiting = Q.ko_2020_crisis_response == "Recruit the progressive wing";
+// Only the recruitment line converts the orphaned partners into Left seats;
+// the other two leave them independent and available to anybody.
+if (Q.ko_2020_alliance_broken && recruiting) {
+    const record = function(id) {
+        return (Q.rival_group_records || []).find(function(entry) {
+            return entry.id == id;
+        });
+    };
+    const ipl = record("ipl");
+    const greens = record("greens");
+    const iplSeats = ipl ? Math.max(0, Math.round(Number(ipl.mp_count) || 0)) : 0;
+    const greenSeats = greens
+        ? Math.max(0, Math.round(Number(greens.mp_count) || 0))
+        : 0;
+    const joined = iplSeats + greenSeats;
+    if (joined > 0) {
+        Q.ipl_joined_left = 1;
+        Q.left_ipl_current_seats = iplSeats;
+        if (greenSeats > 0) {
+            Q.greens_joined_left = 1;
+            Q.left_green_current_seats = greenSeats;
+        }
+        Q.left_seats = Math.max(0, Number(Q.left_seats) || 0) + joined;
+        Q.left_progressives_seats =
+            Math.max(0, Number(Q.left_progressives_seats) || 0) + joined;
+        Q.progressives_strength =
+            (Number(Q.progressives_strength) || 0) + 4;
+        Q.ko_2020_alliance_recruits = joined;
+    }
+}
+Q.ko_2020_crisis_result = Q.ko_2020_alliance_broken
+    ? (Q.ko_2020_alliance_recruits > 0
+        ? "Koalicja Obywatelska dissolves back into PO and " +
+            Q.ko_2020_alliance_recruits + " of its MPs join the Left"
+        : "Koalicja Obywatelska dissolves back into Platforma Obywatelska")
+    : "KO survives the night without its claim to lead the opposition";
+!}
+
+= [+ ko_2020_crisis_result +]
+
+[? if not ko_2020_alliance_broken: KO does not disappear. It keeps a caucus, a
+name, a machine and a [+ ko_2020_r1_share +]% presidential result that every
+rival will quote at it until 2023. What it has lost is the argument — the one
+that made every other democratic party a junior partner by default — and that
+argument was the whole basis of the last five years of opposition politics.?]
+
+[? if ko_2020_alliance_broken: The name goes first. Committees are registered
+and deregistered by a court clerk, and Koalicja Obywatelska was only ever a
+committee: an agreement between four organisations that a common list would
+deliver a government. It delivered [+ ko_2020_r1_share +]%. **Platforma
+Obywatelska** takes back its own name, its own badge and its own colour, and
+keeps the caucus, the offices and the debts. Everybody who spent five years
+described as a KO politician is now described as whatever they actually
+are.
+That is a smaller party than the one that went into Sunday, and it has lost
+more than [+ ko_2020_alliance_leavers +] MPs. It has lost the argument that
+made every other democratic party a junior partner by default, which was the
+whole basis of the last five years of opposition politics.?]
+
+[? if ko_2020_alliance_recruits > 0: **[+ ko_2020_alliance_recruits +] MPs**
+from Inicjatywa Polska and Zieloni now sit with us. They bring constituency
+organisations rather than only votes, and a permanent internal argument about
+what the Left is now for. Nowoczesna went nowhere near us and did not have to
+be asked twice about it.?]
+[? if ko_2020_alliance_broken and ko_2020_alliance_recruits = 0: Nowoczesna,
+Inicjatywa Polska and Zieloni sit as their own parties with **[+
+ko_2020_alliance_leavers +] MPs** between them, no floor under any of them,
+and no agreement with anybody. Somebody will make them an offer. It does not
+have to be us.?]
+
+Our line was **[+ ko_2020_crisis_response +]**.
+
+Whoever leads [? if ko_2020_alliance_broken: Platforma Obywatelska?][? if not
+ko_2020_alliance_broken: KO?] next inherits a party that cannot say the
+sentence any more. When the founder is eventually recalled to fix it — and he
+will be — he will be returning to a smaller job than the one he thinks he is
+taking.
+
+- @ko_collapse_2020_record
+
+@ko_collapse_2020_record
+title: Return to the leadership table
 go-to: poland_hub
 
 @runoff_setup

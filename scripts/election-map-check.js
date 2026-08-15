@@ -63,6 +63,15 @@ const run = engine();
 const state = run.state.qualities;
 const model = globalThis.polandElectionModel;
 assert.strictEqual(model.version, 5);
+assert.deepStrictEqual(
+  [
+    'left_coalition', 'democratic_list', 'psl', 'third_way',
+    'right_2027', 'common_centre_2027', 'third_way_2027',
+    'social_conservative_2027', 'minority', 'other',
+  ].map(model.familyFor),
+  ['left', 'left', 'psl', 'p2050', 'pis', 'p2050', 'p2050', 'pis',
+    'minority', 'other']
+);
 const data = model.geography;
 const geometry = globalThis.polandElectionGeography;
 

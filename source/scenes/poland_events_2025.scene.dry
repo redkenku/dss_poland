@@ -6594,11 +6594,23 @@ Q.psl_relation += 2;
 Q.public_trust += 1;
 Q.news_headline =
     "Lewica proposes a replacement nominee without claiming the presidential designation";
+if (typeof polandCoalitionModel != "undefined") {
+    polandCoalitionModel.reconcile(Q);
+    polandCoalitionModel.initialise(Q, {
+        mode: "replacement", candidate: Q.formation_2025_candidate,
+        candidate_family: "ko", sponsor: "ko", seed_current: true,
+        roles: {ko: "cabinet", lewica: "support"},
+        submit_scene: "formation_designation_2025",
+        submit_label: "Ask the Palace to consider this agreement"
+    });
+}
 !}
 
 We name Sikorski as the democratic candidate our MPs could support, not as a
 prime minister we can appoint. KO resents the intervention; PSL welcomes an
 alternative before the Palace and Sejm make the real decisions.
+
+{!<div class="coalition-builder-host" data-coalition-mode="replacement"></div>!}
 
 - @formation_designation_2025: Ask the Palace to consider the replacement
 
@@ -6624,19 +6636,35 @@ const proposedCandidate =
     Q.formation_2025_candidate.length
         ? Q.formation_2025_candidate
         : (Q.ko_leader || "KO nominee");
+const agreementPreview = typeof polandCoalitionModel != "undefined" &&
+    Q.coalition_builder && Q.coalition_builder.context.mode == "replacement"
+        ? polandCoalitionModel.preview(Q) : null;
 Q.formation_2025_psl_committed =
-    Number(Q.psl_seats) > 0 &&
-    Number(Q.psl_relation) >= 35 &&
-    Number(Q.psl_coalition_dissent) < 65 ? 1 : 0;
+    agreementPreview
+        ? (agreementPreview.decisions.psl &&
+            agreementPreview.decisions.psl.accepted &&
+            agreementPreview.decisions.psl.role == "cabinet" ? 1 : 0)
+        : (Number(Q.psl_seats) > 0 && Number(Q.psl_relation) >= 35 &&
+            Number(Q.psl_coalition_dissent) < 65 ? 1 : 0);
 Q.formation_2025_p2050_committed =
-    Number(Q.p2050_seats) > 0 &&
-    Number(Q.p2050_relation) >= 35 &&
-    Number(Q.p2050_coalition_dissent) < 65 ? 1 : 0;
+    agreementPreview
+        ? (agreementPreview.decisions.p2050 &&
+            agreementPreview.decisions.p2050.accepted &&
+            agreementPreview.decisions.p2050.role == "cabinet" ? 1 : 0)
+        : (Number(Q.p2050_seats) > 0 && Number(Q.p2050_relation) >= 35 &&
+            Number(Q.p2050_coalition_dissent) < 65 ? 1 : 0);
 Q.formation_2025_centrum_committed =
-    Number(Q.centrum_seats) > 0 &&
-    Number(Q.centrum_relation) >= 45 ? 1 : 0;
+    agreementPreview && agreementPreview.decisions.unia_centrum
+        ? (agreementPreview.decisions.unia_centrum.accepted &&
+            agreementPreview.decisions.unia_centrum.role == "cabinet" ? 1 : 0)
+        : (Number(Q.centrum_seats) > 0 && Number(Q.centrum_relation) >= 45 ? 1 : 0);
 const partnerSeats =
-    Math.max(0, Number(Q.ko_seats) || 0) +
+    agreementPreview
+        ? Math.max(0, agreementPreview.effective_seats -
+            (agreementPreview.decisions.lewica &&
+                agreementPreview.decisions.lewica.accepted
+                ? agreementPreview.decisions.lewica.pledged : 0))
+        : Math.max(0, Number(Q.ko_seats) || 0) +
     (Q.formation_2025_p2050_committed
         ? Math.max(0, Number(Q.p2050_seats) || 0)
         : 0) +
@@ -6648,8 +6676,12 @@ const partnerSeats =
         : 0);
 const pledgedLeft = Math.max(
     0,
-    Number(Q.formation_2025_left_yes) || 0
+    agreementPreview && agreementPreview.decisions.lewica &&
+        agreementPreview.decisions.lewica.accepted
+        ? agreementPreview.decisions.lewica.pledged
+        : Number(Q.formation_2025_left_yes) || 0
 );
+Q.formation_2025_left_yes = pledgedLeft;
 const projectedSupport = Math.max(
     0,
     Math.min(total, Math.round(partnerSeats + pledgedLeft))
@@ -6965,6 +6997,23 @@ Q.confidence_threshold =
 Q.formation_2025_passed =
     Q.confidence_present >= quorum &&
     Q.confidence_yes >= Q.confidence_threshold ? 1 : 0;
+const agreementPreview = typeof polandCoalitionModel != "undefined" &&
+    Q.coalition_builder && Q.coalition_builder.context.mode == "replacement"
+        ? polandCoalitionModel.preview(Q) : null;
+if (agreementPreview) {
+    Q.formation_2025_variance = 0;
+    Q.formation_2025_core_loss = 0;
+    Q.formation_2025_absent = 0;
+    Q.formation_2025_core_pool = agreementPreview.effective_seats;
+    Q.formation_2025_core_yes = agreementPreview.effective_seats;
+    Q.confidence_yes = agreementPreview.effective_seats;
+    Q.confidence_no = Math.max(0, total - Q.confidence_yes);
+    Q.confidence_abstain = 0;
+    Q.confidence_present = total;
+    Q.confidence_threshold = Math.max(231, Math.floor(total / 2) + 1);
+    Q.formation_2025_passed = agreementPreview.ok &&
+        Q.confidence_yes >= Q.confidence_threshold ? 1 : 0;
+}
 Q.news_headline = Q.formation_2025_passed
     ? Q.formation_2025_candidate +
         " wins a recorded cabinet investiture"
@@ -6998,6 +7047,14 @@ go-to: formation_success_2025 if formation_2025_passed = 1; formation_failure_20
 title: The successor cabinet takes office
 new-page: true
 on-arrival: {!
+const successorAgreement = typeof polandCoalitionModel != "undefined" &&
+    Q.coalition_builder && Q.coalition_builder.context.mode == "replacement"
+        ? polandCoalitionModel.preview(Q) : null;
+if (successorAgreement && successorAgreement.decisions.lewica) {
+    Q.formation_2025_left_cabinet =
+        successorAgreement.decisions.lewica.accepted &&
+        successorAgreement.decisions.lewica.role == "cabinet" ? 1 : 0;
+}
 Q.government_has_confidence = 1;
 Q.caretaker_government = 0;
 Q.coalition_broken = 0;
@@ -7113,6 +7170,9 @@ Q.government_support_seats = Math.max(
     0,
     Number(Q.formation_2025_core_yes) || 0
 );
+if (successorAgreement && successorAgreement.ok) {
+    polandCoalitionModel.commit(Q);
+}
 Q.news_headline =
     Q.formation_2025_candidate +
     " takes office only after winning the recorded investiture";
@@ -7884,18 +7944,23 @@ tags: poland_event
 priority: 24
 order: 10
 max-visits: 1
-view-if: continuous_campaign = 1 and year = 2025 and month = 10 and ko_collapsed = 0
+view-if: continuous_campaign = 1 and year = 2025 and month = 10 and ko_collapsed = 0 and ko_2020_alliance_broken = 0
 on-arrival: {!
 const koConventionRoll =
     Math.floor((this.random.uint32() / 4294967296) * 9) - 4;
 // One meter carries this convention and every later KO crisis: what the
 // coalition year has already cost KO, what the polls say about it, and
-// whether it kept the Palace it spent 2025 fighting for.
+// whether it kept the Palace it spent 2025 fighting for. A party that missed
+// the 2020 runoff arrives at every one of its own conventions with the same
+// unanswered question, and the components price it.
 Q.ko_cohesion = Math.max(5, Math.min(95, Math.round(
     64 -
     Math.max(0, (Number(Q.ko_coalition_dissent) || 0) - 20) * 0.8 +
     ((Number(Q.ko_poll) || 27) - 27) * 0.9 +
-    (Q.pres_2025_winner_key == "right" ? -8 : 6) +
+    (Q.pres_2025_winner_key == "right" ? -8 : 6) -
+    (Q.ko_hegemony_broken
+        ? 6 + Math.max(0, Number(Q.ko_2020_humiliation) || 0) * 0.12
+        : 0) +
     koConventionRoll
 )));
 Q.ko_convention_done = 1;
@@ -7922,6 +7987,12 @@ exchange Nowoczesna's registration for a current inside somebody else's party.
 PO's regional structures would exchange the right to be consulted for the
 right to be organised. Each of them can count what KO's year has cost before
 handing over the keys.
+
+[? if ko_hegemony_broken: All three boards can also count back further than
+that. The reason a Civic component was ever expected to give up its
+registration was that KO would deliver the presidency and the government; in
+June 2020 it delivered **[+ ko_2020_r1_share +]%** and no second ballot, and
+every delegate in the hall has heard the number quoted at them since.?]
 
 [? if ko_cohesion >= 70: The arithmetic is finished before the speeches begin.
 The component boards have their numbers, and the only live argument is what

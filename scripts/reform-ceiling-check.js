@@ -464,4 +464,78 @@ function completeMajorReformVote(engine, choose, Q) {
     'Signed marriage equality must suppress the obsolete EU ruling event');
 }
 
+// --- 9. a written coalition promise breaks one partner veto, up to tier 3 --
+{
+  const { engine, choose, Q } = newEngine('reform-coalition-promise');
+  leftLedCabinet(Q);
+  engine.goToScene('poland_normalize');
+  Q.marriage_on_slate = 1;
+  Q.marriage_reform_defined = 1;
+  Q.ministry_ko_in_cabinet = 0;
+  Q.ministry_psl_in_cabinet = 1;
+  Q.psl_conservative_share = 60;
+  Q.psl_relation = 40;
+  Q.psl_accept_rights = 30;
+  Q.lgbt_equality_support = 48;
+  Q.lgbt_equality_backlash = 62;
+  // The Palace is not the question here: give it enough to sign a tier-3 bill
+  // so the only binding veto left is the coalition partner.
+  Q.marriage_palace_president = 'Magdalena Biejat';
+  Q.marriage_palace_commitment = 2;
+
+  const blocked = scoreCeiling(engine, Q, 'marriage', 3);
+  assert(blocked.tier < 3 && blocked.blocker === 'psl',
+    'This setup needs PSL blocking a tier-3 bill; got tier ' + blocked.tier +
+    ' blocked by ' + blocked.blocker);
+
+  Q.reform_pressure_promise_psl = 1;
+  const promised = scoreCeiling(engine, Q, 'marriage', 3);
+  assert.strictEqual(promised.tier, 3,
+    'A cashed written promise must carry the blocking partner to tier 3; ' +
+    'ceiling was ' + promised.tier);
+  assert(Q.reform_ceiling_psl_score >= Q.reform_ceiling_need,
+    'The promise must also lift the Sejm forecast, not only the pre-vote tier');
+  const overreach = scoreCeiling(engine, Q, 'marriage', 4);
+  assert(overreach.tier < 4,
+    'The promise must buy tier 3 and nothing above it; ceiling was ' +
+    overreach.tier);
+  Q.reform_pressure_promise_psl = 0;
+
+  // The promise is one per partner: cashing it in the objection spends it.
+  Q.coalition_promises_signed = 1;
+  Q.coalition_promise_spent_psl = 0;
+  Q.reform_pressure_issue = 'marriage';
+  Q.reform_pressure_target_stage = 3;
+  Q.reform_pressure_previous_stage = 0;
+  Q.reform_pressure_pending = 1;
+  Q.reform_pressure_mode = 'partner_objection';
+  Q.reform_pressure_actor = 'psl';
+  Q.reform_pressure_actor_name = 'PSL';
+  Q.reform_pressure_return_mode = 'pressure';
+  Q.reform_pressure_rounds = 0;
+
+  engine.goToScene('poland_reform_pressure');
+  assert.strictEqual(engine.state.sceneId, 'poland_reform_pressure.objection');
+  const offer = engine.getCurrentChoices().find(function(c) {
+    return c.id === 'poland_reform_pressure.objection_promise';
+  });
+  assert(offer && offer.canChoose,
+    'A signed, unspent coalition promise must be cashable against the blocker');
+  choose('poland_reform_pressure.objection_promise');
+  assert.strictEqual(Q.coalition_promise_spent_psl, 1,
+    'Cashing the promise must consume this partner\'s only written promise');
+  assert.strictEqual(Q.major_reform_vote_ready, 1,
+    'The promised bill must clear the partner veto and reach Parliament');
+  assert.strictEqual(Q.reform_ceiling_target_resolved, 3,
+    'The bill must reach Parliament at tier 3, not at the old reachable tier');
+  completeMajorReformVote(engine, choose, Q);
+  assert.strictEqual(Q.marriage_reform_settled, 1,
+    'The promised bill must close the project');
+  assert(Q.marriage_reform_stage >= 2,
+    'A tier-3 bill may lose one tier to a Senate amendment, no more; got ' +
+    Q.marriage_reform_stage);
+  assert.strictEqual(Q.reform_pressure_promise_psl, 0,
+    'The per-bill promise binding must be cleared once the bill resolves');
+}
+
 console.log('reform-ceiling-check: all checks passed');

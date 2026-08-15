@@ -45,10 +45,14 @@ function start(seed) {
 function group(q, id) {
   return (q.rival_group_records || []).find(function(r) { return r.id === id; });
 }
+function flatten(node) {
+  if (node === null || node === undefined) return '';
+  if (typeof node === 'string' || typeof node === 'number') return String(node);
+  if (Array.isArray(node)) return node.map(flatten).join('');
+  return flatten(node.content);
+}
 function pageText() {
-  return engine.state.currentContent.map(function(block) {
-    return Array.isArray(block.content) ? block.content.join('') : '';
-  }).join('');
+  return flatten(engine.state.currentContent);
 }
 
 // 1. A cohesive convention produces one party and keeps the incumbent.
@@ -291,5 +295,162 @@ assert(fs.existsSync(path.join(root, 'out/html/img/partylogo/np.png')),
   'Nowa Platforma badge asset is missing');
 console.log('  breakaway:', q.ko_splinter_name, '·', q.ko_break_leader,
   '·', q.ko_splinter_seats, 'MPs');
+
+// 12. The 2020 first round: KO missing the runoff ends its hegemony for good.
+function play2020Miss(seed, koShare) {
+  const q = start(seed);
+  q.pres_ko_joint_candidate = 0;
+  q.pres_2020_ko_kidawa = 1;
+  q.pres_2020_ko_name = 'Małgorzata Kidawa-Błońska';
+  q.pres_first_round_complete = 0;
+  q.pres_first_calc_mode = 'first_result';
+  // Force the count: PiS and Hołownia take the runoff places, KO takes the
+  // share this case is testing.
+  q.pis_vote_intent = 43.6;
+  q.ko_vote_intent = 27.4;
+  q.pres_bonus_holownia = 20;
+  q.pres_bonus_trzaskowski = koShare - 8.4;
+  engine.goToScene('poland_presidential_election.calculate_first');
+  return q;
+}
+
+let missed = play2020Miss('ko-2020-humiliation', 8.4);
+assert.strictEqual(missed.ko_2020_runoff_miss, 1,
+  'KO reached the runoff in a run designed to keep it out: ' +
+  missed.pres_r1_leader_key + '/' + missed.pres_r1_runner_key);
+assert.strictEqual(missed.ko_hegemony_broken, 1);
+assert(missed.ko_2020_humiliation >= 14);
+assert(missed.ko_coalition_dissent > 0);
+assert(missed.ko_cohesion < 62, 'cohesion untouched: ' + missed.ko_cohesion);
+console.log('  2020 miss:', missed.ko_2020_r1_share + '%',
+  '·', missed.ko_2020_miss_band, '· humiliation', missed.ko_2020_humiliation);
+
+// The broken hegemony must survive a normalise pass and raise KO's structural
+// collapse pressure rather than decaying with the monthly shock.
+const pressureBroken = (function() {
+  engine.goToScene('poland_normalize');
+  const broken = missed.ko_collapse_pressure;
+  missed.ko_collapse_shock = 0;
+  missed.ko_hegemony_broken = 0;
+  engine.goToScene('poland_normalize');
+  const intact = missed.ko_collapse_pressure;
+  missed.ko_hegemony_broken = 1;
+  engine.goToScene('poland_normalize');
+  return [broken, intact, missed.ko_collapse_pressure];
+})();
+assert(pressureBroken[2] > pressureBroken[1],
+  'a broken hegemony must permanently raise KO collapse pressure: ' +
+  pressureBroken.join('/'));
+assert.notStrictEqual(missed.ko_condition_label, 'in working order',
+  'the ledger still calls a KO that missed the runoff healthy');
+
+// 13. Tactical desertion to KO is permanently capped once the claim is gone.
+q = start('ko-2020-tactical');
+q.electoral_viability = 20;
+q.winner_reputation = 20;
+q.list_confidence = 20;
+q.issue_ownership = 20;
+q.ko_leader = 'Donald Tusk';
+for (let i = 0; i < 40; i += 1) engine.goToScene('poland_advance');
+const tacticalIntact = q.tactical_desertion_to_ko;
+q = start('ko-2020-tactical-broken');
+q.electoral_viability = 20;
+q.winner_reputation = 20;
+q.list_confidence = 20;
+q.issue_ownership = 20;
+q.ko_leader = 'Donald Tusk';
+q.ko_hegemony_broken = 1;
+for (let i = 0; i < 40; i += 1) engine.goToScene('poland_advance');
+console.log('  tactical desertion intact/broken:',
+  tacticalIntact.toFixed(2), q.tactical_desertion_to_ko.toFixed(2));
+assert(q.tactical_desertion_to_ko < tacticalIntact * 0.6,
+  'KO keeps its tactical squeeze after losing the runoff claim');
+
+// 14. An annihilating result breaks the Civic Coalition itself, and only the
+// recruitment line converts the orphans into Left mandates.
+q = start('ko-2020-alliance');
+q.ko_2020_runoff_miss = 1;
+q.ko_2020_r1_share = 6.1;
+q.ko_2020_miss_band = 'Annihilation';
+q.ko_2020_humiliation = 56;
+q.ko_hegemony_broken = 1;
+q.pres_r1_leader_name = 'Andrzej Duda';
+q.pres_r1_runner_name = 'Szymon Hołownia';
+const koSeatsBefore2020 = q.ko_seats;
+const leftSeatsBefore2020 = q.left_seats;
+engine.goToScene('poland_presidential_election.ko_ballot_collapse');
+assert.strictEqual(q.ko_2020_alliance_broken, 1);
+assert(q.ko_2020_alliance_leavers > 0);
+assert.strictEqual(q.ko_seats, koSeatsBefore2020 - q.ko_2020_alliance_leavers);
+// All three junior parties leave: the committee is gone, not reshaped.
+['nowoczesna', 'ipl', 'greens'].forEach(function(id) {
+  assert.strictEqual(group(q, id).list_committee, id,
+    id + ' stayed inside a committee that no longer exists');
+  assert.strictEqual(group(q, id).allied, 0);
+});
+assert.strictEqual(group(q, 'ko_party').active, 0);
+assert.strictEqual(group(q, 'po').parent, 'Platforma Obywatelska');
+choose('poland_presidential_election.ko_collapse_2020_absorb');
+choose('poland_presidential_election.ko_collapse_2020_result');
+assert.strictEqual(q.ipl_joined_left, 1);
+assert.strictEqual(q.greens_joined_left, 1);
+// Only the progressive parties are recruitable; Nowoczesna stays outside.
+assert(q.ko_2020_alliance_recruits > 0);
+assert(q.ko_2020_alliance_recruits < q.ko_2020_alliance_leavers,
+  'Nowoczesna was absorbed into the Left along with the progressives');
+assert.strictEqual(q.left_seats,
+  leftSeatsBefore2020 + q.ko_2020_alliance_recruits);
+engine.goToScene('poland_normalize');
+assert.strictEqual(group(q, 'ipl').bloc, 'left');
+console.log('  alliance break:', q.ko_2020_crisis_result);
+
+// The other two lines leave the orphans independent rather than taking them.
+q = start('ko-2020-alliance-refused');
+q.ko_2020_runoff_miss = 1;
+q.ko_2020_r1_share = 5.4;
+q.ko_2020_miss_band = 'Annihilation';
+q.ko_2020_humiliation = 58;
+q.ko_hegemony_broken = 1;
+const leftSeatsRefused = q.left_seats;
+engine.goToScene('poland_presidential_election.ko_ballot_collapse');
+choose('poland_presidential_election.ko_collapse_2020_inherit');
+choose('poland_presidential_election.ko_collapse_2020_result');
+assert.strictEqual(q.ko_2020_alliance_recruits, 0);
+assert.strictEqual(q.ipl_joined_left, 0);
+assert.strictEqual(q.left_seats, leftSeatsRefused);
+engine.goToScene('poland_normalize');
+assert(q.independent_bucket_members.includes('Inicjatywa Polska'),
+  'orphaned IPL never reached the independent bucket: ' +
+  q.independent_bucket_members);
+
+// 15. The defeat is still being paid for years later.
+q = start('ko-2020-long-tail');
+q.continuous_campaign = 1;
+q.year = 2021;
+q.month = 7;
+q.ko_hegemony_broken = 1;
+q.ko_2020_humiliation = 46;
+q.ko_2020_r1_share = 8.4;
+q.ko_poll = 20;
+engine.goToScene('poland_leadership_events.tusk_return_2021');
+assert.strictEqual(q.ko_alternative_2021_outcome, 'Donald Tusk returns');
+assert(q.ko_poll_momentum < 1.5,
+  'the founder still bought a full return bonus: ' + q.ko_poll_momentum);
+assert(pageText().includes('8.4%'),
+  'Tusk\'s return does not mention the result that cost him the argument');
+q.year = 2025;
+q.month = 10;
+q.ko_collapsed = 0;
+engine.goToScene('poland_events_2025.ko_consolidation_2025');
+assert(pageText().includes('8.4%'),
+  'KO\'s 2025 convention has forgotten 2020');
+q.ko_collapse_pressure = 80;
+q.ko_convention_failed = 0;
+q.ko_poll = 22;
+q.ko_coalition_dissent = 20;
+engine.goToScene('poland_ko_collapse.ko_collapse');
+assert.strictEqual(q.ko_collapse_cause, 'hegemony_2020');
+assert(pageText().includes('8.4%'),
+  'the eventual KO split does not name the defeat that caused it');
 
 console.log('KO chain checks passed');

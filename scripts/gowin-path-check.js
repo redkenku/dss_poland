@@ -1224,6 +1224,24 @@ console.log('gowin-path-check: Konfederacja family OK');
   assert(String(fresh.Q.independent_bucket_members).includes('Porozumienie'));
   assert(String(fresh.Q.independent_bucket_members).includes("Kukiz'15"));
   assertAffiliationConsistency(fresh.Q, 'independent bucket');
+
+  // Wolnościowcy become a named independent party after their three MPs
+  // leave Konfederacja, without double-counting those MPs in "other".
+  const wolnosciowcy = newEngine();
+  normalize(wolnosciowcy.engine);
+  wolnosciowcy.Q.wolnosciowcy_formed = 1;
+  wolnosciowcy.Q.february_2023_konf_done = 1;
+  wolnosciowcy.Q.wolnosciowcy_mps = 3;
+  wolnosciowcy.Q.wolnosciowcy_seats = 3;
+  wolnosciowcy.Q.konf_seats = 8;
+  wolnosciowcy.Q.other_seats = 4;
+  normalize(wolnosciowcy.engine);
+  assert(String(wolnosciowcy.Q.independent_bucket_members).includes(
+    'Wolnościowcy'
+  ));
+  assert.strictEqual(wolnosciowcy.Q.independent_bucket_seats, 4);
+  assert.strictEqual(group(wolnosciowcy.Q, 'wolnosciowcy').exclusive_seats, 3);
+  assertAffiliationConsistency(wolnosciowcy.Q, 'Wolnościowcy split');
 }
 
 console.log('gowin-path-check: alliance names and independent bucket OK');

@@ -1256,6 +1256,19 @@ window.disableGrayMode = function() {
       aliases: ['Independence March Association']
     },
     {
+      id: 'womens_strike',
+      explanation: 'The All-Poland Women’s Strike is an independent feminist movement founded during the 2016 Black Protests. It organises for reproductive rights, equality, democratic institutions and protection from violence.',
+      aliases: [
+        'All-Poland Women’s Strike',
+        "All-Poland Women's Strike",
+        'Women’s Strike',
+        "Women's Strike",
+        'Women’s March',
+        "Women's March",
+        'Womens March'
+      ]
+    },
+    {
       id: 'daszynski',
       explanation: 'Ignacy Daszyński was a Polish socialist leader, co-founder of the Polish Socialist Party and the first prime minister of independent Poland in November 1918.',
       aliases: ['Ignacy Daszyński', 'Ignacy Daszynski', 'Daszyński', 'Daszynski']
@@ -1278,7 +1291,12 @@ window.disableGrayMode = function() {
     {
       id: 'piotrowski',
       explanation: 'Mirosław Piotrowski is a Polish academic and former MEP associated with the Movement of True Europe and socially conservative politics.',
-      aliases: ['Mirosław Piotrowski', 'Miroslaw Piotrowski', 'Piotrowski']
+      aliases: ['Mirosław Piotrowski', 'Miroslaw Piotrowski']
+    },
+    {
+      id: 'tomasz_piotrowski',
+      explanation: 'General Tomasz Piotrowski served as Operational Commander of the Polish Armed Forces until resigning in October 2023.',
+      aliases: ['Tomasz Piotrowski']
     },
     {
       id: 'federation_for_the_republic',
@@ -2046,7 +2064,13 @@ window.disableGrayMode = function() {
       id: 'bodnar',
       className: 'party-ko',
       explanation: 'Adam Bodnar is the justice minister and prosecutor general who previously served as Commissioner for Human Rights during the rule-of-law conflict.',
-      aliases: ['Adam Bodnar', 'Bodnar']
+      aliases: ['Adam Bodnar']
+    },
+    {
+      id: 'izabela_bodnar',
+      className: 'party-p2050',
+      explanation: 'Izabela Bodnar is a Poland 2050 MP who ran for mayor of Wrocław as the Third Way-backed candidate in 2024.',
+      aliases: ['Izabela Bodnar']
     },
     {
       id: 'domanski',
@@ -2436,7 +2460,7 @@ window.disableGrayMode = function() {
     },
     {
       id: 'lempart',
-      className: 'party-progressive',
+      className: '',
       explanation: 'Marta Lempart co-founded the All-Poland Women’s Strike and leads its street mobilisation against the abortion ruling.',
       aliases: ['Marta Lempart', 'Lempart']
     },
@@ -2487,6 +2511,264 @@ window.disableGrayMode = function() {
       className: 'party-nonpartisan',
       explanation: 'Marian Banaś is the president of the Supreme Audit Office, appointed by PiS and then in open conflict with it.',
       aliases: ['Marian Banaś', 'Marian Banas', 'Banaś']
+    },
+    {
+      id: 'kwasniewski',
+      className: 'party-sld',
+      explanation: 'Aleksander Kwaśniewski was president of Poland from 1995 to 2005 and previously led the post-communist social-democratic camp.',
+      aliases: ['Aleksander Kwaśniewski', 'Aleksander Kwasniewski', 'Kwaśniewski']
+    },
+    {
+      id: 'spiewak',
+      className: '',
+      explanation: 'Jan Śpiewak is an independent Warsaw urban activist known for housing, reprivatisation and anti-corruption campaigns.',
+      aliases: ['Jan Śpiewak', 'Jan Spiewak']
+    },
+    {
+      id: 'dworczyk',
+      className: 'party-pis',
+      explanation: 'Michał Dworczyk is a PiS politician who headed the Prime Minister’s Chancellery and later became an MEP.',
+      aliases: ['Michał Dworczyk', 'Michal Dworczyk', 'Dworczyk']
+    },
+    {
+      id: 'muller',
+      className: 'party-pis',
+      explanation: 'Piotr Müller is a PiS politician who served as government spokesman and later became an MEP.',
+      aliases: ['Piotr Müller', 'Piotr Muller', 'Müller']
+    },
+    {
+      id: 'tyszka',
+      className: 'party-kukiz',
+      explanation: 'Stanisław Tyszka entered the Sejm with Kukiz’15 before moving to Konfederacja and New Hope.',
+      aliases: ['Stanisław Tyszka', 'Stanislaw Tyszka', 'Tyszka']
+    },
+    {
+      id: 'gut_mostowy',
+      className: 'party-agreement',
+      explanation: 'Andrzej Gut-Mostowy was elected with the Porozumienie component of the United Right.',
+      aliases: ['Andrzej Gut-Mostowy', 'Gut-Mostowy']
+    },
+    {
+      id: 'michalek',
+      className: 'party-agreement',
+      explanation: 'Iwona Michałek was a Porozumienie MP and deputy minister in the United Right government.',
+      aliases: ['Iwona Michałek', 'Iwona Michalek']
+    },
+    {
+      id: 'wypij',
+      className: 'party-agreement',
+      explanation: 'Michał Wypij was a Porozumienie MP who left the United Right with Jarosław Gowin’s camp.',
+      aliases: ['Michał Wypij', 'Michal Wypij']
+    },
+    {
+      id: 'bukowiec',
+      className: 'party-agreement',
+      explanation: 'Stanisław Bukowiec was elected as a Porozumienie politician in the United Right.',
+      aliases: ['Stanisław Bukowiec', 'Stanislaw Bukowiec']
+    },
+    {
+      id: 'piechowiak',
+      className: 'party-agreement',
+      explanation: 'Grzegorz Piechowiak was elected with Porozumienie and served as a deputy development minister.',
+      aliases: ['Grzegorz Piechowiak']
+    },
+    {
+      id: 'dabrowska_banaszek',
+      className: 'party-agreement',
+      explanation: 'Anna Dąbrowska-Banaszek was elected with the Porozumienie component of the United Right.',
+      aliases: ['Anna Dąbrowska-Banaszek', 'Anna Dabrowska-Banaszek']
+    },
+    {
+      id: 'baszko',
+      className: 'party-agreement',
+      explanation: 'Mieczysław Baszko was a Porozumienie MP in the United Right parliamentary camp.',
+      aliases: ['Mieczysław Baszko', 'Mieczyslaw Baszko']
+    },
+    {
+      id: 'murdzek',
+      className: 'party-agreement',
+      explanation: 'Wojciech Murdzek was a Porozumienie MP and science minister in the United Right government.',
+      aliases: ['Wojciech Murdzek']
+    },
+    {
+      id: 'strzezek',
+      className: 'party-agreement',
+      explanation: 'Jacek Strzeżek was a Porozumienie spokesman and organiser in Jarosław Gowin’s camp.',
+      aliases: ['Jacek Strzeżek', 'Jacek Strzezek']
+    },
+    {
+      id: 'kwiecien',
+      className: 'party-pis',
+      explanation: 'Anna Kwiecień is a PiS parliamentarian from Radom.',
+      aliases: ['Anna Kwiecień', 'Anna Kwiecien']
+    },
+    {
+      id: 'bartosik',
+      className: 'party-pis',
+      explanation: 'Ryszard Bartosik is a PiS MP associated with agricultural policy.',
+      aliases: ['Ryszard Bartosik']
+    },
+    {
+      id: 'lorek',
+      className: 'party-pis',
+      explanation: 'Grzegorz Lorek is a PiS parliamentarian.',
+      aliases: ['Grzegorz Lorek']
+    },
+    {
+      id: 'bartoszewicz',
+      className: '',
+      explanation: 'Artur Bartoszewicz is an economist who ran an independent expert and anti-party campaign in the 2025 presidential election.',
+      aliases: ['Artur Bartoszewicz']
+    },
+    {
+      id: 'maciak',
+      className: '',
+      explanation: 'Maciej Maciak is a local broadcaster who ran for president in 2025 outside the parliamentary parties.',
+      aliases: ['Maciej Maciak']
+    },
+    {
+      id: 'woch',
+      className: '',
+      explanation: 'Marek Woch is a lawyer and civic campaigner who ran for president in 2025 outside the parliamentary parties.',
+      aliases: ['Marek Woch']
+    },
+    {
+      id: 'malewski',
+      className: '',
+      explanation: 'Bartosz Malewski is the president of the Independence March Association.',
+      aliases: ['Bartosz Malewski']
+    },
+    {
+      id: 'swieczkowski',
+      className: 'party-pis',
+      explanation: 'Bogdan Święczkowski is a former PiS MP and prosecutor who became a Constitutional Tribunal judge and later its president.',
+      aliases: ['Bogdan Święczkowski', 'Bogdan Swieczkowski']
+    },
+    {
+      id: 'gosek_popiolek',
+      className: 'party-razem',
+      explanation: 'Daria Gosek-Popiołek is a Razem MP from Kraków.',
+      aliases: ['Daria Gosek-Popiołek', 'Daria Gosek-Popiolek']
+    },
+    {
+      id: 'olko',
+      className: 'party-razem',
+      explanation: 'Dorota Olko is a Razem MP and social researcher.',
+      aliases: ['Dorota Olko']
+    },
+    {
+      id: 'wicha',
+      className: 'party-razem',
+      explanation: 'Joanna Wicha is a Razem MP and former public-health nurse.',
+      aliases: ['Joanna Wicha']
+    },
+    {
+      id: 'stozek',
+      className: 'party-razem',
+      explanation: 'Marta Stożek is a Razem MP from Lower Silesia.',
+      aliases: ['Marta Stożek', 'Marta Stozek']
+    },
+    {
+      id: 'lasek',
+      className: 'party-ko',
+      explanation: 'Maciej Lasek is a Civic Platform MP, aviation engineer and government plenipotentiary for the CPK project.',
+      aliases: ['Maciej Lasek']
+    },
+    {
+      id: 'romanowski',
+      className: 'party-sovereign-poland',
+      explanation: 'Marcin Romanowski is a Sovereign Poland politician and former deputy justice minister charged in the Justice Fund case.',
+      aliases: ['Marcin Romanowski', 'Romanowski']
+    },
+    {
+      id: 'kuchcinski',
+      className: 'party-pis',
+      explanation: 'Marek Kuchciński is a senior PiS politician who served as Marshal of the Sejm.',
+      aliases: ['Marek Kuchciński', 'Marek Kuchcinski', 'Kuchciński']
+    },
+    {
+      id: 'wipler',
+      className: 'party-new-hope',
+      explanation: 'Przemysław Wipler is a New Hope and Konfederacja politician associated with its libertarian wing.',
+      aliases: ['Przemysław Wipler', 'Przemyslaw Wipler', 'Wipler']
+    },
+    {
+      id: 'sajbor',
+      className: '',
+      explanation: 'Izabela Sajbor died of septic shock in 2021 after doctors delayed ending a non-viable pregnancy; her case became a central symbol of protests against the abortion ruling.',
+      aliases: ['Izabela Sajbor']
+    },
+    {
+      id: 'jagielska',
+      className: '',
+      explanation: 'Gizela Jagielska is a gynaecologist at the Oleśnica County Hospital who provides lawful abortion care.',
+      aliases: ['Gizela Jagielska', 'Dr Gizela Jagielska']
+    },
+    {
+      id: 'sutryk',
+      className: '',
+      explanation: 'Jacek Sutryk is the mayor of Wrocław, elected through a local committee with support from several national parties.',
+      aliases: ['Jacek Sutryk', 'Sutryk']
+    },
+    {
+      id: 'szymczyk',
+      className: '',
+      explanation: 'Jarosław Szymczyk served as Commander-in-Chief of the Polish Police from 2016 to 2023.',
+      aliases: ['Jarosław Szymczyk', 'Jaroslaw Szymczyk', 'Szymczyk']
+    },
+    {
+      id: 'andrzejczak',
+      className: '',
+      explanation: 'General Rajmund Andrzejczak served as Chief of the General Staff of the Polish Armed Forces until resigning in October 2023.',
+      aliases: ['Rajmund Andrzejczak', 'Andrzejczak']
+    },
+    {
+      id: 'szmydt',
+      className: '',
+      explanation: 'Tomasz Szmydt is a former Polish administrative-court judge who fled to Belarus in 2024 after holding access to classified material.',
+      aliases: ['Tomasz Szmydt', 'Szmydt']
+    },
+    {
+      id: 'ostrowski',
+      className: '',
+      explanation: 'Piotr Ostrowski is the chair of the All-Poland Alliance of Trade Unions (OPZZ).',
+      aliases: ['Piotr Ostrowski']
+    },
+    {
+      id: 'sobol',
+      className: '',
+      explanation: 'Damian Soból was a Polish World Central Kitchen aid worker killed in an Israeli drone strike in Gaza in April 2024.',
+      aliases: ['Damian Soból', 'Damian Sobol']
+    },
+    {
+      id: 'keryk',
+      className: '',
+      explanation: 'Myroslava Keryk is a Ukrainian community organiser in Poland and president of the Ukrainian House foundation.',
+      aliases: ['Myroslava Keryk']
+    },
+    {
+      id: 'shuler',
+      className: '',
+      explanation: 'Liz Shuler is president of the AFL–CIO, the largest federation of trade unions in the United States.',
+      aliases: ['Liz Shuler']
+    },
+    {
+      id: 'jayapal',
+      className: 'party-us-dem',
+      explanation: 'Pramila Jayapal is a Democratic member of the US House of Representatives and a leader of its Congressional Progressive Caucus.',
+      aliases: ['Pramila Jayapal']
+    },
+    {
+      id: 'rose',
+      className: '',
+      explanation: 'Tom Rose is the United States ambassador to Poland appointed during Donald Trump’s second presidency.',
+      aliases: ['Tom Rose']
+    },
+    {
+      id: 'fiore',
+      className: '',
+      explanation: 'Roberto Fiore is the founder and leader of the Italian neofascist party Forza Nuova.',
+      aliases: ['Roberto Fiore']
     }
   ];
 
@@ -2539,8 +2821,28 @@ window.disableGrayMode = function() {
       )
     };
   };
+  // Koalicja Obywatelska is an electoral committee, not a party. If it is
+  // dissolved, "KO" stops naming anything that exists: every alias resolves to
+  // the party that survives it, with Platforma Obywatelska's name, badge and
+  // colour.
+  var civicCoalitionDissolved = function() {
+    return Number(currentGameQualities().ko_2020_alliance_broken) > 0;
+  };
+  var civicSuccessorMatch = function(match) {
+    if (!match || match.definition.id !== 'ko' || !civicCoalitionDissolved()) {
+      return match;
+    }
+    var po = partyDefinitionsByClass['party-po'];
+    if (!po) {
+      return match;
+    }
+    return {
+      definition: po,
+      label: match.label === 'KO' ? po.shortName : po.longName
+    };
+  };
   var partyLabel = function(alias) {
-    var match = partyAliases[alias];
+    var match = civicSuccessorMatch(partyAliases[alias]);
     return match && match.definition.id === 'lewica' &&
       genericLeftAliases[alias]
       ? currentLeftName()
@@ -2559,6 +2861,7 @@ window.disableGrayMode = function() {
 
   var partyLogoIds = {
     'nowa-solidarnosc': true,
+    'freedomites': true,
     'lewica': true,
     'sld': true,
     'wiosna': true,
@@ -2640,8 +2943,22 @@ window.disableGrayMode = function() {
     });
   };
 
+  // Authored prose carries hard-coded KO spans that no resolver rewrites. One
+  // body class lets the stylesheet retire KO's colour with the committee; any
+  // person span nested inside keeps its own party colour.
+  var syncCivicPresentationState = function() {
+    if (!document.body) {
+      return;
+    }
+    if (civicCoalitionDissolved()) {
+      document.body.classList.add('civic-coalition-dissolved');
+    } else {
+      document.body.classList.remove('civic-coalition-dissolved');
+    }
+  };
+
   var partyMarkup = function(alias) {
-    var match = partyAliases[alias];
+    var match = civicSuccessorMatch(partyAliases[alias]);
     if (!match) {
       return alias;
     }
@@ -2784,6 +3101,32 @@ window.disableGrayMode = function() {
       };
     }
 
+    if (
+      ['dziambor', 'kulesza', 'sosnierz'].indexOf(definition.id) >= 0 &&
+      Number(qualities && qualities.wolnosciowcy_formed) > 0 &&
+      Number(qualities && qualities.february_2023_konf_done) > 0
+    ) {
+      var returnedToKonf = definition.id === 'sosnierz' &&
+        Number(qualities && qualities.wolnosciowcy_fate_done) > 0;
+      return {
+        id: definition.id,
+        className: returnedToKonf ? 'party-konf' : 'party-freedomites',
+        explanation: returnedToKonf
+          ? 'Dobromir Sośnierz returned to Konfederacja before the 2023 election.'
+          : definition.explanation,
+        aliases: definition.aliases
+      };
+    }
+
+    if (definition.id === 'tyszka' && Number(qualities && qualities.tyszka_defected) > 0) {
+      return {
+        id: definition.id,
+        className: 'party-konf',
+        explanation: 'Stanisław Tyszka moved from Kukiz’15 to Konfederacja and its New Hope component.',
+        aliases: definition.aliases
+      };
+    }
+
     if (definition.id === 'morawiecki' && morawieckiSplit) {
       return {
         id: definition.id,
@@ -2875,6 +3218,28 @@ window.disableGrayMode = function() {
       };
     }
 
+    // A dissolved Civic Coalition has no members. Everybody still rendered in
+    // KO's colour goes back to the party they actually belong to, which for
+    // most of them is the one KO was built on.
+    if (definition.className === 'party-ko' && civicCoalitionDissolved()) {
+      var civicSuccessors = {
+        nowacka: ['party-inicjatywa-polska', 'Inicjatywa Polska'],
+        rosa: ['party-nowoczesna', 'Nowoczesna'],
+        zielinska: ['party-zieloni', 'Zieloni']
+      };
+      var successor = civicSuccessors[definition.id] ||
+        ['party-po', 'Platforma Obywatelska'];
+      return {
+        id: definition.id,
+        className: successor[0],
+        explanation: definition.explanation +
+          ' Koalicja Obywatelska dissolved after the 2020 first round; ' +
+          (definition.aliases && definition.aliases[0] || definition.id) +
+          ' now sits with ' + successor[1] + '.',
+        aliases: definition.aliases
+      };
+    }
+
     if (definition.id !== 'braun') {
       return definition;
     }
@@ -2900,8 +3265,9 @@ window.disableGrayMode = function() {
     if (!definition) {
       return alias;
     }
-    return '<span class="party ' + definition.className +
-      ' person-name" title="' + escapeAttribute(personTooltip(definition)) +
+    return '<span class="' + (definition.className
+      ? 'party ' + definition.className + ' person-name'
+      : 'person-name') + '" title="' + escapeAttribute(personTooltip(definition)) +
       '" data-party-person="' + definition.id + '">' +
       alias + '</span>';
   };
@@ -3063,6 +3429,7 @@ window.disableGrayMode = function() {
       return;
     }
     syncPrawicaPresentationState();
+    syncCivicPresentationState();
     var candidates = root.querySelectorAll('[class], .party');
     var elements = Array.prototype.filter.call(candidates, function(element) {
       if (element.classList.contains('party')) {
@@ -3110,6 +3477,19 @@ window.disableGrayMode = function() {
         element.title = personTooltip(personDefinition);
         element.setAttribute('data-party-person', personDefinition.id);
         element.classList.add('person-name');
+        // Authored prose hard-codes a party class around some names. When the
+        // resolver says the person has moved — a breakaway, a merger, a
+        // dissolved committee — the element carries the party they are in now.
+        var authoredClass = personDefinitionsById[personDefinition.id];
+        if (
+          personDefinition.className &&
+          authoredClass && authoredClass.className &&
+          authoredClass.className !== personDefinition.className &&
+          element.classList.contains(authoredClass.className)
+        ) {
+          element.classList.remove(authoredClass.className);
+          element.classList.add(personDefinition.className);
+        }
       }
       if (definition) {
         var prawicaMember = isPrawicaPresentationMember(definition);
@@ -6667,6 +7047,260 @@ window.disableGrayMode = function() {
     if (index >= 0) engine.choose(index);
   };
 
+  var coalitionChoose = function(sceneId) {
+    var engine = window.dendryUI && window.dendryUI.dendryEngine;
+    var choices = engine && engine.getCurrentChoices();
+    var index = choices ? choices.findIndex(function(choice) {
+      return choice.canChoose && (choice.id === sceneId ||
+        choice.id.slice(-(sceneId.length + 1)) === '.' + sceneId);
+    }) : -1;
+    if (index >= 0) engine.choose(index);
+  };
+
+  var coalitionPartyToken = function(party) {
+    if (!party) return '';
+    var className = party.class_name ? ' ' + party.class_name : '';
+    var monogram = !party.class_name && party.monogram
+      ? '<span class="coalition-monogram" aria-hidden="true">' +
+        budgetEscape(party.monogram) + '</span>'
+      : '';
+    return '<span class="party coalition-party-token' + className + '">' +
+      monogram + budgetEscape(party.name) + '</span>';
+  };
+
+  var coalitionRoleButton = function(party, role, selected, locked) {
+    var labels = {cabinet: 'Cabinet', support: 'Support', out: 'Out'};
+    var disabled = locked || (party.support_only && role === 'cabinet');
+    return '<button type="button" class="coalition-role-button' +
+      (selected ? ' is-active' : '') + '" data-coalition-action="role"' +
+      ' data-party-id="' + budgetEscape(party.id) + '" data-role="' + role + '"' +
+      ' aria-pressed="' + (selected ? 'true' : 'false') + '"' +
+      (disabled ? ' disabled' : '') + '>' + labels[role] + '</button>';
+  };
+
+  var drawCoalitionParliament = function(host, preview, Q) {
+    if (typeof d3 === 'undefined' || typeof d3.parliament !== 'function') return false;
+    var svg = host.querySelector('.coalition-seat-map');
+    if (!svg) return false;
+    var width = Math.max(260, Math.min(560, host.clientWidth || 500));
+    svg.style.height = Math.round(width / 2) + 'px';
+    var order = {lewica: 0, ko: 10, p2050: 20, psl: 30,
+      nonaligned: 50, pis: 70, konf: 90};
+    var data = preview.parties.slice().sort(function(a, b) {
+      var left = order[a.id] === undefined ? 48 : order[a.id];
+      var right = order[b.id] === undefined ? 48 : order[b.id];
+      return left - right || b.seats - a.seats;
+    }).map(function(party) {
+      return {id: 'coalition-seat-' + party.id.replace(/[^a-z0-9_-]/gi, '-'),
+        partyId: party.id, seats: party.seats, color: party.color,
+        outline: '#ffffff'};
+    });
+    d3.select(svg).selectAll('*').remove();
+    var parliament = d3.parliament();
+    parliament.width(width).height(width / 2).innerRadiusCoef(0.4);
+    parliament.enter.fromCenter(false).smallToBig(false);
+    parliament.exit.toCenter(false).bigToSmall(false);
+    d3.select(svg).datum(data).call(parliament);
+    var namespace = 'http://www.w3.org/2000/svg';
+    var defs = document.createElementNS(namespace, 'defs');
+    var splitColors = {p2050: ['#f3d329', '#00a6a6'], psl: ['#239b56', '#00a6a6']};
+    Object.keys(splitColors).forEach(function(id) {
+      var gradient = document.createElementNS(namespace, 'linearGradient');
+      gradient.id = 'coalition-third-way-' + id;
+      gradient.setAttribute('x1', '0'); gradient.setAttribute('x2', '1');
+      [[0, splitColors[id][0]], [50, splitColors[id][0]],
+        [50, splitColors[id][1]], [100, splitColors[id][1]]].forEach(function(stopData) {
+        var stop = document.createElementNS(namespace, 'stop');
+        stop.setAttribute('offset', stopData[0] + '%');
+        stop.setAttribute('stop-color', stopData[1]); gradient.appendChild(stop);
+      });
+      defs.appendChild(gradient);
+    });
+    svg.insertBefore(defs, svg.firstChild);
+    Array.prototype.forEach.call(svg.querySelectorAll('.seat'), function(seat) {
+      var datum = seat.__data__;
+      var partyId = datum && datum.party && datum.party.partyId;
+      if (!partyId) return;
+      var role = (preview.decisions[partyId] || {}).role || 'out';
+      seat.setAttribute('data-coalition-party', partyId);
+      seat.setAttribute('data-role', role);
+      seat.setAttribute('tabindex', '-1');
+      if (Number(Q.third_way_split) !== 1 && splitColors[partyId]) {
+        seat.style.fill = 'url(#coalition-third-way-' + partyId + ')';
+      }
+    });
+    return true;
+  };
+
+  var renderCoalitionBuilder = function(host) {
+    var engine = window.dendryUI && window.dendryUI.dendryEngine;
+    var Q = engine && engine.state && engine.state.qualities;
+    var model = window.polandCoalitionModel;
+    if (!Q || !model || typeof d3 === 'undefined' ||
+        typeof d3.parliament !== 'function') return false;
+    if (!Q.coalition_builder) {
+      model.initialise(Q, {mode: host.getAttribute('data-coalition-mode') || 'formation',
+        sponsor: 'lewica', roles: {lewica: 'cabinet'}, locked: ['lewica']});
+    }
+    var preview = model.preview(Q);
+    Q.coalition_builder_ready = preview.ok ? 1 : 0;
+    var selected = preview.parties.filter(function(party) {
+      return preview.decisions[party.id].role === 'cabinet';
+    });
+    var equation = selected.map(coalitionPartyToken).join(
+      '<span class="coalition-equation-plus" aria-hidden="true"> + </span>');
+    var formationMode = Q.coalition_builder.context.mode === 'formation';
+    var templates = model.templates(Q).map(function(template) {
+      return '<button type="button" class="coalition-template" ' +
+        'data-coalition-action="template" data-template="' +
+        budgetEscape(template.code) + '"><b>' + budgetEscape(template.label) +
+        '</b><small>' + template.cabinet.map(function(id) {
+          var party = preview.parties.find(function(item) { return item.id === id; });
+          return party ? coalitionPartyToken(party) : budgetEscape(id);
+        }).join(' + ') + (template.support.length
+          ? ' · ' + template.support.map(function(id) {
+            var party = preview.parties.find(function(item) { return item.id === id; });
+            return party ? coalitionPartyToken(party) : budgetEscape(id);
+          }).join(' + ') + ' support' : '') +
+        '</small></button>';
+    }).join('');
+    var legend = preview.parties.map(function(party) {
+      var decision = preview.decisions[party.id];
+      var locked = Q.coalition_builder.locked.indexOf(party.id) !== -1;
+      return '<div class="coalition-party-row" data-role="' + decision.role + '">' +
+        '<button type="button" class="coalition-party-label" ' +
+        'data-coalition-action="cycle" data-party-id="' + budgetEscape(party.id) + '"' +
+        (locked ? ' disabled' : '') + '>' + coalitionPartyToken(party) +
+        '<b>' + party.seats + '</b></button><div class="coalition-role-buttons">' +
+        coalitionRoleButton(party, 'cabinet', decision.role === 'cabinet', locked) +
+        coalitionRoleButton(party, 'support', decision.role === 'support', locked) +
+        coalitionRoleButton(party, 'out', decision.role === 'out', locked) +
+        '</div><small class="coalition-decision ' +
+        (decision.accepted ? 'is-accepted' : 'is-refused') + '">' +
+        budgetEscape(decision.reason) + '</small></div>';
+    }).join('');
+    var minorCabinet = selected.filter(function(party) { return !party.major; });
+    var supporters = preview.support.filter(function(party) {
+      return preview.decisions[party.id].accepted;
+    });
+    var blockers = preview.blockers.length
+      ? '<div class="coalition-blockers" role="alert"><b>Agreement cannot be signed</b><ul>' +
+        preview.blockers.map(function(reason) {
+          return '<li>' + budgetEscape(reason) + '</li>';
+        }).join('') + '</ul></div>'
+      : '<div class="coalition-ready" role="status">Every invited party accepts the agreement.</div>';
+    var protocols = '';
+    if (minorCabinet.length) {
+      protocols += '<div class="coalition-protocol"><b>Coalition annexes</b>' +
+        minorCabinet.map(function(party) { return coalitionPartyToken(party); }).join('') + '</div>';
+    }
+    if (supporters.length) {
+      protocols += '<div class="coalition-protocol"><b>Confidence protocols</b>' +
+        supporters.map(function(party) {
+          var decision = preview.decisions[party.id];
+          return coalitionPartyToken(party) + '<small>' + decision.pledged +
+            ' of ' + party.seats + ' pledged</small>';
+        }).join('') + '</div>';
+    }
+    var currentChoices = engine.getCurrentChoices();
+    var fallbackButtons = [
+      ['formation_fallback_menu', 'Explore fallback governments'],
+      ['formation_toleration_menu', 'Offer outside toleration'],
+      ['formation_no_arrangement', 'No arrangement']
+    ].map(function(item) {
+      var choice = currentChoices.find(function(candidate) {
+        return candidate.id.slice(-(item[0].length + 1)) === '.' + item[0];
+      });
+      if (!choice) return '';
+      return '<button type="button" class="coalition-secondary" ' +
+        'data-coalition-action="scene" data-scene="' + item[0] + '"' +
+        (choice.canChoose ? '' : ' disabled') + '>' + item[1] + '</button>';
+    }).join('');
+    var submitScene = Q.coalition_builder.context.submit_scene ||
+      'formation_builder_commit';
+    var submitLabel = Q.coalition_builder.context.submit_label ||
+      (formationMode ? 'Continue with this agreement' : 'Bring this agreement to the vote');
+    var canSubmitFailedVote = Q.coalition_builder.context.allow_failed_vote &&
+      preview.blockers.every(function(reason) {
+        return reason.indexOf('The agreement pledges ') === 0;
+      });
+    var canSubmit = preview.ok || canSubmitFailedVote;
+    var readOnly = Boolean(Q.coalition_builder.context.read_only);
+    host.innerHTML = '<section class="coalition-builder" aria-label="Government agreement builder">' +
+      '<header class="coalition-equation"><div>' + equation + '</div><h2>' +
+      budgetEscape(preview.name.polish) + '</h2><p>' +
+      budgetEscape(preview.name.english) + '</p></header>' +
+      '<div class="coalition-tally" aria-live="polite"><span><small>Formal seats</small><b>' +
+      preview.formal_seats + '</b></span><span><small>Outside pledges</small><b>' +
+      preview.support_seats + '</b></span><span><small>Effective total</small><b>' +
+      preview.effective_seats + ' / ' + preview.majority + '</b></span></div>' +
+      (formationMode
+        ? '<details class="coalition-templates" open><summary>Recommended agreement templates</summary>' +
+          '<div>' + templates + '</div></details>' : '') + '<div class="coalition-layout">' +
+      '<div class="coalition-map-panel"><svg class="coalition-seat-map" role="img" ' +
+      'aria-label="Interactive Sejm seat map; use the accessible party controls beside it"></svg>' +
+      '<p>Click any seat to cycle the whole party block through Cabinet, Support, and Out.</p></div>' +
+      '<div class="coalition-legend" aria-label="Party agreement roles">' + legend +
+      '</div></div>' + protocols + blockers + (readOnly ? '' : '<div class="coalition-actions">' +
+      '<button type="button" class="coalition-continue" data-coalition-action="scene" ' +
+      'data-scene="' + budgetEscape(submitScene) + '"' + (canSubmit ? '' : ' disabled') +
+      '>' + budgetEscape(submitLabel) + '</button>' +
+      (formationMode ? fallbackButtons : '') + '</div>') + '</section>';
+    drawCoalitionParliament(host, preview, Q);
+    window.enhancePartyElements(host);
+    return true;
+  };
+
+  var initializeCoalitionBuilders = function() {
+    var hosts = document.querySelectorAll('.coalition-builder-host');
+    if (!hosts.length) return;
+    var rendered = false;
+    var hideNative = false;
+    Array.prototype.forEach.call(hosts, function(host) {
+      var hostRendered = renderCoalitionBuilder(host);
+      rendered = hostRendered || rendered;
+      if (hostRendered) {
+        var engine = window.dendryUI && window.dendryUI.dendryEngine;
+        var Q = engine && engine.state && engine.state.qualities;
+        hideNative = hideNative || !(Q && Q.coalition_builder &&
+          Q.coalition_builder.context.read_only);
+      }
+      host.onclick = function(event) {
+        var seat = event.target.closest('[data-coalition-party]');
+        var button = event.target.closest('[data-coalition-action]');
+        if (!seat && (!button || button.disabled)) return;
+        var engine = window.dendryUI.dendryEngine;
+        var Q = engine.state.qualities;
+        var model = window.polandCoalitionModel;
+        if (seat) {
+          var seatId = seat.getAttribute('data-coalition-party');
+          if (Q.coalition_builder.locked.indexOf(seatId) !== -1) return;
+          var roles = ['out', 'cabinet', 'support'];
+          var current = Q.coalition_builder.roles[seatId] || 'out';
+          model.setRole(Q, seatId, roles[(roles.indexOf(current) + 1) % roles.length]);
+        } else {
+          var action = button.getAttribute('data-coalition-action');
+          if (action === 'scene') return coalitionChoose(button.getAttribute('data-scene'));
+          if (action === 'template') model.applyTemplate(Q, button.getAttribute('data-template'));
+          if (action === 'role') model.setRole(Q, button.getAttribute('data-party-id'),
+            button.getAttribute('data-role'));
+          if (action === 'cycle') {
+            var id = button.getAttribute('data-party-id');
+            var roleOrder = ['out', 'cabinet', 'support'];
+            var role = Q.coalition_builder.roles[id] || 'out';
+            model.setRole(Q, id, roleOrder[(roleOrder.indexOf(role) + 1) % roleOrder.length]);
+          }
+        }
+        renderCoalitionBuilder(event.currentTarget);
+      };
+    });
+    if (!rendered || !hideNative) return;
+    var table = document.querySelector('.coalition-table-wrap');
+    if (table) table.classList.add('coalition-native-table');
+    Array.prototype.forEach.call(document.querySelectorAll('#content ul.choices'),
+      function(choices) { choices.classList.add('coalition-native-choices'); });
+  };
+
   var budgetButton = function(label, action, value, active, disabled) {
     return '<button type="button" class="budget-button' +
       (active ? ' is-active' : '') + '" data-budget-action="' +
@@ -7072,6 +7706,7 @@ window.disableGrayMode = function() {
       window.updateMoodBackground();
       var content = document.getElementById('content');
       window.enhancePartyElements(content);
+      initializeCoalitionBuilders();
       initializeBudgetBoards();
       if (content && window.renderElectionMaps) {
         window.renderElectionMaps(content);

@@ -4291,6 +4291,49 @@ if (sikorskiRoute) {
 Q.news_headline =
     "The opposition files a constructive motion naming " +
     Q.constructive_candidate;
+if (typeof polandCoalitionModel != "undefined") {
+    polandCoalitionModel.reconcile(Q);
+    const proposedRoles = {
+        lewica: "out", ko: "out", p2050: "out",
+        psl: "out", pis: "out", konf: "out"
+    };
+    let sponsor = "pis";
+    let candidateFamily = "pis";
+    if (Q.constructive_candidate == "Radosław Sikorski") {
+        sponsor = "ko";
+        candidateFamily = "ko";
+        proposedRoles.ko = "cabinet";
+        proposedRoles.psl = "cabinet";
+        proposedRoles.konf = "cabinet";
+        proposedRoles.p2050 = "support";
+        Q.constructive_sponsors = Math.max(0, Math.round(Number(Q.ko_seats) || 0));
+    } else {
+        proposedRoles.pis = "cabinet";
+        proposedRoles.psl = "support";
+        proposedRoles.p2050 = "support";
+        if (Q.constructive_candidate == "Przemysław Czarnek") {
+            proposedRoles.konf = "cabinet";
+        }
+        Q.constructive_sponsors = Math.max(0, Math.round(Number(Q.pis_seats) || 0));
+    }
+    const agreementParties = polandCoalitionModel.parties(Q);
+    polandCoalitionModel.initialise(Q, {
+        mode: "constructive", candidate: Q.constructive_candidate,
+        candidate_family: candidateFamily, sponsor: sponsor,
+        seed_current: true, roles: proposedRoles,
+        locked: agreementParties.map(function(party) { return party.id; }),
+        allow_failed_vote: true,
+        submit_scene: "constructive_roll_2026",
+        submit_label: "Bring the named agreement to the roll call"
+    });
+    const firstAgreement = polandCoalitionModel.preview(Q);
+    for (const party of firstAgreement.parties) {
+        const decision = firstAgreement.decisions[party.id];
+        if (decision.role != "out" && !decision.accepted) {
+            Q.coalition_builder.roles[party.id] = "out";
+        }
+    }
+}
 !}
 
 = November 2026 — Dismissal requires a replacement
@@ -4332,6 +4375,8 @@ address.?][? if trz_freebie_law = "abortion": The first dated item is repeal of
 the abortion-rights law that made Konfederacja the right's new organising
 address.?]
 
+{!<div class="coalition-builder-host" data-coalition-mode="constructive"></div>!}
+
 - @constructive_roll_2026: Bring the named replacement to a roll call
 
 @constructive_sikorski_dismiss
@@ -4345,6 +4390,8 @@ refuses to make the annex the story. Registrars, hospital managers and equality
 organisations hear something else: nobody in government intends to make the
 price politically costly before the vote.
 
+{!<div class="coalition-builder-host" data-coalition-mode="constructive"></div>!}
+
 - @constructive_roll_2026: Bring the named replacement to a roll call
 
 @constructive_morawiecki
@@ -4357,6 +4404,8 @@ We name the committee chairs, ministries and local promises behind the motion.
 Several recruits retreat rather than defend the bargain; the nominee can no
 longer present every prospective vote as ideological conversion.
 
+{!<div class="coalition-builder-host" data-coalition-mode="constructive"></div>!}
+
 - @constructive_roll_2026: Bring the named replacement to a roll call
 
 @constructive_czarnek
@@ -4368,6 +4417,8 @@ on-arrival: constructive_base -= 10; government_coalition_dissent -= 4; psl_rela
 We put coalition repairs into writing before the opposition can price the same
 deputies. PSL and Poland 2050 keep their leverage, but fewer MPs need a PiS
 replacement cabinet to exercise it.
+
+{!<div class="coalition-builder-host" data-coalition-mode="constructive"></div>!}
 
 - @constructive_roll_2026: Bring the named replacement to a roll call
 
@@ -4394,6 +4445,8 @@ We lift the whip and force each MP to own the named replacement. A small group
 crosses; the public gets an honest roll call and the party inherits a breach
 that will not disappear when the motion ends.
 
+{!<div class="coalition-builder-host" data-coalition-mode="constructive"></div>!}
+
 - @constructive_roll_2026: Bring the named replacement to a roll call
 
 @constructive_defend_2026
@@ -4408,48 +4461,29 @@ Our whips make every dispute answer one question: whether it is worth installing
 **[+ constructive_candidate +]** today. The coalition rediscovers unity, even
 if none of its older disagreements has been solved.
 
+{!<div class="coalition-builder-host" data-coalition-mode="constructive"></div>!}
+
 - @constructive_roll_2026: Bring the named replacement to a roll call
 
 @constructive_roll_2026
 title: Constructive roll call
 new-page: true
 on-arrival: {!
-const relationRecruit =
-    Q.constructive_candidate == "Radosław Sikorski" ? 0 : Math.round(
-        Math.max(0, 38 - (Number(Q.psl_relation) || 0)) / 4
-    ) +
-    Math.round(
-        Math.max(0, 35 - (Number(Q.p2050_relation) || 0)) / 5
-    );
-const coalitionDefections = Math.round(
-    Q.constructive_candidate == "Radosław Sikorski" ? 0 : Math.max(
-        0,
-        (Number(Q.government_coalition_dissent) || 0) - 35
-    ) / 5
-);
-const roll = Math.floor(
-    (this.random.uint32() / 4294967296) * 9
-) - 4;
-Q.constructive_relation_recruits = relationRecruit;
-Q.constructive_coalition_defections = coalitionDefections;
-Q.constructive_roll_variance = roll;
-Q.constructive_yes = Math.max(
-    0,
-    Math.min(
-        460,
-        Math.round(Number(Q.constructive_base) || 0) +
-            relationRecruit +
-            coalitionDefections +
-            roll
-    )
-);
-Q.constructive_passed = Q.constructive_yes >= 231 ? 1 : 0;
+const proposedAgreement = typeof polandCoalitionModel != "undefined" &&
+    Q.coalition_builder && Q.coalition_builder.context.mode == "constructive"
+        ? polandCoalitionModel.preview(Q) : null;
+Q.constructive_relation_recruits = 0;
+Q.constructive_coalition_defections = 0;
+Q.constructive_roll_variance = 0;
+Q.constructive_yes = proposedAgreement
+    ? proposedAgreement.effective_seats
+    : Math.max(0, Math.min(460, Math.round(Number(Q.constructive_base) || 0)));
+Q.constructive_passed =
+    (Number(Q.constructive_sponsors) || 0) >= 46 &&
+    (proposedAgreement ? proposedAgreement.ok : Q.constructive_yes >= 231)
+        ? 1 : 0;
 Q.confidence_yes = Q.constructive_yes;
-Q.confidence_abstain = Math.min(
-    460 - Q.confidence_yes,
-    20,
-    4 + coalitionDefections
-);
+Q.confidence_abstain = 0;
 Q.confidence_no = Math.max(
     0,
     460 - Q.confidence_yes - Q.confidence_abstain
@@ -4459,9 +4493,10 @@ Q.confidence_mode = "Constructive no confidence";
 Q.confidence_present = 460;
 Q.confidence_threshold = 231;
 if (Q.constructive_passed) {
-    Q.government_removed_by_vonc = 1;
     const sikorskiReplacement =
         Q.constructive_candidate == "Radosław Sikorski";
+    if (proposedAgreement) polandCoalitionModel.commit(Q);
+    Q.government_removed_by_vonc = 1;
     Q.prime_minister = Q.constructive_candidate;
     Q.prime_minister_intro_return = sikorskiReplacement
         ? "sikorski_compact_2026"
@@ -4485,18 +4520,20 @@ if (Q.constructive_passed) {
     Q.coalition_status = sikorskiReplacement
         ? "KO–centre–Konfederacja constructive majority"
         : "Constructive replacement majority";
-    Q.coalition_seats = sikorskiReplacement
-        ? Math.min(
-            Number(Q.sejm_total) || 460,
-            Math.max(0, Number(Q.ko_seats) || 0) +
-            Math.max(0, Number(Q.psl_seats) || 0) +
-            Math.max(0, Number(Q.p2050_seats) || 0) +
-            (Q.mentzen_bosak_split == 1
-                ? Math.max(0, Number(Q.new_hope_seats) || 0) +
-                    Math.max(0, Number(Q.national_movement_seats) || 0)
-                : Math.max(0, Number(Q.konf_seats) || 0))
-        )
-        : Math.max(0, Number(Q.pis_seats) || 0);
+    if (!proposedAgreement) {
+        Q.coalition_seats = sikorskiReplacement
+            ? Math.min(
+                Number(Q.sejm_total) || 460,
+                Math.max(0, Number(Q.ko_seats) || 0) +
+                Math.max(0, Number(Q.psl_seats) || 0) +
+                Math.max(0, Number(Q.p2050_seats) || 0) +
+                (Q.mentzen_bosak_split == 1
+                    ? Math.max(0, Number(Q.new_hope_seats) || 0) +
+                        Math.max(0, Number(Q.national_movement_seats) || 0)
+                    : Math.max(0, Number(Q.konf_seats) || 0))
+            )
+            : Math.max(0, Number(Q.pis_seats) || 0);
+    }
     Q.government_support_seats = Q.constructive_yes;
     Q.government_has_confidence = 1;
     Q.caretaker_government = 0;
@@ -4542,12 +4579,19 @@ if (Q.constructive_passed) {
             Math.max(0, Number(Q.other_seats) || 0) +
             durableLeftDefections;
     }
+    const inReplacementCabinet = function(id) {
+        const decision = proposedAgreement && proposedAgreement.decisions[id];
+        return decision && decision.accepted && decision.role == "cabinet";
+    };
+    const p2050InCabinet = inReplacementCabinet("p2050");
+    const pslInCabinet = inReplacementCabinet("psl");
+    const konfInCabinet = inReplacementCabinet("konf");
     const replacementCabinet = sikorskiReplacement ? {
         labor: ["KO", "Marzena Okła-Drewnowicz"],
         equality: ["KO", "Monika Rosa"],
         housing: ["KO", "Krystyna Sibińska"],
         health: ["KO", "Izabela Leszczyna"],
-        digital: (Number(Q.p2050_seats) || 0) > 0
+        digital: p2050InCabinet
             ? ["Poland 2050", "Michał Gramatyka"]
             : ["KO", "Jan Grabiec"],
         science: ["KO", "Barbara Nowacka"],
@@ -4556,10 +4600,10 @@ if (Q.constructive_passed) {
         economy: ["Konfederacja", "Przemysław Wipler"],
         justice: ["KO", "Adam Bodnar"],
         foreign: ["KO", "Paweł Kowal"],
-        agriculture: (Number(Q.psl_seats) || 0) > 0
+        agriculture: pslInCabinet
             ? ["PSL", "Czesław Siekierski"]
             : ["KO", "Dorota Niedziela"],
-        defence: (Number(Q.psl_seats) || 0) > 0
+        defence: pslInCabinet
             ? ["PSL", "Władysław Kosiniak-Kamysz"]
             : ["KO", "Tomasz Siemoniak"]
     } : {
@@ -4570,8 +4614,12 @@ if (Q.constructive_passed) {
         digital: ["PiS", "Janusz Cieszyński"],
         science: ["PiS", "Krzysztof Szczucki"],
         interior: ["PiS", "Paweł Szefernaker"],
-        finance: ["PiS", "Andrzej Kosztowniak"],
-        economy: ["PiS", "Marlena Maląg"],
+        finance: konfInCabinet
+            ? ["Konfederacja", "Sławomir Mentzen"]
+            : ["PiS", "Andrzej Kosztowniak"],
+        economy: konfInCabinet
+            ? ["Konfederacja", "Przemysław Wipler"]
+            : ["PiS", "Marlena Maląg"],
         justice: ["PiS", "Marcin Warchoł"],
         foreign: ["PiS", "Szymon Szynkowski vel Sęk"],
         agriculture: ["PiS", "Anna Gembicka"],
@@ -4587,10 +4635,10 @@ if (Q.constructive_passed) {
     Q.family_minister = Q.labor_minister;
     Q.ministry_count = 0;
     Q.ministry_ko_in_cabinet = sikorskiReplacement ? 1 : 0;
-    Q.ministry_p2050_in_cabinet = sikorskiReplacement &&
-        (Number(Q.p2050_seats) || 0) > 0 ? 1 : 0;
-    Q.ministry_psl_in_cabinet = sikorskiReplacement &&
-        (Number(Q.psl_seats) || 0) > 0 ? 1 : 0;
+    Q.ministry_pis_in_cabinet = sikorskiReplacement ? 0 : 1;
+    Q.ministry_p2050_in_cabinet = p2050InCabinet ? 1 : 0;
+    Q.ministry_psl_in_cabinet = pslInCabinet ? 1 : 0;
+    Q.ministry_konf_in_cabinet = konfInCabinet ? 1 : 0;
     Q.sikorski_konf_cabinet = sikorskiReplacement ? 1 : 0;
     Q.sikorski_nightmare = sikorskiReplacement ? 1 : 0;
     Q.cabinet_roster_government_party = sikorskiReplacement ? "ko" : "pis";
@@ -4608,11 +4656,10 @@ if (Q.constructive_passed) {
 
 **[+ constructive_candidate +]: [+ constructive_yes +] yes**
 
-The nominee began from a declared camp of **[+ constructive_base +]**. Weak
-relations brought **[+ constructive_relation_recruits +] partner MPs** across,
-and the coalition crisis produced **[+ constructive_coalition_defections +]
-more defections**. The remaining movement came from last-minute attendance and
-individual decisions, not an automatic transfer of whole parties.
+The nominee needed **46 named sponsors** and a signed agreement pledging 231
+votes. Every displayed party decision is deterministic: accepted clubs pledge
+their recorded seats, refused invitations supply none, and no anonymous
+last-minute variance is added.
 
 [? if constructive_passed: **[+ constructive_candidate +]** takes office
 immediately with the MPs who signed the replacement. Lewica loses its ministries

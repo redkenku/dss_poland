@@ -1400,6 +1400,7 @@ function testPartyDeckWeights(game) {
   featured.forEach(function(cardId) {
     assert.strictEqual(game.scenes[cardId].frequency, 200);
   });
+  assert.strictEqual(game.scenes.poland_coalition_affairs.frequency, 400);
   majorReformCardIds.forEach(function(cardId) {
     const tags = game.scenes[cardId].tags || [];
     assert.strictEqual(game.scenes[cardId].frequency, 135);
@@ -1614,6 +1615,53 @@ function testPartyPresentationAssets() {
   const presentationSource = fs.readFileSync(
     path.join(projectRoot, 'out', 'html', 'game.js'),
     'utf8'
+  );
+  const personSource = presentationSource.slice(
+    presentationSource.indexOf('var personDefinitions = ['),
+    presentationSource.indexOf('personDefinitions.forEach')
+  );
+  const personAliases = new Set();
+  for (const aliases of personSource.matchAll(/aliases:\s*\[([^\]]*)\]/g)) {
+    for (const alias of aliases[1].matchAll(/['"]([^'"]+)['"]/g)) {
+      personAliases.add(alias[1]);
+    }
+  }
+  const normalizeSource = fs.readFileSync(
+    path.join(projectRoot, 'source', 'scenes', 'poland_normalize.scene.dry'),
+    'utf8'
+  );
+  for (const person of normalizeSource.matchAll(
+    /\["[a-z0-9_]+",\s*"([^"\n]+)",\s*"(?:Sejm|Senate|European Parliament)"/g
+  )) {
+    assert(
+      personAliases.has(person[1]),
+      'Rival parliamentarian has no name badge: ' + person[1]
+    );
+  }
+  [
+    'Aleksander Kwaśniewski', 'Artur Bartoszewicz', 'Bartosz Malewski',
+    'Bogdan Święczkowski', 'Damian Soból', 'Daria Gosek-Popiołek',
+    'Dorota Olko', 'Gizela Jagielska', 'Izabela Bodnar', 'Izabela Sajbor',
+    'Jacek Sutryk', 'Jan Śpiewak', 'Jarosław Szymczyk', 'Joanna Wicha',
+    'Liz Shuler', 'Maciej Lasek', 'Maciej Maciak', 'Marcin Romanowski',
+    'Marek Kuchciński', 'Marek Woch', 'Marta Stożek', 'Myroslava Keryk',
+    'Piotr Ostrowski', 'Pramila Jayapal', 'Przemysław Wipler',
+    'Rajmund Andrzejczak', 'Roberto Fiore', 'Tom Rose', 'Tomasz Szmydt'
+  ].forEach(function(name) {
+    assert(personAliases.has(name), 'Audited prose name has no badge: ' + name);
+  });
+  assert(
+    personSource.includes("id: 'lempart',\n      className: ''") &&
+      !personAliases.has('Bodnar') && !personAliases.has('Piotrowski'),
+    'Independent or ambiguous names regressed to a false party identity'
+  );
+  assert(
+    presentationSource.includes("id: 'womens_strike'") &&
+      presentationSource.includes("'freedomites': true") &&
+      fs.existsSync(path.join(
+        projectRoot, 'out', 'html', 'img', 'partylogo', 'wolnosciowcy.jpg'
+      )),
+    'Women’s Strike biography or Wolnościowcy logo is missing'
   );
   for (let month = 1; month <= 10; month += 1) {
     assert(
@@ -1986,6 +2034,30 @@ function testPartyPresentationAssets() {
   assert(agrounia.includes('class="party party-agrounia person-name"'));
   assert(agrounia.includes('data-party-person="kolodziejczak"'));
 
+  const correctedPeople = sandbox.window.displayText(
+    'Marta Lempart, Izabela Bodnar, Adam Bodnar and Jan Śpiewak'
+  );
+  assert(correctedPeople.includes('class="person-name" title="Marta Lempart'));
+  assert(correctedPeople.includes('party-p2050 person-name" title="Izabela Bodnar'));
+  assert(correctedPeople.includes('party-ko person-name" title="Adam Bodnar'));
+  assert(correctedPeople.includes('class="person-name" title="Jan Śpiewak'));
+
+  sandbox.window.dendryUI.dendryEngine.state.qualities = {
+    wolnosciowcy_formed: 1,
+    february_2023_konf_done: 1,
+  };
+  const freedomites = sandbox.window.displayText(
+    'Artur Dziambor, Jakub Kulesza and Dobromir Sośnierz'
+  );
+  assert.strictEqual(
+    (freedomites.match(/party-freedomites person-name/g) || []).length,
+    3
+  );
+  sandbox.window.dendryUI.dendryEngine.state.qualities.wolnosciowcy_fate_done = 1;
+  assert(sandbox.window.displayText('Dobromir Sośnierz').includes(
+    'party-konf person-name'
+  ));
+
   sandbox.window.dendryUI.dendryEngine.state.qualities = {
     nowa_lewica_merger_agreed: 1,
     progressives_active: 1,
@@ -2029,7 +2101,7 @@ function testPartyPresentationAssets() {
     'koalicjapolska.jpg', 'kukiz.png', 'odnowa.png',
     'partiarepublikanska.webp', 'nowanadzieja.jpg',
     'mniejszoscniemiecka.png', 'zjednoczonaprawica.png', 'prawica.webp', 'ued.jpg',
-    'agrounia.jpg',
+    'agrounia.jpg', 'wolnosciowcy.jpg',
   ].forEach(function(file) {
     assert(logoCss.includes("url('img/partylogo/" + file + "')"));
     assert(fs.existsSync(path.join(projectRoot, 'out', 'html', 'img', 'partylogo', file)));
@@ -2102,6 +2174,38 @@ function testPartyPresentationAssets() {
   assert(nowackaCurrent.includes(
     'internal progressive current in Lewica Razem'
   ));
+
+  // A dissolved Civic Coalition stops being a name, a colour and a badge:
+  // "KO" reads as PO, and its politicians revert to their own parties.
+  sandbox.window.dendryUI.dendryEngine.state.qualities = {
+    ko_2020_alliance_broken: 1,
+  };
+  const dissolvedKo = sandbox.window.displayText(
+    'Koalicja Obywatelska and KO'
+  );
+  assert(dissolvedKo.includes('data-party="po"'), dissolvedKo);
+  assert(dissolvedKo.includes('>Platforma Obywatelska</span>'));
+  assert(dissolvedKo.includes('>PO</span>'));
+  assert(!dissolvedKo.includes('data-party="ko"'));
+  assert(!/class="[^"]*party-ko[^"]*"/.test(dissolvedKo),
+    'a dissolved Civic Coalition still renders in KO colour');
+  [
+    ['Donald Tusk', 'party-po'],
+    ['Rafał Trzaskowski', 'party-po'],
+    ['Barbara Nowacka', 'party-inicjatywa-polska'],
+    ['Monika Rosa', 'party-nowoczesna'],
+    ['Urszula Zielińska', 'party-zieloni'],
+  ].forEach(function(person) {
+    const markup = sandbox.window.displayText(person[0]);
+    assert(
+      markup.includes('class="party ' + person[1] + ' person-name"'),
+      person[0] + ' kept KO branding after the coalition dissolved: ' + markup
+    );
+  });
+  sandbox.window.dendryUI.dendryEngine.state.qualities = {};
+  assert(sandbox.window.displayText('Donald Tusk')
+    .includes('class="party party-ko person-name"'),
+  'an intact Civic Coalition lost its own branding');
 
   sandbox.window.dendryUI.dendryEngine.state.sceneId = 'main';
   const legacy = 'Together, they welcomed the Prussian Spring.';
@@ -5686,6 +5790,30 @@ function runSmoke(game) {
       'img/poland/events/pres-candidate-stanowski.webp',
   };
 
+  // A KO candidate outside the runoff opens the Civic bloc's collapse before
+  // the count page will let the player leave it.
+  function resolveKoBallotCollapse() {
+    if (!currentChoices().some(function(choice) {
+      return choice.id === 'poland_presidential_election.ko_ballot_collapse' &&
+        choice.canChoose;
+    })) {
+      return false;
+    }
+    const qualities = engine.state.qualities;
+    assert.strictEqual(qualities.ko_2020_runoff_miss, 1);
+    assert.strictEqual(qualities.ko_hegemony_broken, 1);
+    choose('poland_presidential_election.ko_ballot_collapse');
+    chooseFirstAvailable([
+      'poland_presidential_election.ko_collapse_2020_inherit',
+      'poland_presidential_election.ko_collapse_2020_front',
+      'poland_presidential_election.ko_collapse_2020_absorb',
+    ]);
+    choose('poland_presidential_election.ko_collapse_2020_result');
+    choose('poland_presidential_election.ko_collapse_2020_record');
+    assert.strictEqual(engine.state.sceneId, 'poland_hub');
+    return true;
+  }
+
   function assertFirstRoundAccounting(qualities) {
     const candidates = [
       'duda',
@@ -6038,10 +6166,14 @@ function runSmoke(game) {
       currentChoices().map(function(choice) {
         return choice.id;
       }),
-      ['poland_presidential_election.wait_for_runoff'],
+      qualities.ko_2020_runoff_miss
+        ? ['poland_presidential_election.ko_ballot_collapse']
+        : ['poland_presidential_election.wait_for_runoff'],
       'First-round result offered a replay or dead-end branch'
     );
-    choose('poland_presidential_election.wait_for_runoff');
+    if (!resolveKoBallotCollapse()) {
+      choose('poland_presidential_election.wait_for_runoff');
+    }
 
     engine.goToScene('poland_presidential_election.runoff_setup');
     checkNumbers();
@@ -6279,6 +6411,8 @@ function runSmoke(game) {
         qualities.pres_finalist_b_key === 'left',
         nominee + ' did not reach the runoff on the forced joint ticket'
       );
+      assert.strictEqual(qualities.ko_2020_runoff_miss, 0,
+        'a joint ticket cannot leave KO out of a runoff it never entered');
       choose('poland_presidential_election.wait_for_runoff');
 
       engine.goToScene('poland_presidential_election.runoff_setup');
@@ -9617,7 +9751,18 @@ function runSmoke(game) {
       choose('poland_presidential_election.campaign_done');
       playPresidentialDebate();
       choose('poland_presidential_election.first_count');
-      choose('poland_presidential_election.wait_for_runoff');
+      if (engine.state.qualities.ko_2020_runoff_miss) {
+        choose('poland_presidential_election.ko_ballot_collapse');
+        chooseFirstAvailable([
+          'poland_presidential_election.ko_collapse_2020_inherit',
+          'poland_presidential_election.ko_collapse_2020_front',
+          'poland_presidential_election.ko_collapse_2020_absorb',
+        ]);
+        choose('poland_presidential_election.ko_collapse_2020_result');
+        choose('poland_presidential_election.ko_collapse_2020_record');
+      } else {
+        choose('poland_presidential_election.wait_for_runoff');
+      }
       if (engine.state.sceneId === 'poland_civic_marches.pride') {
         chooseFirstAvailable([
           'poland_civic_marches.pride_movement',
@@ -14943,33 +15088,95 @@ function runSmoke(game) {
       }),
       'Coalition Affairs remained available while Lewica was in opposition'
     );
+    Object.assign(qualities, {
+      left_in_government: 1,
+      government_party: 'ko',
+      government_has_confidence: 1,
+      caretaker_government: 0,
+      formation_in_progress: 0,
+      government_coalition_dissent: 39,
+    });
+    engine.goToScene('poland_party_deck');
+    assert(!currentChoices().some(function(choice) {
+      return choice.id === 'poland_coalition_affairs';
+    }));
+    qualities.government_coalition_dissent = 40;
+    engine.goToScene('poland_party_deck');
+    assert(currentChoices().some(function(choice) {
+      return choice.id === 'poland_coalition_affairs';
+    }), 'Assuage Our Partners did not unlock at high coalition dissent');
 
-    startStandard('coalition-affairs-snap-launches-campaign');
+    startStandard('coalition-affairs-high-dissent-options');
     qualities = engine.state.qualities;
     qualities.left_in_government = 1;
+    qualities.government_party = 'ko';
     qualities.government_has_confidence = 1;
     qualities.caretaker_government = 0;
+    qualities.formation_in_progress = 0;
     qualities.month_actions = 0;
     qualities.max_month_actions = 1;
     qualities.poland_coalition_affairs_timer = 0;
-    qualities.internal_dissent = 28;
-    qualities.government_coalition_dissent = 15;
-    qualities.early_election_risk = 60;
-    qualities.snap_election_requested = 0;
-    qualities.snap_campaign_active = 0;
-    qualities.snap_election_held = 0;
-    qualities.snap_event_deferred_time = -1;
+    qualities.government_coalition_dissent = 60;
+    qualities.constructive_vonc_cooldown = 0;
     qualities.continuous_campaign = 1;
     engine.goToScene('poland_coalition_affairs');
-    choose('poland_coalition_affairs.snap');
+    assert.deepStrictEqual(
+      currentChoices().map(function(choice) { return choice.id; }),
+      [
+        'poland_coalition_affairs.liberal_reform',
+        'poland_coalition_affairs.ease_relationship',
+        'poland_coalition_affairs.replace_government',
+        'poland_coalition_affairs.refuse',
+      ]
+    );
+    choose('poland_coalition_affairs.replace_government');
     assert.strictEqual(
       engine.state.sceneId,
-      'poland_events_2026.snap_campaign_launch',
-      'Coalition Affairs snap failed to open the snap campaign launch'
+      'poland_government_formation.constructive_motion',
+      'Coalition Affairs failed to open the replacement-majority search'
     );
-    assert.strictEqual(qualities.snap_election_requested, 0);
-    assert.strictEqual(qualities.snap_campaign_active, 1);
-    assert(qualities.snap_election_request_time >= 0);
+
+    startStandard('coalition-affairs-liberal-reform');
+    qualities = engine.state.qualities;
+    Object.assign(qualities, {
+      left_in_government: 1,
+      government_party: 'ko',
+      government_has_confidence: 1,
+      caretaker_government: 0,
+      formation_in_progress: 0,
+      month_actions: 0,
+      max_month_actions: 1,
+      government_coalition_dissent: 60,
+      ko_relation: 40,
+      left_poll: 12,
+      labor_credibility: 60,
+    });
+    engine.goToScene('poland_coalition_affairs');
+    choose('poland_coalition_affairs.liberal_reform');
+    assert(qualities.government_coalition_dissent < 60);
+    assert(qualities.ko_relation > 40);
+    assert(qualities.left_poll < 12);
+    assert(qualities.labor_credibility < 60);
+
+    startStandard('coalition-affairs-ease-relationship');
+    qualities = engine.state.qualities;
+    Object.assign(qualities, {
+      left_in_government: 1,
+      government_party: 'ko',
+      government_has_confidence: 1,
+      caretaker_government: 0,
+      formation_in_progress: 0,
+      month_actions: 0,
+      max_month_actions: 1,
+      resources: 4,
+      government_coalition_dissent: 60,
+      ko_relation: 40,
+    });
+    engine.goToScene('poland_coalition_affairs');
+    choose('poland_coalition_affairs.ease_relationship');
+    assert.strictEqual(qualities.resources, 2);
+    assert(qualities.government_coalition_dissent < 60);
+    assert(qualities.ko_relation > 40);
 
     startStandard('coalition-affairs-stale-opposition-safe-exit');
     qualities = engine.state.qualities;
@@ -14981,14 +15188,15 @@ function runSmoke(game) {
     const staleChoices = currentChoices().map(function(choice) {
       return choice.id;
     });
-    assert(staleChoices.includes('poland_coalition_affairs.stand_down'));
-    choose('poland_coalition_affairs.stand_down');
+    assert(staleChoices.includes('poland_coalition_affairs.refuse'));
+    choose('poland_coalition_affairs.refuse');
     assert.notStrictEqual(engine.state.sceneId, 'poland_coalition_affairs');
     assert.strictEqual(
       qualities.month_actions,
       0,
       'Stale opposition entry to Coalition Affairs still consumed the turn'
     );
+    if (process.env.DSS_COALITION_AFFAIRS_SMOKE === '1') return;
 
     qualities.left_committed_seats = 26;
     qualities.ko_seats = 100;
@@ -16580,6 +16788,28 @@ function runSmoke(game) {
     assert(qualities.wolnosciowcy_status.includes('radical-libertarian rump'));
     assert.strictEqual(qualities.february_2023_konf_done, 1);
 
+    startStandard('wolnosciowcy-historical-split');
+    qualities = engine.state.qualities;
+    Object.assign(qualities, {
+      wolnosciowcy_formed: 1,
+      wolnosciowcy_mps: 3,
+      wolnosciowcy_seats: 0,
+      february_2023_konf_done: 0,
+    });
+    const konfBeforeWolnosciowcy = qualities.konf_seats;
+    const otherBeforeWolnosciowcy = qualities.other_seats;
+    engine.goToScene('poland_events_2021_2023.feb23_konf');
+    assert.strictEqual(qualities.wolnosciowcy_seats, 3);
+    assert.strictEqual(qualities.konf_seats, konfBeforeWolnosciowcy - 3);
+    assert.strictEqual(qualities.other_seats, otherBeforeWolnosciowcy + 3);
+    engine.goToScene(
+      'poland_events_2023_2024.august_wolnosciowcy_scatter'
+    );
+    assert.strictEqual(qualities.wolnosciowcy_seats, 2);
+    assert.strictEqual(qualities.wolnosciowcy_mps, 2);
+    assert.strictEqual(qualities.konf_seats, konfBeforeWolnosciowcy - 2);
+    assert.strictEqual(qualities.other_seats, otherBeforeWolnosciowcy + 2);
+
     qualities = openLeadershipScene(
       'leadership-third-way-forms',
       'poland_events_2021_2023.april_2023'
@@ -16789,7 +17019,7 @@ function runSmoke(game) {
     startStandard('phase7-common-records');
     let qualities = engine.state.qualities;
     assert.strictEqual(qualities.rival_group_schema_version, 4);
-    assert.strictEqual(qualities.rival_group_records.length, 31);
+    assert.strictEqual(qualities.rival_group_records.length, 32);
     qualities.rival_group_records.forEach(function(record) {
       commonFields.forEach(function(field) {
         assert.notStrictEqual(
@@ -16802,7 +17032,7 @@ function runSmoke(game) {
     ['pis_apparatus', 'porozumienie', 'solidarna', 'morawiecki',
       'pis_welfare', 'pis_security', 'pis_culture', 'rozwoj_plus',
       'po', 'nowoczesna', 'ipl', 'greens', 'ko_party', 'ko_splinter',
-      'tak_rozwoj_party', 'p0_party', 'prawica_committee'
+      'tak_rozwoj_party', 'p0_party', 'prawica_committee', 'wolnosciowcy'
     ].forEach(function(id) {
       assert(group(qualities, id), 'Missing persistent group ' + id);
     });
@@ -20133,6 +20363,18 @@ function runSmoke(game) {
       testBudgetOppositionAndConstitutionalRoutes();
       return {
         ending: 'Sikorski nightmare fixture passed',
+        score: 0,
+        unity: engine.state.qualities.party_unity,
+        polling: engine.state.qualities.left_poll,
+        budget2019: 0,
+        budget2020: 0,
+        cardsPlayed: 0,
+      };
+    }
+    if (process.env.DSS_COALITION_AFFAIRS_SMOKE === '1') {
+      testBudgetOppositionAndConstitutionalRoutes();
+      return {
+        ending: 'Coalition-affairs fixtures passed',
         score: 0,
         unity: engine.state.qualities.party_unity,
         polling: engine.state.qualities.left_poll,

@@ -1,80 +1,109 @@
-title: The Coalition Affairs
-subtitle: Spend to cool factional dissent, or pull the snap-election lever.
+title: Assuage Our Partners
+subtitle: Accept their liberal economic programme, repair the relationship, replace the government—or refuse.
 new-page: true
 is-card: true
 tags: poland_party_card
-frequency: 160
-view-if: month_actions < max_month_actions and left_in_government = 1 and poland_coalition_affairs_timer <= 0 and (internal_dissent >= 20 or government_coalition_dissent >= 8 or early_election_risk >= 30)
-on-arrival: month_actions += 1; poland_coalition_affairs_timer = 4
+frequency: 400
+view-if: month_actions < max_month_actions and left_in_government = 1 and government_has_confidence = 1 and caretaker_government = 0 and formation_in_progress = 0 and poland_coalition_affairs_timer <= 0 and government_coalition_dissent >= 40
+on-arrival: month_actions += 1; poland_coalition_affairs_timer = 2
 card-image: img/poland/cards/coalition-council.webp
 
-= The Coalition Affairs
+= Assuage Our Partners
 
-Every coalition is two fights at once: what to pass, and who pays the political
-cost. We can spend organisational capacity to cool the room, or gamble on an
-early parliamentary vote that punishes the governing bloc and feeds the
-extremes.
+The coalition council no longer wants another list of Left priorities. The
+cabinet's market-liberal and business-aligned ministers demand a broad package
+of privatisation, commercial provision and looser labour rules as the price of
+restoring a working majority.
 
-- @stabilise
-- @snap
-- @stand_down
+We can accept their programme, spend political capacity on the relationship
+without conceding policy, or admit that this cabinet has exhausted its
+majority and test a named replacement. Refusal leaves the dispute exactly
+where it is.
 
-@stabilise
-title: Spend 1 resource on a coalition-calming package
-subtitle: Reduce internal and coalition dissent without changing the budget line.
-choose-if: resources >= 1
-unavailable-subtitle: One resource is required for whips, caucus meetings and public discipline.
-on-arrival: resources -= 1; internal_dissent -= 8; government_coalition_dissent -= 6; party_unity += 2; public_trust += 1; barons_dissent -= 1; spring_dissent -= 1; progressives_dissent -= 1; razem_dissent -= 1; social_patriot_dissent -= 1; news_headline = "A coalition-calming package lowers visible dissent"
+- @liberal_reform
+- @ease_relationship
+- @replace_government
+- @refuse
 
-The room is not harmonious, but deadlines are again negotiable and every party
-current leaves with fewer reasons to defect this month. Union conflict is
-unchanged because the budget line is unchanged.
+@liberal_reform
+title: Accept a broad liberal reform of the economy
+subtitle: Partners rally behind the cabinet; Lewica's polling, unity and social credibility take the cost.
+on-arrival: {!
+Q.marketisation_concessions += 2;
+Q.left_economic_position += 12;
+Q.capitalism_acceptance += 8;
+Q.government_coalition_dissent -= 24;
+for (const partner of ["pis", "ko", "psl", "p2050", "konf"]) {
+    if (Q.government_party == partner || Q["ministry_" + partner + "_in_cabinet"]) {
+        Q[partner + "_relation"] =
+            (Number(Q[partner + "_relation"]) || 0) + 10;
+        Q[partner + "_coalition_dissent"] =
+            (Number(Q[partner + "_coalition_dissent"]) || 0) - 16;
+    }
+}
+Q.left_poll -= 1.5;
+Q.left_poll_momentum -= 0.6;
+Q.labor_credibility -= 12;
+Q.progressive_credibility -= 5;
+Q.workers_support -= 8;
+Q.public_sector_support -= 7;
+Q.union_trust -= 8;
+Q.party_unity -= 7;
+Q.razem_dissent += 12;
+Q.labor_dissent += 10;
+Q.progressives_dissent += 7;
+Q.coalition_blur += 10;
+Q.government_burden_breached = 1;
+Q.news_headline = "Lewica accepts the coalition's broad liberal economic programme";
+!}
 
 - #poland_card_finish
 
-@snap
-title: Force self-dissolution and open a snap election
-subtitle: Immediate election campaign; government polling takes a hit and the radical right gets a boost.
-choose-if: left_in_government = 1
-unavailable-subtitle: Only a sitting governing caucus can trigger this route.
-on-arrival: {! 
-Q.snap_election_requested = 1;
-Q.snap_election_request_time = Number(Q.time) || 0;
-Q.snap_election_request_year = Number(Q.year) || 0;
-Q.snap_election_request_month = Number(Q.month) || 0;
-Q.snap_election_reason = "Coalition-affairs snap election";
-Q.snap_election_trigger = "Coalition-affairs self-dissolution vote";
-Q.snap_event_deferred_time = -1;
-Q.snap_self_dissolution_support = 307;
-Q.early_election_risk = 100;
-Q.public_trust -= 3;
-Q.left_poll -= 1.0;
-if (Q.government_party == "pis") {
-    Q.pis_poll -= 2.0;
-} else {
-    Q.ko_poll -= 1.4;
-    Q.psl_poll -= 0.4;
-    Q.p2050_poll -= 0.4;
+@ease_relationship
+title: Spend 2 resources to ease the relationship
+subtitle: Keep Lewica's programme and buy enough coalition management to cool the immediate revolt.
+choose-if: resources >= 2
+unavailable-subtitle: Whips, joint staff and a new dispute protocol require two resources.
+on-arrival: {!
+Q.resources -= 2;
+Q.government_coalition_dissent -= 14;
+for (const partner of ["pis", "ko", "psl", "p2050", "konf"]) {
+    if (Q.government_party == partner || Q["ministry_" + partner + "_in_cabinet"]) {
+        Q[partner + "_relation"] =
+            (Number(Q[partner + "_relation"]) || 0) + 5;
+        Q[partner + "_coalition_dissent"] =
+            (Number(Q[partner + "_coalition_dissent"]) || 0) - 7;
+    }
 }
-Q.konf_poll += 1.2;
-Q.konf_vote_intent += 1.2;
-Q.konf_poll_momentum += 0.40;
-Q.korona_poll += 0.4;
-Q.korona_vote_intent += 0.4;
-Q.far_right_agenda += 5;
-Q.news_headline = "Coalition affairs ends in self-dissolution and a snap-election campaign";
+Q.government_delivery += 2;
+Q.coalition_break_threat = 0;
+Q.news_headline =
+    "A two-resource coalition protocol eases the relationship without changing policy";
 !}
-go-to: poland_events_2026.snap_campaign_launch
 
-@stand_down
-title: Stand down and preserve the current line
-subtitle: Keep the coalition file open, but do not trigger a dissolution move this month.
+The partners get a dispute calendar, named negotiators and deadlines they can
+show their caucuses. Nobody gets the liberal package, but nobody needs to leave
+the government this month to prove that the threat was serious.
+
+- #poland_card_finish
+
+@replace_government
+title: Bring down the government and find a new majority
+subtitle: Open an Article 158 search for a named Prime Minister backed by at least 231 deputies.
+choose-if: constructive_vonc_cooldown <= 0
+unavailable-subtitle: A failed constructive motion is still inside its three-month constitutional cooldown.
+on-arrival: coalition_break_threat = 1; news_headline = "Lewica opens talks for a constructive replacement government"
+go-to: poland_government_formation.constructive_motion
+
+@refuse
+title: No, we will not do this
+subtitle: Skip the demand. The cabinet and its coalition dissent remain unchanged.
 on-arrival: {!
 if (!Q.left_in_government && Number(Q.month_actions) > 0) {
     // Stale hand safety: do not consume the turn if this governing card was
     // opened after losing office.
     Q.month_actions = Math.max(0, Number(Q.month_actions) - 1);
 }
-Q.news_headline = "Coalition affairs is postponed";
+Q.news_headline = "Lewica refuses the coalition's liberal ultimatum";
 !}
 go-to: poland_card_finish

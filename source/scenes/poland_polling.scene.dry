@@ -531,7 +531,10 @@ const leftStructuralHeadwind = function(groupId) {
     }
     const rollingLeftPoll = finitePolling(Q.left_poll, 8.6);
     let headwind =
-        2.6 +
+        2.6 -
+        // The pre-2023 headwind is mostly the useful-vote argument. A KO that
+        // missed the 2020 runoff cannot make it with a straight face again.
+        (Q.ko_hegemony_broken ? 0.7 : 0) +
         Math.max(0, finitePolling(Q.opposition_list_pressure, 35) - 35) * 0.020 +
         Math.max(
             0,
@@ -756,7 +759,17 @@ const partyBlocChange = function(group, id) {
         const delivery = Q.government_party == "ko"
             ? delta("government_delivery") * 0.035
             : 0;
-        return delivery + ([
+        // KO's premium was never a programme; it was inevitability. A party
+        // that missed the 2020 runoff pays for that in every electorate for
+        // the rest of the game, and pays more if the coalition broke with it.
+        const hegemonyLoss = Q.ko_hegemony_broken
+            ? -(
+                0.25 +
+                Math.max(0, finitePolling(Q.ko_2020_humiliation, 0)) * 0.012 +
+                (Q.ko_2020_alliance_broken ? 0.35 : 0)
+            )
+            : 0;
+        return delivery + hegemonyLoss + ([
             "metropolitan_liberals",
             "liberal_professionals",
             "public_service_families"

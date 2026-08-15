@@ -58,6 +58,37 @@ const onArrival = intro.onArrival.map(function(action) {
 }).join('\n');
 const numberCabinet = new Function('Q', onArrival);
 
+const nomination = game.scenes['poland_government_formation.formation_pm_alt'];
+const nominateLeft = game.scenes[
+  'poland_government_formation.formation_pm_alt_czarzasty'
+];
+const jointLeadership = {
+  left_leader: 'Adrian Zandberg and Magdalena Biejat',
+  formation_coalition_code: 'left_only',
+  formation_coalition_members: ['lewica'],
+  formation_coalition_support_seats: 240,
+  sejm_statutory_majority: 231,
+};
+new Function('Q', nomination.onArrival.map(function(action) {
+  return action.$code || '';
+}).join('\n'))(jointLeadership);
+assert.strictEqual(
+  jointLeadership.prime_minister_left_nominee,
+  'Adrian Zandberg',
+  'Razem co-leadership leaked into the prime-ministerial nomination'
+);
+new Function('Q', nominateLeft.onArrival.map(function(action) {
+  return action.$code || '';
+}).join('\n'))(jointLeadership);
+assert.strictEqual(jointLeadership.democratic_candidate, 'Adrian Zandberg');
+jointLeadership.prime_minister = jointLeadership.democratic_candidate;
+jointLeadership.prime_minister_intro_pending = 1;
+numberCabinet(jointLeadership);
+assert.strictEqual(
+  jointLeadership.prime_minister_cabinet_label,
+  'The first Zandberg cabinet'
+);
+
 function install(name, counts) {
   const qualities = {
     prime_minister: name,

@@ -454,7 +454,19 @@ Opposition chooses one of four routes: a free immediate no; a bargain of up to
 two affordable amendments using visible leverage; a one-resource shadow
 budget; or a one-resource wedge against a genuinely unmet coalition demand.
 Only a signed pact or broken red line changes Lewica's declared posture. A
-shadow budget earns programme ownership but never changes state spending.
+shadow budget earns programme ownership but never changes state spending. Each
+amendment states its leverage price and, when it is refused, the reason: the
+line is already funded, the two-amendment cap is reached, leverage is short or
+the cabinet cannot finance it.
+
+No vote is free of politics. A stamped deal moves the bought party's relation,
+raises coalition dissent and blurs the coalition line, and a whole-club deal
+with PiS or Konfederacja additionally angers Razem and the progressives and
+costs progressive credibility; the board prints that price before the stamp and
+charges it at the roll call, once per deal even across a revision. From
+opposition, sustaining or abstaining on another party's budget raises that
+party's relation and Lewica's internal dissent on the same scale, voting it
+down does the reverse, and a wedge costs the targeted party's relation.
 
 ### January execution
 
@@ -969,6 +981,34 @@ than a flat poll penalty: the following monthly poll separately recalculates
 Left consideration and participation, then reduces that effect over six to
 twelve months. A later failure can lengthen and intensify a still-active
 negative cycle.
+
+The first round can also end the Civic bloc's hegemony over the opposition.
+KO's whole claim on the anti-PiS electorate is that only KO reaches the second
+round, so every other democratic party should stand aside; a first round in
+which KO's own candidate finishes outside the top two retires the claim
+permanently. `poland_presidential_election.calculate_first` records the miss,
+KO's share, its rank and a severity band — beaten into third at 14% or more, a
+humiliation between 8 and 14%, an annihilation below 8% — and derives one
+`ko_2020_humiliation` scalar that every later model reads instead of
+re-reading the count. The immediate shock hits KO's polling momentum,
+cohesion, coalition dissent, collapse shock, AI resources and internal wing
+balance, and the wing that chose the losing candidate is the wing that loses
+the internal argument.
+
+`ko_hegemony_broken` never returns to 0, and it is not a one-month poll
+penalty. It permanently reduces tactical desertion from Lewica to KO and
+lowers its ceiling; it cuts the pre-2023 useful-vote headwind on the Left; it
+scales down Tusk's 2021 recentralisation of the anti-PiS electorate and the
+polling momentum his return buys; it applies a standing drag to KO's score in
+every voter group; it reduces the 2022 one-list demand's pressure and
+tactical pull; it adds a permanent term to KO's structural collapse pressure;
+and it gives KO's eventual split a named cause — the years spent arguing about
+one number — rather than a generic succession. An annihilation additionally
+breaks the electoral alliance itself: Inicjatywa Polska and Zieloni leave the
+Civic committee with their mandates, KO's 2025 dissolution convention has no
+three parties left to dissolve, and Lewica chooses in the same scene whether
+to recruit the orphaned progressives, claim the vacancy rhetorically, or hold
+the democratic front together and leave the space open for Hołownia.
 
 The 2025 count has two ledgers. One judges the player-backed candidate and one
 judges the complete Left field against Biejat and Zandberg's historical 9.09%.

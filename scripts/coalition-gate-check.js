@@ -910,4 +910,145 @@ for (const choice of [
     choice + ' moved the relation with non-supporting Poland 2050');
 }
 
+// --- 14. reusable agreement model: roster, vetoes, names and annexes ------
+{
+  const run = newEngine();
+  normalize(run.engine);
+  const Q = run.Q;
+  const model = globalThis.polandCoalitionModel;
+  assert(model, 'The shared coalition model was not published');
+  assert.strictEqual(
+    Q.parliamentary_party_records.reduce(function(total, party) {
+      return total + Number(party.sejm_mps || 0);
+    }, 0),
+    Number(Q.sejm_total),
+    'The parliamentary roster must equal the statutory Sejm total'
+  );
+  assert.deepStrictEqual(model.names['ko+konf'],
+    ['Pakt Wolności i Reform', 'Freedom and Reform Pact']);
+  assert.deepStrictEqual(model.names['pis+p2050'],
+    ['Koalicja Nowej Wspólnoty', 'New Community Coalition']);
+  assert.deepStrictEqual(model.names['lewica+ko+p2050+psl'],
+    ['Pełna Koalicja Demokratyczna', 'Full Democratic Coalition']);
+  assert.strictEqual(model.templates(Q).some(function(template) {
+    return template.code.indexOf('left_pis_konf') === 0;
+  }), false, 'SPS templates leaked into an ordinary Lewica game');
+
+  Object.assign(Q, {
+    year: 2024, sejm_total: 460, sejm_statutory_majority: 231,
+    left_seats: 0, ko_seats: 130, pis_seats: 130,
+    p2050_seats: 100, psl_seats: 100, konf_seats: 0,
+    ko_coalition_openness: 100, pis_coalition_openness: 100,
+    p2050_coalition_openness: 100,
+    rival_relation_pis_ko: 100, rival_relation_pis_p2050: 100,
+    coalition_viable_pis_ko: 1, coalition_viable_pis_p2050: 1,
+    pis_economic_position: 50, pis_cultural_position: 50,
+    ko_economic_position: 50, ko_cultural_position: 50,
+    p2050_economic_position: 50, p2050_cultural_position: 50
+  });
+  model.initialise(Q, {mode: 'replacement', sponsor: 'pis', seed_current: false,
+    roles: {pis: 'cabinet', ko: 'cabinet'}});
+  assert(model.preview(Q).blockers.some(function(reason) {
+    return reason.includes('KO and PiS');
+  }), 'KO–PiS lost its permanent cabinet veto');
+
+  model.initialise(Q, {mode: 'replacement', sponsor: 'pis', seed_current: false,
+    roles: {pis: 'cabinet', p2050: 'cabinet'}});
+  assert.strictEqual(model.preview(Q).blockers.some(function(reason) {
+    return reason.includes('cannot share') || reason.includes('will not enter');
+  }), false, 'PiS–Poland 2050 was incorrectly made a permanent veto');
+
+  Object.assign(Q, {
+    ko_seats: 130, pis_seats: 0, p2050_seats: 100,
+    psl_seats: 100, konf_seats: 130,
+    konf_coalition_openness: 100, rival_relation_ko_konf: 100,
+    coalition_viable_ko_konf: 1,
+    konf_economic_position: 50, konf_cultural_position: 50
+  });
+  model.initialise(Q, {mode: 'replacement', sponsor: 'ko', seed_current: false,
+    roles: {ko: 'cabinet', konf: 'cabinet'}});
+  assert.strictEqual(model.preview(Q).blockers.length, 0,
+    'A dynamically compatible KO–Konfederacja cabinet should be viable');
+
+  model.initialise(Q, {mode: 'replacement', sponsor: 'p2050', seed_current: false,
+    roles: {p2050: 'cabinet', konf: 'cabinet'}});
+  assert(model.preview(Q).blockers.some(function(reason) {
+    return reason.includes('Poland 2050 will not enter');
+  }), 'Poland 2050–Konfederacja lost its permanent cabinet veto');
+
+  Object.assign(Q, {
+    p2050_seats: 101, pis_seats: 130, psl_seats: 99, konf_seats: 0,
+    p2050_coalition_openness: 100, rival_relation_pis_p2050: 10,
+    coalition_viable_pis_p2050: 1
+  });
+  model.initialise(Q, {mode: 'replacement', sponsor: 'pis', seed_current: false,
+    roles: {pis: 'cabinet', p2050: 'cabinet'}});
+  assert(model.preview(Q).blockers.some(function(reason) {
+    return reason.includes('Poland 2050') && reason.includes('relations are too low');
+  }), 'A relationship refusal must name the party and explain the low relations');
+
+  Object.assign(Q, {
+    p2050_coalition_openness: 0, rival_relation_pis_p2050: 50,
+    pis_economic_position: 50, pis_cultural_position: 50,
+    p2050_economic_position: 50, p2050_cultural_position: 50
+  });
+  model.initialise(Q, {mode: 'replacement', sponsor: 'pis', seed_current: false,
+    roles: {pis: 'cabinet', p2050: 'cabinet'}});
+  assert.strictEqual(model.preview(Q).decisions.p2050.accepted, 1,
+    'An aligned, trusted party should accept when no veto or red line applies');
+
+  Object.assign(Q, {
+    year: 2023, left_seats: 56, ko_seats: 130, psl_seats: 40,
+    p2050_seats: 30, pis_seats: 204, konf_seats: 0,
+    ko_relation: 100, psl_relation: 100, p2050_relation: 100,
+    ko_coalition_openness: 100, psl_coalition_openness: 100,
+    p2050_coalition_openness: 100,
+    coalition_viable_left_ko: 1, coalition_viable_left_psl: 1,
+    coalition_viable_ko_psl: 1
+  });
+  model.initialise(Q, {mode: 'formation', sponsor: 'lewica', seed_current: false,
+    roles: {lewica: 'cabinet'}, locked: ['lewica']});
+  model.applyTemplate(Q, 'ko_psl_left');
+  const cappedProtocol = model.preview(Q);
+  assert.strictEqual(cappedProtocol.route_code, 'ko_psl_left');
+  assert.strictEqual(cappedProtocol.decisions.p2050.pledged, 5,
+    'The existing Poland 2050 protocol must pledge only the votes needed, capped at six');
+  assert.strictEqual(cappedProtocol.effective_seats, 231);
+}
+
+{
+  const run = newEngine();
+  normalize(run.engine);
+  const Q = run.Q;
+  const model = globalThis.polandCoalitionModel;
+  Object.assign(Q, {
+    sejm_total: 460, sejm_statutory_majority: 231,
+    left_seats: 220, ko_seats: 229, pis_seats: 0,
+    p2050_seats: 0, psl_seats: 0, konf_seats: 0
+  });
+  Q.parliamentary_party_records = [
+    {id: 'left_party', name: 'Lewica', family: 'left', sejm_mps: 220},
+    {id: 'ko_party', name: 'KO', family: 'ko', sejm_mps: 229},
+    {id: 'porozumienie', name: 'Porozumienie', family: 'independent', sejm_mps: 11}
+  ];
+  const porozumienie = Q.rival_group_records.find(function(record) {
+    return record.id === 'porozumienie';
+  });
+  Object.assign(porozumienie, {
+    active: 1, independent: 1, relation: 100, coalition_openness: 100,
+    economic_position: 52, cultural_position: 52, exclusive_seats: 11
+  });
+  model.initialise(Q, {mode: 'replacement', sponsor: 'lewica', seed_current: false,
+    roles: {lewica: 'cabinet', porozumienie: 'cabinet'}});
+  const committed = model.commit(Q);
+  assert.strictEqual(committed.committed, 1);
+  assert.strictEqual(Q.coalition_name_polish, 'Rząd Społecznej Odbudowy',
+    'A minor annex renamed the major-party core');
+  const annex = Q.government_agreement_records.find(function(record) {
+    return record.party_id === 'porozumienie';
+  });
+  assert.strictEqual(annex.annex, 'Coalition Annex');
+  assert.strictEqual(annex.junior_office, 'Minister without portfolio');
+}
+
 console.log('coalition-gate-check: all assertions passed');

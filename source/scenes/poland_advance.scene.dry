@@ -1717,14 +1717,20 @@ if ((Q.year > 2021 || Q.year == 2021 && Q.month >= 7) &&
         clampMood(Q.labor_credibility, 0, 100) +
         clampMood(Q.media_access, 0, 100)
     ) / 3;
-    const squeeze = Math.max(1, 7 - Math.max(0, differentiation - 42) / 8);
+    // The squeeze is Tusk's authority to concentrate the anti-PiS vote. A KO
+    // that was not on the 2020 second ballot hands him a party that cannot
+    // enforce the demand, and the founder's return recentralises much less.
+    const squeeze = Math.max(1, 7 - Math.max(0, differentiation - 42) / 8) *
+        (Q.ko_hegemony_broken ? 0.4 : 1);
     applyHistoryShift({
         electoral_viability: -squeeze,
         media_access: -squeeze * 0.8,
         winner_reputation: -squeeze * 0.45
-    }, differentiation >= 56
-        ? "Tusk centralises the opposition, but a differentiated Left keeps an audience"
-        : "Tusk's return centralises the anti-PiS electorate around KO");
+    }, Q.ko_hegemony_broken
+        ? "Tusk returns to a Civic bloc that cannot demand the opposition concentrate behind it"
+        : (differentiation >= 56
+            ? "Tusk centralises the opposition, but a differentiated Left keeps an audience"
+            : "Tusk's return centralises the anti-PiS electorate around KO"));
     Q.historical_tusk_squeeze_applied = 1;
 }
 if (Q.ukraine_invasion_event_done && !Q.historical_war_inflation_applied) {
@@ -1863,10 +1869,15 @@ const tacticalFragility = Math.max(0, (
     55 - Q.list_confidence +
     50 - Q.issue_ownership
 ) / 4);
+// Tactical desertion to KO is the price of KO's claim to be the only vehicle
+// that can beat PiS. A Civic bloc that missed the 2020 runoff cannot make that
+// claim again, whoever leads it afterwards, so the channel never reopens to
+// its old width.
 const tacticalKoTarget = clampMood(
-    tacticalFragility * (Q.ko_leader == "Donald Tusk" ? 0.34 : 0.22),
+    tacticalFragility * (Q.ko_leader == "Donald Tusk" ? 0.34 : 0.22) *
+        (Q.ko_hegemony_broken ? 0.45 : 1),
     0,
-    18
+    Q.ko_hegemony_broken ? 9 : 18
 );
 const tacticalAbstentionTarget = clampMood(
     tacticalFragility * (0.22 + Q.coalition_blur / 500),

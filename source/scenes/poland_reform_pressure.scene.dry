@@ -59,6 +59,13 @@ Q.reform_pressure_actor_live =
         (Q.government_party == "konf" || Q.ministry_konf_in_cabinet))
         ? 1 : 0;
 Q.reform_pressure_bargain_available = actor != "president" ? 1 : 0;
+// The coalition agreement signed on taking office carries one written promise
+// per partner. It is spent rather than argued: it binds that partner to carry
+// the bill up to tier 3, and never above it.
+Q.reform_pressure_promise_available =
+    Q.coalition_promises_signed && actor != "president" &&
+    !Q["coalition_promise_spent_" + actor] &&
+    Number(Q.reform_ceiling_target) <= 3 ? 1 : 0;
 // The Sejm freezer needs a Marshal who takes our calls. The chair belongs to a
 // person, not a party, so the holder is matched by name against the Left's own
 // front bench and its elected leadership.
@@ -156,6 +163,11 @@ and the Chancellery protocol becomes worth building again.?]?]
 moves this actor. Each recorded commitment is worth nine points of its score;
 public mandate, polling and the relationship supply the rest.?]
 
+[? if reform_pressure_promise_available = 1: **The written coalition agreement
+is still unspent against [+ reform_pressure_actor_name +].** Reading it back to
+them carries this bill to tier 3 without another bargain — once, and never
+again with this partner.?]
+
 [? if reform_pressure_rounds_left <= 0: **The partners have stopped taking the
 meeting on this bill.** Three negotiating rounds have already been spent; what
 remains is the reachable settlement, a survival confrontation or withdrawal.?]
@@ -163,6 +175,7 @@ remains is the reachable settlement, a survival confrontation or withdrawal.?]
 on this bill before the partners stop taking the meeting.?]
 
 - @objection_bargain
+- @objection_promise
 - @objection_relation
 - @objection_mandate
 - @objection_force
@@ -181,6 +194,15 @@ view-if: reform_pressure_actor != "president"
 choose-if: resources >= 1 and reform_pressure_bargain_available = 1 and reform_pressure_rounds_left > 0
 unavailable-subtitle: [? if reform_pressure_rounds_left <= 0: This bill has already used its three negotiating rounds; the partner will not open another.?][? if reform_pressure_rounds_left > 0: This negotiating round requires one resource.?]
 on-arrival: resources -= 1; reform_pressure_resolution = "bargain"
+go-to: apply_objection
+
+@objection_promise
+title: Invoke the written coalition promise [+ reform_pressure_actor_name +] signed
+subtitle: Free, once per partner. The signed protocol binds them to carry this bill up to tier 3; it buys nothing above that.
+view-if: reform_pressure_actor != "president" and coalition_promises_signed = 1
+choose-if: reform_pressure_promise_available = 1
+unavailable-subtitle: [? if reform_ceiling_target_resolved > 3: The protocol commits the partners to a tier-3 settlement at most. A tier-4 bill has to be argued for.?][? if reform_ceiling_target_resolved <= 3: [+ reform_pressure_actor_name +] has already been held to its written promise once. There is no second one to cash.?]
+on-arrival: reform_pressure_resolution = "promise"
 go-to: apply_objection
 
 @objection_relation
@@ -348,6 +370,17 @@ if (resolution == "bargain") {
         ? "The campaign moves the field slowly against an organised backlash"
         : "A national campaign raises public support behind the bill";
     dissent = 3 + proposed;
+} else if (resolution == "promise") {
+    // The promise is a receipt, not goodwill: the partner is held to a text it
+    // signed, resents it, and cannot be held to the same text twice.
+    dissent = 8 + proposed * 2;
+    Q["coalition_promise_spent_" + actor] = 1;
+    Q["reform_pressure_promise_" + actor] = 1;
+    Q[relationKey] -= 6;
+    Q[commitmentKey] = Math.max(Number(Q[commitmentKey]) || 0, proposed);
+    Q.reform_pressure_last_result =
+        "The coalition agreement is read back to " +
+        Q.reform_pressure_actor_name + ", which carries the bill it signed for";
 } else if (resolution == "relationship") {
     dissent = 6 + proposed * 2;
     Q[relationKey] -= 12;
