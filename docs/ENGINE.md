@@ -442,6 +442,28 @@ the second is the qdisplay name.
 
 ## Debugging
 
+### Plain mode
+
+`?plain=1` on the game URL strips the interface to scene text and hyperlinks:
+no images, charts, maps, party logos, card art, press rail, ledger, radio,
+mood wash, colour or animation. `#plain` works too, `?plain=0` switches it off,
+and the choice is remembered in `localStorage` under `dss_plain_mode` until
+changed.
+
+There is deliberately no control for it anywhere in the interface, and the
+smoke suite fails if one appears. It is a development and inspection aid — for
+reading a chain without the presentation in the way, checking what the prose
+carries on its own, or driving the game where the graphics cannot load — not a
+player-facing option.
+
+The mode is not a no-JavaScript build and cannot become one: the engine
+evaluates every quality, view-if and on-arrival in the browser, and a choice is
+advanced by a click handler. What plain mode removes is everything
+presentational. `window.dssPlainMode` reports the state, `updateSidebar`,
+`updateSidebarRight`, `onDisplayContent` and `onload` return early rather than
+rendering into a hidden panel, and `body.plain-mode` in `game.css` overrides
+what the engine still emits.
+
 ### Compiler errors
 
 Run a forced build:

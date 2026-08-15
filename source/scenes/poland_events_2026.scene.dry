@@ -5349,6 +5349,35 @@ Q.snap_formation_base = Math.max(
     Math.min(460, Math.round(Q.snap_formation_base))
 );
 Q.snap_formation_left_votes = 0;
+if (typeof polandCoalitionModel != "undefined") {
+    const roles = {};
+    if (Q.snap_formation_first_right) {
+        roles.pis = "cabinet";
+        if (pisKonfPledge) roles.konf = "support";
+    } else {
+        roles.ko = "cabinet";
+        if (Q.snap_p2050_cabinet_committed) roles.p2050 = "cabinet";
+    }
+    if (Q.snap_psl_cabinet_committed) roles.psl = "cabinet";
+    if (Q.snap_centrum_cabinet_committed &&
+        polandCoalitionModel.parties(Q).some(function(party) {
+            return party.id == "unia_centrum";
+        })) roles.unia_centrum = "cabinet";
+    const locked = polandCoalitionModel.parties(Q).filter(function(party) {
+        return party.id != "lewica";
+    }).map(function(party) { return party.id; });
+    polandCoalitionModel.initialise(Q, {
+        mode: "snap_formation", candidate: Q.snap_formation_candidate,
+        candidate_family: Q.snap_formation_nominee_is_left
+            ? "left" : (Q.snap_formation_first_right ? "pis" : "ko"),
+        sponsor: Q.snap_formation_nominee_is_left
+            ? "lewica" : (Q.snap_formation_first_right ? "pis" : "ko"),
+        seed_current: false, roles: roles, locked: locked,
+        majority: 231, allow_failed_vote: true,
+        submit_scene: "snap_attempt_one_vote",
+        submit_label: "Bring this named agreement to the first vote"
+    });
+}
 Q.news_headline =
     Q.president_name + " nominates " +
     Q.snap_formation_candidate + " in the first attempt";
@@ -5361,6 +5390,8 @@ snap_formation_pledge_basis +]**. Other parties are possible partners, not
 automatic yes votes; Lewica controls
 only its own **[+ left_committed_seats +]** committed votes.
 
+{!<div class="coalition-builder-host" data-coalition-mode="snap-formation"></div>!}
+
 - @snap_attempt_one_support
 - @snap_attempt_one_join
 - @snap_attempt_one_reject
@@ -5368,7 +5399,18 @@ only its own **[+ left_committed_seats +]** committed votes.
 @snap_attempt_one_support
 title: Supply confidence for a time-limited constitutional cabinet
 view-if: snap_formation_nominee_is_left = 0
-on-arrival: snap_formation_left_votes = left_committed_seats; snap_left_cabinet_commitment = 0; party_unity -= 5; public_trust -= 1; pis_relation += 5 if snap_formation_first_right = 1; ko_relation += 3 if snap_formation_first_right = 0; news_headline = "Lewica offers confidence without claiming to control the nominee"
+on-arrival: {!
+Q.snap_formation_left_votes = Q.left_committed_seats;
+Q.snap_left_cabinet_commitment = 0;
+if (typeof polandCoalitionModel != "undefined" && Q.coalition_builder) {
+    polandCoalitionModel.setRole(Q, "lewica", "support");
+}
+Q.party_unity -= 5;
+Q.public_trust -= 1;
+if (Q.snap_formation_first_right) Q.pis_relation += 5;
+else Q.ko_relation += 3;
+Q.news_headline = "Lewica offers confidence without claiming to control the nominee";
+!}
 go-to: snap_attempt_one_vote
 
 @snap_attempt_one_join
@@ -5377,23 +5419,45 @@ subtitle: Confidence entails real collective responsibility and ministries.
 view-if: snap_formation_first_right = 0
 choose-if: coalition_viable_left_ko = 1
 unavailable-subtitle: KO and Lewica are too far apart, in trust and in programme, to sign a cabinet agreement; confidence from outside is still on offer.
-on-arrival: snap_formation_left_votes = left_committed_seats; snap_left_cabinet_commitment = 1; party_unity += 1; ko_relation += 3; government_coalition_dissent += 2; news_headline = "Lewica joins the first-attempt cabinet under a written programme"
+on-arrival: {!
+Q.snap_formation_left_votes = Q.left_committed_seats;
+Q.snap_left_cabinet_commitment = 1;
+if (typeof polandCoalitionModel != "undefined" && Q.coalition_builder) {
+    polandCoalitionModel.setRole(Q, "lewica", "cabinet");
+}
+Q.party_unity += 1;
+Q.ko_relation += 3;
+Q.government_coalition_dissent += 2;
+Q.news_headline = "Lewica joins the first-attempt cabinet under a written programme";
+!}
 go-to: snap_attempt_one_vote
 
 @snap_attempt_one_reject
 title: Reject the presidential nominee
-on-arrival: snap_formation_left_votes = 0; party_unity += 2; pis_relation -= 3 if snap_formation_first_right = 1; news_headline = "Lewica withholds confidence from the first attempt"
+on-arrival: {!
+Q.snap_formation_left_votes = 0;
+Q.snap_left_cabinet_commitment = 0;
+if (typeof polandCoalitionModel != "undefined" && Q.coalition_builder) {
+    polandCoalitionModel.setRole(Q, "lewica", "out");
+}
+Q.party_unity += 2;
+if (Q.snap_formation_first_right) Q.pis_relation -= 3;
+Q.news_headline = "Lewica withholds confidence from the first attempt";
+!}
 go-to: snap_attempt_one_vote
 
 @snap_attempt_one_vote
 title: First-attempt confidence vote
 new-page: true
 on-arrival: {!
-const attemptOneRoll =
+const agreement = typeof polandCoalitionModel != "undefined" &&
+    Q.coalition_builder && Q.coalition_builder.context.mode == "snap_formation"
+        ? polandCoalitionModel.preview(Q) : null;
+const attemptOneRoll = agreement ? 0 :
     Math.floor((this.random.uint32() / 4294967296) * 7) - 3;
 Q.snap_formation_variance = attemptOneRoll;
 Q.confidence_candidate = Q.snap_formation_candidate;
-Q.confidence_yes = Math.max(
+Q.confidence_yes = agreement ? agreement.effective_seats : Math.max(
     0,
     Math.min(
         460,
@@ -5412,8 +5476,9 @@ Q.confidence_no = Math.max(
 );
 Q.confidence_present = 460;
 Q.confidence_threshold = 231;
-Q.government_has_confidence =
-    Q.confidence_yes >= 231 ? 1 : 0;
+Q.government_has_confidence = agreement
+    ? (agreement.ok ? 1 : 0)
+    : (Q.confidence_yes >= 231 ? 1 : 0);
 Q.snap_formation_attempt = 1;
 !}
 
@@ -5972,6 +6037,14 @@ if (Q.government_party == "pis") {
             "Cabinet", independentMinisters[portfolio]
         ];
     }
+    if (Q.snap_p2050_cabinet_committed) {
+        formationCabinet.digital = ["Poland 2050", "Michał Gramatyka"];
+    }
+    if (Q.snap_psl_cabinet_committed) {
+        formationCabinet.economy = ["PSL", "Krzysztof Hetman"];
+        formationCabinet.agriculture = ["PSL", "Czesław Siekierski"];
+        formationCabinet.defence = ["PSL", "Władysław Kosiniak-Kamysz"];
+    }
 } else if (leftCabinetParticipation) {
     formationCabinet.labor = [
         "Lewica", "Agnieszka Dziemianowicz-Bąk"
@@ -6041,13 +6114,13 @@ if (typeof polandCoalitionModel != "undefined") {
             roles.konf = "support";
         }
     } else {
-        roles.ko = independentCabinet ? "support" : "cabinet";
+        roles.ko = "cabinet";
     }
     if (Q.snap_psl_cabinet_committed) {
-        roles.psl = independentCabinet ? "support" : "cabinet";
+        roles.psl = "cabinet";
     }
     if (Q.snap_p2050_cabinet_committed) {
-        roles.p2050 = independentCabinet ? "support" : "cabinet";
+        roles.p2050 = "cabinet";
     }
     if (Q.snap_centrum_cabinet_committed &&
         polandCoalitionModel.parties(Q).some(function(party) {
@@ -6065,7 +6138,11 @@ if (typeof polandCoalitionModel != "undefined") {
             ? "left" : Q.government_party,
         sponsor: Q.government_party == "pis"
             ? "pis" : (leftCabinetParticipation ? "lewica" : "ko"),
-        seed_current: false, roles: roles
+        seed_current: false, roles: roles,
+        concessions: {
+            psl: Q.snap_psl_cabinet_committed ? 1 : 0,
+            p2050: Q.snap_p2050_cabinet_committed ? 1 : 0
+        }
     });
     const snapAgreement = polandCoalitionModel.preview(Q);
     if (snapAgreement.ok) polandCoalitionModel.commit(Q);

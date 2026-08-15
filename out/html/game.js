@@ -774,6 +774,36 @@
     window.updateRadio();
   };
 
+  // Hidden plain mode. The engine is JavaScript and cannot be removed without
+  // a server, but everything presentational can: no images, no charts, no
+  // maps, no rails, no card art, no colour — the scene text and its choices as
+  // ordinary browser hyperlinks. There is no control for it anywhere in the
+  // interface. Turn it on with ?plain=1 or #plain, off with ?plain=0; the
+  // setting persists for the browser until switched off.
+  var plainMode = (function() {
+    var location = window.location || {};
+    var address = String(location.search || '') + String(location.hash || '');
+    var stored = null;
+    try {
+      stored = window.localStorage.getItem('dss_plain_mode');
+    } catch (error) {
+      stored = null;
+    }
+    var on = stored === '1';
+    if (/[?&#]plain=(0|false|off)(&|$)/.test(address)) {
+      on = false;
+    } else if (/[?&#]plain(=(1|true|on))?(&|$)/.test(address)) {
+      on = true;
+    }
+    try {
+      window.localStorage.setItem('dss_plain_mode', on ? '1' : '0');
+    } catch (error) {
+      // Storage blocked. The address alone still governs this page load.
+    }
+    return on;
+  }());
+  window.dssPlainMode = plainMode;
+
   window.enableImages = function() {
     window.dendryUI.show_portraits = true;
     window.dendryUI.saveSettings();
@@ -4123,6 +4153,15 @@ window.disableGrayMode = function() {
 
   window.updateSidebar = function() {
       $('#qualities').empty();
+      if (plainMode) {
+        // The ledger's own on-arrival actions still have to run: they compute
+        // qualities the scenes read. Only the rendering is dropped.
+        var plainStatus = dendryUI.game.scenes.status;
+        if (plainStatus && plainStatus.onArrival) {
+          dendryUI.dendryEngine._runActions(plainStatus.onArrival);
+        }
+        return;
+      }
       var baseStatus = dendryUI.game.scenes.status;
       var scene = dendryUI.game.scenes[window.statusTab] || baseStatus;
       if (baseStatus.onArrival) {
@@ -6861,14 +6900,1785 @@ window.disableGrayMode = function() {
     }[outlet.id] || 'POLITYKA';
   };
 
-  var pressTVPStory = function(outlet, story, qualities) {
+  // While PiS holds public media, TVP leads with a Wiadomości-style pasek: an
+  // all-caps banner that reads the month as an attack on Poland. The copy is
+  // original pastiche of a documented editorial line, never a quoted broadcast,
+  // and it is deterministic per turn so the rail does not flicker.
+  var pressPaskiByIssue = {
+    abortion_rights: [
+      '{T} WANTS TO DECIDE ABOUT POLISH CHILDREN',
+      'RADICALS ON THE STREETS. SILENCE FROM {T}'
+    ],
+    refugee_solidarity: [
+      '{T} WOULD BRING ILLEGAL MIGRATION TO POLAND',
+      'BRUSSELS SETS THE QUOTA. {T} SAYS YES'
+    ],
+    border_security: [
+      '{T} WOULD OPEN THE EASTERN BORDER',
+      'OUR SERVICES DEFEND POLAND. {T} ATTACKS THEM'
+    ],
+    vaccination: [
+      '{T} PLAYS POLITICS WITH POLISH HEALTH',
+      'HOSPITALS ARE WORKING. {T} SPREADS PANIC'
+    ],
+    social_spending: [
+      '{T} WOULD TAKE AWAY YOUR BENEFITS',
+      'EXPERTS WARN: {T} MEANS NEW TAXES'
+    ],
+    lgbt_equality: [
+      'AN IDEOLOGICAL OFFENSIVE AGAINST THE POLISH FAMILY',
+      '{T} HAS POLISH SCHOOLS IN ITS SIGHTS'
+    ],
+    secular_state: [
+      '{T} ATTACKS POLISH TRADITION',
+      'THE CHURCH ON THE TARGET LIST OF {T}'
+    ],
+    rule_of_law: [
+      'FOREIGN INSTITUTIONS DICTATE TO POLAND',
+      '{T} DENOUNCES ITS OWN COUNTRY ABROAD'
+    ],
+    national_security: [
+      '{T} WEAKENS THE POLISH ARMY',
+      'WHOSE INTEREST DOES {T} REALLY SERVE?'
+    ]
+  };
+
+  // Terms are matched on a word boundary and, unless they end in "*", must
+  // finish one too: "coalition" is not a coal story and "broad" is not a road.
+  var pressPaskiPattern = function(terms) {
+    return new RegExp('\\b(' + terms.map(function(term) {
+      return term.slice(-1) === '*' ? term.slice(0, -1) : term + '\\b';
+    }).join('|') + ')');
+  };
+
+  // Authored banners for the outcomes with a recognisable historical shape:
+  // the audit-chamber crisis, the Marshal's chair, Pegasus, Czajka, the
+  // constructive motion, the merger of the right and the runoff. These match
+  // the outcome exactly and are checked before any subject frame, so a
+  // distinctive moment can never be swallowed by a broad one.
+  var pressPaskiByEvent = {};
+  [
+    ['The Left watches PiS fight its own auditor', [
+      '{T} FEEDS ON A DISPUTE INSIDE THE CAMP THAT BUILT POLAND',
+      'THEY WAIT FOR A CRISIS INSTEAD OF PROPOSING ANYTHING'
+    ]],
+    ['The Left defends the audit chamber\'s term against the party that filled it', [
+      'SUDDENLY {T} LOVES AN INSTITUTION IT ONCE CALLED A RELIC',
+      'DEFENDING THE AUDITOR TODAY, ABOLISHING HIM TOMORROW'
+    ]],
+    ['The audit chamber\'s term survives on opposition votes', [
+      'THE AUDITOR NOW OWES HIS CHAIR TO {T}',
+      'A DEBT HAS BEEN CREATED. IT WILL BE COLLECTED'
+    ]],
+    ['The governing majority fails to remove the head of the audit chamber', [
+      '{T} CELEBRATES A DEFEAT FOR POLAND',
+      'THEY COUNT VOTES AGAINST THE GOVERNMENT, NEVER FOR VOTERS'
+    ]],
+    ['The audit chamber begins taking referrals from the Left\'s caucus', [
+      'INSPECTORS TO ORDER: {T} SENDS ITS LISTS',
+      'WHO WILL {T} DENOUNCE NEXT WEEK?'
+    ]],
+    ['The audit chamber opens the emergency-procurement file', [
+      'THE PANDEMIC FILE REOPENED BY {T} FOR POLITICAL GAIN',
+      'THEY ATTACK THE PEOPLE WHO BOUGHT POLAND ITS EQUIPMENT'
+    ]],
+    ['A published emergency-procurement standard follows the ventilator money', [
+      'NEW PAPERWORK FROM {T} WHILE THE SICK WAIT',
+      'PROCEDURE BEFORE PATIENTS: THE PRIORITY OF {T}'
+    ]],
+    ['The health ministry\'s emergency ventilator contract goes to an arms dealer', [
+      'A CONTRACT SIGNED IN AN EMERGENCY, JUDGED BY {T} IN COMFORT',
+      'THEY WOULD HAVE LET THE WARDS WAIT FOR A TENDER'
+    ]],
+    ['The ventilator contract becomes a straight corruption charge', [
+      '{T} THROWS THE WORD CORRUPTION AND RUNS FROM THE EVIDENCE',
+      'AN ACCUSATION BEFORE AN INVESTIGATION: THE METHOD OF {T}'
+    ]],
+    ['Nurses and hospital directors put the ventilator money beside their requisition forms', [
+      '{T} USES NURSES AS PROPS IN ITS CAMPAIGN',
+      'THE WARDS WORK. {T} FILMS THEM'
+    ]],
+    ['The returned Left puts up a candidate for the Marshal\'s chair', [
+      'THE GAVEL IS NOT A CONSOLATION PRIZE FOR {T}',
+      'FORTY-NINE SEATS AND ALREADY DEMANDING THE CHAMBER'
+    ]],
+    ['The Marshal is elected without an opposition proposal on the chamber\'s rules', [
+      '{T} HAD NOTHING TO SAY WHEN IT MATTERED',
+      'THEY COMPLAIN AFTERWARDS. THEY ALWAYS COMPLAIN AFTERWARDS'
+    ]],
+    ['The new Sejm confirms the Marshal installed after her predecessor\'s flight scandal', [
+      '{T} DRAGS AN OLD STORY INTO A NEW PARLIAMENT',
+      'THE CHAMBER WORKS. {T} SEARCHES THE ARCHIVES'
+    ]],
+    ['The Sejm Marshal postpones the abortion bills until after the local elections', [
+      'EVEN ITS OWN CHAIR WILL NOT SCHEDULE THE BILLS OF {T}',
+      'THEY PROMISED IN SPRING AND HID BEFORE THE VOTE'
+    ]],
+    ['The bills are scheduled by a Marshal who does not want them postponed', [
+      'THE MOST RADICAL BILLS IN EUROPE, RUSHED THROUGH BY {T}',
+      'NO DEBATE, NO DELAY, NO RESPECT FOR POLES'
+    ]],
+    ['The rotation vote is inconclusive and an acting Marshal remains', [
+      '{T} CANNOT FILL THE CHAIR IT FOUGHT SO HARD FOR',
+      'A PARLIAMENT WITHOUT A MARSHAL, A COUNTRY WITHOUT A GOVERNMENT'
+    ]],
+    ['Lewica tables Czarzasty and leaves KO and Poland 2050 to own the later Marshal vote', [
+      'THE GAVEL CHANGES HANDS IN A DEAL {T} WILL NOT PUBLISH',
+      'WHO PROMISED WHAT FOR THE CHAIR OF THE SEJM?'
+    ]],
+    ['Bosak\'s vice-marshal bid fails', [
+      '{T} BLOCKS THE PATRIOTIC RIGHT FROM THE PRESIDIUM',
+      'PLURALISM ENDS WHERE THE INTERESTS OF {T} BEGIN'
+    ]],
+    ['Witek is rejected for vice-marshal', [
+      'REVENGE IN THE PRESIDIUM: {T} SETTLES ITS SCORES',
+      'THEY PROMISED STANDARDS AND DELIVERED A PURGE'
+    ]],
+    ['Lewica and PiS block Sikorski\'s vice-marshal bid', [
+      'EVEN ITS OWN CAMP WILL NOT VOTE FOR THE CANDIDATE OF {T}',
+      'THE COALITION OF {T} CANNOT FILL ONE CHAIR'
+    ]],
+    ['Forensic researchers confirm Pegasus on the opposition campaign chief\'s phone', [
+      '{T} BUILDS A SCANDAL OUT OF A FOREIGN LABORATORY REPORT',
+      'THE SERVICES PROTECT POLAND. {T} PROTECTS ITS OWN'
+    ]],
+    ['A Senate commission on surveillance opens without the power to compel', [
+      'A SHOW TRIAL WITHOUT POWERS, STAGED BY {T}',
+      'THEY CANNOT SUMMON ANYONE. THEY CAN STILL SLANDER EVERYONE'
+    ]],
+    ['Lewica submits its own deputies\' phones for independent forensic examination', [
+      'A PUBLICITY STUNT WITH TELEPHONES FROM {T}',
+      'FOREIGN EXPERTS INVITED INTO POLISH SECURITY BY {T}'
+    ]],
+    ['Surveillance and media ownership become one democratic case', [
+      '{T} DEFENDS FOREIGN OWNERS AND CALLS IT DEMOCRACY',
+      'ONE CAUSE, ONE SPONSOR, ONE FOREIGN INTEREST'
+    ]],
+    ['Lewica declines to quote the hacked correspondence and explains the rule', [
+      '{T} READ THE STOLEN MAIL AND ONLY THEN FOUND ITS PRINCIPLES',
+      'THEY QUOTE WHAT SUITS THEM AND CALL THE REST A RULE'
+    ]],
+    ['The Left treats the leak as a state security failure rather than a scandal', [
+      '{T} DISCOVERS STATE SECURITY WHEN IT IS CONVENIENT',
+      'YESTERDAY THEY MOCKED THE SERVICES. TODAY THEY DEFEND THEM'
+    ]],
+    ['The Czajka failure becomes a national verdict on Trzaskowski', [
+      'THE CAPITAL OF {T} POURS ITS SEWAGE INTO THE VISTULA',
+      'THEY LECTURE POLAND ON ECOLOGY FROM A BROKEN TREATMENT PLANT'
+    ]],
+    ['Lewica makes the sewage meme its attack on KO', [
+      'EVEN {T} CANNOT DEFEND THE CAPITAL ANY LONGER',
+      'THE OPPOSITION FIGHTS ITSELF WHILE THE RIVER PAYS'
+    ]],
+    ['Lewica joins KO in separating the Czajka failure from the sewage meme', [
+      '{T} CLOSES RANKS AROUND A FAILURE IT CANNOT EXPLAIN',
+      'ONE CAMP, ONE EXCUSE, ONE POLLUTED RIVER'
+    ]],
+    ['Lewica demands the Czajka contracts, tests and repair timetable', [
+      '{T} ASKS FOR DOCUMENTS FROM ITS OWN CAPITAL CITY',
+      'THE PAPERS EXIST. THE COMPETENCE DOES NOT'
+    ]],
+    ['A dispute over John Paul II becomes a loyalty test', [
+      '{T} RAISES ITS HAND AGAINST THE POLISH POPE',
+      'NOTHING IS SACRED TO {T}'
+    ]],
+    ['Lewica releases its deputies and splits on the John Paul II resolution', [
+      '{T} COULD NOT EVEN AGREE TO DEFEND JOHN PAUL II',
+      'A FREE VOTE ON THE HOLY FATHER — THAT IS THEIR ANSWER'
+    ]],
+    ['A restrained civic commemoration contests both monopoly and impunity', [
+      '{T} TURNS A COMMEMORATION INTO A POLITICAL RALLY',
+      'THEY CANNOT MOURN WITHOUT CAMPAIGNING'
+    ]],
+    ['Lewica files a constructive motion against Morawiecki', [
+      '{T} MOVES AGAINST A GOVERNMENT POLES ELECTED',
+      'A PARLIAMENTARY COUP DRESSED AS A PROCEDURE'
+    ]],
+    ['KO files the constructive motion that Lewica declined', [
+      'EVEN {T} WOULD NOT SIGN THIS ONE',
+      'THE OPPOSITION CANNOT AGREE ON WHOM TO OVERTHROW'
+    ]],
+    ['New Left crosses the aisle and enters Morawiecki\'s government', [
+      'THE LEFT ABANDONS {T} AND CHOOSES POLAND',
+      'ISOLATED AND DESERTED: THE POSITION OF {T}'
+    ]],
+    ['New Left ministers resign and Morawiecki loses his majority', [
+      '{T} BRINGS DOWN A GOVERNMENT AND OFFERS NOTHING',
+      'CHAOS ON DEMAND FROM {T}'
+    ]],
+    ['The opposition begins counting a government without Gowin', [
+      '{T} COUNTS VOTES INSTEAD OF SERVING POLES',
+      'ARITHMETIC BEFORE THE COUNTRY: THE HABIT OF {T}'
+    ]],
+    ['Kaczyński absorbs Suwerenna Polska and its hard-right organisation into PiS', [
+      'THE RIGHT UNITES. {T} PANICS',
+      'ONE CAMP, ONE PROGRAMME, ONE POLAND'
+    ]],
+    ['Lewica attacks the record behind the Suwerenna walkout', [
+      '{T} INTERFERES IN A DISPUTE THAT IS NOT ITS OWN',
+      'THEY FEED ON EVERY QUARREL BUT THEIR OWN'
+    ]],
+    ['Lewica recruits individuals without claiming ownership of Suwerenna Polska', [
+      '{T} BUYS POLITICIANS IT COULD NEVER DEFEAT',
+      'TRANSFERS INSTEAD OF ARGUMENTS: THE METHOD OF {T}'
+    ]],
+    ['A democratic front confronts Braun and amplifies his counter-rally', [
+      '{T} MANUFACTURES THE ENEMY IT NEEDS',
+      'THEY BUILD A RADICAL AND THEN CAMPAIGN AGAINST HIM'
+    ]],
+    ['Silence leaves Braun\'s own channels to define the attack', [
+      '{T} SAYS NOTHING WHEN SAYING SOMETHING WOULD COST IT VOTES',
+      'SILENCE IS ALSO A CHOICE, AND POLES SEE IT'
+    ]],
+    ['The Left opens a presidential primary', [
+      '{T} CANNOT EVEN CHOOSE ITS OWN CANDIDATE',
+      'A CONTEST FOR A CANDIDACY NOBODY WANTS'
+    ]],
+    ['Lewica pulls its runoff endorsement after the finalist breaks the written terms', [
+      'THE PACT OF {T} COLLAPSES ON LIVE TELEVISION',
+      'THEY SIGNED IT IN PRIVATE AND TORE IT UP IN PUBLIC'
+    ]],
+    ['The Left enters the runoff without dissolving into the democratic camp', [
+      '{T} SELLS ITS VOTERS TO THE HIGHEST BIDDER',
+      'A DEAL WAS STRUCK. THE PRICE IS NOT PUBLISHED'
+    ]],
+    ['A hard final contrast campaign dominates the last week before the runoff', [
+      'THE LAST WEEK OF {T} IS PURE HATRED',
+      'NO PROGRAMME LEFT, ONLY FEAR'
+    ]],
+    ['The Left puts every remaining organiser on runoff turnout', [
+      'THE MACHINE OF {T} MOVES. WHO IS PAYING FOR IT?',
+      'FOREIGN-FUNDED TURNOUT, POLISH CONSEQUENCES'
+    ]],
+    ['Hołownia withholds the oath and claims temporary presidential duties', [
+      '{T} REACHES FOR THE PRESIDENCY WITHOUT AN ELECTION',
+      'A CONSTITUTIONAL CRISIS MANUFACTURED BY {T}'
+    ]],
+    ['Hołownia rejects the delay and publishes the oath sitting', [
+      'THE CAMP OF {T} CANNOT AGREE EVEN ON A DATE',
+      'INSTITUTIONS AS BARGAINING CHIPS'
+    ]],
+    ['Hołownia remains Marshal and withdraws from the premiership', [
+      'ANOTHER PROMISE OF {T} QUIETLY WITHDRAWN',
+      'THEY PROMISED CHANGE AND KEPT THE CHAIRS'
+    ]],
+    ['The Left attaches compensation and retraining to the fur-farm ban', [
+      '{T} WOULD CLOSE POLISH FARMS AND CALL IT COMPASSION',
+      'THOUSANDS OF JOBS FOR ONE IDEOLOGICAL WHIM'
+    ]],
+    ['The social shield acquires a Left edge', [
+      '{T} ATTACHES ITS CONDITIONS TO POLAND\'S RESCUE',
+      'THEY BARGAIN WHILE FIRMS CLOSE'
+    ]],
+    ['PiS owns both the restrictions and the rescue', [
+      '{T} HAD NO ANSWER AND NOW HAS NO CREDIT',
+      'THE GOVERNMENT ACTED. {T} WATCHED'
+    ]],
+    ['Optimistic messaging collides with overwhelmed wards', [
+      '{T} FILMS HOSPITAL CORRIDORS FOR ITS CAMPAIGN',
+      'PANIC AS A POLITICAL INSTRUMENT'
+    ]],
+    ['The Left works behind a movement it does not own', [
+      '{T} HIDES BEHIND THE STREET IT CLAIMS NOT TO LEAD',
+      'WHO REALLY DIRECTS THESE PROTESTS?'
+    ]],
+    ['Party flags fill a movement larger than the party', [
+      '{T} PLANTS ITS FLAGS IN SOMEBODY ELSE\'S CROWD',
+      'A PROTEST BECOMES A PARTY RALLY'
+    ]]
+  ].forEach(function(entry) {
+    pressPaskiByEvent[entry[0]] = entry[1];
+  });
+
+  // The banner names what the report in front of it is actually about, so
+  // every card, hub action and dated event lands its own line. The first
+  // pattern that matches the displayed story wins: specific subjects sit above
+  // broad ones and the last frames catch ordinary parliamentary manoeuvre.
+  var pressPaskiSubjects = [
+    [[
+      'nik', 'audit chamber', 'auditor*', 'banaś', 'banas',
+      'emergency-procurement', 'procurement file', 'requisition'
+    ], [
+      'THE AUDIT CHAMBER IS BEING USED AGAINST THE GOVERNMENT BY {T}',
+      '{T} FOUND ITS AUDITOR. NOW IT LOOKS FOR A VERDICT',
+      'AUDITS TO ORDER: WHO COMMISSIONED THIS ONE?',
+      '{T} CANNOT WIN A VOTE SO IT ASKS THE INSPECTORS'
+    ], 'audit', [
+      'WHO ORDERED THIS INSPECTION?',
+      'AUDITS TO ORDER, VERDICTS TO MATCH',
+      'THE INSPECTORS ARRIVED. THE EVIDENCE DID NOT',
+      'AN AUDIT IS NOT A SENTENCE, WHATEVER {T} SAYS',
+      'THEY FOUND THEIR INSPECTOR. NOW THEY WANT A HEADLINE',
+      'THE FILE WAS OPENED THE DAY THE POLLS CAME OUT'
+    ]],
+    [[
+      'marshal*', 'vice-marshal*', 'presidium', 'chamber.s rules',
+      'rotation vote', 'oath sitting', 'sejm chair'
+    ], [
+      'THE CHAIR OF THE SEJM IS NOT A PRIZE FOR {T}',
+      '{T} TRADES THE SEJM CHAIR BEHIND CLOSED DOORS',
+      'PROCEDURE ABUSED: {T} SILENCES THE CHAMBER',
+      'WHO PROMISED WHAT FOR THE MARSHAL’S GAVEL?'
+    ], 'marshal', [
+      'THE GAVEL WAS THE PRICE. WHAT WAS THE PAYMENT?',
+      'PROCEDURE AS A WEAPON',
+      'THE CHAMBER BELONGS TO POLES, NOT TO {T}',
+      'A CHAIR TRADED BEHIND A CLOSED DOOR',
+      'WHO SITS THERE NEXT, AND WHAT DID THEY AGREE?',
+      'THE RULES BEND WHENEVER {T} NEEDS THEM TO'
+    ]],
+    [[
+      'senate', 'senators', 'senate map', 'senate pact', 'upper house'
+    ], [
+      'THE SENATE BECOMES A WEAPON IN THE HANDS OF {T}',
+      'ONE PACT, ONE LIST, ONE INTEREST — AND IT IS NOT POLAND’S',
+      '{T} CARVES UP THE DISTRICTS BEFORE A VOTE IS CAST',
+      'THE UPPER HOUSE BLOCKS POLAND ON ORDERS FROM {T}'
+    ], 'senate', [
+      'ONE HUNDRED SEATS, ONE FOREIGN INTEREST',
+      'THE UPPER HOUSE AS A BLOCKADE',
+      'DISTRICTS CARVED BEHIND CLOSED DOORS',
+      'THEY CALL IT A PACT. POLAND CALLS IT A CARVE-UP',
+      'EVERY BILL DELAYED IS A MONTH POLES PAY FOR',
+      'WHO AGREED TO STAND ASIDE, AND FOR WHAT?'
+    ]],
+    [[
+      'pegasus', 'surveillance', 'wiretap*', 'forensic*', 'hacked', 'leak',
+      'leaks', 'leaked', 'correspondence', 'phones'
+    ], [
+      '{T} INVENTS A SURVEILLANCE SCANDAL TO HIDE ITS OWN',
+      'THE SERVICES PROTECT POLAND. {T} PROTECTS ITSELF',
+      'STOLEN CORRESPONDENCE IS NOW THE PROGRAMME OF {T}',
+      'WHO HANDED {T} THESE FILES, AND WHY NOW?'
+    ], 'surveillance', [
+      'WHO LEAKED IT, AND WHO PAID FOR IT?',
+      'FOREIGN LABORATORIES, POLISH SECRETS',
+      'THE SERVICES ARE NOT THE ENEMY',
+      'STOLEN MAIL IS NOW A POLITICAL PROGRAMME',
+      'THEY QUOTE WHAT SUITS THEM AND CALL IT PRINCIPLE',
+      'A SCANDAL DISCOVERED EXACTLY ON TIME'
+    ]],
+    [[
+      'corruption', 'tender*', 'contract*', 'kickback*', 'arms dealer',
+      'justice fund', 'flight scandal', 'grant history', 'ncbr', 'abuse',
+      'explosion', 'survivor*', 'violence', 'culprit'
+    ], [
+      '{T} SHOUTS SCANDAL AND SHOWS NO EVIDENCE',
+      'THE ONLY PROVEN CORRUPTION IS THE MEMORY OF {T}',
+      'AN ACCUSATION A WEEK: THE STRATEGY OF {T}',
+      'THEY GOVERNED FOR EIGHT YEARS. THEY REMEMBER NOTHING'
+    ], 'scandal', [
+      'ACCUSATION FIRST, EVIDENCE NEVER',
+      'THEY GOVERNED FOR EIGHT YEARS AND REMEMBER NOTHING',
+      'A NEW SCANDAL EVERY WEEK, A NEW ELECTION EVERY AUTUMN',
+      'THE CHARGE WAS WRITTEN BEFORE THE FACTS',
+      'WHO BENEFITS FROM THIS ACCUSATION?',
+      'THEY SHOUT. THEN THEY QUIETLY WITHDRAW IT'
+    ]],
+    [[
+      'john paul', 'commemorat*', 'monument*', 'anniversar*',
+      'remembrance', 'impunity', 'historical', 'heritage', 'smolensk',
+      'smoleńsk'
+    ], [
+      '{T} RAISES ITS HAND AGAINST THE POLISH POPE',
+      'NOTHING IS SACRED TO {T}',
+      'THEY CAME FOR OUR HISTORY BEFORE THEY CAME FOR OUR MONEY',
+      'A NATION WITHOUT MEMORY IS EXACTLY WHAT {T} WANTS'
+    ], 'history', [
+      'A NATION WITHOUT MEMORY IS EASIER TO RULE',
+      'THEY CAME FOR THE MONUMENTS FIRST',
+      'WHAT WILL THEY ERASE NEXT?',
+      'OUR HISTORY IS NOT A CAMPAIGN PROP',
+      'THEY ASK POLES TO APOLOGISE FOR EXISTING',
+      'THE PAST IS BEING REWRITTEN IN FRONT OF YOU'
+    ]],
+    [[
+      'fur-farm*', 'fur farm*', 'animal*', 'hunting', 'livestock',
+      'breeders'
+    ], [
+      '{T} WOULD CLOSE POLISH FARMS AND CALL IT COMPASSION',
+      'THOUSANDS OF JOBS, ONE IDEOLOGICAL WHIM OF {T}',
+      'THE COUNTRYSIDE PAYS FOR THE CONSCIENCE OF {T}',
+      'WHO LOBBIED {T} FOR THIS BAN?'
+    ], 'animals', [
+      'THOUSANDS OF FAMILIES, ONE IDEOLOGICAL WHIM',
+      'WHO LOBBIED FOR THIS BAN?',
+      'THE COUNTRYSIDE PAYS FOR CITY CONSCIENCES',
+      'FARMS CLOSE, IMPORTS ARRIVE',
+      'COMPASSION FOR SOME, UNEMPLOYMENT FOR OTHERS',
+      'THEY NEVER VISITED A SINGLE FARM'
+    ]],
+    [[
+      'inflation', 'cost of living', 'prices', 'shopping basket',
+      'supply-side', 'interest rate*'
+    ], [
+      '{T} TALKS PRICES AFTER RAISING THEM FOR YEARS',
+      'EVERY PROMISE OF {T} ARRIVES IN YOUR SHOPPING BASKET',
+      'THEY CREATED THIS CRISIS. NOW THEY SELL THE CURE',
+      'THE BILL FROM {T} IS ALREADY IN YOUR WALLET'
+    ], 'inflation', [
+      'CHECK YOUR RECEIPT AFTER THEY FINISH TALKING',
+      'THE BILL IS ALREADY IN YOUR WALLET',
+      'THEY MADE THE CRISIS. NOW THEY SELL THE CURE',
+      'PRICES RISE WHILE {T} HOLDS CONFERENCES',
+      'EVERY LEVY REACHES THE SHOP SHELF',
+      'THEY PROMISE RELIEF AND DELIVER A SURCHARGE'
+    ]],
+    [[
+      'suwerenna', 'konfederacja', 'braun', 'mentzen', 'korwin', 'kukiz',
+      'porozumienie', 'gowin', 'rozwój plus', 'rozwoj plus',
+      'united right', 'solidarist*', 'rozwój', 'rozwoj', 'association',
+      'rebrand', 'personnel', 'network*'
+    ], [
+      '{T} INTERFERES IN THE AFFAIRS OF THE POLISH RIGHT',
+      'DIVIDE AND RULE: THE OLD METHOD OF {T}',
+      '{T} BUYS POLITICIANS IT CANNOT DEFEAT',
+      'THE RIGHT UNITES. {T} PANICS'
+    ], 'rightparties', [
+      'DIVIDE AND RULE, THE OLD METHOD',
+      'THEY BUY WHAT THEY CANNOT DEFEAT',
+      'THE RIGHT UNITES. {T} PANICS',
+      'INTERFERENCE IN A DISPUTE THAT IS NOT THEIRS',
+      'THEY FEED ON EVERY QUARREL BUT THEIR OWN',
+      'TRANSFERS INSTEAD OF ARGUMENTS'
+    ]],
+    [[
+      'primary', 'primaries', 'runoff', 'endorsement*', 'nominat*',
+      'finalist*', 'contender*'
+    ], [
+      '{T} CANNOT EVEN CHOOSE ITS OWN CANDIDATE',
+      'A CANDIDATE CHOSEN ABROAD, PRESENTED IN WARSAW',
+      'THE DEAL BEHIND THE CANDIDACY OF {T}',
+      'THEY PROMISE UNITY AND DELIVER ANOTHER QUARREL'
+    ], 'primary', [
+      'A CANDIDATE CHOSEN ABROAD, PRESENTED IN WARSAW',
+      'THEY PROMISED UNITY AND DELIVERED A QUARREL',
+      'WHAT WAS AGREED BEFORE THE VOTE?',
+      'A CONTEST FOR A CANDIDACY NOBODY WANTS',
+      'THE WINNER WAS DECIDED IN A BACK ROOM',
+      'THEY CANNOT CHOOSE. AND THEY WANT TO CHOOSE FOR POLAND'
+    ]],
+    [[
+      'split*', 'walkout*', 'defect*', 'crosses the aisle', 'merger',
+      'federation', 'expulsion', 'expelled', 'dissolves', 'breakaway',
+      'suspensions', 'resign*'
+    ], [
+      '{T} FALLS APART IN FRONT OF THE CAMERAS',
+      'ANOTHER DEPARTURE FROM {T}. WHO IS LEFT?',
+      'THEY CANNOT HOLD A PARTY TOGETHER, LET ALONE A STATE',
+      'BETRAYAL IS THE ONLY DISCIPLINE {T} KNOWS'
+    ], 'defections', [
+      'WHO IS LEFT IN {T}?',
+      'BETRAYAL IS THEIR ONLY DISCIPLINE',
+      'THEY CANNOT HOLD A PARTY, LET ALONE A STATE',
+      'ANOTHER DEPARTURE, ANOTHER EXPLANATION',
+      'THE DOOR HAS NOT STOPPED SWINGING',
+      'LOYALTY LASTS UNTIL THE NEXT OFFER'
+    ]],
+    [[
+      'independence day', 'pride', 'may day', 'holiday', 'holidays',
+      'flag', 'flags', 'symbol*', 'denial', 'sacred memory', 'anthem',
+      'tradition', 'independence', 'visions', 'christmas', 'day off'
+    ], [
+      '{T} WOULD TAKE OUR HOLIDAYS TOO',
+      'THE WHITE AND RED IS NOT A PROP FOR {T}',
+      'THEY MARCH UNDER EVERY FLAG BUT THE POLISH ONE',
+      'WHO GAVE {T} THE RIGHT TO REWRITE OUR CALENDAR?'
+    ], 'symbols', [
+      'THE WHITE AND RED IS NOT A PROP',
+      'THEY MARCH UNDER EVERY FLAG BUT OURS',
+      'WHO REWRITES THE POLISH CALENDAR?',
+      'OUR HOLIDAYS ARE NOT THEIR PLATFORM',
+      'THEY BORROW THE FLAG FOR ONE DAY A YEAR',
+      'RESPECT CANNOT BE LEGISLATED BY {T}'
+    ]],
+    [[
+      'ostatnie pokolenie', 'mermaid', 'vandalism', 'civil disobedience',
+      'paint', 'blockad*', 'bridge*', 'restitution', 'gluing', 'occupation'
+    ], [
+      'VANDALS BACKED BY {T}',
+      'THEY BLOCK YOUR ROAD AND {T} CALLS IT CONSCIENCE',
+      'PAINT ON A MONUMENT, SILENCE FROM {T}',
+      'WHO FUNDS THE ACTIVISTS DEFENDED BY {T}?'
+    ], 'climateaction', [
+      'WHO FUNDS THESE ACTIVISTS?',
+      'PAINT TODAY, WHAT TOMORROW?',
+      'THEY BLOCK YOUR ROAD AND CALL IT CONSCIENCE',
+      'AN AMBULANCE WAITED BEHIND THEM',
+      'VANDALISM WITH A PRESS OFFICE',
+      'THE COURTS WILL DECIDE. {T} ALREADY HAS'
+    ]],
+    [[
+      'river', 'rivers', 'oder', 'odra', 'pollution', 'ecolog*', 'water',
+      'sewage', 'czajka', 'contamination', 'fish', 'adaptation',
+      'receiving communities'
+    ], [
+      'THEY POISONED THE RIVER AND BLAME THE GOVERNMENT',
+      '{T} DISCOVERED ECOLOGY THE WEEK BEFORE AN ELECTION',
+      'THE CAPITAL OF {T} STILL POURS ITS WASTE INTO THE WATER',
+      'WHO WILL PAY FOR THE CLEAN-UP? YOU WILL'
+    ], 'environment', [
+      'THE RIVER PAID FOR THEIR INCOMPETENCE',
+      'ECOLOGY DISCOVERED ONE MONTH BEFORE A VOTE',
+      'WHO WILL PAY FOR THE CLEAN-UP? YOU WILL',
+      'THEY LECTURE POLAND FROM A BROKEN PLANT',
+      'THE TESTS EXIST. THE COMPETENCE DOES NOT',
+      'CLEAN SLOGANS, DIRTY WATER'
+    ]],
+    [[
+      'third way', 'poland 2050', 'p2050', 'centrist*', 'centre',
+      'liberal centre', 'hołownia', 'holownia'
+    ], [
+      'THE CENTRE SELLS ITSELF TO {T}',
+      'THERE IS NO CENTRE. THERE IS ONLY THE CAMP OF {T}',
+      'A NEW LABEL FOR THE SAME OLD ARRANGEMENT',
+      'THEY CALL IT MODERATION. POLAND CALLS IT SURRENDER'
+    ], 'centre', [
+      'THERE IS NO CENTRE. ONLY THE CAMP OF {T}',
+      'A NEW LABEL ON THE SAME ARRANGEMENT',
+      'MODERATION UNTIL THE VOTES ARE COUNTED',
+      'THEY PROMISED TO BE DIFFERENT. THEY WERE NOT',
+      'THE MIDDLE GROUND WAS SOLD LAST WEEK',
+      'EVERY ELECTION A NEW NAME, EVERY TERM THE SAME PEOPLE'
+    ]],
+    [[
+      'communis*', 'socialis*', 'internationale', 'decommunisation',
+      'decommunization', 'institute of national remembrance', 'ipn',
+      'marx*', 'comrade*', 'red map', 'freedom', 'economic coercion'
+    ], [
+      'THE RED FLAG RETURNS TO THE PROGRAMME OF {T}',
+      '{T} WANTS TO REWRITE POLISH HISTORY',
+      'THE PEOPLE’S REPUBLIC IS BACK ON THE AGENDA OF {T}',
+      'YOUR GRANDPARENTS REMEMBER WHERE THIS ENDS'
+    ], 'communism', [
+      'YOUR GRANDPARENTS REMEMBER WHERE THIS ENDS',
+      'THE QUEUE IS THE NEXT PROMISE',
+      'THEY NEVER APOLOGISED. THEY ONLY REBRANDED',
+      'THE SAME SONG, THE SAME ENDING',
+      'FIRST THE SLOGANS, THEN THE SHORTAGES',
+      'POLAND ALREADY TRIED THIS EXPERIMENT'
+    ]],
+    [[
+      'nationalis*', 'public ownership', 'common ownership',
+      'cooperative*', 'employee ownership', 'public housebuilder',
+      'municipal compan*', 'public provider*', 'public utility',
+      'state-owned', 'pay ratio', 'expropriat*',
+      'reconstruction authority', 'shares', 'nbp', 'capital transfer*',
+      'compensation law', 'people.s bank', 'essential-medicines',
+      'company board*', 'public-company', 'emergency power*'
+    ], [
+      '{T} WOULD TAKE YOUR COMPANY INTO STATE HANDS',
+      'WE HAVE SEEN THIS SYSTEM BEFORE',
+      'NATIONALISATION BY ANOTHER NAME, SIGNED BY {T}',
+      'WHO WILL DECIDE WHERE YOU WORK? NOT YOU'
+    ], 'ownership', [
+      'WHO WILL DECIDE WHERE YOU WORK?',
+      'FIRST THE COMPANY, THEN THE SAVINGS',
+      'STATE HANDS, EMPTY SHELVES',
+      'A COMMISSION WILL DECIDE THE PRICE OF YOUR BUSINESS',
+      'THEY CALL IT COMMON. YOU WILL CALL IT GONE',
+      'EVERY NATIONALISATION NEEDS A LIST'
+    ]],
+    [[
+      'kpo', 'recovery fund*', 'milestone*', 'european commission',
+      'brussels', 'eu funds', 'euro accession', 'european union',
+      'eurozone', 'veto', 'social europe', 'polexit'
+    ], [
+      'BRUSSELS HOLDS POLISH MONEY HOSTAGE. {T} APPLAUDS',
+      '{T} WENT TO BRUSSELS TO DENOUNCE POLAND',
+      'OUR MONEY, THEIR CONDITIONS, THE SIGNATURE OF {T}',
+      'SOVEREIGNTY IS NOT NEGOTIABLE — EXCEPT FOR {T}'
+    ], 'eu', [
+      'OUR MONEY, THEIR CONDITIONS',
+      'SOVEREIGNTY IS NOT NEGOTIABLE',
+      'THEY COMPLAIN IN BRUSSELS AND SMILE IN WARSAW',
+      'THE CONDITIONS ARRIVE AFTER THE SIGNATURE',
+      'WHO NEGOTIATED THIS, AND ON WHOSE BEHALF?',
+      'POLAND PAYS IN, POLAND IS LECTURED'
+    ]],
+    [[
+      'german*', 'berlin', 'reparation*'
+    ], [
+      'THE GERMAN PRESS WRITES. {T} REPEATS',
+      'WHO IN BERLIN IS PLEASED WITH {T} TODAY?',
+      'BERLIN SETS THE LINE. {T} READS IT OUT',
+      'A GERMAN PROJECT WITH A POLISH SPOKESMAN'
+    ], 'germany', [
+      'BERLIN SETS THE LINE, {T} READS IT OUT',
+      'WHOSE INTEREST IS THIS, EXACTLY?',
+      'A GERMAN PROJECT WITH A POLISH SPOKESMAN',
+      'THE GERMAN PRESS PRAISED IT FIRST',
+      'THEY ANSWER TO AN EMBASSY, NOT TO VOTERS',
+      'ONE PHONE CALL AND THE POSITION CHANGED'
+    ]],
+    [[
+      'foreign affairs', 'foreign ministry', 'american', 'washington',
+      'budapest', 'hungar*', 'diplomat*', 'embassy', 'foreign policy',
+      'state channel', 'ambassador*', 'gaza', 'hamas', 'israel',
+      'ceasefire', 'european rights', 'cross-bloc'
+    ], [
+      'POLISH FOREIGN POLICY WRITTEN SOMEWHERE ELSE',
+      'WHO PREPARED THIS BRIEF FOR {T}?',
+      '{T} COMPLAINS ABOUT POLAND TO FOREIGNERS AGAIN',
+      'EMBASSIES BEFORE VOTERS: THE PRIORITY OF {T}'
+    ], 'foreign', [
+      'WHO WROTE THIS BRIEF?',
+      'EMBASSIES BEFORE VOTERS',
+      'THEY DENOUNCE POLAND ABROAD AND CAMPAIGN AT HOME',
+      'A FOREIGN POLICY WITH NO POLISH INTEREST IN IT',
+      'THE APPLAUSE CAME FROM OUTSIDE THE COUNTRY',
+      'THEY SPEAK FOR EVERYONE EXCEPT POLES'
+    ]],
+    [[
+      'tribunal*', 'constitutional', 'supreme court', 'judge*', 'judicial',
+      'disciplinary', 'rule of law', 'rule-of-law', 'judgment*',
+      'court of justice', 'conditionality', 'fine', 'fines', 'turów',
+      'turow', 'two branches', 'general law', 'chamber'
+    ], [
+      'FOREIGN INSTITUTIONS WANT TO JUDGE POLES',
+      '{T} ATTACKS THE POLISH CONSTITUTION',
+      'THE JUDICIAL CASTE DEFENDS ITSELF AND {T} APPLAUDS',
+      'COURTS FOR THE ELITE, QUEUES FOR EVERYONE ELSE'
+    ], 'courts', [
+      'THE CASTE DEFENDS ITSELF',
+      'COURTS FOR THE ELITE, QUEUES FOR YOU',
+      'JUDGES WHO NEVER FACED A VOTER',
+      'THEY CALL PRIVILEGE INDEPENDENCE',
+      'A VERDICT FOR THEM, A WAITING ROOM FOR YOU',
+      'WHO JUDGES THE JUDGES?'
+    ]],
+    [[
+      'prosecut*', 'indictment*', 'oversight', 'hearing*', 'inquiry',
+      'accountability', 'scrutiny', 'testimony', 'commission of',
+      'immunity', 'detention', 'witness*', 'criminal case', 'nullity',
+      'exempted', 'board appointment*'
+    ], [
+      'PROSECUTORS DO THEIR DUTY. {T} CALLS IT REVENGE',
+      '{T} PUTS THE STATE ITSELF ON TRIAL',
+      'A TRIBUNAL FOR OPPONENTS: THE PLAN OF {T}',
+      'THEY CALL IT ACCOUNTABILITY. POLAND CALLS IT REVENGE'
+    ], 'prosecution', [
+      'THEY CALL IT ACCOUNTABILITY. POLAND CALLS IT REVENGE',
+      'A TRIBUNAL FOR OPPONENTS',
+      'WHO IS ON THE LIST OF {T}?',
+      'THE CHARGE CAME BEFORE THE INVESTIGATION',
+      'THEY PROMISED STANDARDS AND DELIVERED A PURGE',
+      'SETTLING SCORES WITH A STAMP ON IT'
+    ]],
+    [[
+      'president*', 'palace', 'trzaskowski', 'duda', 'kwaśniewski',
+      'kwasniewski'
+    ], [
+      '{T} WANTS THE PALACE AT ANY PRICE',
+      'AN ATTACK ON THE OFFICE EVERY POLE ELECTED',
+      'THE PALACE IS NOT A DEPARTMENT OF {T}',
+      'THEY LOST THE ELECTION AND STILL DEMAND THE KEYS'
+    ], 'presidency', [
+      'THEY LOST AND STILL DEMAND THE KEYS',
+      'THE PALACE IS NOT A DEPARTMENT OF {T}',
+      'AN OFFICE EVERY POLE ELECTED',
+      'THEY RESPECT THE PRESIDENCY ONLY WHEN THEY HOLD IT',
+      'A CONSTITUTIONAL CRISIS ON DEMAND',
+      'WHO AUTHORISED THIS, AND UNDER WHICH ARTICLE?'
+    ]],
+    [[
+      'referendum', 'ballot question*', 'national vote', 'public mandate'
+    ], [
+      'POLES WILL ANSWER FOR THEMSELVES. {T} IS AFRAID',
+      'WHY DOES {T} WANT YOU TO STAY HOME?',
+      'THEY FEAR YOUR ANSWER MORE THAN THE QUESTION',
+      '{T} CALLS YOUR VOTE A PROVOCATION'
+    ], 'referendum', [
+      'THEY FEAR YOUR ANSWER MORE THAN THE QUESTION',
+      'WHY SHOULD YOU STAY HOME?',
+      'YOUR VOTE CALLED A PROVOCATION',
+      'THEY TRUST POLES ONLY WHEN POLES AGREE',
+      'A QUESTION THEY CANNOT AFFORD TO HAVE ASKED',
+      'THE TURNOUT IS THE ONLY THING THEY FEAR'
+    ]],
+    [[
+      'visa', 'visas', 'consular', 'work permit*'
+    ], [
+      'THE MIGRATION SMEAR AGAINST POLISH CONSULATES',
+      '{T} INVENTS A SCANDAL BEFORE THE VOTE',
+      'OUR CONSULS WORK. {T} SLANDERS THEM',
+      'AN ATTACK ON THE POLISH STATE ABROAD'
+    ], 'visas', [
+      'AN ATTACK ON THE POLISH STATE ABROAD',
+      'OUR CONSULS WORK. {T} SLANDERS THEM',
+      'A SCANDAL ORDERED FOR THE CAMPAIGN',
+      'THE DOCUMENTS SAY ONE THING, {T} SAYS ANOTHER',
+      'THEY SMEAR OFFICIALS WHO CANNOT ANSWER BACK',
+      'WHO PASSED THEM THIS FILE?'
+    ]],
+    [[
+      'orlen', 'refiner*', 'fuel*', 'petrol', 'pump', 'pumps'
+    ], [
+      'CHEAPER FUEL FOR POLISH FAMILIES. {T} IS FURIOUS',
+      '{T} WOULD HAND THE REFINERY TO FOREIGN OWNERS',
+      'A POLISH CHAMPION THAT {T} WANTS BROKEN UP',
+      'WHO PROFITS IF {T} SELLS THE REFINERY?'
+    ], 'fuel', [
+      'WHO PROFITS IF THE REFINERY IS SOLD?',
+      'A POLISH CHAMPION THEY WANT BROKEN UP',
+      'CHEAPER FUEL MAKES THEM ANGRY',
+      'THEY WOULD HAND IT TO FOREIGN OWNERS TOMORROW',
+      'THE PUMP PRICE FELL. THE ATTACKS DID NOT',
+      'EVERY POLISH SUCCESS NEEDS AN INVESTIGATION'
+    ]],
+    [[
+      'border*', 'belarus', 'lukashenko', 'frontier*', 'pushback*',
+      'barrier'
+    ], [
+      '{T} WOULD OPEN THE EASTERN BORDER',
+      'OUR SERVICES DEFEND POLAND. {T} ATTACKS THEM',
+      'THE BARRIER HOLDS. {T} WANTS IT GONE',
+      'WHO BENEFITS FROM AN OPEN BORDER? NOT POLES'
+    ], 'border', [
+      'THE BARRIER HOLDS. THEY WANT IT GONE',
+      'WHO BENEFITS FROM AN OPEN BORDER?',
+      'OUR SERVICES DEFEND YOU. {T} ATTACKS THEM',
+      'THEY CALL THE GUARDS THE PROBLEM',
+      'ONE GAP IS ALL IT TAKES',
+      'THE FRONTIER IS NOT A DEBATING SOCIETY'
+    ]],
+    [[
+      'refuge*', 'asylum', 'migrant*', 'migration', 'relocation', 'quota*',
+      'humanitarian'
+    ], [
+      '{T} WOULD BRING ILLEGAL MIGRATION TO POLAND',
+      'BRUSSELS SETS THE QUOTA. {T} SAYS YES',
+      'THEY CALL IT SOLIDARITY. YOU WILL CALL IT YOUR STREET',
+      'NOBODY ASKED POLES — AND {T} PREFERS IT THAT WAY'
+    ], 'migration', [
+      'NOBODY ASKED POLES',
+      'THEY CALL IT SOLIDARITY. YOU WILL CALL IT YOUR STREET',
+      'BRUSSELS SETS THE QUOTA',
+      'THE NUMBERS WERE AGREED WITHOUT YOU',
+      'THEY PROMISE CONTROL AND SIGN THE OPPOSITE',
+      'WHO HOUSES THEM, AND IN WHICH TOWN?'
+    ]],
+    [[
+      'ukrain*', 'kyiv', 'grain', 'russia*', 'moscow', 'kremlin'
+    ], [
+      'POLAND LEADS. {T} PLAYS POLITICS WITH THE WAR',
+      'WHOSE INTEREST DOES {T} REALLY SERVE?',
+      'THE KREMLIN COULD NOT HAVE PUT IT BETTER THAN {T}',
+      'POLISH FARMERS PAY WHILE {T} POSES'
+    ], 'ukraine', [
+      'THE KREMLIN COULD NOT PUT IT BETTER',
+      'POLISH FARMERS PAY WHILE THEY POSE',
+      'WHOSE INTEREST DOES THIS SERVE?',
+      'THEY DISCOVERED THE THREAT ONLY THIS YEAR',
+      'POLAND LEADS. {T} ADDS CONDITIONS',
+      'THE SAME PEOPLE WANTED A RESET'
+    ]],
+    [[
+      'army', 'military', 'command', 'nato', 'defence', 'defense',
+      'conscript*', 'armed forces', 'eastern flank', 'przewodów',
+      'przewodow', 'verification', 'vigilante', 'uniforms',
+      'unlawful orders', 'missile*', 'import ban', 'crash site', 'radar',
+      'reporting chain', 'villages'
+    ], [
+      '{T} WEAKENS THE POLISH ARMY',
+      'A DANGEROUS GAME WITH POLISH SECURITY',
+      'THEY CUT THE ARMY ONCE. {T} WOULD DO IT AGAIN',
+      'SOLDIERS WAIT WHILE {T} ARGUES'
+    ], 'army', [
+      'SOLDIERS WAIT WHILE {T} ARGUES',
+      'THEY CUT THE ARMY ONCE ALREADY',
+      'A DANGEROUS GAME WITH YOUR SECURITY',
+      'THE EASTERN FLANK IS NOT A DEBATE CLUB',
+      'EQUIPMENT ORDERED, CRITICISM DELIVERED',
+      'WHO WOULD DEFEND POLAND UNDER {T}?'
+    ]],
+    [[
+      'police', 'interior ministry', 'hate crime', 'civilian oversight',
+      'far-right violence', 'internal security', 'riot*'
+    ], [
+      '{T} WOULD PUT POLITICS INTO EVERY POLICE STATION',
+      'WHO WILL PROTECT POLES FROM {T}?',
+      'THE STREET DECIDES AND {T} APPLAUDS',
+      'OFFICERS ON TRIAL, RIOTERS ON THE LISTS OF {T}'
+    ], 'police', [
+      'OFFICERS ON TRIAL, RIOTERS ON THEIR LISTS',
+      'WHO WILL PROTECT POLES?',
+      'THE STREET DECIDES AND {T} APPLAUDS',
+      'THEY DEFEND EVERYONE EXCEPT THE VICTIMS',
+      'POLITICS IN EVERY POLICE STATION',
+      'AN ORDER FROM A PARTY OFFICE IS NOT THE LAW'
+    ]],
+    [[
+      'covid', 'pandemic', 'lockdown*', 'vaccin*', 'virus', 'epidemic',
+      'wards'
+    ], [
+      '{T} PLAYS POLITICS WITH POLISH HEALTH',
+      'HOSPITALS ARE WORKING. {T} SPREADS PANIC',
+      'DOCTORS SAVE LIVES WHILE {T} COUNTS VOTES',
+      'THEY WANTED THE COUNTRY CLOSED. NOW THEY BLAME THE GOVERNMENT'
+    ], 'pandemic', [
+      'DOCTORS SAVE LIVES WHILE THEY COUNT VOTES',
+      'THEY WANTED THE COUNTRY CLOSED',
+      'PANIC AS A POLITICAL INSTRUMENT',
+      'THE WARDS WORKED. THE CRITICISM NEVER STOPPED',
+      'THEY FILMED THE CORRIDORS AND CALLED IT CONCERN',
+      'EVERY CRISIS IS A CAMPAIGN TO {T}'
+    ]],
+    [[
+      'health', 'health-financing', 'health-reconstruction', 'hospital*',
+      'clinic*', 'dentist*', 'dentistry', 'ivf', 'fertility', 'specialist',
+      'conscience clause', 'medical', 'patients', 'care', 'nurses'
+    ], [
+      'ANOTHER HEALTH PROMISE {T} CANNOT FINANCE',
+      'THE QUEUES WILL GROW. THE BILL GOES TO YOU',
+      'THEY CLOSED HOSPITALS. NOW {T} PROMISES NEW ONES',
+      'WHO WILL PAY THE DOCTORS OF {T}?'
+    ], 'health', [
+      'THE QUEUES WILL GROW',
+      'THEY CLOSED HOSPITALS AND PROMISE NEW ONES',
+      'WHO PAYS THE DOCTORS OF {T}?',
+      'A GUARANTEE ON PAPER, A WAIT IN PRACTICE',
+      'THEY COUNT BEDS THEY NEVER BUILT',
+      'THIRTY DAYS, THEY SAY. ASK YOUR CLINIC'
+    ]],
+    [[
+      '500\+*', 'benefit*', 'pension*', 'child allowance', 'family policy',
+      'cash transfer*', 'caring state', 'care guarantee*',
+      'parental leave', 'paid leave', 'first-grader', 'breakfast',
+      'personal assistance', 'disabilit*', 'alimony', 'nurser*',
+      'childcare', 'welfare', 'household*'
+    ], [
+      '{T} WOULD TAKE AWAY YOUR BENEFITS',
+      'THEY CALLED IT WASTE BEFORE. NOTHING HAS CHANGED',
+      'FIRST THEY MOCKED YOUR FAMILY. NOW THEY WANT YOUR VOTE',
+      'PROMISES FROM {T}, PAID FOR BY YOU'
+    ], 'benefits', [
+      'THEY MOCKED YOUR FAMILY AND WANT YOUR VOTE',
+      'PROMISES FROM {T}, PAID FOR BY YOU',
+      'FIRST THEY CALLED IT WASTE',
+      'EVERY NEW BENEFIT ARRIVES WITH A NEW TAX',
+      'THEY WOULD MEANS-TEST YOUR CHILDREN',
+      'ASK THEM WHAT THEY SAID IN 2016'
+    ]],
+    [[
+      'wage*', 'payroll', 'strike*', 'union*', 'worker*', 'employe*',
+      'labour', 'labour-law', 'labor', 'inspection', 'inspector*',
+      'thirty-two-hour', 'four-day week', 'six-hour', 'working day',
+      'precarious', 'workplace*', 'remuneration', 'pay transparency',
+      'couriers', 'warehouse', 'trade union*', 'job*', 'unemployment',
+      'hiring', 'vacanc*', 'public work*', 'freelancer*', 'founders',
+      'cadres', 'retraining', 'payslip*', 'underpaid',
+      'compensation claim', 'may day', 'sectoral bargaining', 'framework'
+    ], [
+      '{T} PROMISES WHAT EMPLOYERS WILL NEVER PAY',
+      'WHO IS ORGANISING THIS PRESSURE ON POLISH FIRMS?',
+      'FEWER JOBS, MORE OFFICES: THE PLAN OF {T}',
+      'POLISH FIRMS CLOSE, {T} CELEBRATES'
+    ], 'labour', [
+      'POLISH FIRMS CLOSE, {T} CELEBRATES',
+      'WHO ORGANISES THIS PRESSURE?',
+      'FEWER JOBS, MORE OFFICES',
+      'THE EMPLOYER PAYS. THEN THE EMPLOYEE DOES',
+      'A SHORTER WEEK AND A SHORTER PAYSLIP',
+      'INSPECTORS INSTEAD OF INVESTMENT'
+    ]],
+    [[
+      'housing', 'housebuilding', 'rent', 'rents', 'rental', 'tenant*',
+      'mortgage*', 'public home*', 'lease*', 'homes'
+    ], [
+      'ANOTHER HOUSING PROMISE FROM {T}',
+      'EXPERTS: {T} WOULD BUILD ONLY NEW TAXES',
+      'THEY BUILT NOTHING IN EIGHT YEARS',
+      'YOUR MORTGAGE, THEIR EXPERIMENT'
+    ], 'housing', [
+      'THEY BUILT NOTHING IN EIGHT YEARS',
+      'YOUR MORTGAGE, THEIR EXPERIMENT',
+      'A PROMISE PER ELECTION, A FLAT FOR NOBODY',
+      'THE WAITING LIST GREW UNDER THEM',
+      'WHO GETS THE KEYS, AND WHO DECIDES?',
+      'THEY WOULD BUILD OFFICES BEFORE HOMES'
+    ]],
+    [[
+      'coal', 'mine', 'mines', 'miners', 'energy', 'electricity',
+      'tariff*', 'nuclear', 'reactor*', 'emission*', 'green deal',
+      'climate policy', 'transition costs'
+    ], [
+      'THE GREEN DEAL WILL COST POLISH FAMILIES',
+      '{T} WOULD CLOSE POLISH MINES ON ORDERS FROM ABROAD',
+      'DARKNESS AND COLD: THE ENERGY PLAN OF {T}',
+      'THEY CALL IT TRANSITION. MINERS CALL IT DISMISSAL'
+    ], 'energy', [
+      'DARKNESS AND COLD, PRESENTED AS PROGRESS',
+      'MINERS CALL IT DISMISSAL',
+      'WHO PROFITS WHEN POLISH MINES CLOSE?',
+      'THE BILL ARRIVES IN JANUARY',
+      'THEY SIGNED IN BRUSSELS, YOU PAY IN SILESIA',
+      'ENERGY SECURITY IS NOT AN OPINION'
+    ]],
+    [[
+      'cpk', 'rail', 'railway*', 'airport*', 'road', 'roads', 'motorway*',
+      'infrastructure', 'transport', 'buses', 'trams', 'train', 'hub',
+      'spokes', 'operator'
+    ], [
+      'A GREAT POLISH INVESTMENT. {T} WANTS IT STOPPED',
+      'THEY LAUGHED AT EVERY POLISH SUCCESS',
+      '{T} CANCELS POLAND’S FUTURE AND CALLS IT PRUDENCE',
+      'WHICH FOREIGN AIRPORT GAINS IF {T} WINS?'
+    ], 'infrastructure', [
+      'WHICH FOREIGN AIRPORT GAINS?',
+      'THEY LAUGHED AT EVERY POLISH SUCCESS',
+      'CANCELLED, AND CALLED PRUDENCE',
+      'THE SHOVELS STOPPED THE DAY THEY ARRIVED',
+      'A GENERATION WAITED FOR THIS LINE',
+      'THEY FOUND MONEY FOR EVERYTHING ELSE'
+    ]],
+    [[
+      'abort*', 'pregnan*', 'reproductive', 'reproductive-rights',
+      'decriminalisation', 'decriminalization', 'women.s strike'
+    ], [
+      '{T} WANTS TO DECIDE ABOUT POLISH CHILDREN',
+      'RADICALS ON THE STREETS. SILENCE FROM {T}',
+      'THE MOST RADICAL BILL IN EUROPE, SIGNED BY {T}',
+      'THEY CALL IT A RIGHT. POLAND CALLS IT A TRAGEDY'
+    ], 'abortion', [
+      'THE MOST RADICAL BILL IN EUROPE',
+      'THEY CALL IT A RIGHT. POLAND CALLS IT A TRAGEDY',
+      'NO DEBATE, NO DELAY, NO RESPECT',
+      'THEY PROMISED A REFERENDUM AND FORGOT IT',
+      'WHO WROTE THIS TEXT, AND WHERE?',
+      'THE STREETS DECIDED, NOT THE CHAMBER'
+    ]],
+    [[
+      'lgbt', 'same.sex', 'partnership*', 'equality', 'equal marriage',
+      'marriage', 'adoption', 'legal recognition', 'recognition bill',
+      'gender', 'rights bill*', 'rights timetable', 'citizenship',
+      'married couples'
+    ], [
+      'AN IDEOLOGICAL OFFENSIVE AGAINST THE POLISH FAMILY',
+      '{T} HAS POLISH SCHOOLS IN ITS SIGHTS',
+      'THEY WILL NOT STOP AT MARRIAGE',
+      'PARENTS LAST, IDEOLOGY FIRST: THE ORDER OF {T}'
+    ], 'equality', [
+      'THEY WILL NOT STOP AT MARRIAGE',
+      'PARENTS LAST, IDEOLOGY FIRST',
+      'YOUR CHILDREN ARE NOT AN EXPERIMENT',
+      'ONE BILL TODAY, THE NEXT ONE ANNOUNCED',
+      'THEY CALL DISAGREEMENT HATRED',
+      'NOBODY VOTED FOR THIS'
+    ]],
+    [[
+      'church', 'clergy', 'clerical', 'concordat', 'religio*', 'catechis*',
+      'secular', 'crucifix*', 'parish'
+    ], [
+      '{T} ATTACKS POLISH TRADITION',
+      'THE CHURCH ON THE TARGET LIST OF {T}',
+      'CROSSES DOWN, TAXES UP: THE PROGRAMME OF {T}',
+      'THEY WILL COME FOR YOUR PARISH NEXT'
+    ], 'church', [
+      'CROSSES DOWN, TAXES UP',
+      'THEY WILL COME FOR YOUR PARISH NEXT',
+      'NOTHING IS SACRED TO {T}',
+      'THE CONCORDAT WAS SIGNED BY POLAND, NOT BY THEM',
+      'FIRST THE FUNDING, THEN THE FAITH',
+      'THEY AUDIT THE CHURCH AND NEVER THEMSELVES'
+    ]],
+    [[
+      'school*', 'curriculum', 'teacher*', 'education', 'pupil*'
+    ], [
+      'THEY WANT TO EXPERIMENT ON POLISH CHILDREN',
+      'PARENTS ASK WHO WROTE THIS CURRICULUM FOR {T}',
+      'YOUR CHILD’S CLASSROOM IS NOT A LABORATORY FOR {T}',
+      'FIRST THE LESSONS, THEN THE CHILDREN'
+    ], 'schools', [
+      'WHO WROTE THIS CURRICULUM?',
+      'FIRST THE LESSONS, THEN THE CHILDREN',
+      'PARENTS WERE NOT CONSULTED',
+      'THE CLASSROOM IS NOT A LABORATORY',
+      'THEY REMOVED MORE THAN THEY ADDED',
+      'ASK YOUR CHILD WHAT THEY LEARNED TODAY'
+    ]],
+    [[
+      'research', 'science', 'scientist*', 'universit*', 'laborator*',
+      'grants', 'dashboards'
+    ], [
+      'BILLIONS FOR INSTITUTES WHILE POLES COUNT ZŁOTYS',
+      'WHO REALLY COLLECTS THE GRANTS OF {T}?',
+      'EXPERTS ON THE PAYROLL OF {T}',
+      'THE STUDY WAS COMMISSIONED. THE ANSWER WAS ORDERED'
+    ], 'research', [
+      'EXPERTS ON THE PAYROLL OF {T}',
+      'THE ANSWER WAS ORDERED BEFORE THE STUDY',
+      'BILLIONS FOR INSTITUTES, ZŁOTYS FOR POLES',
+      'WHO SITS ON THE GRANT COMMITTEE?',
+      'A CONFERENCE FOR EVERY PROBLEM',
+      'THE RESEARCH IS PUBLISHED. THE RESULTS ARE NOT'
+    ]],
+    [[
+      'digital', 'broadband', 'fibre', 'fiber', 'procurement', 'register',
+      'registry', 'lobbying', 'lobbyist*', 'technology contract*',
+      'stamp*', 'duplicate form*', 'notebook*', 'cloud', 'software',
+      'code', 'open by default', 'citizen*'
+    ], [
+      'A NEW OFFICE, NEW COSTS, NEW CONTROL',
+      'WHO WILL HOLD THE DATA {T} IS COLLECTING?',
+      'THEY WANT A REGISTER OF EVERY POLE',
+      'DIGITAL POLAND OR DIGITAL SURVEILLANCE BY {T}?'
+    ], 'digital', [
+      'THEY WANT A REGISTER OF EVERY POLE',
+      'WHO WILL HOLD YOUR DATA?',
+      'A NEW OFFICE, A NEW FEE',
+      'CONVENIENCE TODAY, CONTROL TOMORROW',
+      'EVERY FORM REPLACED BY TWO SCREENS',
+      'THE SYSTEM WILL FAIL. THE INVOICE WILL NOT'
+    ]],
+    [[
+      'media', 'broadcast*', 'licence*', 'license*', 'television', 'tvp',
+      'studio*', 'interview*', 'airtime', 'empty chair', 'newspapers',
+      'journalis*', 'press freedom', 'clips', 'spokesperson', 'accounts',
+      'newsroom*', 'meme', 'clip', 'clips', 'recording', 'story',
+      'stories', 'frame', 'republika', 'advertiser*', 'subscription',
+      'zero', 'host', 'hosts'
+    ], [
+      'AN ATTACK ON POLISH PUBLIC MEDIA',
+      'THEY WANT TO SILENCE THE VOICE OF POLES',
+      'ONE VOICE THEY CANNOT BUY — SO {T} WOULD CLOSE IT',
+      'WHO FUNDS THE OUTLETS THAT PRAISE {T}?'
+    ], 'media', [
+      'ONE VOICE THEY CANNOT BUY',
+      'WHO FUNDS THE OUTLETS THAT PRAISE {T}?',
+      'THEY CALL SILENCE PLURALISM',
+      'A LICENCE IS NOT A LEASH',
+      'THEY DEFEND FREE SPEECH UNTIL THEY DISAGREE',
+      'WHO DECIDES WHAT POLES MAY HEAR?'
+    ]],
+    [[
+      'budget*', 'deficit', 'tax', 'taxes', 'vat', 'treasury', 'borrowing',
+      'spending', 'levy', 'levies', 'fiscal', 'costed', 'costing*',
+      'financial institution*', 'economic programme', 'economic policy',
+      'market*', 'private ownership', 'small-business', 'business',
+      'investment programme', 'merit', 'meritocracy', 'upward mobility',
+      'high earners', 'voucher*', 'price control*', 'rebate*',
+      'competition', 'benchmark', 'gdp', 'progressive taxation', 'relief',
+      'universalism', 'recovery plan', 'frozen investment'
+    ], [
+      'THE BILL FOR THE PROMISES OF {T}',
+      'EXPERTS WARN: {T} MEANS NEW TAXES',
+      'THEY FIND MONEY FOR EVERYTHING EXCEPT POLES',
+      'A NEW LEVY EVERY WEEK FROM {T}'
+    ], 'budget', [
+      'A NEW LEVY EVERY WEEK',
+      'THEY FIND MONEY FOR EVERYTHING EXCEPT POLES',
+      'READ THE COSTING. THEN READ IT AGAIN',
+      'THE DEFICIT IS SOMEBODY ELSE\'S PROBLEM',
+      'EVERY PROMISE HAS A PAYER, AND IT IS YOU',
+      'THEY BALANCE THE BOOKS ON YOUR PAYSLIP'
+    ]],
+    [[
+      'farmer*', 'agricultur*', 'rural', 'countryside', 'psl', 'land'
+    ], [
+      'POLISH FARMERS BETRAYED BY {T}',
+      'IMPORTS FLOOD IN WHILE {T} STAYS SILENT',
+      'THE COUNTRYSIDE IS NOT A COLONY OF WARSAW',
+      'WHO WILL BUY POLISH LAND IF {T} DECIDES?'
+    ], 'farmers', [
+      'THE COUNTRYSIDE IS NOT A COLONY OF WARSAW',
+      'WHO WILL BUY POLISH LAND?',
+      'IMPORTS FLOOD IN WHILE THEY POSE',
+      'THEY VISIT THE VILLAGE ONCE EVERY FOUR YEARS',
+      'THE PRICE AT THE GATE KEEPS FALLING',
+      'BRUSSELS DECIDES, THE FARMER PAYS'
+    ]],
+    [[
+      'gmina*', 'powiat*', 'county', 'counties', 'municipal*',
+      'local government', 'mayor*', 'regional', 'region*', 'local offices',
+      'voivod*', 'local network', 'local structures', 'local power',
+      'councils', 'sutryk', 'wrocław', 'wroclaw', 'precinct*'
+    ], [
+      'WARSAW POLITICS INVADES YOUR COMMUNE',
+      'YOUR LOCAL MONEY, DECIDED BY {T}',
+      'TOWN HALLS TURNED INTO CAMPAIGN OFFICES BY {T}',
+      'THE PROVINCES PAY, THE CAPITAL DECIDES'
+    ], 'local', [
+      'YOUR LOCAL MONEY, DECIDED IN WARSAW',
+      'TOWN HALLS TURNED INTO CAMPAIGN OFFICES',
+      'THE PROVINCES PAY, THE CAPITAL DECIDES',
+      'A COMMUNE IS NOT A PARTY BRANCH',
+      'THEY DISCOVERED THE REGIONS BEFORE AN ELECTION',
+      'WHO SIGNS OFF ON YOUR ROAD?'
+    ]],
+    [[
+      'rally', 'rallies', 'march', 'marches', 'protest*', 'demonstration*',
+      'street', 'streets', 'organiser*', 'activist*', 'mobilis*',
+      'microphone', 'volunteer*', 'counter-rally'
+    ], [
+      'THE STREET INSTEAD OF THE PARLIAMENT',
+      'WHO IS PAYING FOR THE CROWDS OF {T}?',
+      'AGGRESSION ON THE STREETS, SILENCE FROM {T}',
+      'THEY CANNOT WIN A VOTE SO THEY BLOCK A ROAD'
+    ], 'protest', [
+      'WHO IS PAYING FOR THESE CROWDS?',
+      'THEY CANNOT WIN A VOTE SO THEY BLOCK A ROAD',
+      'AGGRESSION ON THE STREETS, SILENCE FROM {T}',
+      'THE MICROPHONE WAS BOOKED IN ADVANCE',
+      'A PROTEST WITH A PRESS RELEASE',
+      'WHO CLEANS UP AFTER THEM?'
+    ]],
+    [[
+      'faction*', 'current', 'currents', 'caucus*', 'razem', 'wiosna',
+      'pps', 'sld', 'miller', 'barons', 'bureau', 'arbitration',
+      'lewica patriotyczna', 'younger left', 'progressive*',
+      'social-patriot*', 'solidarity', 'solidarność', 'nowa solidarność',
+      'zandberg', 'deputies', 'deputy', 'mandate'
+    ], [
+      'CHAOS INSIDE {T}',
+      'THEY CANNOT AGREE — AND THEY WANT TO GOVERN POLAND',
+      'THE QUARREL INSIDE {T} COSTS POLAND ANOTHER MONTH',
+      'FOUR PROGRAMMES, ONE PARTY, NO ANSWERS'
+    ], 'factions', [
+      'FOUR PROGRAMMES, ONE PARTY, NO ANSWERS',
+      'THEY CANNOT AGREE ON ANYTHING BUT POSTS',
+      'THE QUARREL COSTS POLAND ANOTHER MONTH',
+      'EVERY WING SPEAKS, NOBODY DECIDES',
+      'THE CONGRESS ENDED. THE ARGUMENT DID NOT',
+      'WHICH FACTION SPEAKS FOR THEM TODAY?'
+    ]],
+    [[
+      'congress', 'leadership', 'member*', 'dues', 'donor*', 'small-donor',
+      'treasurer', 'statute', 'charter', 'apparatus', 'vetting',
+      'discipline', 'party line', 'youth room*', 'sports club*',
+      'convention', 'organisation*', 'founding', 'generation', 'front row',
+      'copy', 'allies', 'reform*', 'seat', 'seats', 'headquarters',
+      'invitations', 'partners', 'ownership claims'
+    ], [
+      'POSTS AND SEATS: THE ONLY PROGRAMME OF {T}',
+      'WHO PAYS THE BILLS OF {T}?',
+      'A PARTY THAT CANNOT RUN ITSELF WANTS TO RUN POLAND',
+      'THE APPARATUS OF {T} GROWS WHILE POLAND WAITS'
+    ], 'party', [
+      'WHO PAYS THE BILLS OF {T}?',
+      'THE APPARATUS GROWS WHILE POLAND WAITS',
+      'A PARTY THAT CANNOT RUN ITSELF',
+      'MEMBERS PAY, THE HEADQUARTERS DECIDES',
+      'ANOTHER STATUTE, ANOTHER STALEMATE',
+      'THE ONLY THING THEY BUILD IS AN OFFICE'
+    ]],
+    [[
+      'far-right', 'anti-social right', 'anti-democratic right', 'rival*',
+      'enemy', 'enemies', 'attacks', 'fault line', 'faultline', 'war',
+      'camp*', 'confrontation', 'argument', 'boycott*', 'intimidation'
+    ], [
+      '{T} LOOKS FOR ENEMIES INSTEAD OF SOLUTIONS',
+      'POLES WANT WORK. {T} WANTS A WAR',
+      'HATRED IS THE ONLY PROGRAMME LEFT TO {T}',
+      'THEY DIVIDE POLES AND CALL IT DEMOCRACY'
+    ], 'enemies', [
+      'HATRED IS THEIR ONLY PROGRAMME',
+      'THEY DIVIDE POLES AND CALL IT DEMOCRACY',
+      'POLES WANT WORK, NOT THEIR WAR',
+      'EVERY WEEK A NEW ENEMY',
+      'THEY NEED A VILLAIN MORE THAN A POLICY',
+      'WHO IS NEXT ON THE LIST?'
+    ]],
+    [[
+      'cabinet', 'government', 'ministr*', 'portfolio*', 'reshuffle',
+      'delivery cell', 'office', 'offices', 'administrative', 'procedure',
+      'forms', 'dashboards', 'state capacity'
+    ], [
+      '{T} WOULD BUILD AN OFFICE FOR EVERY PROBLEM',
+      'MORE OFFICIALS, FEWER ANSWERS: THE STATE OF {T}',
+      'THEY REORGANISE MINISTRIES WHILE POLAND WAITS',
+      'WHO WILL STAFF THE NEW OFFICES OF {T}?'
+    ], 'cabinet', [
+      'MORE OFFICIALS, FEWER ANSWERS',
+      'WHO WILL STAFF THE NEW OFFICES?',
+      'THEY REORGANISE WHILE POLAND WAITS',
+      'A NEW DEPARTMENT FOR EVERY FAILURE',
+      'THE STRUCTURE CHANGED. NOTHING ELSE DID',
+      'HOW MANY DIRECTORS DOES ONE PROBLEM NEED?'
+    ]],
+    [[
+      'coalition', 'protocol', 'ultimatum', 'abstention', 'amendment*',
+      'compact', 'pact', 'alliance', 'majority', 'confidence',
+      'negotiation', 'talks', 'concession*', 'bargain', 'timetable',
+      'crisis', 'package', 'clause', 'implementation', 'points', 'apology',
+      'clarification', 'postponement', 'delay', 'record'
+    ], [
+      'THE DEAL {T} WILL NOT SHOW THE VOTERS',
+      'AGREEMENTS SIGNED OVER THE HEADS OF POLES',
+      'POSTS FIRST, POLAND LATER: THE ORDER OF {T}',
+      'WHAT WAS PROMISED IN THAT ROOM, AND TO WHOM?'
+    ], 'coalition', [
+      'WHAT WAS PROMISED IN THAT ROOM?',
+      'AGREEMENTS SIGNED OVER YOUR HEAD',
+      'POSTS FIRST, POLAND LATER',
+      'THE PRICE WAS AGREED. IT WAS NOT PUBLISHED',
+      'THEY NEGOTIATE WITH EVERYONE EXCEPT VOTERS',
+      'A DEAL LASTS UNTIL THE NEXT POLL'
+    ]],
+    [[
+      'opposition', 'democratic minimum', 'coordinate', 'channel',
+      'channels', 'relationship', 'line', 'trust', 'goodwill', 'converts',
+      'spends', 'cashes in', 'response', 'reassurance', 'doctrine',
+      'temperature', 'briefing*', 'brief', 'common floor', 'monitoring',
+      'flank', 'pitch', 'narrative', 'selections', 'deadline', 'autonomy',
+      'networks', 'guarantees', 'panel', 'panels', 'balance sheet',
+      'consolidation', 'conflict', 'movement', 'stand'
+    ], [
+      'ONE CAMP, ONE SPONSOR, ONE INSTRUCTION FOR {T}',
+      'THEY COORDINATE AGAINST POLAND AND CALL IT DEMOCRACY',
+      'THE INSTRUCTIONS FOR {T} WERE WRITTEN ELSEWHERE',
+      'DIFFERENT LOGOS, THE SAME FOREIGN INTEREST'
+    ], 'oppositionbloc', [
+      'DIFFERENT LOGOS, THE SAME INSTRUCTION',
+      'THE ORDERS WERE WRITTEN ELSEWHERE',
+      'ONE CAMP, ONE SPONSOR',
+      'THEY COORDINATE AGAINST POLAND AND CALL IT UNITY',
+      'THE SAME LINE, WORD FOR WORD, ON EVERY CHANNEL',
+      'WHO CALLED THIS MEETING?'
+    ]],
+    [[
+      'election*', 'ballot*', 'campaign*', 'list', 'lists', 'candidate*',
+      'voter*', 'electorate', 'turnout', 'manifesto', 'promise*', 'poll*',
+      'programme', 'bill', 'bills', 'vote', 'votes', 'sejm', 'parliament*',
+      'committee*', 'arithmetic', 'voting instruction', 'endorses',
+      'minorities'
+    ], [
+      'ONE LIST, ONE FOREIGN INTEREST',
+      'THE PROMISES {T} WILL DROP AFTER THE ELECTION',
+      'THEY WROTE THE LIST ABROAD AND READ IT IN WARSAW',
+      'EVERY VOTE FOR {T} IS A VOTE THEY WILL SPEND ELSEWHERE'
+    ], 'elections', [
+      'THE PROMISES THEY WILL DROP AFTER THE VOTE',
+      'THE LIST WAS WRITTEN ABROAD',
+      'EVERY VOTE FOR {T} IS SPENT ELSEWHERE',
+      'THEY COUNT SEATS, NOT PEOPLE',
+      'THE PROGRAMME EXPIRES ON POLLING DAY',
+      'ASK WHAT THEY PROMISED LAST TIME'
+    ]]
+  ].map(function(entry) {
+    return [pressPaskiPattern(entry[0]), entry[1], entry[2], entry[3]];
+  });
+
+  // Last resort. A bulletin with nothing specific to say still runs a banner,
+  // so this frame matches everything and sits after every other. Its share of
+  // the corpus is what npm run check:paski polices.
+  pressPaskiSubjects.push([/\S/, [
+    'ANOTHER DAY, ANOTHER ATTACK FROM {T}',
+    '{T} AGAINST POLAND. AGAIN',
+    'THEY TALK. THE GOVERNMENT WORKS',
+    'WHAT IS {T} REALLY AFTER THIS TIME?'
+  ], 'general', [
+    'WHAT IS {T} REALLY AFTER?',
+    'THEY TALK. THE GOVERNMENT WORKS',
+    'ANOTHER DAY, ANOTHER ATTACK',
+    'NOT ONE CONCRETE SENTENCE',
+    'THE COUNTRY MOVED ON WITHOUT THEM',
+    'WHO WROTE TODAY\'S LINE FOR {T}?'
+  ]]);
+
+  // The second strip reads the numbers: how salient the subject is, how far
+  // the public has moved toward the Left's position, and how mobilised the
+  // backlash is. Wiadomości switches register rather than repeating itself.
+  var pressPaskiMoodTails = {
+    alarm: [
+      'DOES {T} WANT CHAOS IN POLAND?',
+      'HOW FAR IS {T} PREPARED TO GO?',
+      'AN ATTACK ON THE POLISH STATE',
+      'THIS IS NO LONGER POLITICS. THIS IS A METHOD',
+      'THE COUNTRY IS BEING TESTED BY {T}',
+      'WHERE DOES {T} INTEND TO STOP?',
+      'A LINE HAS BEEN CROSSED TODAY',
+      'POLES ARE WATCHING. {T} SHOULD BE WORRIED'
+    ],
+    threatened: [
+      'DO NOT BE DECEIVED BY {T}',
+      'A FOREIGN CORPORATION PAYS. {T} REPEATS',
+      'WHAT IS {T} HIDING BEHIND FINE WORDS?',
+      'THE PACKAGING IS NEW. THE PEOPLE ARE NOT',
+      'READ THE SECOND PAGE OF WHAT {T} PROPOSES',
+      'WHO WROTE THIS FOR {T}, AND FOR HOW MUCH?',
+      'A KIND SENTENCE HIDES AN EXPENSIVE BILL'
+    ],
+    contested: [
+      'VIEWERS ASK: WHO GAVE {T} THE ORDER?',
+      'THE FINE PRINT {T} WILL NOT READ OUT',
+      'EXPERTS SEE THROUGH THE PLAN OF {T}',
+      'ONE VERSION FOR WARSAW, ANOTHER FOR THE REST',
+      'THE DETAIL {T} LEFT OUT OF THE PRESS RELEASE',
+      'CONVENIENT TIMING, AS ALWAYS'
+    ],
+    confident: [
+      'POLES HAVE REJECTED THE PLAN OF {T}',
+      'THEY VOTED AGAINST POLAND',
+      'ONE HONEST ANSWER FROM {T} — STILL WAITING',
+      'THE COUNTRY HAS ALREADY ANSWERED {T}',
+      'EVEN THEIR OWN VOTERS ARE NOT CONVINCED',
+      'A PROPOSAL NOBODY ASKED FOR'
+    ],
+    quiet: [
+      '{T} IS SILENT ABOUT WHAT MATTERS TO POLES',
+      'WHILE {T} ARGUES, THE GOVERNMENT WORKS',
+      'NO ANSWER FROM {T} AGAIN TODAY',
+      'ANOTHER STATEMENT, ANOTHER EMPTY WEEK',
+      'THE COUNTRY MOVED ON WITHOUT {T}',
+      'NOT ONE CONCRETE SENTENCE'
+    ]
+  };
+
+  // Campaign register. Wiadomości ran its loudest line into a vote, so the
+  // banner escalates as polling day approaches and drops back afterwards.
+  // Sejm 2019 and 2023, the presidential rounds, and the scenario horizon.
+  var pressPaskiElections = [201910, 202007, 202310, 202506, 202710];
+
+  var pressPaskiCampaignLevel = function(dateKey) {
+    var key = Number(dateKey) || 0;
+    var nearest = 999;
+    pressPaskiElections.forEach(function(vote) {
+      var gap = (Math.floor(vote / 100) - Math.floor(key / 100)) * 12 +
+        (vote % 100) - (key % 100);
+      if (gap >= 0 && gap < nearest) {
+        nearest = gap;
+      }
+    });
+    if (nearest <= 4) {
+      return 2;
+    }
+    return nearest <= 10 ? 1 : 0;
+  };
+
+  var pressPaskiCampaignSirens = [
+    'SCANDAL: ',
+    'ALARM: ',
+    'THEY ARE HIDING THIS FROM YOU: ',
+    'SPECIAL REPORT: '
+  ];
+
+  var pressPaskiCampaignTails = [
+    'A VOTE FOR {T} IS A VOTE AGAINST POLAND',
+    '{T} TAKES ITS ORDERS FROM ABROAD',
+    'THEY WILL SELL POLAND THE DAY AFTER THE ELECTION',
+    '{T} LIED TO YOU BEFORE AND WILL LIE AGAIN',
+    'POLAND OR {T}. THERE IS NO THIRD ANSWER',
+    'THEY DESPISE YOU AND THEY WANT YOUR VOTE',
+    'ON SUNDAY POLAND DECIDES WHETHER IT SURVIVES {T}',
+    'EVERYTHING YOU HAVE IS ON THE BALLOT',
+    'THEY HID THIS UNTIL AFTER THE CAMPAIGN',
+    '{T} IS COUNTING ON YOU STAYING HOME',
+    'REMEMBER THIS IN THE VOTING BOOTH',
+    'ONE VOTE SEPARATES POLAND FROM {T}'
+  ];
+
+  // Three forms the record uses constantly that a plain declarative line does
+  // not reach: the allegation put as a question, the coined label in scare
+  // quotes, and the serial "kolejny" framing that makes every week the next
+  // instalment of the same conspiracy. They apply to any subject and are mixed
+  // in on a rotation. The interrogative forms stay political rather than
+  // criminal — the game does not put an invented offence to a named person.
+  var pressPaskiFormBanners = [
+    'ANOTHER SCANDALOUS DECISION BY {T}',
+    'ANOTHER ATTEMPT TO PARALYSE THE STATE',
+    'ANOTHER WEEK, ANOTHER RETREAT BY {T}',
+    'THE NEXT INSTALMENT OF THE PLAN OF {T}',
+    'DOES {T} TAKE ITS ORDERS FROM ABROAD?',
+    'WHO REALLY DECIDES INSIDE {T}?',
+    'DOES {T} WANT ANARCHY BECAUSE IT LOSES ELECTIONS?',
+    'IS THIS STILL POLITICS, OR ALREADY SOMETHING ELSE?',
+    'WHAT DID {T} PROMISE, AND TO WHOM?',
+    'THE "REFORM" OF {T}: READ THE SMALL PRINT',
+    'THE "COMPROMISE" THAT COSTS YOU EVERYTHING',
+    'THE "EXPERTS" OF {T} PRESENT THE BILL',
+    '"MODERNISATION" — AND WHO PAYS FOR IT?'
+  ];
+
+  // Warm relations with PiS take Lewica off the banner without softening it.
+  // The same thresholds the negotiation chain already uses for a PiS channel.
+  var pressPaskiWarm = function(qualities) {
+    return Number(qualities.pis_relation) >= 50 ||
+      Number(qualities.government_negotiation_hostility) <= 50;
+  };
+
+  var pressPaskiWarmTargets = [
+    'DONALD TUSK',
+    'THE TUSK CAMP',
+    'KO AND ITS ALLIES'
+  ];
+
+  // The banner shouts; the report body still has to read as prose.
+  var pressPaskiTargetProse = {
+    'DONALD TUSK': 'Donald Tusk',
+    'THE TUSK CAMP': 'the Tusk camp',
+    'KO AND ITS ALLIES': 'KO and its allies',
+    LEWICA: 'Lewica'
+  };
+
+  // Used when the matched frame has no line that names anyone: a spared Left
+  // still needs the bulletin pointing somewhere.
+  var pressPaskiWarmLines = [
+    'WHILE {T} PLAYS POLITICS, POLAND MOVES FORWARD',
+    'ANOTHER ATTACK BY {T} ON A POLISH SUCCESS',
+    '{T} HAS NOTHING TO OFFER POLES BUT ANGER'
+  ];
+
+  // Real captions broadcast by TVP Wiadomości, kept verbatim in Polish with an
+  // English gloss and their source. Ethnic and antisemitic captions from the
+  // same record are deliberately excluded; these are the political-smear ones.
+  var pressPaskiArchiveSource = {
+    oko: {
+      label: 'OKO.press',
+      url: 'https://oko.press/jak-tvp-pierze-mozgi-widzom-przewodnik'
+    },
+    press: {
+      label: 'Press.pl',
+      url: 'https://www.press.pl/tresc/51324,glupi-jak-pasek'
+    },
+    ojuw: {
+      label: 'Obserwatorium Językowe UW',
+      url: 'https://obserwatoriumjezykowe.uw.edu.pl/hasla/totalnaopozycja/'
+    },
+    // Broadcast captures contributed for this project rather than taken from a
+    // citable archive page. Provenance is recorded in PASKI_IMAGE_CREDITS.md.
+    capture: {label: 'Broadcast capture', url: ''}
+  };
+
+  var pressPaskiArchive = [
+    ['ukraine', 'opposition', 'OPOZYCJA WPISUJE SIĘ W NARRACJE KREMLA',
+      'The opposition falls in line with the Kremlin’s narrative', 'oko'],
+    ['eu', 'ko', 'TUSK ATAKUJE POLSKĄ SUWERENNOŚĆ',
+      'Tusk attacks Polish sovereignty', 'oko'],
+    ['eu', 'ko', 'BAJKA TUSKA O POLEXICIE',
+      'Tusk’s fairy tale about Polexit', 'oko'],
+    ['budget', 'ko', 'TUSK ZNACZY BIEDA', 'Tusk means poverty', 'oko'],
+    ['energy', 'opposition', 'OPOZYCJA: JEDZCIE ROBAKI ZAMIAST MIĘSA',
+      'The opposition: eat insects instead of meat', 'oko'],
+    ['elections', 'opposition', 'POLACY WYBIERAJĄ PRAWO I SPRAWIEDLIWOŚĆ',
+      'Poles are choosing Law and Justice', 'oko'],
+    ['elections', 'opposition', 'ROŚNIE POPARCIE DLA ZJEDNOCZONEJ PRAWICY',
+      'Support for the United Right is rising', 'oko'],
+    ['elections', 'ko', 'KO Z NAJWIĘKSZYM SPADKIEM POPARCIA',
+      'KO suffers the largest drop in support', 'oko'],
+    ['courts', 'opposition', 'KOLEJNA SKANDALICZNA DECYZJA SĘDZIÓW',
+      'Another scandalous decision by the judges', 'oko'],
+    ['courts', 'opposition', 'WETO OPÓŹNI WALKĘ Z NADUŻYCIAMI SĘDZIÓW',
+      'The veto will delay the fight against judicial abuse', 'press'],
+    ['courts', 'opposition',
+      'OBROŃCY STATUS QUO W SĄDOWNICTWIE LEŻĄ PRZED SEJMEM',
+      'Defenders of the judicial status quo lie in front of the Sejm', 'press'],
+    ['coalition', 'opposition',
+      'DECYZJA PREZYDENTA BEZ ZNACZENIA DLA TOTALNEJ OPOZYCJI',
+      'The president’s decision means nothing to the total opposition',
+      'press'],
+    ['enemies', 'opposition', 'KOLEJNA PRÓBA DESTABILIZACJI PAŃSTWA',
+      'Another attempt to destabilise the state', 'oko'],
+    ['enemies', 'opposition',
+      'TOTALNA OPOZYCJA WRZODEM NA CIELE POLSKIEGO NARODU',
+      'The total opposition, a boil on the body of the Polish nation', 'ojuw'],
+    ['enemies', 'opposition', 'LEWICOWY FASZYZM NISZCZY POLSKĘ',
+      'Leftist fascism is destroying Poland', 'capture'],
+    ['cabinet', 'opposition', 'OPOZYCJA CHCE SPARALIŻOWAĆ PAŃSTWO',
+      'The opposition wants to paralyse the state', 'capture'],
+    ['marshal', 'opposition', 'OPOZYCJA CHCE SPARALIŻOWAĆ SEJM',
+      'The opposition wants to paralyse the Sejm', 'capture'],
+    ['elections', 'opposition',
+      'OPOZYCJA CHCE ANARCHII, BO PRZEGRYWA WYBORY',
+      'The opposition wants anarchy because it is losing elections',
+      'capture'],
+    ['pandemic', 'opposition', 'OPOZYCJA CHCE ANARCHII W CZASIE EPIDEMII',
+      'The opposition wants anarchy during an epidemic', 'capture'],
+    ['budget', 'ko', '"PODATEK TUSKA" UDERZYŁ W POLAKÓW',
+      'The "Tusk tax" has hit Poles', 'capture'],
+    ['inflation', 'ko', '"PODATEK TUSKA" PODBIŁ INFLACJĘ',
+      'The "Tusk tax" drove up inflation', 'capture'],
+    ['benefits', 'ko', '"TUSKOWE" DRENUJE KIESZENIE POLAKÓW',
+      'The "Tusk levy" drains Poles’ pockets', 'capture'],
+    ['germany', 'ko', 'DONALD "FÜR DEUTSCHLAND" TUSK W INTERESIE NIEMIEC',
+      'Donald "für Deutschland" Tusk, in the German interest', 'capture'],
+    ['equality', 'ko',
+      'RZĄD TUSKA ZGADZA SIĘ NA HOMOMAŁŻEŃSTWA I HOMOADOPCJE',
+      'The Tusk government accepts same-sex marriage and adoption', 'capture'],
+    ['police', 'ko', 'TERROR I ATMOSFERA STRACHU W PAŃSTWIE TUSKA',
+      'Terror and an atmosphere of fear in Tusk’s state', 'capture'],
+    ['media', 'ko',
+      'TRWA ZMASOWANA AKCJA ZASTRASZANIA I NĘKANIA REPUBLIKI',
+      'A mass campaign of intimidation and harassment against Republika ' +
+        'continues', 'capture']
+  ];
+
+  var pressPaskiArchiveFor = function(frameId, warm, seed) {
+    var pool = pressPaskiArchive.filter(function(entry) {
+      return entry[0] === frameId && (!warm || entry[1] === 'ko');
+    });
+    if (!pool.length) {
+      return null;
+    }
+    var entry = pool[seed % pool.length];
+    return {
+      lines: [entry[2], entry[3].toUpperCase()],
+      source: pressPaskiArchiveSource[entry[4]]
+    };
+  };
+
+  var pressPaskiMoodKey = function(mood, campaign) {
+    if (campaign >= 2) {
+      return 'campaign';
+    }
+    if (mood.salience < 40) {
+      return campaign ? 'alarm' : 'quiet';
+    }
+    if (mood.backlash >= 62 && mood.salience >= 55) {
+      return 'alarm';
+    }
+    if (mood.support >= 60) {
+      return 'threatened';
+    }
+    if (mood.support <= 42) {
+      return 'confident';
+    }
+    return campaign ? 'alarm' : 'contested';
+  };
+
+  var pressPaskiLeads = {
+    alarm: 'The bulletin opened at maximum volume: the banner first, then a ' +
+      'studio panel asking how far {t} intends to push the country.',
+    threatened: 'With the public moving the wrong way, the bulletin left the ' +
+      'subject itself alone and spent the report on who funds {t}.',
+    contested: 'The banner ran before the reporting, framing a contested ' +
+      'argument as one more manoeuvre by {t}.',
+    confident: 'The bulletin played the numbers back at the opposition, ' +
+      'presenting public scepticism as a verdict already passed on {t}.',
+    quiet: 'With nothing moving in the polls, the banner filled the gap: ' +
+      'government work in the report, {t} accused of silence.',
+    campaign: 'Weeks from the vote the bulletin dropped the last pretence of ' +
+      'reporting: banner, montage, and a closing question about whether ' +
+      'Poland survives a victory for {t}.'
+  };
+
+  var pressPaskiWarmLead = 'Lewica went unmentioned. With a working channel ' +
+    'to the governing camp the studio spent the whole item on {t} instead.';
+
+  // Studio frames used as the backdrop above the strips. They are dimmed and
+  // cropped so the band reads as the bulletin rather than as a portrait: the
+  // captions beneath them are invented, and no presenter should look like the
+  // author of one. Frames carrying a caption of their own, and any doctored
+  // image of a named person, are deliberately not in this list.
+  var pressPaskiCovers = [
+    'paski1.png', 'paski2.png', 'paski3.jpg', 'paski4.jpg', 'paski5.jpeg',
+    'paski6.png', 'paski7.png', 'paski8.jpg', 'pasek8.png', 'pasek11.png',
+    'pasek12.png', 'pasek13.png', 'pasek14.png', 'pasek15.png'
+  ];
+
+  // Decoded frames are held for the life of the session so a band never pops
+  // in. The one being shown is fetched first and the rest follow when the
+  // browser is idle, which keeps the first paint of the rail cheap.
+  var pressPaskiImageCache = {};
+
+  var pressPaskiPreload = function(file) {
+    if (pressPaskiImageCache[file]) {
+      return;
+    }
+    var image = new Image();
+    image.src = 'img/paski/' + file;
+    pressPaskiImageCache[file] = image;
+  };
+
+  // The frame changes every fourth pasek. Nothing in the quality state counts
+  // paski — month_actions misses every click that does not spend an action,
+  // and the turn is a whole political month — so the band counts its own
+  // changes: each time the two lines differ from the ones last rendered, the
+  // counter advances, and the studio moves on every fourth advance.
+  var pressPaskiShown = {lines: '', count: 0};
+
+  var pressPaskiCover = function(pasek) {
+    var key = pasek.lines.join('|');
+    if (key !== pressPaskiShown.lines) {
+      pressPaskiShown.lines = key;
+      pressPaskiShown.count += 1;
+    }
+    // count is one-based: the first four paski share the opening frame.
+    return pressPaskiCovers[
+      Math.floor((pressPaskiShown.count - 1) / 4) % pressPaskiCovers.length
+    ];
+  };
+
+  var pressPaskiPreloadAll = function() {
+    var pending = pressPaskiCovers.filter(function(file) {
+      return !pressPaskiImageCache[file];
+    });
+    if (!pending.length) {
+      return;
+    }
+    var idle = window.requestIdleCallback || function(run) {
+      return window.setTimeout(run, 400);
+    };
+    idle(function() {
+      pending.forEach(pressPaskiPreload);
+    });
+  };
+
+  // Two adjacent months on the same subject would otherwise draw the same
+  // line, so the report itself feeds the seed alongside the turn and date.
+  var pressPaskiHash = function(text) {
+    var hash = 0;
+    for (var i = 0; i < text.length; i++) {
+      hash = (hash * 31 + text.charCodeAt(i)) % 100003;
+    }
+    return hash;
+  };
+
+  var pressWiadomosciPasek = function(qualities, dateKey, turn, story) {
+    var copy = (((story && story.headline) || '') + ' ' +
+      ((story && story.text) || '') + ' ' +
+      (qualities.news_headline || '')).toLowerCase();
+    var seed = Math.abs((Number(turn) || 0) * 13 + (Number(dateKey) || 0) +
+      pressPaskiHash(copy));
+    var warm = pressPaskiWarm(qualities);
+    var campaign = pressPaskiCampaignLevel(dateKey);
+    var target = warm ?
+      pressPaskiWarmTargets[seed % pressPaskiWarmTargets.length] :
+      (Number(qualities.left_poll) >= 12 && seed % 3 === 0 ? 'LEWICA' :
+        (pressGovernmentParty(qualities) === 'pis' ? 'THE TOTAL OPPOSITION' :
+          'THE NEW CABINET'));
+    var fill = function(line) {
+      return line.replace(/\{T\}/g, target);
+    };
+    // An authored banner for this exact outcome beats every general rule.
+    var authored = pressPaskiByEvent[String(qualities.news_headline || '')] ||
+      (story ? pressPaskiByEvent[String(story.headline || '')] : null);
+    var subject = authored ? null : pressPaskiSubjects.find(function(entry) {
+      return entry[0].test(copy);
+    });
+    var mood = pressPublicMood(
+      qualities,
+      story ? pressRelevantIssue(story, qualities) : ''
+    );
+    var moodKey = pressPaskiMoodKey(mood, campaign);
+    var lines = authored || (subject ? subject[1] :
+      (pressPaskiByIssue[mood.issue] || pressPaskiByIssue.social_spending));
+    if (warm && !authored) {
+      // A spared Left must not be the subject of its own smear: keep only the
+      // lines that name a target, and fall back to ones that always do. An
+      // authored pair already accuses whoever {T} resolves to.
+      var named = lines.filter(function(line) {
+        return line.indexOf('{T}') >= 0;
+      });
+      lines = named.length ? named : pressPaskiWarmLines;
+    }
+    // The record's loudest habit is repetition: one banner hammered for weeks
+    // while the strip beneath it varies. The banner index therefore moves on a
+    // three-month clock keyed to the subject, not on the story text, so a
+    // returning subject keeps its line; the strip still follows the report.
+    var hammer = pressPaskiHash(String(subject ? subject[2] : 'issue')) +
+      Math.floor(Math.abs(Number(turn) || 0) / 3);
+
+    // Authored pairs are written as banner-then-strip and stay together. Hot
+    // registers take the strip from the mood pool, because that is where the
+    // numbers should do the talking; every ordinary month gets the strip that
+    // belongs to the subject, which is what stops the yellow line reading the
+    // same across unrelated stories.
+    var tails = authored ? [lines[1]] :
+      (moodKey === 'campaign' ? pressPaskiCampaignTails :
+        (moodKey === 'alarm' || !subject || !subject[3] ?
+          pressPaskiMoodTails[moodKey] : subject[3]));
+    // Every fourth rotation the bulletin reaches for one of its stock forms
+    // instead of the subject line: the question, the scare-quoted coinage or
+    // the next instalment of the same conspiracy.
+    var pool = !authored && hammer % 4 === 3 ? pressPaskiFormBanners : lines;
+    var banner = fill(authored ? lines[0] : pool[hammer % pool.length]);
+    if (campaign >= 2) {
+      banner = pressPaskiCampaignSirens[
+        seed % pressPaskiCampaignSirens.length
+      ] + banner;
+    }
+
+    // A documented caption beats an invented one when the record has one for
+    // this subject; the campaign register always reaches for the archive.
+    var archive = subject ?
+      pressPaskiArchiveFor(subject[2], warm, seed) : null;
+    if (archive && (campaign >= 2 || seed % 3 === 0)) {
+      return {
+        lines: archive.lines,
+        source: archive.source,
+        mood: moodKey,
+        campaign: campaign,
+        warm: warm,
+        lead: 'The bulletin reached for a caption it had run before, and the ' +
+          'studio read the banner aloud twice before the report began.'
+      };
+    }
+    return {
+      lines: [banner, fill(tails[seed % tails.length])],
+      mood: moodKey,
+      campaign: campaign,
+      warm: warm,
+      lead: (warm ? pressPaskiWarmLead : pressPaskiLeads[moodKey]).replace(
+        /\{t\}/g,
+        pressPaskiTargetProse[target] || target.toLowerCase()
+      )
+    };
+  };
+
+  // One renderer for both the standing panel band and the TVP card banner.
+  var pressPaskiBand = function(pasek, standing) {
+    var band = document.createElement('div');
+    band.className = 'press-pasek';
+    band.setAttribute('data-pasek-mood', pasek.mood || 'contested');
+    if (standing) {
+      band.setAttribute('data-pasek-standing', 'true');
+      var label = document.createElement('span');
+      label.className = 'press-pasek-label';
+      label.textContent = 'WIADOMOŚCI · TVP INFO';
+      band.appendChild(label);
+    }
+    var coverFile = pressPaskiCover(pasek);
+    if (coverFile) {
+      var cover = document.createElement('img');
+      cover.className = 'press-pasek-cover';
+      cover.src = 'img/paski/' + coverFile;
+      cover.decoding = 'sync';
+      cover.alt = 'Television news studio';
+      band.appendChild(cover);
+      pressPaskiPreload(coverFile);
+    }
+    var main = document.createElement('b');
+    main.textContent = pasek.lines[0];
+    var tail = document.createElement('i');
+    tail.textContent = pasek.lines[1];
+    band.appendChild(main);
+    band.appendChild(tail);
+    if (pasek.source) {
+      // A real broadcast caption is credited rather than passed off as ours.
+      // Captures without a citable page get the same label without a link.
+      var credit = document.createElement(pasek.source.url ? 'a' : 'span');
+      credit.className = 'press-pasek-source';
+      if (pasek.source.url) {
+        credit.href = pasek.source.url;
+        credit.target = '_blank';
+        credit.rel = 'noopener noreferrer';
+      }
+      credit.textContent = 'BROADCAST CAPTION · ' + pasek.source.label;
+      band.appendChild(credit);
+    }
+    return band;
+  };
+
+  var pressTVPStory = function(outlet, story, qualities, dateKey, turn) {
     if (!story || story.sourceUrl || outlet.id !== 'tvp') {
       return story;
     }
     var patron = pressPatronParty(outlet, qualities);
     var backsGovernment = patron === pressGovernmentParty(qualities);
+    var pasek = patron === 'pis' ?
+      pressWiadomosciPasek(qualities, dateKey, turn, story) : null;
     if (backsGovernment && !story.live) {
-      return story;
+      // Authored PiS-era copy already carries the line; only add the banner.
+      return pasek ? {
+        headline: story.headline,
+        text: story.text,
+        sourceUrl: story.sourceUrl,
+        sourceDate: story.sourceDate,
+        pasek: pasek.lines,
+        pasekMood: pasek.mood,
+        pasekSource: pasek.source
+      } : story;
     }
     var headlinePrefixes = {
       pis: backsGovernment ? 'Cabinet acts: ' : 'Government under fire: ',
@@ -6883,9 +8693,12 @@ window.disableGrayMode = function() {
         : 'Opposition parties say the decision exposes delays and divisions the cabinet has failed to explain.');
     return {
       headline: (headlinePrefixes[patron] || '') + story.headline,
-      text: lead + ' ' + story.text,
+      text: (pasek ? pasek.lead + ' ' : '') + lead + ' ' + story.text,
       sourceUrl: story.sourceUrl,
-      sourceDate: story.sourceDate
+      sourceDate: story.sourceDate,
+      pasek: pasek ? pasek.lines : undefined,
+      pasekMood: pasek ? pasek.mood : undefined,
+      pasekSource: pasek ? pasek.source : undefined
     };
   };
 
@@ -7114,6 +8927,17 @@ window.disableGrayMode = function() {
     heading.appendChild(eyebrow);
     heading.appendChild(title);
     heading.appendChild(edition);
+
+    // While PiS governs, the bulletin's banner is a standing fixture pinned to
+    // the top of the rail, above the masthead, rather than something the
+    // player sees only when TVP happens to rotate into the edition. It follows
+    // the month's own event.
+    var standing = pressGovernmentParty(qualities) === 'pis' ?
+      pressWiadomosciPasek(qualities, dateKey, turn, null) : null;
+    if (standing) {
+      panel.appendChild(pressPaskiBand(standing, true));
+      pressPaskiPreloadAll();
+    }
     panel.appendChild(heading);
 
     for (var i = 0; i < count; i++) {
@@ -7124,7 +8948,7 @@ window.disableGrayMode = function() {
         story = pressLiveStory(outlet, qualities, dateKey, turn);
       }
       story = pressChoiceStory(outlet, story, qualities, dateKey);
-      story = pressTVPStory(outlet, story, qualities);
+      story = pressTVPStory(outlet, story, qualities, dateKey, turn);
       var article = document.createElement('article');
       article.className = 'press-card press-' + outlet.id;
       article.style.setProperty('--press-accent', outlet.accent);
@@ -7153,8 +8977,20 @@ window.disableGrayMode = function() {
       var kicker = document.createElement('p');
       kicker.className = 'press-kicker';
       kicker.textContent = story.sourceUrl ? 'FROM THE ARCHIVE' :
-        pressSection(outlet);
+        (story.pasek ? 'WIADOMOŚCI · TVP INFO' : pressSection(outlet));
       article.appendChild(kicker);
+
+      // The standing band is the bulletin's chyron for the whole rail, so the
+      // TVP card carries no banner of its own while one is up. The card banner
+      // survives only where there is no standing band — PiS holding public
+      // media under somebody else's cabinet.
+      if (story.pasek && !standing) {
+        article.appendChild(pressPaskiBand({
+          lines: story.pasek,
+          mood: story.pasekMood,
+          source: story.pasekSource
+        }, false));
+      }
 
       var headline = document.createElement('h2');
       headline.className = 'press-headline';
@@ -7189,6 +9025,9 @@ window.disableGrayMode = function() {
 
   window.updateSidebarRight = function() {
     $('#qualities_right').empty();
+    if (plainMode) {
+      return;
+    }
     if (window.statusTabRight === 'press_review') {
       window.renderPressReview();
       return;
@@ -7258,6 +9097,9 @@ window.disableGrayMode = function() {
 
   var coalitionChoose = function(sceneId) {
     var engine = window.dendryUI && window.dendryUI.dendryEngine;
+    if (engine && typeof engine._compileChoices === 'function') {
+      engine.choiceCache = engine._compileChoices(engine.getCurrentScene());
+    }
     var choices = engine && engine.getCurrentChoices();
     var index = choices ? choices.findIndex(function(choice) {
       return choice.canChoose && (choice.id === sceneId ||
@@ -7291,9 +9133,12 @@ window.disableGrayMode = function() {
     if (typeof d3 === 'undefined' || typeof d3.parliament !== 'function') return false;
     var svg = host.querySelector('.coalition-seat-map');
     if (!svg) return false;
-    var width = Math.max(260, Math.min(560, host.clientWidth || 500));
+    var mapPanel = svg.parentElement;
+    var width = Math.max(220, Math.min(560,
+      (mapPanel && mapPanel.clientWidth) || host.clientWidth || 500));
     svg.style.height = Math.round(width / 2) + 'px';
-    var order = {lewica: 0, ko: 10, p2050: 20, psl: 30,
+    var order = {razem_party: -10, razem_internal: -10, lewica: 0,
+      ko: 10, p2050: 20, psl: 30,
       nonaligned: 50, pis: 70, konf: 90};
     var data = preview.parties.slice().sort(function(a, b) {
       var left = order[a.id] === undefined ? 48 : order[a.id];
@@ -7359,7 +9204,20 @@ window.disableGrayMode = function() {
     var equation = selected.map(coalitionPartyToken).join(
       '<span class="coalition-equation-plus" aria-hidden="true"> + </span>');
     var formationMode = Q.coalition_builder.context.mode === 'formation';
+    var readOnly = Boolean(Q.coalition_builder.context.read_only);
+    var savedRoles = Object.assign({}, Q.coalition_builder.roles);
     var templates = model.templates(Q).map(function(template) {
+      model.applyTemplate(Q, template.code);
+      var result = model.preview(Q);
+      Q.coalition_builder.roles = Object.assign({}, savedRoles);
+      return {template: template, result: result};
+    }).filter(function(item) {
+      return item.result.ok;
+    }).sort(function(first, second) {
+      return first.result.effective_seats - second.result.effective_seats;
+    }).slice(0, 4);
+    var templateButtons = templates.map(function(item) {
+      var template = item.template;
       return '<button type="button" class="coalition-template" ' +
         'data-coalition-action="template" data-template="' +
         budgetEscape(template.code) + '"><b>' + budgetEscape(template.label) +
@@ -7376,6 +9234,20 @@ window.disableGrayMode = function() {
     var legend = preview.parties.map(function(party) {
       var decision = preview.decisions[party.id];
       var locked = Q.coalition_builder.locked.indexOf(party.id) !== -1;
+      var jointThirdWayConcession = Q.coalition_builder.third_way_linked &&
+        (party.id === 'p2050' || party.id === 'psl');
+      var concession = decision.can_concede &&
+        (!jointThirdWayConcession || party.id === 'p2050')
+        ? '<button type="button" class="coalition-concession" ' +
+          'data-coalition-action="concession" data-party-id="' +
+          budgetEscape(party.id) + '"' +
+          (!readOnly && Number(Q.resources) >= 1 ? '' : ' disabled') +
+          '>' + (jointThirdWayConcession
+            ? 'Bind both Third Way parties (1 resource)'
+            : decision.role === 'support'
+            ? 'Spend 1 resource on a binding confidence protocol'
+            : 'Spend 1 resource on programme and cabinet guarantees') + '</button>'
+        : '';
       return '<div class="coalition-party-row" data-role="' + decision.role + '">' +
         '<button type="button" class="coalition-party-label" ' +
         'data-coalition-action="cycle" data-party-id="' + budgetEscape(party.id) + '"' +
@@ -7384,10 +9256,24 @@ window.disableGrayMode = function() {
         coalitionRoleButton(party, 'cabinet', decision.role === 'cabinet', locked) +
         coalitionRoleButton(party, 'support', decision.role === 'support', locked) +
         coalitionRoleButton(party, 'out', decision.role === 'out', locked) +
-        '</div><small class="coalition-decision ' +
+        '</div>' + concession + '<small class="coalition-decision ' +
         (decision.accepted ? 'is-accepted' : 'is-refused') + '">' +
         budgetEscape(decision.reason) + '</small></div>';
     }).join('');
+    var thirdWayVisible = Number(Q.third_way_split) !== 1 &&
+      preview.parties.some(function(party) { return party.id === 'p2050'; }) &&
+      preview.parties.some(function(party) { return party.id === 'psl'; });
+    var thirdWayControl = thirdWayVisible
+      ? '<div class="coalition-third-way"><span class="coalition-third-way-copy">' +
+        '<b>Trzecia Droga</b><small>' +
+        (Q.coalition_builder.third_way_linked
+          ? 'One delegation: changing either party changes both.'
+          : 'Separate talks can produce different roles and may break the alliance.') +
+        '</small></span><label class="coalition-third-way-toggle">' +
+        '<input type="checkbox" data-coalition-action="third-way"' +
+        (Q.coalition_builder.third_way_linked ? ' checked' : '') +
+        (readOnly ? ' disabled' : '') + '><span>Joint delegation</span></label></div>'
+      : '';
     var minorCabinet = selected.filter(function(party) { return !party.major; });
     var supporters = preview.support.filter(function(party) {
       return preview.decisions[party.id].accepted;
@@ -7434,7 +9320,6 @@ window.disableGrayMode = function() {
         return reason.indexOf('The agreement pledges ') === 0;
       });
     var canSubmit = preview.ok || canSubmitFailedVote;
-    var readOnly = Boolean(Q.coalition_builder.context.read_only);
     host.innerHTML = '<section class="coalition-builder" aria-label="Government agreement builder">' +
       '<header class="coalition-equation"><div>' + equation + '</div><h2>' +
       budgetEscape(preview.name.polish) + '</h2><p>' +
@@ -7443,9 +9328,11 @@ window.disableGrayMode = function() {
       preview.formal_seats + '</b></span><span><small>Outside pledges</small><b>' +
       preview.support_seats + '</b></span><span><small>Effective total</small><b>' +
       preview.effective_seats + ' / ' + preview.majority + '</b></span></div>' +
-      (formationMode
-        ? '<details class="coalition-templates" open><summary>Recommended agreement templates</summary>' +
-          '<div>' + templates + '</div></details>' : '') + '<div class="coalition-layout">' +
+      (formationMode && templates.length
+        ? '<details class="coalition-templates"><summary>' + templates.length +
+          ' viable recommended agreement' + (templates.length === 1 ? '' : 's') +
+          '</summary><div>' + templateButtons + '</div></details>' : '') +
+      thirdWayControl + '<div class="coalition-layout">' +
       '<div class="coalition-map-panel"><svg class="coalition-seat-map" role="img" ' +
       'aria-label="Interactive Sejm seat map; use the accessible party controls beside it"></svg>' +
       '<p>Click any seat to cycle the whole party block through Cabinet, Support, and Out.</p></div>' +
@@ -7472,7 +9359,8 @@ window.disableGrayMode = function() {
         var engine = window.dendryUI && window.dendryUI.dendryEngine;
         var Q = engine && engine.state && engine.state.qualities;
         hideNative = hideNative || !(Q && Q.coalition_builder &&
-          Q.coalition_builder.context.read_only);
+          (Q.coalition_builder.context.read_only ||
+            Q.coalition_builder.context.keep_native_choices));
       }
       host.onclick = function(event) {
         var seat = event.target.closest('[data-coalition-party]');
@@ -7491,6 +9379,10 @@ window.disableGrayMode = function() {
           var action = button.getAttribute('data-coalition-action');
           if (action === 'scene') return coalitionChoose(button.getAttribute('data-scene'));
           if (action === 'template') model.applyTemplate(Q, button.getAttribute('data-template'));
+          if (action === 'concession') model.offerConcession(Q,
+            button.getAttribute('data-party-id'));
+          if (action === 'third-way') model.setThirdWayLinked(Q,
+            Boolean(button.checked));
           if (action === 'role') model.setRole(Q, button.getAttribute('data-party-id'),
             button.getAttribute('data-role'));
           if (action === 'cycle') {
@@ -7912,8 +9804,14 @@ window.disableGrayMode = function() {
   window.onDisplayContent = function() {
       window.updateSidebar();
       window.updateSidebarRight();
-      window.updateMoodBackground();
       var content = document.getElementById('content');
+      if (plainMode) {
+        // Party spans still carry the names the prose depends on; everything
+        // below this line draws something.
+        window.enhancePartyElements(content);
+        return;
+      }
+      window.updateMoodBackground();
       window.enhancePartyElements(content);
       setTimeout(initializeCoalitionBuilders, 0);
       initializeBudgetBoards();
@@ -8234,6 +10132,16 @@ window.disableGrayMode = function() {
 
   window.onload = function() {
     window.dendryUI.loadSettings({show_portraits: true});
+    if (plainMode) {
+      // Nothing decorative is initialised at all: no tabs, no card art, no
+      // mood wash, no radio. The stylesheet strips what the engine still
+      // emits, and the page is left as text and links.
+      document.body.classList.add('plain-mode');
+      window.dendryUI.show_portraits = false;
+      window.updateSidebar();
+      window.updateSidebarRight();
+      return;
+    }
     if (window.dendryUI.dark_mode) {
         document.body.classList.add('dark-mode');
     }

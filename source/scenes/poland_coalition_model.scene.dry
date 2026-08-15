@@ -140,6 +140,29 @@ if (!coalitionHost.polandCoalitionModel ||
                 leader: String(q[id == "lewica" ? "left_leader" : id + "_leader"] || "")
             };
         });
+        const left = result.find(function(party) { return party.id == "lewica"; });
+        const razemSeats = Math.min(left.seats, integer(q.razem_seats));
+        if (q.razem_active && !q.razem_party_formed && !q.razem_merged &&
+            razemSeats > 0) {
+            left.seats -= razemSeats;
+            result.push({
+                id: "razem_internal",
+                name: "Razem",
+                seats: razemSeats, source_family: "left",
+                class_name: "party-razem", color: "#8f143f", monogram: "R",
+                major: 0, support_only: 0, internal_signoff: 1,
+                economic_position: clamp(number(q.left_economic_position, 52) - 8, 0, 100),
+                cultural_position: clamp(number(q.left_cultural_position, 52) - 4, 0, 100),
+                coalition_openness: number(q.razem_cooperation, 52),
+                relation: number(q.razem_cooperation, 52),
+                leader: String(q.razem_leader || "Adrian Zandberg"),
+                record: {
+                    grievance_memory: number(q.razem_grievance_memory, 0) +
+                        (q.razem_red_line_broken ? 30 : 0),
+                    defection_readiness: number(q.razem_dissent, 0)
+                }
+            });
+        }
         let nonaligned = 0;
         for (const record of q.parliamentary_party_records || []) {
             const seats = integer(record && record.sejm_mps);
@@ -207,6 +230,7 @@ if (!coalitionHost.polandCoalitionModel ||
         const pair = [first.id, second.id].sort().join("+");
         if (pair == "ko+pis") return "KO and PiS cannot share cabinet responsibility.";
         if (pair == "konf+p2050") return "Poland 2050 will not enter a cabinet with Konfederacja.";
+        if (pair == "p2050+solidarna") return "Poland 2050 will not enter an agreement with Suwerenna Polska.";
         if (pair == "konf+lewica" && !leftIsSps(q)) {
             return "Lewica and Konfederacja have mutually exclusive cabinet programmes.";
         }
@@ -265,24 +289,80 @@ if (!coalitionHost.polandCoalitionModel ||
                 pledged: pledged, reason: pledged + " of " + party.seats +
                     " MPs sign the Free Votes Protocol."};
         }
+        if (role != "out" && (
+            (party.id == "p2050" && draft.roles.solidarna && draft.roles.solidarna != "out") ||
+            (party.id == "solidarna" && draft.roles.p2050 && draft.roles.p2050 != "out")
+        )) {
+            return {accepted: 0, score: 0, red_line: 1,
+                reason: "Poland 2050 will not enter any cabinet or confidence agreement with Suwerenna Polska."};
+        }
+        if (role == "support" && party.id == "ko" && sponsor &&
+            sponsor.id == "lewica") {
+            return {accepted: 0, score: 0,
+                reason: "Koalicja Obywatelska will not prop up a Lewica-led cabinet from outside; it demands cabinet responsibility or opposition."};
+        }
+        if (party.id == "lewica" && sponsor && sponsor.id != "lewica" &&
+            draft.context.player_controls_lewica !== false) {
+            return {accepted: 1, score: 100,
+                reason: role == "support"
+                    ? "Lewica accepts the confidence protocol chosen by the player."
+                    : "Lewica accepts the cabinet role chosen by the player."};
+        }
         const relevantRelation = clamp(relationBetween(q, sponsor, party), 0, 100);
         const distance = programmeDistance(sponsor || party, party);
+        const supportRole = role == "support";
+        const strongSupport = supportRole && party.major && sponsor &&
+            party.seats >= Math.max(1, sponsor.seats * 0.75);
         let score = Math.round(clamp(party.coalition_openness, 0, 100) * 0.35);
         score += Math.round(relevantRelation * 0.25);
         score += Math.round(Math.max(0, 30 - distance * 30 / 55));
         if (currentRole == "cabinet" && role == "cabinet") score += 15;
         if (currentRole == "support" && role == "support") score += 8;
-        if (role == "support") score += 8;
+        if (supportRole && party.id == "razem_internal") score += 4;
+        else if (supportRole && party.major) {
+            score -= 10;
+            if (strongSupport) score -= 15;
+        } else if (supportRole) score += 8;
         const candidate = String(draft.context.candidate || "");
         const candidateFamily = String(draft.context.candidate_family || "");
         if (candidate && party.leader && candidate == party.leader) score += 20;
         else if (candidateFamily && [party.id, party.source_family].includes(candidateFamily)) score += 10;
+        const bargainNotes = [];
+        const openingBargain = draft.context.mode == "formation"
+            ? String(q.formation_opening_bargain || "none") : "none";
+        if (["ko", "p2050", "psl"].includes(party.id)) {
+            if (openingBargain == "democratic_protocol") {
+                score += 4;
+                bargainNotes.push("Public democratic voting protocol +4");
+            } else if (openingBargain == "psl_first" && party.id == "psl") {
+                score += 6;
+                bargainNotes.push("PSL-first talks +6");
+            } else if (openingBargain == "presidential_channel") {
+                bargainNotes.push("Presidential channel: no coalition guarantee");
+            } else if (openingBargain == "morawiecki_continuation") {
+                score -= 3;
+                bargainNotes.push("Morawiecki continuation -3");
+            }
+        }
         let namedReason = "";
         let redLineApplied = false;
+        let programmeGuarantee = false;
+        if (["razem_internal", "razem_party"].includes(party.id) &&
+            role == "cabinet") {
+            programmeGuarantee = String(q.left_dominant_current || "") != "razem";
+            namedReason = programmeGuarantee
+                ? " Requires binding housing, labour and social guarantees."
+                : " Razem controls the governing Left programme.";
+        }
         if (party.id == "pis" && sponsor && sponsor.id == "lewica") score += 35;
         if (party.id == "konf" && leftIsSps(q) && sponsor && sponsor.id == "lewica") score += 40;
         if (party.id == "konf" && candidate == "Radosław Sikorski" &&
             sponsor && sponsor.id == "ko") score += 45;
+        if (party.id == "p2050" && supportRole &&
+            candidate == "Radosław Sikorski" && sponsor && sponsor.id == "ko") {
+            score += 25;
+            namedReason = " A named constitutional protocol keeps Poland 2050 outside the Konfederacja cabinet.";
+        }
         if (party.id == "konf" && candidate == "Beata Szydło" &&
             sponsor && sponsor.id == "pis") score += 20;
         if (party.id == "solidarna") {
@@ -295,10 +375,9 @@ if (!coalitionHost.polandCoalitionModel ||
             namedReason = " Requires a justice and sovereignty annex.";
         }
         if (["kkp", "korona"].includes(party.id)) {
-            if (role == "cabinet" && sponsor &&
-                !["pis", "konf"].includes(sponsor.id) && !leftIsSps(q)) {
-                score -= 40;
-                redLineApplied = true;
+            if (role == "cabinet" && (!sponsor || sponsor.id != "konf")) {
+                return {accepted: 0, score: 0, red_line: 1,
+                    reason: party.name + " will take cabinet office only in a Konfederacja-led government."};
             }
             if (["Grzegorz Braun", "Roman Fritz"].includes(candidate)) score += 20;
             namedReason = " Requires a sovereignty and candidate annex.";
@@ -308,13 +387,27 @@ if (!coalitionHost.polandCoalitionModel ||
             : 0;
         score -= Math.round(Math.max(0, grievances) / 5);
         if (grievances >= 30) redLineApplied = true;
-        // A trusted, programmatically aligned party needs no invented extra
-        // obstacle: only an authored veto/red line can keep it below 50.
-        if (!redLineApplied && relevantRelation >= 50 && distance <= 18) {
+        const concession = integer(draft.concessions && draft.concessions[party.id]);
+        const concessionPoints = draft.third_way_linked &&
+            ["p2050", "psl"].includes(party.id) ? 10 : 8;
+        score += Math.min(1, concession) * concessionPoints;
+        if (concession) bargainNotes.push(
+            concessionPoints == 10
+                ? "Binding Third Way guarantee +10"
+                : "Binding programme guarantee +8"
+        );
+        // Programme alignment clears an ordinary cabinet invitation. Outside
+        // confidence remains a harder, ministry-forgoing bargain.
+        if (!supportRole && !redLineApplied && relevantRelation >= 50 && distance <= 18) {
             score = Math.max(50, score);
         }
         score = Math.round(score);
-        const accepted = score >= 50 && relevantRelation >= 35;
+        const threshold = supportRole
+            ? (!party.major ? 50 : (strongSupport ? 65 : 58))
+            : 50;
+        const accepted = score >= threshold && relevantRelation >= 35;
+        const canConcede = !accepted && !redLineApplied && relevantRelation >= 35 &&
+            distance <= 40 && score >= threshold - concessionPoints && concession < 1;
         const refusal = relevantRelation < 35
             ? party.name + " has only " + Math.round(relevantRelation) +
                 "/100 relations with " + String(sponsor && sponsor.name || "the sponsoring bloc") +
@@ -323,11 +416,26 @@ if (!coalitionHost.polandCoalitionModel ||
                 ? party.name + " is too far from the proposed common programme"
                 : (redLineApplied
                     ? party.name + " is enforcing a candidate, cohesion or grievance red line"
-                    : party.name + " lacks sufficient authority for this agreement"));
+                    : (strongSupport
+                        ? party.name + " carries hinge weight and wants ministries; only a hard governing bargain can buy outside confidence"
+                        : (supportRole
+                            ? party.name + " prefers cabinet responsibility to confidence-and-supply"
+                            : party.name + " lacks sufficient authority for this agreement"))));
         return {
             accepted: accepted ? 1 : 0, score: score,
-            reason: (accepted ? "Invitation accepted" : refusal) +
-                " (" + score + "/50)." + namedReason
+            threshold: threshold, relation_score: relevantRelation,
+            red_line: redLineApplied ? 1 : 0,
+            can_concede: canConcede ? 1 : 0,
+            concession: concession ? 1 : 0,
+            bargain_notes: bargainNotes,
+            hard_bargain: accepted && supportRole && party.major ? 1 : 0,
+            programme_guarantee: programmeGuarantee ? 1 : 0,
+            reason: (accepted
+                ? (concession
+                    ? "Binding programme guarantee accepted"
+                    : (supportRole && party.major
+                        ? "Hard confidence protocol accepted" : "Invitation accepted"))
+                : refusal) + " (" + score + "/" + threshold + ")." + namedReason
         };
     };
     const initialise = function(q, context) {
@@ -350,9 +458,16 @@ if (!coalitionHost.polandCoalitionModel ||
             roles.lewica = "cabinet";
             if (!locked.includes("lewica")) locked.push("lewica");
         }
+        const thirdWayLinked = Number(q.third_way_split) !== 1 &&
+            roles.p2050 !== undefined && roles.psl !== undefined &&
+            roles.p2050 == roles.psl;
         q.coalition_builder = {
             version: 1, context: Object.assign({mode: "formation"}, context),
-            roles: roles, locked: locked, created_at: number(q.time, 0)
+            roles: roles, locked: locked,
+            concessions: Object.assign({}, context.concessions || {}),
+            third_way_linked: context.third_way_linked === undefined
+                ? thirdWayLinked : Boolean(context.third_way_linked),
+            created_at: number(q.time, 0)
         };
         return q.coalition_builder;
     };
@@ -362,6 +477,38 @@ if (!coalitionHost.polandCoalitionModel ||
         const party = blocks(q).find(function(item) { return item.id == id; });
         if (!party || !["cabinet", "support", "out"].includes(role)) return draft;
         draft.roles[id] = party.support_only && role == "cabinet" ? "support" : role;
+        if (draft.third_way_linked && ["p2050", "psl"].includes(id)) {
+            const partner = id == "p2050" ? "psl" : "p2050";
+            if (draft.roles[partner] !== undefined && !draft.locked.includes(partner)) {
+                draft.roles[partner] = draft.roles[id];
+            }
+        }
+        return draft;
+    };
+    const setThirdWayLinked = function(q, linked) {
+        const draft = q.coalition_builder || initialise(q, {});
+        if (Number(q.third_way_split) === 1) return draft;
+        draft.third_way_linked = Boolean(linked);
+        if (draft.third_way_linked) {
+            const roles = [draft.roles.p2050, draft.roles.psl];
+            const role = roles.sort(function(first, second) {
+                return roleRank[first] - roleRank[second];
+            })[0] || "out";
+            if (!draft.locked.includes("p2050")) draft.roles.p2050 = role;
+            if (!draft.locked.includes("psl")) draft.roles.psl = role;
+        }
+        return draft;
+    };
+    const offerConcession = function(q, id) {
+        const draft = q.coalition_builder || initialise(q, {});
+        const decision = preview(q).decisions[id];
+        if (!decision || !decision.can_concede || number(q.resources, 0) < 1) return draft;
+        q.resources = number(q.resources, 0) - 1;
+        draft.concessions[id] = 1;
+        if (draft.third_way_linked && ["p2050", "psl"].includes(id)) {
+            draft.concessions.p2050 = 1;
+            draft.concessions.psl = 1;
+        }
         return draft;
     };
     const applyTemplate = function(q, code) {
@@ -372,6 +519,9 @@ if (!coalitionHost.polandCoalitionModel ||
             if (!draft.locked.includes(id)) draft.roles[id] = "out";
         }
         for (const id of route[1]) draft.roles[id] = "cabinet";
+        if (draft.roles.razem_internal !== undefined && route[1].includes("lewica")) {
+            draft.roles.razem_internal = "cabinet";
+        }
         const formalSeats = blocks(q).filter(function(party) {
             return route[1].includes(party.id);
         }).reduce(function(total, party) { return total + party.seats; }, 0);
@@ -424,10 +574,62 @@ if (!coalitionHost.polandCoalitionModel ||
             const decision = invitation(q, draft, party, role, sponsor, current[party.id]);
             const pledged = decision.pledged === undefined ? party.seats : decision.pledged;
             decisions[party.id] = Object.assign({}, decision, {role: role, pledged: pledged});
-            if (role != "out" && !decision.accepted) blockers.push(party.name + ": " + decision.reason);
-            if (decision.accepted && role == "cabinet") formalSeats += pledged;
         }
-        const majority = integer(q.sejm_statutory_majority) || 231;
+        const thirdWayRole = roles.p2050;
+        if (draft.third_way_linked && thirdWayRole && thirdWayRole != "out" &&
+            thirdWayRole == roles.psl && decisions.p2050 && decisions.psl) {
+            const p2050Decision = decisions.p2050;
+            const pslDecision = decisions.psl;
+            const jointRelation = Math.round(
+                (p2050Decision.relation_score + pslDecision.relation_score) / 2
+            );
+            const jointThreshold = Math.round(
+                (p2050Decision.threshold + pslDecision.threshold) / 2
+            );
+            const jointScore = Math.round(
+                (p2050Decision.score + pslDecision.score) / 2
+            );
+            const jointNotes = p2050Decision.bargain_notes.concat(
+                pslDecision.bargain_notes
+            ).filter(function(note, index, notes) {
+                return notes.indexOf(note) == index;
+            });
+            const jointEligible = !p2050Decision.red_line && !pslDecision.red_line &&
+                Math.min(p2050Decision.relation_score, pslDecision.relation_score) >= 20;
+            const jointAccepted = jointEligible && jointRelation >= 35 &&
+                jointScore >= jointThreshold;
+            const jointReason = !jointEligible
+                ? "Third Way cannot pool a hard red line or a hostile component relationship."
+                : (jointRelation < 35
+                    ? "Third Way relations average only " + jointRelation +
+                        "/100; relations are too low for a joint agreement."
+                    : "Third Way joint delegation " +
+                        (jointAccepted ? "accepts" : "refuses") +
+                        ": Poland 2050 " + p2050Decision.score + "/" +
+                        p2050Decision.threshold + ", PSL " + pslDecision.score +
+                        "/" + pslDecision.threshold + "; average " + jointScore +
+                        "/" + jointThreshold + ", relations " + jointRelation +
+                        "/100." + (jointNotes.length
+                            ? " " + jointNotes.join(" · ") + "." : ""));
+            for (const decision of [p2050Decision, pslDecision]) {
+                decision.accepted = jointAccepted ? 1 : 0;
+                decision.score = jointScore;
+                decision.threshold = jointThreshold;
+                decision.can_concede = !jointAccepted && jointEligible &&
+                    jointRelation >= 35 && jointScore >= jointThreshold - 10 &&
+                    !p2050Decision.concession && !pslDecision.concession ? 1 : 0;
+                decision.hard_bargain = jointAccepted && thirdWayRole == "support" ? 1 : 0;
+                decision.reason = jointReason;
+            }
+        }
+        for (const party of parties) {
+            const role = roles[party.id] || "out";
+            const decision = decisions[party.id];
+            if (role != "out" && !decision.accepted) blockers.push(party.name + ": " + decision.reason);
+            if (decision.accepted && role == "cabinet") formalSeats += decision.pledged;
+        }
+        const majority = integer(draft.context.majority) ||
+            integer(q.sejm_statutory_majority) || 231;
         const formationCaps = {ko_psl_left: 6, ko_p2050_left: 6,
             ko_left: 10, third_left_pis: 20};
         let cappedRemaining = draft.context.mode == "formation" &&
@@ -463,30 +665,80 @@ if (!coalitionHost.polandCoalitionModel ||
         };
     };
     const commit = function(q) {
+        const previousAgreement = Array.isArray(q.government_agreement_records)
+            ? q.government_agreement_records.slice() : [];
         const result = preview(q);
         if (!result.ok) return Object.assign({committed: 0}, result);
         const records = result.parties.map(function(party) {
             const decision = result.decisions[party.id];
-            const minorCabinet = !party.major && decision.role == "cabinet" && decision.accepted;
-            const annex = minorCabinet
-                ? (party.id == "solidarna" ? "Justice and Sovereignty Annex"
+            const minorCabinet = !party.major && !party.internal_signoff &&
+                decision.role == "cabinet" && decision.accepted;
+            let annex = ["razem_internal", "razem_party"].includes(party.id) &&
+                decision.role == "cabinet"
+                ? "Razem Programme Guarantees"
+                : (minorCabinet
+                    ? (party.id == "solidarna" ? "Justice and Sovereignty Annex"
                     : (["kkp", "korona"].includes(party.id)
                         ? "Sovereignty and Candidate Annex" : "Coalition Annex"))
-                : (decision.role == "support"
-                    ? (party.id == "nonaligned" ? "Protokół Wolnych Głosów — Free Votes Protocol"
-                        : "Protokół Stabilizacyjny — Stabilisation Protocol") : "");
+                    : (decision.role == "support"
+                        ? (party.id == "nonaligned"
+                            ? "Protokół Wolnych Głosów — Free Votes Protocol"
+                            : (["razem_internal", "razem_party"].includes(party.id)
+                                ? "Protokół Gwarancji Społecznych — Social Guarantees Protocol"
+                                : (decision.hard_bargain
+                                    ? "Protokół Twardych Gwarancji — Hard Confidence Protocol"
+                                    : "Protokół Stabilizacyjny — Stabilisation Protocol"))) : ""));
+            if (decision.concession && decision.role != "out") {
+                annex += (annex ? " · " : "") +
+                    "Gwarancja Programowa — Binding Programme Guarantee";
+            }
             return {
                 party_id: party.id, name: party.name, role: decision.role,
                 seats: party.seats, pledged_seats: decision.accepted ? decision.pledged : 0,
                 source_family: party.source_family, accepted: decision.accepted,
                 reason: decision.reason, annex: annex,
+                concession: decision.concession,
                 junior_office: minorCabinet
                     ? (party.seats >= 5 ? "Minister without portfolio"
                         : (party.seats >= 3 ? "Deputy minister" : "Parliamentary secretary"))
                     : ""
             };
         });
+        const razemWasInCabinet = previousAgreement.some(function(record) {
+            return record && record.accepted && record.role == "cabinet" &&
+                ["razem_internal", "razem_party"].includes(record.party_id);
+        });
+        const razemJoinsCabinet = records.some(function(record) {
+            return record.accepted && record.role == "cabinet" &&
+                ["razem_internal", "razem_party"].includes(record.party_id);
+        });
+        if (razemJoinsCabinet && !razemWasInCabinet) {
+            const strain = {ko: [4, 5], p2050: [3, 4], psl: [4, 6]};
+            let strained = 0;
+            for (const id of Object.keys(strain)) {
+                if (!records.some(function(record) {
+                    return record.party_id == id && record.accepted && record.role != "out";
+                })) continue;
+                q[id + "_relation"] = clamp(number(q[id + "_relation"], 50) - strain[id][0], 0, 100);
+                q[id + "_coalition_dissent"] = clamp(
+                    number(q[id + "_coalition_dissent"], 0) + strain[id][1], 0, 100
+                );
+                strained += 1;
+            }
+            if (strained) {
+                q.government_coalition_dissent = clamp(
+                    number(q.government_coalition_dissent, 0) + 2, 0, 100
+                );
+                q.razem_capitalist_strain_last =
+                    "Razem entered cabinet under binding programme guarantees";
+            }
+        }
         q.government_agreement_records = records;
+        q.coalition_concession_records = records.filter(function(record) {
+            return record.accepted && record.concession;
+        }).map(function(record) {
+            return {party_id: record.party_id, guarantee: "Binding programme guarantee"};
+        });
         q.government_members = records.filter(function(record) {
             return record.accepted && record.role == "cabinet";
         }).map(function(record) { return record.party_id; });
@@ -499,6 +751,19 @@ if (!coalitionHost.polandCoalitionModel ||
         }
         q.left_in_government = q.government_members.includes("lewica") ? 1 : 0;
         q.left_cabinet_committed = q.left_in_government;
+        const razemAgreement = records.find(function(record) {
+            return ["razem_internal", "razem_party"].includes(record.party_id);
+        });
+        if (razemAgreement) {
+            q.razem_in_government = razemAgreement.accepted &&
+                razemAgreement.role == "cabinet" ? 1 : 0;
+            q.razem_budget_support_pact = razemAgreement.accepted &&
+                razemAgreement.role != "out" ? 1 : 0;
+            q.razem_government_role = q.razem_in_government
+                ? "Coalition party with a red-line protocol"
+                : (q.razem_budget_support_pact ? "Confidence and supply" : "Opposition");
+            q.razem_cooperation_protocol = q.razem_budget_support_pact;
+        }
         q.coalition_seats = result.formal_seats;
         q.government_support_seats = result.effective_seats;
         q.formation_coalition_seats = result.formal_seats;
@@ -514,8 +779,13 @@ if (!coalitionHost.polandCoalitionModel ||
         q.formation_coalition_members = q.government_members.filter(function(id) {
             return majorIds.includes(id);
         });
+        q.candidate_left_votes = records.filter(function(record) {
+            return record.accepted && record.role != "out" &&
+                (record.party_id == "lewica" || record.source_family == "left");
+        }).reduce(function(total, record) { return total + record.pledged_seats; }, 0);
         q.candidate_independent_votes = records.filter(function(record) {
-            return record.accepted && record.role != "out" && !majorIds.includes(record.party_id);
+            return record.accepted && record.role != "out" &&
+                !majorIds.includes(record.party_id) && record.source_family != "left";
         }).reduce(function(total, record) { return total + record.pledged_seats; }, 0);
         for (const record of q.rival_group_records || []) {
             const agreement = records.find(function(item) { return item.party_id == record.id; });
@@ -721,11 +991,19 @@ if (!coalitionHost.polandCoalitionModel ||
     coalitionHost.polandCoalitionModel = {
         version: 1, majorIds: majorIds, names: names,
         initialise: initialise, setRole: setRole, applyTemplate: applyTemplate,
+        setThirdWayLinked: setThirdWayLinked, offerConcession: offerConcession,
         preview: preview, commit: commit, reconcile: reconcile,
         autonomous: autonomous, parties: blocks,
         templates: function(q) {
             return routes.filter(function(route) {
-                return !route[4] || leftIsSps(q);
+                if (route[4] && !leftIsSps(q)) return false;
+                const draft = q.coalition_builder;
+                if (!draft || !draft.third_way_linked) return true;
+                const role = function(id) {
+                    return route[1].includes(id) ? "cabinet"
+                        : (route[2].includes(id) ? "support" : "out");
+                };
+                return role("p2050") == role("psl");
             }).map(function(route) {
                 return {code: route[0], cabinet: route[1].slice(),
                     support: route[2].slice(), label: route[3]};

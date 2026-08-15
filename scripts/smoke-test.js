@@ -1687,9 +1687,25 @@ function testPartyPresentationAssets() {
     ) && presentationSource.includes('return qualities.public_media_patron;') &&
       presentationSource.includes('var pressTVPStory = function') &&
       presentationSource.includes(
-        'story = pressTVPStory(outlet, story, qualities);'
+        'story = pressTVPStory(outlet, story, qualities, dateKey, turn);'
       ),
     'TVP framing and simulated copy do not follow the public-media patron'
+  );
+  assert(
+    presentationSource.includes('var pressWiadomosciPasek = function') &&
+      presentationSource.includes('var pressPaskiSubjects = [') &&
+      presentationSource.includes('var pressPaskiMoodTails = {') &&
+      presentationSource.includes('var pressPaskiArchive = [') &&
+      presentationSource.includes('var pressPaskiCampaignTails = [') &&
+      presentationSource.includes("band.className = 'press-pasek'") &&
+      presentationSource.includes("'WIADOMOŚCI · TVP INFO'"),
+    'The TVP Wiadomości chyron is no longer rendered in the press rail'
+  );
+  assert(
+    /var standing = pressGovernmentParty\(qualities\) === 'pis' \?[\s\S]{0,200}pressPaskiBand\(standing, true\)/
+      .test(presentationSource) &&
+      presentationSource.includes('if (story.pasek && !standing) {'),
+    'The pasek is no longer a standing fixture of the rail under a PiS cabinet'
   );
   assert(
     presentationSource.includes("accent: '#ffd200'") &&
@@ -1703,6 +1719,16 @@ function testPartyPresentationAssets() {
   const testablePresentationSource = presentationSource.replace(
     '  window.renderPressReview = function() {',
       '  window.__testPressTVPStory = pressTVPStory;\n' +
+      '  window.__testPressWiadomosciPasek = pressWiadomosciPasek;\n' +
+      '  window.__testPressPaskiArchive = pressPaskiArchive;\n' +
+      '  window.__testPressPaskiByEvent = pressPaskiByEvent;\n' +
+      '  window.__testPressPaskiSubjects = pressPaskiSubjects;\n' +
+      '  window.__testPressPaskiMoodTails = pressPaskiMoodTails;\n' +
+      '  window.__testPressPaskiCampaignTails = pressPaskiCampaignTails;\n' +
+      '  window.__testPressPaskiCovers = pressPaskiCovers;\n' +
+      '  window.__testPressPaskiFormBanners = pressPaskiFormBanners;\n' +
+      '  window.__testPressPaskiCover = pressPaskiCover;\n' +
+      '  window.__testPressPaskiArchiveSource = pressPaskiArchiveSource;\n' +
       '  window.__testPressLiveStory = pressLiveStory;\n' +
       '  window.__testPressChoiceStory = pressChoiceStory;\n' +
       '  window.__testPressEventStories = pressEventStories;\n' +
@@ -1912,7 +1938,398 @@ function testPartyPresentationAssets() {
     );
     assert(story.headline.startsWith(expected[1]));
     assert(story.text.includes(expected[2]));
+    assert.strictEqual(
+      Boolean(story.pasek),
+      expected[0] === 'pis',
+      'The Wiadomości banner does not follow the public-media patron'
+    );
   });
+
+  const paskiQualities = {
+    time: 12,
+    government_party: 'pis',
+    public_media_patron: 'pis',
+    lgbt_equality_salience: 95,
+    lgbt_equality_backlash: 70,
+  };
+  const opposition2020 = sandbox.window.__testPressWiadomosciPasek(
+    paskiQualities,
+    202010,
+    12
+  );
+  assert.strictEqual(opposition2020.lines.length, 2);
+  opposition2020.lines.forEach(function(line) {
+    assert.strictEqual(line, line.toUpperCase(), 'A pasek is not all caps');
+    assert(!line.includes('{T}'), 'A pasek target placeholder was not filled');
+  });
+  assert(
+    /POLISH FAMILY|POLISH SCHOOLS|MARRIAGE|IDEOLOGY FIRST/
+      .test(opposition2020.lines[0]),
+    'The pasek ignores the hottest public-mood issue'
+  );
+  assert(
+    opposition2020.lines.concat([opposition2020.lead]).join(' ')
+      .toLowerCase().includes('total opposition'),
+    'PiS-era paski do not name the opposition as the target'
+  );
+  assert(
+    sandbox.window.__testPressWiadomosciPasek(
+      {time: 12, government_party: 'ko', public_media_patron: 'pis'},
+      202402,
+      12
+    ).lines.join(' ').includes('THE NEW CABINET'),
+    'A PiS-held TVP after 2023 does not turn the banner on the new cabinet'
+  );
+  assert.deepStrictEqual(
+    sandbox.window.__testPressWiadomosciPasek(paskiQualities, 202010, 12).lines,
+    opposition2020.lines,
+    'The Wiadomości banner is not deterministic within a turn'
+  );
+
+  // The banner reads the report in front of it, not only the hottest issue.
+  const borderReport = {
+    headline: 'The Left proposes a lawful border operation',
+    text: 'Deputies ask for a legal mandate at the Belarus frontier.',
+  };
+  const churchReport = {
+    headline: 'The Left files a bill on catechism funding',
+    text: 'The clergy calls the proposal an attack on the parish.',
+  };
+  const paskiMoodBase = {
+    time: 24,
+    government_party: 'pis',
+    public_media_patron: 'pis',
+  };
+  const asOppositionTarget = function(line) {
+    return line.replace(/\{T\}/g, 'THE TOTAL OPPOSITION');
+  };
+  const borderPasek = sandbox.window.__testPressWiadomosciPasek(
+    Object.assign({}, paskiMoodBase, {
+      border_security_salience: 80,
+      border_security_support: 30,
+      border_security_backlash: 20,
+    }),
+    202110,
+    24,
+    borderReport
+  );
+  const churchPasek = sandbox.window.__testPressWiadomosciPasek(
+    Object.assign({}, paskiMoodBase, {
+      border_security_salience: 80,
+      border_security_support: 30,
+      border_security_backlash: 20,
+    }),
+    202110,
+    24,
+    churchReport
+  );
+  // The banner is either the subject's own line or one of the stock forms the
+  // bulletin reaches for every fourth rotation; over a run it must be both.
+  const borderLines = sandbox.window.__testPressPaskiSubjects.find(
+    function(entry) { return entry[2] === 'border'; }
+  )[1].map(asOppositionTarget);
+  const stockLines =
+    sandbox.window.__testPressPaskiFormBanners.map(asOppositionTarget);
+  const borderRun = [12, 15, 18, 21, 24, 27, 30, 33].map(function(turn) {
+    return sandbox.window.__testPressWiadomosciPasek(
+      Object.assign({}, paskiMoodBase, {
+        border_security_salience: 80,
+        border_security_support: 30,
+        border_security_backlash: 20,
+      }),
+      202110,
+      turn,
+      borderReport
+    ).lines[0];
+  });
+  borderRun.forEach(function(line) {
+    assert(
+      borderLines.indexOf(line) >= 0 || stockLines.indexOf(line) >= 0,
+      'A border report drew a banner from neither its subject nor the stock ' +
+        'forms: ' + line
+    );
+  });
+  assert(
+    borderRun.some(function(line) { return borderLines.indexOf(line) >= 0; }),
+    'The banner never names the subject of the report it accompanies'
+  );
+  assert(
+    borderRun.some(function(line) { return stockLines.indexOf(line) >= 0; }),
+    'The stock forms never reach the banner'
+  );
+  assert(
+    /TRADITION|CHURCH|CROSSES|PARISH/.test(churchPasek.lines[0]),
+    'Two different reports in the same month produced the same banner'
+  );
+
+  // Subject terms match whole words: "coalition" is not a coal story.
+  [
+    ['coalition talks collapse in the Sejm', 'MINES'],
+    ['a broad opposition front', 'INVESTMENT'],
+    ['preparation of the bill continues', 'GERMAN'],
+    ['an immediate response from the caucus', 'PUBLIC MEDIA'],
+  ].forEach(function(trap) {
+    assert(
+      !sandbox.window.__testPressWiadomosciPasek(
+        paskiMoodBase,
+        202110,
+        24,
+        {headline: trap[0], text: ''}
+      ).lines[0].includes(trap[1]),
+      'A pasek subject matched inside another word: ' + trap[0]
+    );
+  });
+
+  // The second strip follows the public-mood numbers for that same subject.
+  const paskiMoodFor = function(support, salience, backlash) {
+    return sandbox.window.__testPressWiadomosciPasek(
+      Object.assign({}, paskiMoodBase, {
+        border_security_support: support,
+        border_security_salience: salience,
+        border_security_backlash: backlash,
+      }),
+      202110,
+      24,
+      borderReport
+    );
+  };
+  [
+    ['confident', 30, 80, 20],
+    ['threatened', 70, 80, 20],
+    ['contested', 50, 80, 20],
+    ['alarm', 50, 80, 75],
+    ['quiet', 50, 10, 5],
+  ].forEach(function(expected) {
+    const pasek = paskiMoodFor(expected[1], expected[2], expected[3]);
+    assert.strictEqual(
+      pasek.mood,
+      expected[0],
+      'The pasek register does not follow the public mood'
+    );
+    assert(
+      borderLines.indexOf(pasek.lines[0]) >= 0 ||
+        stockLines.indexOf(pasek.lines[0]) >= 0,
+      'The mood register overwrote the banner: ' + pasek.lines[0]
+    );
+  });
+  // Ordinary months take the yellow strip from the subject, which is what
+  // stops it reading identically across unrelated stories; the hot registers
+  // take it from the mood pool, where the numbers should do the talking.
+  const borderFrame = sandbox.window.__testPressPaskiSubjects.find(
+    function(entry) { return entry[2] === 'border'; }
+  );
+  assert(borderFrame && borderFrame[3].length >= 6);
+  const asOpposition = function(line) {
+    return line.replace(/\{T\}/g, 'THE TOTAL OPPOSITION');
+  };
+  [[30, 80, 20], [70, 80, 20], [50, 80, 20], [50, 10, 5]].forEach(
+    function(mood) {
+      assert(
+        borderFrame[3].map(asOpposition)
+          .indexOf(paskiMoodFor(mood[0], mood[1], mood[2]).lines[1]) >= 0,
+        'An ordinary month did not take the strip from its subject'
+      );
+    }
+  );
+  assert(
+    sandbox.window.__testPressPaskiMoodTails.alarm.map(asOpposition)
+      .indexOf(paskiMoodFor(50, 80, 75).lines[1]) >= 0,
+    'A mobilised backlash did not reach the alarm strip'
+  );
+  assert(
+    sandbox.window.__testPressPaskiMoodTails.alarm.length >= 6 &&
+      sandbox.window.__testPressPaskiCampaignTails.length >= 10,
+    'The mood and campaign strip pools were thinned out again'
+  );
+  sandbox.window.__testPressPaskiSubjects.forEach(function(entry) {
+    assert(
+      Array.isArray(entry[3]) && entry[3].length >= 6,
+      'Subject frame "' + entry[2] + '" has too few yellow strips of its own'
+    );
+    assert.strictEqual(
+      new Set(entry[3]).size,
+      entry[3].length,
+      'Subject frame "' + entry[2] + '" repeats a yellow strip'
+    );
+  });
+
+  // Outcomes with a historical shape carry their own authored banner, and it
+  // must survive every broad frame that would otherwise swallow them.
+  const authoredPaski = sandbox.window.__testPressPaskiByEvent;
+  assert(
+    Object.keys(authoredPaski).length >= 50,
+    'The authored event-banner table shrank'
+  );
+  [
+    ['The Left watches PiS fight its own auditor', /AUDIT|DISPUTE INSIDE/],
+    ['The audit chamber’s term survives on opposition votes'
+      .replace('’', "'"), /AUDITOR/],
+    ['The returned Left puts up a candidate for the Marshal\'s chair',
+      /GAVEL/],
+    ['Bosak\'s vice-marshal bid fails', /PRESIDIUM/],
+    ['The Czajka failure becomes a national verdict on Trzaskowski',
+      /SEWAGE|CAPITAL/],
+    ['Forensic researchers confirm Pegasus on the opposition campaign ' +
+      'chief\'s phone', /SCANDAL|LABORATORY/],
+    ['A dispute over John Paul II becomes a loyalty test', /POPE|SACRED/],
+    ['Lewica files a constructive motion against Morawiecki', /COUP|MOVES/],
+  ].forEach(function(row) {
+    assert(authoredPaski[row[0]], 'No authored pasek for: ' + row[0]);
+    const pasek = sandbox.window.__testPressWiadomosciPasek(
+      Object.assign({news_headline: row[0]}, paskiMoodBase),
+      202002,
+      4,
+      null
+    );
+    assert(
+      row[1].test(pasek.lines[0]),
+      'The authored banner was overridden for: ' + row[0] + ' -> ' +
+        pasek.lines[0]
+    );
+    assert.strictEqual(
+      pasek.lines[1],
+      authoredPaski[row[0]][1].replace(/\{T\}/g, 'THE TOTAL OPPOSITION'),
+      'The authored second strip was replaced by a register line'
+    );
+  });
+
+  // The record's loudest habit is repetition: one banner held for weeks while
+  // the strip beneath it varies.
+  const hammerFor = function(turn) {
+    return sandbox.window.__testPressWiadomosciPasek(
+      Object.assign({news_headline: 'Lewica files another housing bill'},
+        paskiMoodBase),
+      202100 + turn,
+      turn,
+      null
+    );
+  };
+  assert.strictEqual(
+    hammerFor(15).lines[0],
+    hammerFor(16).lines[0],
+    'The banner no longer holds across consecutive months'
+  );
+  assert.notStrictEqual(
+    hammerFor(15).lines[0],
+    hammerFor(18).lines[0],
+    'The banner never rotates off a subject'
+  );
+  assert.notStrictEqual(
+    hammerFor(15).lines[1],
+    hammerFor(16).lines[1],
+    'The strip is hammered too, leaving the band completely static'
+  );
+  assert(
+    sandbox.window.__testPressPaskiFormBanners.some(function(line) {
+      return /\?$/.test(line);
+    }) &&
+      sandbox.window.__testPressPaskiFormBanners.some(function(line) {
+        return line.indexOf('"') >= 0;
+      }) &&
+      sandbox.window.__testPressPaskiFormBanners.some(function(line) {
+        return line.indexOf('ANOTHER') === 0;
+      }),
+    'The stock forms lost the question, the scare quote or the serial framing'
+  );
+
+  // The months before a vote run the loudest register the bulletin has.
+  const campaignPasek = sandbox.window.__testPressWiadomosciPasek(
+    Object.assign({}, paskiMoodBase, {
+      housing_salience: 20,
+      social_spending_salience: 20,
+    }),
+    202309,
+    47,
+    {headline: 'Lewica publishes its housing programme', text: 'Public homes.'}
+  );
+  assert.strictEqual(
+    campaignPasek.campaign,
+    2,
+    'September 2023 is not treated as the final run-up to the October vote'
+  );
+  assert.strictEqual(campaignPasek.mood, 'campaign');
+  assert(
+    /^(SCANDAL|ALARM|THEY ARE HIDING THIS FROM YOU|SPECIAL REPORT)/
+      .test(campaignPasek.lines[0]),
+    'The campaign banner lost its siren opening'
+  );
+  assert(
+    sandbox.window.__testPressPaskiCampaignTails.map(function(line) {
+      return line.replace(/\{T\}/g, 'THE TOTAL OPPOSITION');
+    }).indexOf(campaignPasek.lines[1]) >= 0,
+    'The campaign strip is no more aggressive than an ordinary month'
+  );
+  assert.strictEqual(
+    sandbox.window.__testPressWiadomosciPasek(
+      paskiMoodBase, 202112, 30, borderReport
+    ).campaign,
+    0,
+    'A month far from any vote is running the campaign register'
+  );
+
+  // Warm relations with PiS take Lewica off the banner without softening it.
+  const warmQualities = Object.assign({}, paskiMoodBase, {pis_relation: 55});
+  const hostileQualities = Object.assign({}, paskiMoodBase, {
+    pis_relation: 8,
+    government_negotiation_hostility: 76,
+    left_poll: 20,
+  });
+  [
+    [warmQualities, true],
+    [Object.assign({}, paskiMoodBase, {government_negotiation_hostility: 40}),
+      true],
+    [hostileQualities, false],
+  ].forEach(function(row) {
+    [202110, 202309].forEach(function(dateKey) {
+      [24, 47, 61].forEach(function(turn) {
+        const pasek = sandbox.window.__testPressWiadomosciPasek(
+          row[0], dateKey, turn, churchReport
+        );
+        assert.strictEqual(pasek.warm, row[1]);
+        const text = pasek.lines.concat([pasek.lead]).join(' ');
+        if (row[1]) {
+          assert(
+            !/LEWICA|Lewica went unmentioned\.$|TOTAL OPPOSITION/.test(
+              pasek.lines.join(' ')
+            ),
+            'A warm PiS channel still put Lewica on the banner: ' +
+              pasek.lines.join(' | ')
+          );
+          assert(
+            /TUSK|KO\b/.test(text),
+            'A spared Left left the banner with nobody to attack'
+          );
+        }
+      });
+    });
+  });
+
+  // Imported captions stay verbatim, credited, and never target a spared Left.
+  const archive = sandbox.window.__testPressPaskiArchive;
+  assert(archive.length >= 12, 'The broadcast-caption archive shrank');
+  archive.forEach(function(entry) {
+    assert.strictEqual(entry[2], entry[2].toUpperCase());
+    assert(['opposition', 'ko'].indexOf(entry[1]) >= 0);
+    assert(
+      sandbox.window.__testPressPaskiArchiveSource[entry[4]],
+      'A broadcast caption has no source: ' + entry[2]
+    );
+  });
+  const archivedCampaign = sandbox.window.__testPressWiadomosciPasek(
+    Object.assign({}, paskiMoodBase, {pis_relation: 55}),
+    202309,
+    47,
+    {headline: 'Lewica answers Tusk in Brussels over the recovery fund',
+      text: ''}
+  );
+  assert(
+    archivedCampaign.source && archivedCampaign.source.url,
+    'A real broadcast caption was shown without its citation'
+  );
+  assert(
+    !/LEWICA/.test(archivedCampaign.lines[0]),
+    'A warm channel drew an archive caption aimed at the Left'
+  );
 
   const moodQualities = {
     news_headline: 'The housing bill survives a coalition revolt',
@@ -2099,6 +2516,123 @@ function testPartyPresentationAssets() {
   const logoCss = fs.readFileSync(
     path.join(projectRoot, 'out', 'html', 'game.css'),
     'utf8'
+  );
+  // Hidden plain mode. No control for it may appear in the interface, and it
+  // must switch off every renderer rather than only hiding the output.
+  assert(
+    presentationSource.includes('window.dssPlainMode = plainMode') &&
+      /\[\?&#\]plain=\(0\|false\|off\)/.test(presentationSource) &&
+      presentationSource.includes("document.body.classList.add('plain-mode')"),
+    'The hidden plain mode is gone or no longer reachable from the address'
+  );
+  [
+    'window.updateSidebar = function() {',
+    'window.updateSidebarRight = function() {',
+    'window.onDisplayContent = function() {',
+    'window.onload = function() {',
+  ].forEach(function(entry) {
+    const at = presentationSource.indexOf(entry);
+    assert(at > 0, 'Missing render entry point: ' + entry);
+    assert(
+      presentationSource.slice(at, at + 900).includes('plainMode'),
+      entry + ' no longer honours plain mode and will draw over it'
+    );
+  });
+  assert(
+    !/id=['"]plain|plain-mode-toggle|>\s*Plain mode\s*</.test(
+      fs.readFileSync(path.join(projectRoot, 'out', 'html', 'index.html'), 'utf8')
+    ),
+    'Plain mode acquired a visible control; it is meant to stay hidden'
+  );
+
+  // The band's studio backdrop: every listed frame must exist, and the two
+  // excluded contributions must stay out of the rotation.
+  const paskiCovers = sandbox.window.__testPressPaskiCovers;
+  assert(paskiCovers.length >= 12, 'The Wiadomości backdrop rotation shrank');
+  paskiCovers.forEach(function(file) {
+    assert(
+      fs.existsSync(path.join(projectRoot, 'out', 'html', 'img', 'paski', file)),
+      'Missing Wiadomości backdrop: ' + file
+    );
+  });
+  assert.strictEqual(
+    paskiCovers.indexOf('pasek9.jpg'),
+    -1,
+    'pasek9.jpg carries a caption about a named presenter that was not ' +
+      'broadcast, and must not appear under a second invented banner'
+  );
+  assert(
+    presentationSource.includes("cover.className = 'press-pasek-cover'") &&
+      presentationSource.includes("cover.src = 'img/paski/' + coverFile") &&
+      logoCss.includes('.press-pasek-cover'),
+    'The Wiadomości band lost its studio backdrop'
+  );
+  // Frames must be held and warmed, or each new band flashes in blank.
+  assert(
+    presentationSource.includes('var pressPaskiImageCache = {}') &&
+      presentationSource.includes('pressPaskiPreloadAll()') &&
+      !presentationSource.includes("cover.loading = 'lazy'"),
+    'The band backdrops are no longer preloaded and will pop in'
+  );
+  // The studio frame changes every fourth pasek. The band counts its own
+  // changes rather than reading the quality state: month_actions misses every
+  // click that does not spend an action, and a turn is a whole month.
+  const coverFor = function(n) {
+    return sandbox.window.__testPressPaskiCover({
+      lines: ['BANNER NUMBER ' + n, 'STRIP NUMBER ' + n],
+    });
+  };
+  const coverRun = [];
+  for (let i = 0; i < 24; i += 1) {
+    coverRun.push(coverFor(i));
+  }
+  assert.strictEqual(
+    new Set(coverRun.slice(0, 4)).size,
+    1,
+    'The studio frame changes with every pasek instead of every fourth'
+  );
+  assert.notStrictEqual(
+    coverRun[0],
+    coverRun[4],
+    'The studio frame does not move on after four paski'
+  );
+  assert.strictEqual(
+    new Set(coverRun).size,
+    6,
+    'The studio frame does not advance once per four paski across a run'
+  );
+  const held = coverFor(99);
+  assert.strictEqual(
+    sandbox.window.__testPressPaskiCover({
+      lines: ['BANNER NUMBER 99', 'STRIP NUMBER 99'],
+    }),
+    held,
+    'Re-rendering the same pasek advanced the studio rotation'
+  );
+  assert(
+    fs.existsSync(path.join(projectRoot, 'docs', 'PASKI_IMAGE_CREDITS.md')),
+    'The Wiadomości band images have no credits file'
+  );
+  assert(
+    logoCss.includes('body.plain-mode') &&
+      /body\.plain-mode img,/.test(logoCss) &&
+      /body\.plain-mode ul\.choices li a \{|body\.plain-mode a,/.test(logoCss),
+    'The plain-mode stylesheet no longer strips images or restyles choices'
+  );
+  assert(
+    logoCss.includes('.press-pasek b') && logoCss.includes('.press-pasek i') &&
+      logoCss.includes('.press-pasek[data-pasek-standing]') &&
+      /\.press-pasek\[data-pasek-standing\] \{[^}]*position: sticky/
+        .test(logoCss),
+    'The Wiadomości chyron lost its banner or standing-band styling'
+  );
+  // overflow:auto on #content makes it the scroll container for every sticky
+  // descendant, and #content never scrolls, so the standing band would freeze
+  // in the flow instead of pinning to the top of the rail.
+  assert(
+    /#content \{[^}]*display: flow-root/.test(logoCss) &&
+      !/#content \{[^}]*overflow: auto/.test(logoCss),
+    '#content is a scroll container again; the standing pasek cannot pin'
   );
   [
     'koalicjapolska.jpg', 'kukiz.png', 'odnowa.png',
@@ -2305,6 +2839,11 @@ function testCheatMenu(game) {
   assert.strictEqual(
     engine.state.qualities.left_poll,
     leftBeforeCheat + 11
+  );
+  choose('cheat_menu.left_poll_down_ten');
+  assert.strictEqual(
+    engine.state.qualities.left_poll,
+    leftBeforeCheat + 1
   );
   assert.strictEqual(
     engine.state.qualities.left_vote_intent,
@@ -4302,6 +4841,11 @@ function runSmoke(game) {
     qualities.government_support_seats = 260;
     qualities.coalition_seats = 260;
     qualities.left_seats = 260;
+    qualities.government_agreement_records = [{
+      party_id: 'lewica', name: 'Lewica', role: 'cabinet', seats: 260,
+      pledged_seats: 260, source_family: 'left', accepted: 1,
+      reason: 'Test cabinet', annex: '', junior_office: ''
+    }];
     assert.strictEqual(globalThis.polandBudgetModel.version, 4);
     const first = globalThis.polandBudgetModel.preview(qualities);
     assert(first.affordable);
@@ -7774,6 +8318,8 @@ function runSmoke(game) {
     );
 
     choose('poland_government_formation.first_democratic_protocol');
+    assert.strictEqual(qualities.formation_opening_bargain,
+      'democratic_protocol');
     assert.strictEqual(
       engine.state.sceneId,
       'poland_government_formation.formation_coalition_menu'
@@ -8923,7 +9469,7 @@ function runSmoke(game) {
         qualities.p2050_seats +
         qualities.centrum_seats +
         qualities.psl_seats +
-        qualities.left_seats
+        qualities.nowa_lewica_seats
     );
     engine.goToScene('poland_events_2025.cabinet_reshuffle_2025');
     choose('poland_events_2025.formation_return_2025');
@@ -8965,6 +9511,13 @@ function runSmoke(game) {
       qualities.coalition_seats,
       rebuiltCabinetSeats,
       'Rebuilt July cabinet did not derive its formal party seats'
+    );
+    assert.strictEqual(
+      qualities.government_agreement_records.find(function(record) {
+        return record.party_id === 'razem_internal';
+      }).role,
+      'out',
+      'July reformation counted Razem without a separate agreement'
     );
 
     startStandard('cabinet-formation-palace-refusal');
@@ -15570,20 +16123,41 @@ function runSmoke(game) {
       qualities.left_cabinet_model,
       'Confidence and supply from opposition'
     );
-    assert.strictEqual(qualities.government_support_seats, 248);
+    assert.strictEqual(qualities.economy_minister_party, 'PSL',
+      'A cabinet-committed hinge partner received no ministry');
+    const namedIndependentSupport = qualities.government_agreement_records
+      .filter(function(record) {
+        return record.accepted && record.role !== 'out';
+      }).reduce(function(total, record) {
+        return total + record.pledged_seats;
+      }, 0);
+    assert.strictEqual(qualities.government_support_seats, namedIndependentSupport,
+      JSON.stringify(globalThis.polandCoalitionModel.preview(qualities).blockers));
+    assert.strictEqual(
+      qualities.government_agreement_records.find(function(record) {
+        return record.party_id === 'razem_internal';
+      }).role,
+      'out',
+      'The independent cabinet counted Razem without a confidence protocol'
+    );
     engine.goToScene('poland_hub');
     assert.strictEqual(
       qualities.government_support_seats,
-      248,
+      namedIndependentSupport,
       'Normalisation erased an independent cabinet support ledger'
     );
     qualities.annual_budget_year = 2024;
     engine.goToScene('poland_budget_2023_2026.annual_budget');
+    const independentBudgetVote =
+      globalThis.polandBudgetModel.preview(qualities).vote;
     assert.strictEqual(
-      globalThis.polandBudgetModel.preview(qualities).vote.governmentYes,
-      248,
-      'The opposition budget treated an independent cabinet as seatless'
+      independentBudgetVote.governmentYes +
+        independentBudgetVote.externalYes + independentBudgetVote.abstain,
+      namedIndependentSupport,
+      'The budget ledger lost a cabinet member or confidence protocol'
     );
+    assert(independentBudgetVote.externalYes > 0,
+      'The signed confidence-and-supply protocol did not count for the budget');
 
     startStandard('office-successor-biejat-remains-left-nominee');
     qualities = engine.state.qualities;

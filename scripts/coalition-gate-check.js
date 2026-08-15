@@ -18,6 +18,8 @@ Object.defineProperty(globalThis, 'localStorage', {
 const dendry = require('dendrynexus/lib/engine');
 const projectRoot = path.resolve(__dirname, '..');
 const json = fs.readFileSync(path.join(projectRoot, 'out', 'game.json'), 'utf8');
+const browserJavaScript = fs.readFileSync(
+  path.join(projectRoot, 'out', 'html', 'game.js'), 'utf8');
 
 let game;
 dendry.convertJSONToGame(json, function(error, converted) {
@@ -199,10 +201,15 @@ function preparePiSRoute(seats, gates, code, lifecycle) {
 
 // --- 4. the formation menu greys the blocked arrangements ----------------
 {
+  assert(browserJavaScript.includes(
+    'engine.choiceCache = engine._compileChoices(engine.getCurrentScene())'),
+  'The interactive builder does not refresh stale native choice predicates');
   const { engine, Q } = newEngine();
   seedRivalRelations(Q, OPENING_RELATIONS_2023);
   formationChamber(Q);
   engine.goToScene('poland_government_formation.formation_coalition_menu');
+  assert(choiceText(engine.state.currentContent).includes('Counting to 231'),
+    'The formation event lost its Counting to 231 title');
 
   assert.strictEqual(
     choiceById(engine, 'poland_government_formation.formation_pick_democratic').canChoose,
@@ -1000,6 +1007,34 @@ for (const choice of [
     'An aligned, trusted party should accept when no veto or red line applies');
 
   Object.assign(Q, {
+    left_seats: 120, ko_seats: 120, p2050_seats: 110,
+    psl_seats: 110, pis_seats: 0, konf_seats: 0, razem_seats: 0,
+    ko_relation: 100, p2050_relation: 70,
+    p2050_coalition_openness: 60,
+    left_economic_position: 50, left_cultural_position: 50,
+    p2050_economic_position: 50, p2050_cultural_position: 50
+  });
+  model.initialise(Q, {mode: 'formation', sponsor: 'lewica', seed_current: false,
+    roles: {lewica: 'cabinet', ko: 'support'}});
+  assert(model.preview(Q).decisions.ko.reason.includes('will not prop up'),
+    'KO offered confidence-and-supply to a Lewica-led cabinet');
+
+  model.initialise(Q, {mode: 'formation', sponsor: 'lewica', seed_current: false,
+    roles: {lewica: 'cabinet', p2050: 'support'}});
+  const hingeRefusal = model.preview(Q).decisions.p2050;
+  assert.strictEqual(hingeRefusal.accepted, 0);
+  assert(hingeRefusal.reason.includes('hinge weight') &&
+    hingeRefusal.reason.includes('ministries'),
+  'A roughly equal partner accepted outside confidence as a routine offer');
+
+  Q.p2050_relation = 100;
+  Q.p2050_coalition_openness = 100;
+  model.initialise(Q, {mode: 'replacement', sponsor: 'lewica', seed_current: false,
+    roles: {lewica: 'cabinet', p2050: 'support'}});
+  assert.strictEqual(model.preview(Q).decisions.p2050.hard_bargain, 1,
+    'Exceptional major-party support did not require a hard confidence protocol');
+
+  Object.assign(Q, {
     year: 2023, left_seats: 56, ko_seats: 130, psl_seats: 40,
     p2050_seats: 30, pis_seats: 204, konf_seats: 0,
     ko_relation: 100, psl_relation: 100, p2050_relation: 100,
@@ -1018,6 +1053,155 @@ for (const choice of [
   assert.strictEqual(cappedProtocol.effective_seats, 231);
 }
 
+// Intact Third Way averages its two real decisions. The historical cabinet
+// needs an explicit joint guarantee, in standalone and normal campaign play.
+{
+  const run = newEngine();
+  normalize(run.engine);
+  const Q = run.Q;
+  const model = globalThis.polandCoalitionModel;
+  Object.assign(Q, {
+    scenario_mode: 'formation_2023', year: 2023,
+    sejm_total: 460, sejm_statutory_majority: 231,
+    left_seats: 26, ko_seats: 157, p2050_seats: 33,
+    psl_seats: 32, pis_seats: 194, konf_seats: 18,
+    psl_relation: 34, p2050_relation: 42,
+    psl_coalition_openness: 57, p2050_coalition_openness: 61,
+    third_way_cohesion: 58, formation_opening_bargain: 'none', resources: 2,
+    left_economic_position: 35, left_cultural_position: 24,
+    psl_economic_position: 52, psl_cultural_position: 70,
+    p2050_economic_position: 55, p2050_cultural_position: 49,
+    coalition_viable_left_ko: 1, coalition_viable_left_p2050: 1,
+    coalition_viable_left_psl: 1, coalition_viable_ko_p2050: 1,
+    coalition_viable_ko_psl: 1, coalition_viable_psl_p2050: 1
+  });
+  model.initialise(Q, {mode: 'formation', sponsor: 'lewica', seed_current: false,
+    roles: {lewica: 'cabinet', ko: 'cabinet', p2050: 'cabinet', psl: 'cabinet'},
+    locked: ['lewica']});
+  let pslDecision = model.preview(Q).decisions.psl;
+  assert.strictEqual(pslDecision.accepted, 0,
+    'Third Way received acceptance from an unbargained cohesion bonus');
+  assert.strictEqual(pslDecision.score, 40);
+  assert(pslDecision.reason.includes('average 40/50') &&
+    !pslDecision.reason.includes('cohesion'));
+  assert.strictEqual(pslDecision.can_concede, 1);
+  model.offerConcession(Q, 'psl');
+  pslDecision = model.preview(Q).decisions.psl;
+  assert.strictEqual(pslDecision.accepted, 1,
+    'A joint guarantee did not secure the historical Third Way bargain');
+  assert.strictEqual(Q.resources, 1);
+  assert.strictEqual(Q.coalition_builder.concessions.p2050, 1);
+  assert(pslDecision.reason.includes('Binding Third Way guarantee +10'));
+  Q.scenario_mode = 'campaign_2019';
+  model.initialise(Q, {mode: 'formation', sponsor: 'lewica', seed_current: false,
+    roles: {lewica: 'cabinet', ko: 'cabinet', p2050: 'cabinet', psl: 'cabinet'},
+    locked: ['lewica']});
+  pslDecision = model.preview(Q).decisions.psl;
+  assert.strictEqual(pslDecision.accepted, 0,
+    'Normal campaign play did not use the same unbargained Third Way average');
+  model.offerConcession(Q, 'p2050');
+  assert.strictEqual(model.preview(Q).decisions.psl.accepted, 1,
+    'Joint Third Way bargaining did not carry into normal campaign play');
+
+  Q.formation_opening_bargain = 'democratic_protocol';
+  model.initialise(Q, {mode: 'formation', sponsor: 'lewica', seed_current: false,
+    roles: {lewica: 'cabinet', ko: 'cabinet', p2050: 'cabinet', psl: 'cabinet'},
+    locked: ['lewica']});
+  pslDecision = model.preview(Q).decisions.psl;
+  assert.strictEqual(pslDecision.score, 44);
+  assert(pslDecision.reason.includes('Public democratic voting protocol +4'));
+}
+
+// --- 14a. Third Way defaults to joint talks; near misses can buy guarantees
+{
+  const run = newEngine();
+  normalize(run.engine);
+  const Q = run.Q;
+  const model = globalThis.polandCoalitionModel;
+  Object.assign(Q, {
+    year: 2023, sejm_total: 460, sejm_statutory_majority: 231,
+    left_seats: 200, ko_seats: 0, pis_seats: 180,
+    p2050_seats: 40, psl_seats: 40, konf_seats: 0,
+    resources: 2, p2050_relation: 45, p2050_coalition_openness: 15,
+    left_economic_position: 50, left_cultural_position: 50,
+    p2050_economic_position: 50, p2050_cultural_position: 50,
+    coalition_viable_left_p2050: 1, coalition_viable_left_psl: 1
+  });
+  model.initialise(Q, {mode: 'formation', sponsor: 'lewica', seed_current: false,
+    roles: {lewica: 'cabinet'}, locked: ['lewica']});
+  assert.strictEqual(Q.coalition_builder.third_way_linked, true);
+  model.setRole(Q, 'p2050', 'cabinet');
+  assert.strictEqual(Q.coalition_builder.roles.psl, 'cabinet',
+    'An intact Third Way did not negotiate as one alliance by default');
+  assert(model.templates(Q).every(function(template) {
+    const p2050Role = template.cabinet.includes('p2050') ? 'cabinet'
+      : (template.support.includes('p2050') ? 'support' : 'out');
+    const pslRole = template.cabinet.includes('psl') ? 'cabinet'
+      : (template.support.includes('psl') ? 'support' : 'out');
+    return p2050Role === pslRole;
+  }), 'Joint Third Way talks recommended a casual component split');
+
+  model.setThirdWayLinked(Q, false);
+  model.setRole(Q, 'psl', 'out');
+  const nearMiss = model.preview(Q).decisions.p2050;
+  assert.strictEqual(nearMiss.score, 46);
+  assert.strictEqual(nearMiss.can_concede, 1,
+    'A small, ordinary invitation gap could not be bargained through');
+  model.offerConcession(Q, 'p2050');
+  assert.strictEqual(Q.resources, 1);
+  assert.strictEqual(model.preview(Q).decisions.p2050.accepted, 1,
+    'A binding guarantee did not secure the near-miss invitation');
+}
+
+// --- 14b. independent hard-right signatories keep their own red lines -----
+{
+  const run = newEngine();
+  normalize(run.engine);
+  const Q = run.Q;
+  const model = globalThis.polandCoalitionModel;
+  Object.assign(Q, {
+    sejm_total: 460, sejm_statutory_majority: 231,
+    left_seats: 0, ko_seats: 0, pis_seats: 180,
+    p2050_seats: 130, psl_seats: 0, konf_seats: 130
+  });
+  Q.parliamentary_party_records = [
+    {id: 'solidarna', name: 'Suwerenna Polska', family: 'independent', sejm_mps: 10},
+    {id: 'kkp', name: 'Korona', family: 'independent', sejm_mps: 10}
+  ];
+  for (const id of ['solidarna', 'kkp']) {
+    let record = Q.rival_group_records.find(function(item) { return item.id === id; });
+    if (!record) {
+      record = {id: id};
+      Q.rival_group_records.push(record);
+    }
+    Object.assign(record, {
+      active: 1, independent: 1, relation: 100, coalition_openness: 100,
+      economic_position: 50, cultural_position: 50, leader: id === 'kkp'
+        ? 'Grzegorz Braun' : 'Patryk Jaki'
+    });
+  }
+
+  model.initialise(Q, {mode: 'replacement', sponsor: 'p2050', seed_current: false,
+    roles: {p2050: 'cabinet', solidarna: 'support'}});
+  assert(model.preview(Q).decisions.solidarna.reason.includes(
+    'will not enter any cabinet or confidence agreement'));
+
+  model.initialise(Q, {mode: 'replacement', sponsor: 'pis', seed_current: false,
+    candidate: 'Grzegorz Braun', roles: {pis: 'cabinet', kkp: 'cabinet'}});
+  assert(model.preview(Q).decisions.kkp.reason.includes(
+    'only in a Konfederacja-led government'));
+
+  model.initialise(Q, {mode: 'replacement', sponsor: 'konf', seed_current: false,
+    candidate: 'Grzegorz Braun', roles: {konf: 'cabinet', kkp: 'cabinet'}});
+  assert.strictEqual(model.preview(Q).decisions.kkp.accepted, 1,
+    'Korona refused cabinet office in a Konfederacja-led government');
+
+  model.initialise(Q, {mode: 'replacement', sponsor: 'pis', seed_current: false,
+    roles: {pis: 'cabinet', kkp: 'support'}});
+  assert.strictEqual(model.preview(Q).decisions.kkp.accepted, 1,
+    'Korona lost its independent confidence-and-supply option');
+}
+
 {
   const run = newEngine();
   normalize(run.engine);
@@ -1026,7 +1210,7 @@ for (const choice of [
   Object.assign(Q, {
     sejm_total: 460, sejm_statutory_majority: 231,
     left_seats: 220, ko_seats: 229, pis_seats: 0,
-    p2050_seats: 0, psl_seats: 0, konf_seats: 0
+    p2050_seats: 0, psl_seats: 0, konf_seats: 0, razem_seats: 0
   });
   Q.parliamentary_party_records = [
     {id: 'left_party', name: 'Lewica', family: 'left', sejm_mps: 220},
@@ -1051,6 +1235,15 @@ for (const choice of [
   });
   assert.strictEqual(annex.annex, 'Coalition Annex');
   assert.strictEqual(annex.junior_office, 'Minister without portfolio');
+
+  model.initialise(Q, {mode: 'replacement', sponsor: 'lewica', seed_current: false,
+    roles: {lewica: 'cabinet', porozumienie: 'support'}});
+  const splitterSupport = model.commit(Q);
+  assert.strictEqual(splitterSupport.committed, 1,
+    'An independent splitter lost confidence-and-supply as its semi-join route');
+  assert.strictEqual(Q.government_agreement_records.find(function(record) {
+    return record.party_id === 'porozumienie';
+  }).annex, 'Protokół Stabilizacyjny — Stabilisation Protocol');
 }
 
 {
@@ -1086,6 +1279,102 @@ for (const choice of [
   assert.strictEqual(parties.reduce(function(total, party) {
     return total + party.seats;
   }, 0), 460, 'Dissolved KO splinters were double-counted');
+}
+
+// --- 15. an autonomous Razem caucus must sign for its own seats ------------
+{
+  const run = newEngine();
+  normalize(run.engine);
+  const Q = run.Q;
+  const model = globalThis.polandCoalitionModel;
+  Object.assign(Q, {
+    sejm_total: 460, left_seats: 100, ko_seats: 360,
+    pis_seats: 0, p2050_seats: 0, psl_seats: 0, konf_seats: 0,
+    razem_active: 1, razem_seats: 20, razem_merged: 0,
+    left_dominant_current: 'barons', razem_cooperation: 20
+  });
+  Q.parliamentary_party_records = [
+    {id: 'left_party', name: 'Lewica', family: 'left', sejm_mps: 100},
+    {id: 'ko_party', name: 'KO', family: 'ko', sejm_mps: 360}
+  ];
+  let parties = model.parties(Q);
+  assert.strictEqual(parties.find(function(party) {
+    return party.id === 'lewica';
+  }).seats, 80);
+  assert.strictEqual(parties.find(function(party) {
+    return party.id === 'razem_internal';
+  }).seats, 20);
+
+  model.initialise(Q, {mode: 'formation', sponsor: 'lewica', majority: 80,
+    roles: {lewica: 'cabinet'}, locked: ['lewica']});
+  assert.strictEqual(model.commit(Q).committed, 1);
+  assert.strictEqual(Q.candidate_left_votes, 80,
+    'Uninvited Razem MPs leaked into the candidate tally');
+
+  model.initialise(Q, {mode: 'formation', sponsor: 'lewica', majority: 100,
+    roles: {lewica: 'cabinet'}, locked: ['lewica']});
+  model.setRole(Q, 'razem_internal', 'cabinet');
+  assert(model.preview(Q).decisions.razem_internal.reason.includes('relations are too low'),
+    'Low-cooperation Razem seats were counted without a bargain');
+
+  Q.razem_cooperation = 70;
+  model.setRole(Q, 'razem_internal', 'cabinet');
+  const razemCabinet = model.preview(Q).decisions.razem_internal;
+  assert.strictEqual(razemCabinet.accepted, 1);
+  assert(razemCabinet.reason.includes('binding housing, labour and social guarantees'),
+    'Non-leading Razem entered cabinet without programme guarantees');
+  model.setRole(Q, 'razem_internal', 'support');
+  assert.strictEqual(model.preview(Q).decisions.razem_internal.accepted, 1,
+    'Aligned Razem should be able to sign confidence and supply');
+  assert.strictEqual(model.commit(Q).committed, 1);
+  assert.strictEqual(Q.candidate_left_votes, 100,
+    'A signed Razem protocol did not restore its pledged votes');
+
+  Q.razem_merged = 1;
+  Q.left_dominant_current = 'barons';
+  parties = model.parties(Q);
+  assert.strictEqual(parties.some(function(party) {
+    return party.id === 'razem_internal';
+  }), false, 'A merged Razem without autonomy should remain inside the Lewica block');
+}
+
+// Razem outside support carries no capitalist-partner cost; taking ministries
+// does, and the transition must not be charged again on reconfirmation.
+{
+  const run = newEngine();
+  normalize(run.engine);
+  const Q = run.Q;
+  const model = globalThis.polandCoalitionModel;
+  Object.assign(Q, {
+    scenario_mode: 'campaign_2019', sejm_total: 460,
+    left_seats: 100, ko_seats: 360, pis_seats: 0,
+    p2050_seats: 0, psl_seats: 0, konf_seats: 0,
+    razem_active: 1, razem_seats: 20, razem_merged: 0,
+    razem_party_formed: 0, razem_cooperation: 70,
+    ko_relation: 100, ko_coalition_openness: 100,
+    ko_coalition_dissent: 10, coalition_viable_left_ko: 1,
+    left_economic_position: 50, left_cultural_position: 50,
+    ko_economic_position: 50, ko_cultural_position: 50
+  });
+  Q.parliamentary_party_records = [
+    {id: 'left_party', name: 'Lewica', family: 'left', sejm_mps: 100},
+    {id: 'ko_party', name: 'KO', family: 'ko', sejm_mps: 360}
+  ];
+  model.initialise(Q, {mode: 'formation', sponsor: 'lewica', majority: 460,
+    seed_current: false,
+    roles: {lewica: 'cabinet', ko: 'cabinet', razem_internal: 'support'},
+    locked: ['lewica']});
+  assert.strictEqual(model.commit(Q).committed, 1);
+  assert.strictEqual(Q.ko_relation, 100);
+  assert.strictEqual(Q.ko_coalition_dissent, 10);
+
+  model.initialise(Q, {mode: 'formation', sponsor: 'lewica', majority: 460,
+    seed_current: false,
+    roles: {lewica: 'cabinet', ko: 'cabinet', razem_internal: 'cabinet'},
+    locked: ['lewica']});
+  assert.strictEqual(model.commit(Q).committed, 1);
+  assert.strictEqual(Q.ko_relation, 96);
+  assert.strictEqual(Q.ko_coalition_dissent, 15);
 }
 
 console.log('coalition-gate-check: all assertions passed');

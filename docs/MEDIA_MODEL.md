@@ -124,6 +124,158 @@ matching issue field. The same polling sentence is never appended to every
 outlet in an edition. Real-source coverage stops in 2026: reports in the 2027
 scenario cannot truthfully be attributed to future outlet pages.
 
+## The Wiadomości chyron
+
+While PiS holds public media the TVP slot is presented as the evening bulletin
+rather than as a wire report. The card is labelled `WIADOMOŚCI · TVP INFO` and
+carries a two-line **pasek**: a red all-caps banner over a narrower yellow
+strip. Both lines are generated from live state rather than written per month,
+and each does a different job.
+
+For as long as PiS holds the cabinet the pasek is a standing fixture of the
+rail rather than something the player meets only when TVP happens to rotate
+into the edition. A labelled band sits directly under the panel heading and
+stays stuck there while the rail scrolls, so the bulletin's line on the
+player's last action is on screen every month of the PiS years whatever else
+the press review is showing. It is painted on the opaque content background
+rather than the translucent surface token, because it scrolls over the cards
+beneath it. The band follows the month's own `news_headline`, and it is the
+bulletin's only chyron: while it is up the TVP card carries no banner of its
+own. When the cabinet changes hands the band disappears and the card falls back
+to the patron rule, so a PiS-held broadcaster under somebody else's government
+still runs a banner on its own card without the panel-wide fixture.
+
+The red banner is chosen in three stages.
+
+**Authored outcomes come first.** Fifty-seven moments with a recognisable
+historical shape carry a banner and strip written for them alone, matched on
+the outcome text exactly: the audit chamber crisis and the government's attempt
+to remove its own auditor, the contest for the Marshal's chair and the
+vice-marshal ballots, the ventilator contract, Czajka and the capital's sewage,
+Pegasus and the Senate surveillance commission, the John Paul II resolution,
+the constructive motion against Morawiecki, the absorption of Suwerenna Polska,
+the fur-farm ban, the presidential primary and the 2025 runoff. Nothing general
+can override these, which is the point: the distinctive months of the scenario
+were previously being swallowed by broad frames.
+
+**Then fifty-six subject frames**, each with four banner lines, matched on the
+displayed headline and standfirst: the audit chamber, the Marshal and the
+presidium, the Senate, surveillance, scandal and contracts, national symbols
+and Independence Day, climate direct action, rivers and pollution, the centrist
+parties, communism and decommunisation, public ownership, recovery funds and the
+EU, German influence, foreign policy, the courts, prosecutions, the presidency,
+referendums, visas, fuel prices, the border, migration, Ukraine, the army, the
+police, the pandemic, the health service, transfers and care, labour and work
+time, housing, energy, infrastructure, abortion, equality, the church, schools,
+research, the digital state, public media, the budget, farmers, animals,
+inflation, the right's parties, primaries, defections, local government, the
+street, party organisation, factions, chosen enemies, the cabinet, coalition
+manoeuvre, the opposition bloc and elections. The first match wins, so specific
+subjects sit above broad ones. Matching is on whole words: a coalition is not a
+coal story and a broad front is not a road programme.
+
+Every fourth rotation the banner drops the subject line for one of the **stock
+forms** the record leans on constantly and a plain declarative sentence cannot
+reach: the allegation put as a question, the coined label in scare quotes, and
+the serial *kolejny* framing that makes each week the next instalment of the
+same conspiracy. The interrogative forms stay political rather than criminal —
+the game does not put an invented offence to a named person.
+
+The banner also **holds**. Repetition was the practice's loudest habit, so the
+line moves on a three-month clock keyed to the subject rather than to the
+report: a returning subject keeps its banner for a stretch while the yellow
+strip beneath it changes with each story. The studio frame behind the band
+moves slower still, once every fourth pasek.
+
+**Then one reflex frame** for everything else, because a bulletin with nothing
+to say still runs a banner. `npm run check:paski` walks every `news_headline` in
+the scene tree — 2,678 outcomes across cards, hub actions and dated events — and
+reports how many land on that reflex frame. It fails above five per cent, fails
+if any single frame absorbs more than nine per cent of the corpus, and fails if
+a frame becomes unreachable. The corpus currently produces 283 distinct banners
+with 3.4 per cent on the reflex lines.
+
+The yellow strip belongs to the subject in an ordinary month — each of the
+fifty-seven frames carries six follow-ups of its own, so a housing story and a
+courts story do not close on the same line, and a subject the player returns to
+does not exhaust its supply. The strip switches to the mood pool only where the
+numbers should do the talking: a mobilised backlash, or a campaign month. The
+corpus yields 355 distinct yellow strips, and `npm run check:paski` fails below
+three hundred.
+
+The mood registers, used for the hot months and as the fallback:
+
+| Register | Condition | What the strip does |
+| --- | --- | --- |
+| `quiet` | salience below 40 | Fills the gap: government work in the report, the target accused of silence. |
+| `alarm` | backlash 62+ with salience 55+ | The emergency line — chaos, an attack on the state, how far will they go. Deepens the banner to crisis red. |
+| `threatened` | support for the Left position 60+ | Leaves the subject alone and attacks funding and motive instead. |
+| `confident` | support 42 or below | Plays the polling back as a verdict already passed. |
+| `contested` | anything else | Routine insinuation: fine print, orders from somewhere, experts who see through it. |
+| `campaign` | within four months of a vote | Overrides everything below it. See the campaign register. |
+
+The studio framing sentence in the report body follows the same register, so a
+month where the public has moved toward the Left reads visibly differently from
+one where it has not. Selection is seeded by turn and date, so reopening a card
+does not reshuffle the banner.
+
+### The campaign register
+
+Wiadomości ran its loudest line into a vote, and the scenario reproduces that
+shape rather than holding one flat tone for eight years. The banner escalates by
+distance to the next election — the Sejm votes of October 2019 and October 2023,
+the presidential rounds of 2020 and 2025, and the October 2027 scenario horizon.
+Within ten months the register floors at `alarm`; within four months it becomes
+`campaign`, which is the deliberate peak: a siren opening bolted onto the subject
+banner, a black-and-yellow second strip promising that a vote for the target is a
+vote against Poland, and a studio line that has stopped pretending to report.
+The run-up to October 2023 is therefore the most aggressive stretch in the game,
+which is what the record shows it was.
+
+### The named target and the PiS channel
+
+The target follows the balance of power. Under a PiS cabinet the banner attacks
+the total opposition, and names Lewica directly once the Left's polling makes it
+a worthwhile target on its own. If a later branch leaves TVP under PiS
+management while another cabinet governs — the statutory reform behind the veto
+wall, for example — the same machinery turns on the new government instead. When
+public media passes to a KO, Left or pluralist board, the banner stops and TVP
+reverts to the ordinary patron-driven voice.
+
+A working channel to the governing camp changes who is on screen, not how loud
+the bulletin is. Once `pis_relation` reaches 50 **or** `government_negotiation_hostility`
+falls to 50 — the same thresholds the negotiation chain already uses to open a
+PiS channel — Lewica disappears from the banner entirely and Donald Tusk, the
+Tusk camp and KO take its place. Frames whose lines name nobody are dropped in
+favour of ones that do, so a spared Left is never the implied subject of its own
+smear, and the archive narrows to the captions that were aimed at Tusk and KO.
+The campaign register still applies: warm relations in September 2023 produce
+the most aggressive anti-Tusk banners in the game, not a quiet month.
+
+### Imported captions
+
+Where the record has a real caption for the subject on screen, the bulletin uses
+it instead of an invented one. Fourteen captions broadcast by TVP Wiadomości are
+carried verbatim in Polish on the red strip, with an English gloss on the yellow
+strip and a `BROADCAST CAPTION` credit linking the source. They are drawn from
+[OKO.press's guide to the paski](https://oko.press/jak-tvp-pierze-mozgi-widzom-przewodnik),
+[Press.pl's account of how they were written](https://www.press.pl/tresc/51324,glupi-jak-pasek)
+and the [Obserwatorium Językowe UW entry on *totalna opozycja*](https://obserwatoriumjezykowe.uw.edu.pl/hasla/totalnaopozycja/).
+Each is tagged with the target it was aimed at, so the warm-channel rule applies
+to the archive as well. The campaign register always reaches for an archive
+caption when one exists for the subject; outside a campaign it appears about a
+third of the time.
+
+Two exclusions are deliberate. The ethnic and antisemitic captions in the same
+record are not imported, and captions constructed from a described pattern
+rather than an attested broadcast are left out: only verbatim, sourced captions
+enter the archive. Everything else on the banner is original pastiche, and no
+quotation or criminal allegation is invented for a real person.
+
+Authored PiS-era copy already carries the editorial line, so it receives the
+banner and nothing else; only live fallback copy also gains the studio framing
+sentence.
+
 The first outcome-specific authoring pass adds 162 reports across 58 branches:
 the presidential nomination, media strategy, lockdown, rescue shield, abortion
 revolt, recovery-fund vote, Belarus border, Ukraine invasion, opposition-list
@@ -163,7 +315,7 @@ whole; it does not name internal currents other than Razem.
 | **WP** | The neutral mass-market option: direct consequence, service information and a strong curiosity gap without a permanent party patron. |
 | **Rzeczpospolita** | Centre-right institutional and business analysis: sceptical of Left spending, attentive to legality, cost, enforceability and precedent. |
 | **Kanał Zero** | Pro-PiS or pro-Konfederacja confrontation after February 2024. The active patron and its relation to Lewica decide whether the Left is mocked as an enemy or briefly useful against the centre. |
-| **TVP** | Pro-government. Under PiS it foregrounds PiS delivery and opposition threat; under a KO-led cabinet it foregrounds KO delivery and treats Lewica according to the live KO relationship. |
+| **TVP** | Pro-government. Under PiS management it runs as *Wiadomości*, leading with a pasek that treats the opposition as a threat to the nation before any reporting begins, at its loudest in the months before a vote and pointed at Tusk rather than Lewica once a PiS channel is open; under a KO-led cabinet it drops the banner, foregrounds KO delivery and treats Lewica according to the live KO relationship. |
 | **TVN** | Pro-KO democratic framing. A good KO relationship tolerates Lewica as a partner; a bad one depicts it as an irresponsible obstacle to defeating PiS. |
 | **Republika** | Usually pro-PiS, occasionally pro-Konfederacja, and more aggressively partisan than TVP. It presents Lewica as hostile unless the active right patron finds a temporary tactical use for it. |
 

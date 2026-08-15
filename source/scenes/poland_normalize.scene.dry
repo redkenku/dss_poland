@@ -553,15 +553,34 @@ if (!budgetHost.polandBudgetModel || budgetHost.polandBudgetModel.version < 4) {
     const vote = function(q, game, calculated) {
         const p = calculated || preview(q, game);
         const total = integer(q.sejm_total, 460) || 460;
+        const acceptedAgreement = (q.government_agreement_records || []).filter(
+            function(record) {
+                return record && record.accepted && record.role != "out";
+            }
+        );
+        const cabinetAgreement = acceptedAgreement.filter(function(record) {
+            return record.role == "cabinet";
+        });
+        const supportAgreement = acceptedAgreement.filter(function(record) {
+            return record.role == "support";
+        });
         const governmentTotal = Math.min(
             total,
-            integer(q.government_support_seats,
-                integer(q.coalition_seats, partySeats(
-                    q, partyId(q.government_party) || "pis"
-                )))
+            acceptedAgreement.length
+                ? cabinetAgreement.reduce(function(sum, record) {
+                    return sum + integer(record.pledged_seats, 0);
+                }, 0)
+                : integer(q.government_support_seats,
+                    integer(q.coalition_seats, partySeats(
+                        q, partyId(q.government_party) || "pis"
+                    )))
         );
         const cabinet = cabinetParties(q);
-        const lead = partyId(q.government_party) || "pis";
+        const lead = partyId(q.government_party) || cabinet.slice().sort(
+            function(first, second) {
+                return partySeats(q, second) - partySeats(q, first);
+            }
+        )[0] || "pis";
         let cabinetKnown = 0;
         let governmentYes = 0;
         let governmentAbstain = 0;
@@ -613,15 +632,21 @@ if (!budgetHost.polandBudgetModel || budgetHost.polandBudgetModel.version < 4) {
                 }
             }
         }
-        let externalYes = 0;
+        const agreementSupportIds = supportAgreement.map(function(record) {
+            return record.party_id == "lewica" ? "left" : record.party_id;
+        });
+        let externalYes = supportAgreement.reduce(function(sum, record) {
+            return sum + integer(record.pledged_seats, 0);
+        }, 0);
         for (const id of game.deals) {
-            if (!cabinet.includes(id) && partyData[id]) {
+            if (!cabinet.includes(id) && !agreementSupportIds.includes(id) &&
+                partyData[id]) {
                 externalYes += partySeats(q, id);
                 reasons.push(partyData[id].label + " supports under a displayed deal");
             }
         }
         const leftSeats = partySeats(q, "left");
-        if (!cabinet.includes("left")) {
+        if (!cabinet.includes("left") && !agreementSupportIds.includes("left")) {
             if (game.role == "opposition") {
                 if (game.posture == "support") externalYes += leftSeats;
                 else if (game.posture == "abstain") governmentAbstain += leftSeats;
