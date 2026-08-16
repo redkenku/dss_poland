@@ -127,7 +127,8 @@ function startCampaign(engine, seed) {
   if (!chooseById(engine, 'root.standard')) {
     return false;
   }
-  return chooseById(engine, 'poland_hub');
+  return chooseById(engine, 'poland_intro.short_brief') &&
+    chooseById(engine, 'poland_hub');
 }
 
 function toNum(value, fallback) {

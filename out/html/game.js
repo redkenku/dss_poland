@@ -780,9 +780,13 @@
   // ordinary browser hyperlinks. There is no control for it anywhere in the
   // interface. Turn it on with ?plain=1 or #plain, off with ?plain=0; the
   // setting persists for the browser until switched off.
-  var plainMode = (function() {
+  var plainAddress = (function() {
     var location = window.location || {};
-    var address = String(location.search || '') + String(location.hash || '');
+    return String(location.search || '') + String(location.hash || '');
+  }());
+
+  var plainMode = (function() {
+    var address = plainAddress;
     var stored = null;
     try {
       stored = window.localStorage.getItem('dss_plain_mode');
@@ -803,6 +807,284 @@
     return on;
   }());
   window.dssPlainMode = plainMode;
+
+  // Plain mode is driven by ordinary navigation rather than by click handlers.
+  // Every choice, deck and card becomes a real URL; the engine state is kept
+  // in storage and restored on load; the action named in the address is
+  // applied before anything is drawn. An automated client can therefore play
+  // the whole game by fetching URLs, which a page full of href="#" cannot
+  // support. The engine still runs in the browser — this changes how it is
+  // reached, not where it lives.
+  var PLAIN_STATE_KEY = 'dss_plain_state';
+  var PLAIN_LINKS_KEY = 'dss_plain_links';
+
+  var plainRead = function(key) {
+    try {
+      return window.localStorage.getItem(key);
+    } catch (error) {
+      return null;
+    }
+  };
+
+  var plainWrite = function(key, value) {
+    try {
+      window.localStorage.setItem(key, value);
+    } catch (error) {
+      // Storage blocked; the session simply will not resume after a reload.
+    }
+  };
+
+  // The printed ordinal is the number in the address. Nothing in the public
+  // protocol is zero-based: a client that reads "[3]" and writes "pick=3" —
+  // or "do=3" — gets the third link, which is the only behaviour worth
+  // exposing. The engine's own zero-based index never leaves this file.
+  var plainRequest = (function() {
+    var match = /[?&#](pick|do|card|deck|pinned)=([^&#]*)/.exec(plainAddress);
+    if (!match) {
+      return null;
+    }
+    return {kind: match[1], value: decodeURIComponent(match[2])};
+  }());
+
+  // What each printed ordinal did, recorded at render time and kept with the
+  // save so "pick=3" can still be resolved after the reload it causes.
+  var plainLinkMap = [];
+
+  var plainLoadLinkMap = function() {
+    try {
+      var stored = JSON.parse(plainRead(PLAIN_LINKS_KEY) || '[]');
+      return Array.isArray(stored) ? stored : [];
+    } catch (error) {
+      return [];
+    }
+  };
+
+  // Read once, here, before anything renders. The engine's own opening display
+  // rewrites the stored map, so resolving the request against storage later
+  // would resolve it against this page instead of the one the link came from.
+  var plainIncomingLinks = plainLoadLinkMap();
+
+  var plainFresh = /[?&#]new(=1|=true)?(&|$)/.test(plainAddress);
+
+  // The engine begins a fresh game as soon as the document is ready, well
+  // before window.onload gets a chance to restore the session. That first
+  // display must not be written to storage or it clobbers the save it is about
+  // to be replaced by, and every navigation silently restarts the game.
+  var plainBooted = false;
+
+  var plainSaveState = function() {
+    if (!plainMode || !plainBooted ||
+        !window.dendryUI || !window.dendryUI.dendryEngine) {
+      return;
+    }
+    try {
+      plainWrite(
+        PLAIN_STATE_KEY,
+        JSON.stringify(window.dendryUI.dendryEngine.getExportableState())
+      );
+    } catch (error) {
+      // An unserialisable state is not worth losing the turn over.
+    }
+  };
+
+  var plainRestoreState = function() {
+    if (plainFresh) {
+      plainWrite(PLAIN_STATE_KEY, '');
+      plainWrite(PLAIN_LINKS_KEY, '[]');
+      plainIncomingLinks = [];
+      return false;
+    }
+    var saved = plainRead(PLAIN_STATE_KEY);
+    if (!saved) {
+      return false;
+    }
+    try {
+      window.dendryUI.dendryEngine.setState(JSON.parse(saved));
+      return true;
+    } catch (error) {
+      return false;
+    }
+  };
+
+  // The action is consumed once. Without this a refresh would replay the last
+  // choice against the state that already contains it.
+  var plainForgetRequest = function() {
+    if (!plainRequest || !window.history || !window.history.replaceState) {
+      return;
+    }
+    try {
+      window.history.replaceState({}, '', '?plain=1');
+    } catch (error) {
+      // Opened from file:// — the stale parameter is harmless after a save.
+    }
+  };
+
+  var plainApplyRequest = function() {
+    if (!plainRequest || !window.dendryUI) {
+      return;
+    }
+    var engine = window.dendryUI.dendryEngine;
+    var request = plainRequest;
+    // "pick" is the printed ordinal for any kind of link. Resolve it against
+    // the map the last render left behind, then act as if that link's own
+    // explicit address had been requested.
+    if (request.kind === 'pick' || request.kind === 'do') {
+      var ordinal = Number(request.value);
+      var entry = plainIncomingLinks[ordinal - 1];
+      if (entry && entry.kind) {
+        request = entry;
+      } else if (request.kind === 'do' && Number.isFinite(ordinal)) {
+        // No map — a cold start, or storage is blocked. Fall back to treating
+        // the number as the ordinal among this scene's choices.
+        request = {kind: 'choice', value: String(ordinal - 1)};
+      } else {
+        request = null;
+      }
+    }
+    try {
+      if (!request) {
+        throw new Error('unresolved');
+      }
+      if (request.kind === 'choice') {
+        engine.choose(Number(request.value));
+      } else if (request.kind === 'card') {
+        engine.playCard(request.value);
+      } else if (request.kind === 'deck') {
+        engine.drawCard(request.value);
+      } else if (request.kind === 'pinned') {
+        engine.playPinnedCard(request.value);
+      }
+    } catch (error) {
+      // A link from a stale page: leave the scene where it is rather than
+      // throwing, so the client can read the choices and pick again.
+    }
+    plainForgetRequest();
+  };
+
+  // Page furniture is taken out of the document rather than hidden with CSS.
+  // A reading client works from the markup or the accessibility tree, and a
+  // display:none overlay full of save slots and radio buttons is still noise
+  // in both. Removing the nodes leaves one unambiguous page.
+  var plainStripDom = function() {
+    [
+      '#options', '#save', '#mods', '#radio',
+      '#stats_sidebar_right', '.tab_container',
+      'header', 'footer'
+    ].forEach(function(selector) {
+      Array.prototype.forEach.call(
+        document.querySelectorAll(selector),
+        function(node) {
+          if (node.parentNode) {
+            node.parentNode.removeChild(node);
+          }
+        }
+      );
+    });
+  };
+
+  // Choices, decks and cards arrive as href="#" with the target in a data
+  // attribute. Give each one an address that says what it does, and number
+  // them so a client can refer to "choice 3" unambiguously.
+  // Consecutive hub renders look almost identical in prose, so a reading
+  // client cannot tell whether its last request did anything. One unambiguous
+  // status line at the top of the page gives it a delta to check.
+  var plainStatusLine = function(content) {
+    Array.prototype.forEach.call(
+      content.querySelectorAll('[data-plain-status]'),
+      function(node) {
+        if (node.parentNode) {
+          node.parentNode.removeChild(node);
+        }
+      }
+    );
+    var engine = window.dendryUI && window.dendryUI.dendryEngine;
+    var state = engine && engine.state;
+    if (!state) {
+      return;
+    }
+    var q = state.qualities || {};
+    var number = function(value, digits) {
+      var parsed = Number(value);
+      return Number.isFinite(parsed) ? parsed.toFixed(digits || 0) : '?';
+    };
+    var parts = [
+      'SCENE ' + (state.sceneId || '?'),
+      'TURN ' + number(q.time),
+      String(q.date_label || (number(q.month) + '/' + number(q.year))),
+      'ACTIONS ' + number(q.month_actions) + '/' + number(q.max_month_actions),
+      'LEWICA ' + number(q.left_poll, 1) + '%',
+      'RESOURCES ' + number(q.resources),
+      'UNITY ' + number(q.party_unity)
+    ];
+    if (q.news_headline) {
+      parts.push('LAST: ' + q.news_headline);
+    }
+    var line = document.createElement('p');
+    line.setAttribute('data-plain-status', 'true');
+    line.textContent = parts.join(' · ');
+    content.insertBefore(line, content.firstChild);
+  };
+
+  var plainRewriteLinks = function() {
+    var content = document.getElementById('content');
+    if (!content) {
+      return;
+    }
+    plainStatusLine(content);
+    // This runs more than once per scene — the engine displays the prose
+    // before the choices exist — so any escape hatch added by an earlier pass
+    // is dropped first, and links already dealt with are left alone rather
+    // than numbered twice.
+    Array.prototype.forEach.call(
+      content.querySelectorAll('[data-plain-escape]'),
+      function(node) {
+        if (node.parentNode) {
+          node.parentNode.removeChild(node);
+        }
+      }
+    );
+    var number = 0;
+    plainLinkMap = [];
+    var rewrite = function(selector, describe) {
+      Array.prototype.forEach.call(
+        content.querySelectorAll(selector),
+        function(link) {
+          number += 1;
+          plainLinkMap.push(describe(link));
+          // The address carries the printed ordinal and nothing else, so a
+          // client that reads "[3]" and writes "pick=3" is always right.
+          link.setAttribute('href', '?plain=1&pick=' + number);
+          if (!link.hasAttribute('data-plain-link')) {
+            link.setAttribute('data-plain-link', String(number));
+            link.textContent = '[' + number + '] ' + link.textContent;
+          }
+        }
+      );
+    };
+    rewrite('ul.choices li a[data-choice]', function(link) {
+      return {kind: 'choice', value: link.getAttribute('data-choice')};
+    });
+    [
+      ['ul.decks li a[card-id]', 'deck'],
+      ['ul.hand li a[card-id]', 'card'],
+      ['ul.pinned-cards li a[card-id]', 'pinned']
+    ].forEach(function(pair) {
+      rewrite(pair[0], function(link) {
+        return {kind: pair[1], value: link.getAttribute('card-id')};
+      });
+    });
+    plainWrite(PLAIN_LINKS_KEY, JSON.stringify(plainLinkMap));
+    if (!number) {
+      // A scene with no way out would strand a client that cannot click.
+      var escape = document.createElement('p');
+      escape.setAttribute('data-plain-escape', 'true');
+      var link = document.createElement('a');
+      link.setAttribute('href', '?plain=1&new=1');
+      link.textContent = '[1] Start a new game';
+      escape.appendChild(link);
+      content.appendChild(escape);
+    }
+  };
 
   window.enableImages = function() {
     window.dendryUI.show_portraits = true;
@@ -955,9 +1237,10 @@ window.disableGrayMode = function() {
     {
       id: 'sld',
       className: 'party-sld',
-      explanation: 'Democratic Left Alliance (SLD) — the predecessor of New Left.',
+      explanation: 'Democratic Left Alliance (SLD) — the predecessor of New Left. It also supplied the legal committee for the 2015 Zjednoczona Lewica coalition and the 2019 Lewica list.',
       aliases: [
         ['Democratic Left Alliance', 'Sojusz Lewicy Demokratycznej'],
+        ['Zjednoczona Lewica', 'Zjednoczona Lewica'],
         ['Sojusz Lewicy Demokratycznej', 'Sojusz Lewicy Demokratycznej'],
         ['SLD', 'SLD']
       ]
@@ -1105,6 +1388,78 @@ window.disableGrayMode = function() {
       ]
     },
     {
+      id: 'pzpr',
+      className: 'party-pzpr',
+      explanation: 'Polska Zjednoczona Partia Robotnicza (PZPR) — the communist party that ruled Poland from 1948 until it dissolved itself in January 1990. SdRP, and through it SLD, is its organisational successor, which is the biography every decommunisation fight is really about.',
+      aliases: [
+        ['Polska Zjednoczona Partia Robotnicza', 'Polska Zjednoczona Partia Robotnicza'],
+        ['Polish United Workers\u2019 Party', 'Polska Zjednoczona Partia Robotnicza'],
+        ['Polish United Workers Party', 'Polska Zjednoczona Partia Robotnicza'],
+        ['PZPR', 'PZPR']
+      ]
+    },
+    {
+      id: 'demokraci',
+      className: 'party-demokraci',
+      explanation: 'Partia Demokratyczna \u2013 demokraci.pl \u2014 the small liberal party descended from Unia Wolności. It was the fourth component of the 2006\u20132008 Lewica i Demokraci alliance.',
+      aliases: [
+        ['Partia Demokratyczna', 'Partia Demokratyczna'],
+        ['Demokraci.pl', 'demokraci.pl'],
+        ['demokraci.pl', 'demokraci.pl']
+      ]
+    },
+    {
+      id: 'lid',
+      className: 'party-lid',
+      explanation: 'Lewica i Demokraci (LiD) — the 2006–2008 electoral alliance of SLD, Socjaldemokracja Polska, Unia Pracy and the liberal Democrats. It took 13.15% and 53 seats in 2007, then dissolved within a year over what it was actually for.',
+      aliases: [
+        ['Lewica i Demokraci', 'Lewica i Demokraci'],
+        ['Left and Democrats', 'Lewica i Demokraci'],
+        ['LiD', 'LiD']
+      ]
+    },
+    {
+      id: 'sdpl',
+      className: 'party-sdpl',
+      explanation: 'Socjaldemokracja Polska (SdPl) \u2014 the social-democratic party Marek Borowski founded in March 2004 after leaving SLD with part of its parliamentary club.',
+      aliases: [
+        ['Socjaldemokracja Polska', 'Socjaldemokracja Polska'],
+        ['SdPl', 'SdPl']
+      ]
+    },
+    {
+      id: 'twoj-ruch',
+      className: 'party-twoj-ruch',
+      explanation: 'Twoj Ruch (Your Movement) \u2014 Janusz Palikot\u2019s anticlerical liberal party. Founded as Ruch Palikota, it took 10.02% in 2011, finishing ahead of SLD, and later joined the 2015 Zjednoczona Lewica coalition.',
+      aliases: [
+        ['Ruch Palikota', 'Ruch Palikota'],
+        ['Palikot\u2019s Movement', 'Ruch Palikota'],
+        ['Twoj Ruch', 'Tw\u00f3j Ruch'],
+        ['Tw\u00f3j Ruch', 'Tw\u00f3j Ruch']
+      ]
+    },
+    {
+      id: 'samoobrona',
+      className: 'party-samoobrona',
+      explanation: 'Self-Defence (Samoobrona) — Andrzej Lepper’s agrarian-populist party and a junior partner in the 2006–2007 PiS coalition.',
+      aliases: [
+        ['Self-Defence of the Republic of Poland', 'Samoobrona RP'],
+        ['Samoobrona RP', 'Samoobrona RP'],
+        ['Self-Defence', 'Samoobrona'],
+        ['Samoobrona', 'Samoobrona']
+      ]
+    },
+    {
+      id: 'lpr',
+      className: 'party-lpr',
+      explanation: 'League of Polish Families (LPR) — the clerical-nationalist party of Roman Giertych and the other junior partner in the 2006–2007 PiS coalition.',
+      aliases: [
+        ['League of Polish Families', 'Liga Polskich Rodzin'],
+        ['Liga Polskich Rodzin', 'Liga Polskich Rodzin'],
+        ['LPR', 'LPR']
+      ]
+    },
+    {
       id: 'agrounia',
       className: 'party-agrounia',
       explanation: 'AgroUnia is the agrarian protest movement founded by Michał Kołodziejczak.',
@@ -1197,10 +1552,11 @@ window.disableGrayMode = function() {
     {
       id: 'republicans',
       className: 'party-republicans',
-      explanation: 'Republican Party — a centre-right party formed by former Agreement politicians.',
+      explanation: 'Partia Republikańska — the Polish centre-right party formed by politicians who left Jarosław Gowin\u2019s Agreement. It has nothing to do with the United States Republican Party.',
       aliases: [
-        ['Republican Party', 'Partia Republikańska'],
-        ['Partia Republikańska', 'Partia Republikańska']
+        ['Partia Republikańska', 'Partia Republikańska'],
+        ['Polish Republicans', 'Partia Republikańska'],
+        ['Republikanie', 'Partia Republikańska']
       ]
     },
     {
@@ -1354,6 +1710,13 @@ window.disableGrayMode = function() {
     'zieloni': ['Zieloni', 'Partia Zieloni'],
     'pis': ['PiS', 'Prawo i Sprawiedliwość'],
     'psl': ['PSL', 'Polskie Stronnictwo Ludowe'],
+    'pzpr': ['PZPR', 'Polska Zjednoczona Partia Robotnicza'],
+    'demokraci': ['PD', 'Partia Demokratyczna'],
+    'lid': ['LiD', 'Lewica i Demokraci'],
+    'sdpl': ['SdPl', 'Socjaldemokracja Polska'],
+    'twoj-ruch': ['TR', 'Tw\u00f3j Ruch'],
+    'samoobrona': ['Samoobrona', 'Samoobrona RP'],
+    'lpr': ['LPR', 'Liga Polskich Rodzin'],
     'agrounia': ['AgroUnia', 'AgroUnia'],
     'polish-coalition': ['KP', 'Koalicja Polska'],
     'p2050': ['PL2050', 'Polska 2050'],
@@ -1548,6 +1911,181 @@ window.disableGrayMode = function() {
       aliases: ['Movement of True Europe', 'Ruch Prawdziwa Europa']
     },
     {
+      id: 'gazeta_wyborcza',
+      explanation: 'Gazeta Wyborcza is the liberal daily founded in 1989 out of the Round Table talks and edited by Adam Michnik. It broke the Rywin affair against an SLD government in 2002 and Jarosław Kaczyński’s tower recordings in 2019, and under PiS has lost state advertising and faced dozens of lawsuits.',
+      aliases: ['Gazeta Wyborcza', 'Wyborcza']
+    },
+    {
+      id: 'rywin_affair',
+      explanation: 'The Rywin affair began on 27 December 2002, when Gazeta Wyborcza published film producer Lew Rywin’s demand for 17.5 million dollars in exchange for an amendment to the media law, made on behalf of what he called the group holding power. The televised commission that followed destroyed the credibility of Leszek Miller’s government.',
+      aliases: ['Rywin affair', 'Lew Rywin', 'Rywin']
+    },
+    {
+      id: 'smolensk_crash',
+      explanation: 'On 10 April 2010 a government Tu-154 crashed in fog near Smolensk, killing all 96 people aboard, including President Lech Kaczyński and the left’s presidential candidate Jerzy Szmajdziński. Rival reports, a withheld wreck and PiS’s assassination theory turned the disaster into the party’s founding myth.',
+      aliases: ['Smoleńsk', 'Smolensk']
+    },
+    {
+      id: 'katyn',
+      explanation: 'The Katyń massacres were the 1940 executions of some 22,000 Polish officers and officials by the Soviet NKVD. The 2010 delegation was flying to the seventieth anniversary when it crashed.',
+      aliases: ['Katyń massacres', 'Katyn massacres', 'Katyń', 'Katyn']
+    },
+    {
+      id: 'solidarity',
+      explanation: 'Solidarity was the independent trade union born of the 1980 Gdańsk strike that broke the communist monopoly. Both PO and PiS claim its inheritance; today’s union leadership is close to PiS, while OPZZ sits closer to the left.',
+      aliases: ['Solidarity', 'Solidarność', 'Solidarnosc']
+    },
+    {
+      id: 'kod',
+      explanation: 'The Committee for the Defence of Democracy (KOD) was the mass civic movement founded in November 2015 against the Constitutional Tribunal takeover. It produced the largest demonstrations since 1989 and then lost authority through an invoice scandal involving its own leader.',
+      aliases: ['Committee for the Defence of Democracy', 'KOD']
+    },
+    {
+      id: 'venice_commission',
+      explanation: 'The Venice Commission is the Council of Europe’s advisory body on constitutional law. Its opinions on the Polish Tribunal, the judicial council and the courts carry no enforcement power but define the European legal consensus.',
+      aliases: ['Venice Commission']
+    },
+    {
+      id: 'cjeu',
+      explanation: 'The Court of Justice of the European Union rules on EU law and has issued interim measures and judgments against parts of the Polish judicial reforms, including the Supreme Court retirement rules and the disciplinary chamber.',
+      aliases: ['Court of Justice of the European Union', 'CJEU']
+    },
+    {
+      id: 'krs',
+      explanation: 'The National Council of the Judiciary (KRS) nominates judges. Since 2018 its judicial members are elected by the Sejm rather than by judges, which is why European courts question every appointment made through it.',
+      aliases: ['National Council of the Judiciary', 'KRS']
+    },
+    {
+      id: 'supreme_court_pl',
+      explanation: 'The Supreme Court is Poland’s highest court of appeal, and it also validates elections. PiS’s 2017–2018 laws added new chambers and forced retirements, producing a dispute over which of its judges are lawfully appointed.',
+      aliases: ['Supreme Court']
+    },
+    {
+      id: 'nik',
+      explanation: 'The Supreme Audit Office (NIK) audits public spending and reports to the Sejm. Its president serves a six-year term and cannot easily be removed — which is why Marian Banaś became a problem for the party that appointed him.',
+      aliases: ['Supreme Audit Office', 'NIK']
+    },
+    {
+      id: 'cba',
+      explanation: 'The Central Anti-Corruption Bureau (CBA) was created in 2006 as the Fourth Republic’s flagship agency, answering to the prime minister. Its televised operations shaped the politics of the period, including the sting that ended Andrzej Lepper’s career.',
+      aliases: ['Central Anti-Corruption Bureau', 'CBA']
+    },
+    {
+      id: 'fourth_republic',
+      explanation: 'The Fourth Republic (IV RP) was PiS’s 2005–2007 programme for replacing the post-1989 settlement: new anti-corruption bodies, mass lustration, a purge of the elites and a state that treated the existing institutions as compromised.',
+      aliases: ['Fourth Republic', 'IV RP']
+    },
+    {
+      id: 'third_republic',
+      explanation: 'The Third Republic is the Polish state established after 1989 under the 1997 Constitution — the settlement PiS argues was captured at birth and which the left drafted much of.',
+      aliases: ['Third Republic']
+    },
+    {
+      id: 'national_assembly',
+      explanation: 'The National Assembly is the Sejm and Senate sitting together. It adopted the 1997 Constitution, receives the presidential oath and can declare a president unable to serve.',
+      aliases: ['National Assembly']
+    },
+    {
+      id: 'article_131',
+      explanation: 'Article 131 of the Constitution puts the Marshal of the Sejm in temporary charge of presidential duties when the president cannot serve. It is how Bronisław Komorowski ran the Republic after Smolensk, and how any oath dispute would be resolved.',
+      aliases: ['Article 131']
+    },
+    {
+      id: 'marshal_of_the_sejm',
+      explanation: 'The Marshal of the Sejm chairs the lower chamber, controls its agenda and stands first in line to exercise presidential powers. The office is a genuine prize in any coalition bargain.',
+      aliases: ['Marshal of the Sejm']
+    },
+    {
+      id: 'electoral_threshold',
+      explanation: 'The electoral threshold is 5% for a single party’s committee and 8% for a registered coalition. Getting that choice wrong wasted 7.55% of the vote in 2015; getting it right converted the same alliance into 49 deputies in 2019.',
+      aliases: ['electoral threshold']
+    },
+    {
+      id: 'state_subvention',
+      explanation: 'The state subvention is the annual public payment to parties that clear 3% of the vote, scaled by result. It funds staff, offices and campaigns, which is why a party can survive outside parliament on 3.62% and die on 2.9%.',
+      aliases: ['state subvention', 'parliamentary subvention']
+    },
+    {
+      id: 'lustration',
+      explanation: 'Lustration is the vetting of public figures for collaboration with the communist security services. The 2007 law extending it to tens of thousands of people was struck down in part by the Constitutional Tribunal, back when the Tribunal still ruled against governments.',
+      aliases: ['lustration']
+    },
+    {
+      id: 'cohabitation',
+      explanation: 'Cohabitation is a government and a president from opposing camps. The president can veto legislation, and only a three-fifths Sejm majority overrides him, so cohabitation sets the ceiling on what any cabinet can pass.',
+      aliases: ['cohabitation']
+    },
+    {
+      id: 'warm_water',
+      explanation: 'Warm water in the tap (ciepła woda w kranie) was Donald Tusk’s own description of his governing philosophy: administer competently, promise nothing, change little.',
+      aliases: ['warm water in the tap', 'ciepła woda w kranie']
+    },
+    {
+      id: 'junk_contracts',
+      explanation: 'Junk contracts (umowy śmieciowe) are civil-law contracts used in place of employment: no notice period, no paid holiday, no sick pay and minimal social insurance. They covered a large share of young Polish workers through the 2010s.',
+      aliases: ['junk contracts', 'umowy śmieciowe']
+    },
+    {
+      id: 'ofe',
+      explanation: 'OFE were the private pension funds created in the 1999 reform. In 2013–2014 the Tusk government moved their bond holdings into the state system, cutting recorded debt and convincing many savers that no pension promise is safe.',
+      aliases: ['OFE']
+    },
+    {
+      id: 'child_benefit_500',
+      explanation: 'The 500+ child benefit, introduced in 2016, paid a flat monthly sum per child and became PiS’s central social achievement — universal for families with children and closed to everyone else.',
+      aliases: ['child benefit', '500+']
+    },
+    {
+      id: 'black_protests',
+      explanation: 'The Black Protests were the mass women’s mobilisations against abortion bans: Black Monday in October 2016, which forced the Sejm to reject a citizens’ ban 352 to 58, then Black Wednesday and Black Friday in 2018.',
+      aliases: ['Black Monday', 'Black Wednesday', 'Black Friday', 'Black Protests']
+    },
+    {
+      id: 'save_women',
+      explanation: 'Save Women (Ratujmy Kobiety) was the citizens’ bill to liberalise abortion access, rejected by the Sejm in January 2018 while a further restriction continued through committee.',
+      aliases: ['Save Women', 'Ratujmy Kobiety']
+    },
+    {
+      id: 'ustawa_20',
+      explanation: 'Ustawa 2.0 was Jarosław Gowin’s 2018 higher-education law, concentrating power in rectors and threatening provincial universities. Students and junior academics occupied buildings in five cities against it.',
+      aliases: ['Ustawa 2.0']
+    },
+    {
+      id: 'znp',
+      explanation: 'ZNP, the Polish Teachers’ Union, is the largest education union and led the three-week national strike of April 2019, which ended without a pay agreement before the school-leaving exams.',
+      aliases: ['ZNP', 'Polish Teachers’ Union']
+    },
+    {
+      id: 'all_polish_youth',
+      explanation: 'The All-Polish Youth is a radical nationalist youth organisation, revived in 1989, from which Roman Giertych and much of the League of Polish Families leadership came.',
+      aliases: ['All-Polish Youth', 'Młodzież Wszechpolska']
+    },
+    {
+      id: 'column_hall',
+      explanation: 'The Column Hall is a side room of the Sejm. The 2017 budget was voted there in December 2016, away from the occupied chamber and without a working vote counter, and the opposition has disputed its validity ever since.',
+      aliases: ['Column Hall']
+    },
+    {
+      id: 'krakowskie_przedmiescie',
+      explanation: 'Krakowskie Przedmieście is the avenue in front of the Presidential Palace where the Smolensk cross stood in 2010, and where the defenders of the cross faced off against counter-demonstrators for months.',
+      aliases: ['Krakowskie Przedmieście', 'Krakowskie Przedmiescie']
+    },
+    {
+      id: 'european_council',
+      explanation: 'The European Council brings together EU heads of government. Donald Tusk left the Polish premiership in 2014 to preside over it until 2019, which shaped both his standing in Brussels and PiS’s hostility to him.',
+      aliases: ['European Council']
+    },
+    {
+      id: 'tape_scandal',
+      explanation: 'The tape scandal (afera taśmowa) of June 2014 published secret restaurant recordings of ministers and central bankers, including the interior minister’s remark that the Polish state exists theoretically. Nobody was convicted for the substance, and the contempt on the tapes outlived the government.',
+      aliases: ['tape scandal', 'afera taśmowa']
+    },
+    {
+      id: 'wprost',
+      explanation: 'Wprost is a Polish weekly magazine, which published the 2014 restaurant recordings and resisted a prosecutor’s attempt to seize the material from its newsroom.',
+      aliases: ['Wprost']
+    },
+    {
       id: 'gutowski',
       explanation: 'Marcin Gutowski is a Polish investigative journalist associated with major public-interest reporting projects.',
       aliases: ['Marcin Gutowski', 'Gutowski']
@@ -1571,6 +2109,142 @@ window.disableGrayMode = function() {
   );
 
   var personDefinitions = [
+    {
+      id: 'gierek',
+      className: 'party-pzpr',
+      explanation: 'Edward Gierek led the PZPR from 1970 to 1980: authoritarian rule, censorship and the debt that broke the economy, but also mass housing, industry and a standard of living many Poles still remember as the best they had. He is the test case in every argument about decommunisation and the left\u2019s own past.',
+      aliases: ['Edward Gierek', 'Gierek']
+    },
+    {
+      id: 'lubnauer',
+      className: 'party-ko',
+      explanation: 'Katarzyna Lubnauer took over Nowoczesna in November 2017 after Ryszard Petru\u2019s collapse, and led what was left of it into Koalicja Obywatelska.',
+      aliases: ['Katarzyna Lubnauer', 'Lubnauer']
+    },
+    {
+      id: 'kosiniak_kamysz',
+      className: 'party-psl',
+      explanation: 'Władysław Kosiniak-Kamysz has led PSL since 2015. A doctor and former labour minister in the Tusk government, he keeps the party socially conservative, agrarian and available to almost any coalition.',
+      aliases: ['Władysław Kosiniak-Kamysz', 'Wladyslaw Kosiniak-Kamysz', 'Kosiniak-Kamysz', 'Kosiniak']
+    },
+    {
+      id: 'morawska_stanecka',
+      className: 'party-lewica',
+      explanation: 'Gabriela Morawska-Stanecka is a lawyer elected to the Senate on the 2019 opposition pact and chosen as a deputy Marshal of the Senate \u2014 one of the two seats the Left holds in the upper chamber.',
+      aliases: ['Gabriela Morawska-Stanecka', 'Morawska-Stanecka']
+    },
+    {
+      id: 'korwin_mikke',
+      className: 'party-new-hope',
+      explanation: 'Janusz Korwin-Mikke is the veteran free-market and socially reactionary politician whose KORWiN party took 4.76% in 2015 and whose voters became part of Konfederacja.',
+      aliases: ['Janusz Korwin-Mikke', 'Korwin-Mikke']
+    },
+    {
+      id: 'ogorek',
+      className: 'party-nonpartisan',
+      explanation: 'Magdalena Ogórek was the SLD-backed candidate in the 2015 presidential election: an academic with no political record, nominated for television. She campaigned at arm’s length from the party, took 2.38% — the worst result the Polish left has recorded — and later presented programmes on PiS-run public television.',
+      aliases: ['Magdalena Ogórek', 'Magdalena Ogorek', 'Ogórek', 'Ogorek']
+    },
+    {
+      id: 'michnik',
+      explanation: 'Adam Michnik is a former dissident, Solidarity adviser and political prisoner who founded Gazeta Wyborcza in 1989 and has edited it since. He published the Rywin affair against an SLD government in 2002 and has kept the paper adversarial under PiS.',
+      aliases: ['Adam Michnik', 'Michnik']
+    },
+    {
+      id: 'walesa',
+      explanation: 'Lech Wałęsa led the Solidarity strike at the Gdańsk shipyard in 1980, won the Nobel Peace Prize and served as president from 1990 to 1995, when Aleksander Kwaśniewski defeated him.',
+      aliases: ['Lech Wałęsa', 'Lech Walesa', 'Wałęsa', 'Walesa']
+    },
+    {
+      id: 'cimoszewicz',
+      className: 'party-sld',
+      explanation: 'Włodzimierz Cimoszewicz was a left-wing prime minister in 1996–1997 and foreign minister under Leszek Miller. He led every poll before the 2005 presidential election and withdrew in September after a parliamentary commission raised an accusation about his asset declaration.',
+      aliases: ['Włodzimierz Cimoszewicz', 'Wlodzimierz Cimoszewicz', 'Cimoszewicz']
+    },
+    {
+      id: 'belka',
+      className: 'party-sld',
+      explanation: 'Marek Belka is an economist who governed as a technocratic prime minister from May 2004 to October 2005, stabilised the public finances and remains the last left-wing prime minister Poland has had. He later ran the national bank and sat in the European Parliament for the left.',
+      aliases: ['Marek Belka', 'Belka']
+    },
+    {
+      id: 'borowski',
+      className: 'party-sdpl',
+      explanation: 'Marek Borowski was Marshal of the Sejm under Leszek Miller and left SLD in March 2004 with part of its parliamentary club to found Socjaldemokracja Polska. He took 10.33% in the 2005 presidential election and later sat in the Senate.',
+      aliases: ['Marek Borowski', 'Borowski']
+    },
+    {
+      id: 'napieralski',
+      className: 'party-sld',
+      explanation: 'Grzegorz Napieralski led SLD from 2008 and took 13.68% in the 2010 presidential election after Jerzy Szmajdziński died at Smolensk — the best left-wing presidential result since 2005.',
+      aliases: ['Grzegorz Napieralski', 'Napieralski']
+    },
+    {
+      id: 'szmajdzinski',
+      className: 'party-sld',
+      explanation: 'Jerzy Szmajdziński was a defence minister and deputy Marshal of the Sejm, and the left’s candidate for the presidency in 2010. He died in the Smolensk crash on 10 April 2010.',
+      aliases: ['Jerzy Szmajdziński', 'Jerzy Szmajdzinski', 'Szmajdziński', 'Szmajdzinski']
+    },
+    {
+      id: 'palikot',
+      className: 'party-twoj-ruch',
+      explanation: 'Janusz Palikot is a vodka entrepreneur and former PO deputy whose anticlerical Ruch Palikota took 10.02% in 2011, finishing ahead of SLD. The movement, renamed Twój Ruch, joined the 2015 Zjednoczona Lewica coalition.',
+      aliases: ['Janusz Palikot', 'Palikot']
+    },
+    {
+      id: 'maciej_konieczny',
+      className: 'party-razem',
+      explanation: 'Maciej Konieczny is a Razem deputy elected on the 2019 Lewica list, working mainly on health, industrial policy and party organisation. He is not Wojciech Konieczny, the PPS senator.',
+      aliases: ['Maciej Konieczny']
+    },
+    {
+      id: 'komorowski',
+      className: 'party-po',
+      explanation: 'Bronisław Komorowski was Marshal of the Sejm, acting head of state after the Smolensk crash under Article 131, and president from 2010 to 2015. He lost re-election to Andrzej Duda after a campaign he treated as a formality.',
+      aliases: ['Bronisław Komorowski', 'Bronislaw Komorowski', 'Komorowski']
+    },
+    {
+      id: 'kopacz',
+      className: 'party-po',
+      explanation: 'Ewa Kopacz was health minister, Marshal of the Sejm and prime minister from September 2014 to November 2015, inheriting Donald Tusk’s cabinet fourteen months before it lost the election.',
+      aliases: ['Ewa Kopacz', 'Kopacz']
+    },
+    {
+      id: 'lech_kaczynski',
+      className: 'party-pis',
+      explanation: 'Lech Kaczyński, twin brother of Jarosław, was mayor of Warsaw and president of Poland from 2005 until his death in the Smolensk crash on 10 April 2010.',
+      aliases: ['Lech Kaczyński', 'Lech Kaczynski']
+    },
+    {
+      id: 'marcinkiewicz',
+      className: 'party-pis',
+      explanation: 'Kazimierz Marcinkiewicz was PiS’s first prime minister after the 2005 election, leading a minority government until Jarosław Kaczyński took the office himself in July 2006.',
+      aliases: ['Kazimierz Marcinkiewicz', 'Marcinkiewicz']
+    },
+    {
+      id: 'lepper',
+      className: 'party-samoobrona',
+      explanation: 'Andrzej Lepper led the agrarian-populist Samoobrona, made his name blocking roads with tractors, and served as deputy prime minister and agriculture minister until a land-rezoning sting ended his career and the coalition in July 2007.',
+      aliases: ['Andrzej Lepper', 'Lepper']
+    },
+    {
+      id: 'giertych',
+      className: 'party-lpr',
+      explanation: 'Roman Giertych led the clerical-nationalist League of Polish Families and the All-Polish Youth, and served as deputy prime minister and education minister in 2006–2007. He later became a lawyer for opposition politicians against PiS.',
+      aliases: ['Roman Giertych', 'Giertych']
+    },
+    {
+      id: 'blida',
+      className: 'party-sld',
+      explanation: 'Barbara Blida was an SLD construction minister and deputy who shot herself in April 2007 during a search of her home by anti-corruption agents, in a case that came to stand for the Fourth Republic’s methods.',
+      aliases: ['Barbara Blida', 'Blida']
+    },
+    {
+      id: 'macierewicz',
+      className: 'party-pis',
+      explanation: 'Antoni Macierewicz is a PiS politician and former defence minister who ran the parliamentary team and later the state subcommittee that treated the Smolensk crash as an assassination.',
+      aliases: ['Antoni Macierewicz', 'Macierewicz']
+    },
     {
       id: 'duda',
       className: 'party-pis',
@@ -1690,7 +2364,7 @@ window.disableGrayMode = function() {
     },
     {
       id: 'gowin',
-      className: 'party-pis',
+      className: 'party-agreement',
       explanation: 'Jarosław Gowin is the founder of Agreement (Porozumienie) and a former deputy prime minister in the United Right camp.',
       aliases: ['Jaroslaw Gowin', 'Jarosław Gowin', 'Gowin']
     },
@@ -1836,8 +2510,8 @@ window.disableGrayMode = function() {
     },
     {
       id: 'biejat',
-      className: 'party-lewica',
-      explanation: 'Magdalena Biejat is a New Left politician known for social policy, tenant rights, and welfare-state advocacy.',
+      className: 'party-razem',
+      explanation: 'Magdalena Biejat is a Razem politician known for social policy, tenant rights and welfare-state advocacy. She entered the Sejm on the 2019 Lewica list as one of Razem\u2019s six deputies.',
       aliases: ['Magdalena Biejat', 'Biejat']
     },
     {
@@ -1885,8 +2559,8 @@ window.disableGrayMode = function() {
     },
     {
       id: 'dziemianowicz',
-      className: 'party-lewica',
-      explanation: 'Agnieszka Dziemianowicz-Bąk is a New Left politician focused on labor rights, education, and social policy reform.',
+      className: 'party-razem',
+      explanation: 'Agnieszka Dziemianowicz-Bąk entered the Sejm in 2019 as one of Razem\u2019s six deputies and works on labour rights, education and social policy. She sat with the New Left after Razem left the joint club.',
       aliases: [
         'Agnieszka Dziemianowicz-Bak',
         'Agnieszka Dziemianowicz-Bąk',
@@ -2662,8 +3336,8 @@ window.disableGrayMode = function() {
     },
     {
       id: 'hausner',
-      className: 'party-nonpartisan',
-      explanation: 'Jerzy Hausner is an economist and former deputy prime minister who authored the mid-2000s public-finance reform plan.',
+      className: 'party-sld',
+      explanation: 'Jerzy Hausner is an economist who served as labour minister and deputy prime minister in the SLD governments of Leszek Miller and Marek Belka, and who authored the mid-2000s public-finance reform plan that cut spending under a left-wing government.',
       aliases: ['Jerzy Hausner', 'Hausner']
     },
     {
@@ -3118,6 +3792,13 @@ window.disableGrayMode = function() {
     'zieloni': true,
     'pis': true,
     'psl': true,
+    'pzpr': true,
+    'demokraci': true,
+    'lid': true,
+    'sdpl': true,
+    'twoj-ruch': true,
+    'samoobrona': true,
+    'lpr': true,
     'agrounia': true,
     'polish-coalition': true,
     'p2050': true,
@@ -3278,6 +3959,70 @@ window.disableGrayMode = function() {
 
     var engine = window.dendryUI && window.dendryUI.dendryEngine;
     var qualities = engine && engine.state && engine.state.qualities;
+
+    // The opening history briefing describes 1993–2015, when Koalicja
+    // Obywatelska did not exist and several figures sat in other camps. Inside
+    // those pages they carry the party they actually belonged to at the time.
+    var briefingScene = engine && engine.state && engine.state.sceneId;
+    if (
+      typeof briefingScene === 'string' &&
+      briefingScene.indexOf('poland_intro') === 0
+    ) {
+      var historicalCamps = {
+        tusk: {
+          className: 'party-po',
+          explanation: 'Donald Tusk co-founded Platforma Obywatelska in 2001, lost the 2005 presidential runoff to Lech Kaczyński, and governed as prime minister from 2007 to 2014 before leaving for the European Council.'
+        },
+        ogorek: {
+          className: 'party-sld',
+          explanation: 'Magdalena Ogórek was SLD\u2019s candidate in the 2015 presidential election: an academic with no political record, nominated for television. She campaigned at arm\u2019s length from the party, took 2.38% \u2014 the worst result the Polish left has recorded \u2014 and later presented programmes on PiS-run public television.'
+        },
+        nowacka: {
+          className: 'party-sld',
+          explanation: 'Barbara Nowacka led the Zjednoczona Lewica coalition into the 2015 election. Registered as a coalition, it needed 8%, took 7.55% and elected nobody; she moved to the liberal centre afterwards.'
+        }
+      };
+      var historicalCamp = historicalCamps[definition.id];
+      if (historicalCamp) {
+        return {
+          id: definition.id,
+          className: historicalCamp.className,
+          explanation: historicalCamp.explanation,
+          aliases: definition.aliases
+        };
+      }
+    }
+
+    // Badges follow the organisation a politician actually belongs to at the
+    // time. Biedroń is Wiosna until the unification congress; the two Razem
+    // deputies who stayed with the Left carry Razem until Razem itself merges
+    // or walks out of the club.
+    var leftMerged =
+      Number(qualities && qualities.nowa_lewica_merger_agreed) > 0;
+    var razemGone =
+      Number(qualities && qualities.razem_merged) > 0 ||
+      Number(qualities && qualities.razem_split) > 0;
+
+    if (definition.id === 'biedron' && !leftMerged) {
+      return {
+        id: definition.id,
+        className: 'party-wiosna',
+        explanation: 'Robert Biedroń founded Wiosna in February 2019 after two terms as a deputy and four years as mayor of Słupsk. Wiosna is a separate party inside the Lewica alliance until the unification congress.',
+        aliases: definition.aliases
+      };
+    }
+
+    if (
+      (definition.id === 'biejat' || definition.id === 'dziemianowicz') &&
+      razemGone
+    ) {
+      return {
+        id: definition.id,
+        className: 'party-lewica',
+        explanation: definition.explanation,
+        aliases: definition.aliases
+      };
+    }
 
     var isRazemLedMerger =
       Number(qualities && qualities.nowa_lewica_merger_agreed) > 0 &&
@@ -4153,15 +4898,9 @@ window.disableGrayMode = function() {
 
   window.updateSidebar = function() {
       $('#qualities').empty();
-      if (plainMode) {
-        // The ledger's own on-arrival actions still have to run: they compute
-        // qualities the scenes read. Only the rendering is dropped.
-        var plainStatus = dendryUI.game.scenes.status;
-        if (plainStatus && plainStatus.onArrival) {
-          dendryUI.dendryEngine._runActions(plainStatus.onArrival);
-        }
-        return;
-      }
+      // The ledger renders in plain mode too. Stripping it was a mistake: it
+      // is the only place the qualities appear as text, and a client that
+      // cannot read the numbers cannot make a decision worth playtesting.
       var baseStatus = dendryUI.game.scenes.status;
       var scene = dendryUI.game.scenes[window.statusTab] || baseStatus;
       if (baseStatus.onArrival) {
@@ -9809,6 +10548,8 @@ window.disableGrayMode = function() {
         // Party spans still carry the names the prose depends on; everything
         // below this line draws something.
         window.enhancePartyElements(content);
+        plainRewriteLinks();
+        plainSaveState();
         return;
       }
       window.updateMoodBackground();
@@ -10133,13 +10874,20 @@ window.disableGrayMode = function() {
   window.onload = function() {
     window.dendryUI.loadSettings({show_portraits: true});
     if (plainMode) {
-      // Nothing decorative is initialised at all: no tabs, no card art, no
-      // mood wash, no radio. The stylesheet strips what the engine still
-      // emits, and the page is left as text and links.
+      // Nothing decorative is initialised: no tabs, no card art, no mood wash,
+      // no radio, no press rail. Resume where the last request left off, carry
+      // out whatever the address asked for, then leave the page as text, the
+      // ledger, and links that are ordinary URLs.
       document.body.classList.add('plain-mode');
       window.dendryUI.show_portraits = false;
+      plainStripDom();
+      plainRestoreState();
+      plainApplyRequest();
+      plainBooted = true;
       window.updateSidebar();
       window.updateSidebarRight();
+      plainRewriteLinks();
+      plainSaveState();
       return;
     }
     if (window.dendryUI.dark_mode) {

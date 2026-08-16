@@ -444,24 +444,70 @@ the second is the qdisplay name.
 
 ### Plain mode
 
-`?plain=1` on the game URL strips the interface to scene text and hyperlinks:
-no images, charts, maps, party logos, card art, press rail, ledger, radio,
-mood wash, colour or animation. `#plain` works too, `?plain=0` switches it off,
-and the choice is remembered in `localStorage` under `dss_plain_mode` until
-changed.
+`?plain=1` on the game URL strips the interface to scene text, the ledger and
+hyperlinks: no images, charts, maps, party logos, card art, press rail, radio,
+tabs, save dialogs, mood wash, colour or animation. `#plain` works too,
+`?plain=0` switches it off, and the choice is remembered in `localStorage`
+under `dss_plain_mode`. There is deliberately no control for it in the
+interface, and the smoke suite fails if one appears.
 
-There is deliberately no control for it anywhere in the interface, and the
-smoke suite fails if one appears. It is a development and inspection aid — for
-reading a chain without the presentation in the way, checking what the prose
-carries on its own, or driving the game where the graphics cannot load — not a
-player-facing option.
+Its purpose is automated playtesting: driving the game with a browser agent or
+a script, reading a chain without the presentation in the way, or playing where
+the graphics cannot load.
 
-The mode is not a no-JavaScript build and cannot become one: the engine
-evaluates every quality, view-if and on-arrival in the browser, and a choice is
-advanced by a click handler. What plain mode removes is everything
-presentational. `window.dssPlainMode` reports the state, `updateSidebar`,
-`updateSidebarRight`, `onDisplayContent` and `onload` return early rather than
-rendering into a hidden panel, and `body.plain-mode` in `game.css` overrides
+**It is played by navigation, not by clicking.** Normally every choice is
+`<a href="#">` with a click handler, which an automated client cannot address
+or distinguish. In plain mode each action becomes a real URL:
+
+| Address | Action |
+| --- | --- |
+| `?plain=1&new=1` | Discard the stored session and start a new game |
+| `?plain=1` | Resume where the last request left off |
+| `?plain=1&pick=N` | Take the Nth printed link, whatever kind it is |
+| `?plain=1&do=N` | Alias for `pick=N` |
+| `?plain=1&deck=<id>` | Draw from a named deck |
+| `?plain=1&card=<id>` | Play a named card from the hand |
+| `?plain=1&pinned=<id>` | Play a named pinned card |
+
+**Everything in the public protocol counts from one, and the printed ordinal is
+the number in the address.** Links are numbered `[1]`, `[2]`, … in the order
+they appear and each one's `href` is `?plain=1&pick=<that same number>`. A
+client that reads `[3] Convene the leadership` and constructs `pick=3` — or
+guesses `do=3` — gets exactly that link. The engine's own zero-based choice
+index never appears in a URL: a protocol that disagreed with its own printed
+ordinals would not fail, it would quietly perform the wrong action, which is
+the worst failure mode available.
+
+`pick` spans every kind of link, so ordinal 4 works whether it is a choice, a
+deck, a hand card or a pinned card. The named forms remain for scripts that
+already know an id and would rather not count.
+
+Two things are written to `localStorage` after every render: the engine state
+under `dss_plain_state`, and the ordinal-to-action map under `dss_plain_links`.
+The map is what lets `pick=3` still be resolved after the reload that the click
+causes, and it is read into `plainIncomingLinks` once at script load — before
+the engine's opening display overwrites it — so a request always resolves
+against the page the link came from.
+
+Every page opens with a status line — scene id, turn, date, actions used, poll,
+resources, unity and the last `news_headline` — because consecutive hub renders
+are near-identical in prose and a client otherwise cannot tell whether its last
+request did anything.
+
+Two ordering hazards are worth knowing if you touch this code. The engine
+begins a fresh game as soon as the document is ready, before `window.onload`
+runs, so the save is gated behind `plainBooted` — without it the first display
+of a new game overwrites the session the navigation is trying to resume. And
+`plainRewriteLinks` runs more than once per scene, because the prose is
+displayed before the choices exist; it therefore removes any escape hatch added
+by an earlier pass and skips links it has already numbered.
+
+The mode is not a no-JavaScript build and cannot become one without a server:
+the engine evaluates every quality, view-if and on-arrival in the browser.
+What it removes is everything presentational, and what it adds is an address
+for every action. `window.dssPlainMode` reports the state, page furniture is
+deleted from the DOM rather than hidden — a `display:none` overlay is still
+noise in the accessibility tree — and `body.plain-mode` in `game.css` overrides
 what the engine still emits.
 
 ### Compiler errors

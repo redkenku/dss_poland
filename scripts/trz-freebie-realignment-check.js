@@ -30,6 +30,7 @@ function run(seed) {
   }
   choose('root.campaign_game');
   choose('root.standard');
+  choose('poland_intro.short_brief');
   choose('poland_hub');
   return {engine: engine, Q: engine.state.qualities, choose: choose};
 }

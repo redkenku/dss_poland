@@ -1413,6 +1413,7 @@ function testPartyDeckWeights(game) {
   engine.beginGame(['weighted-party-deck-check']);
   choose('root.campaign_game');
   choose('root.standard');
+  choose('poland_intro.short_brief');
   choose('poland_hub');
 
   const weight = function(choice) {
@@ -2526,7 +2527,6 @@ function testPartyPresentationAssets() {
     'The hidden plain mode is gone or no longer reachable from the address'
   );
   [
-    'window.updateSidebar = function() {',
     'window.updateSidebarRight = function() {',
     'window.onDisplayContent = function() {',
     'window.onload = function() {',
@@ -2538,6 +2538,65 @@ function testPartyPresentationAssets() {
       entry + ' no longer honours plain mode and will draw over it'
     );
   });
+  // The ledger must keep rendering: it is the only text form of the qualities,
+  // and a client that cannot read them cannot make a decision worth testing.
+  const sidebarAt = presentationSource.indexOf('window.updateSidebar = function');
+  assert(
+    !presentationSource.slice(sidebarAt, sidebarAt + 400).includes('plainMode'),
+    'Plain mode skips the ledger again; the numbers disappear with it'
+  );
+  // Plain mode is played by navigation, so every action needs a real address
+  // and the session has to survive the reload each one causes.
+  [
+    "link.setAttribute('href', '?plain=1&pick=' + number)",
+    "['ul.decks li a[card-id]', 'deck']",
+    "['ul.hand li a[card-id]', 'card']",
+    "['ul.pinned-cards li a[card-id]', 'pinned']",
+    'var PLAIN_STATE_KEY',
+    'var PLAIN_LINKS_KEY',
+    'plainRestoreState()',
+    'plainApplyRequest()',
+    'plainStripDom()',
+    'data-plain-status',
+  ].forEach(function(fragment) {
+    assert(
+      presentationSource.includes(fragment),
+      'Plain mode lost its URL-driven navigation: ' + fragment
+    );
+  });
+  // The printed ordinal and the number in the address must never disagree. A
+  // client reads "[3]" and writes "3"; if the protocol were zero-based it
+  // would silently take the wrong action rather than fail.
+  assert(
+    presentationSource.includes(
+      "link.textContent = '[' + number + '] ' + link.textContent"
+    ) &&
+      /var entry = plainIncomingLinks\[ordinal - 1\]/.test(presentationSource) &&
+      /kind: 'choice', value: String\(ordinal - 1\)/.test(presentationSource) &&
+      !/\?plain=1&do=' \+ link\.getAttribute/.test(presentationSource),
+    'Plain mode numbers its links from one but addresses them from zero'
+  );
+  // "do" is kept as an alias precisely because a client may guess it, so it
+  // has to mean the same thing as "pick" rather than the engine's own index.
+  assert(
+    /\(pick\|do\|card\|deck\|pinned\)=/.test(presentationSource) &&
+      /request\.kind === 'pick' \|\| request\.kind === 'do'/
+        .test(presentationSource),
+    'The do= alias no longer resolves to the printed ordinal'
+  );
+  // The opening display rewrites the stored link map, so the request has to be
+  // resolved against a snapshot taken before anything renders.
+  assert(
+    /var plainIncomingLinks = plainLoadLinkMap\(\);/.test(presentationSource),
+    'The link map is read after the first render and will resolve stale picks'
+  );
+  // The engine starts a fresh game before onload; saving that first display
+  // would wipe the session the very navigation is trying to resume.
+  assert(
+    /var plainBooted = false/.test(presentationSource) &&
+      /if \(!plainMode \|\| !plainBooted/.test(presentationSource),
+    'The plain-mode save no longer waits for the restore and will self-clobber'
+  );
   assert(
     !/id=['"]plain|plain-mode-toggle|>\s*Plain mode\s*</.test(
       fs.readFileSync(path.join(projectRoot, 'out', 'html', 'index.html'), 'utf8')
@@ -3174,6 +3233,7 @@ function runSmoke(game) {
         'very weak/medium',
       ]
     );
+    choose('poland_intro.short_brief');
     choose('poland_hub');
     assertHandHub();
   }
@@ -11491,6 +11551,7 @@ function runSmoke(game) {
       'New-game setup retained cards from the previous game'
     );
     choose('root.standard');
+    choose('poland_intro.short_brief');
     choose('poland_hub');
     assertHandHub();
     assert.strictEqual(

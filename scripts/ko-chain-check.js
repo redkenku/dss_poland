@@ -39,6 +39,7 @@ function start(seed) {
     choose('root.campaign_game');
   } else { choose('root.new_game'); }
   choose('root.standard');
+  choose('poland_intro.short_brief');
   choose('poland_hub');
   return engine.state.qualities;
 }
