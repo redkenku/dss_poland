@@ -116,6 +116,7 @@ const ui = {
 
 storage.setItem('Polish Red Autumn_redkenku_save_0', 'legacy');
 storage.setItem('Polish_Red_Autumn_budget_v2_save_a0', 'legacy');
+storage.setItem('Polish_Red_Autumn_save_v3_0', 'legacy');
 storage.setItem('Polish Red Autumn_achievements', '{"kept":true}');
 windowObject.__saveSystemMain(ui);
 
@@ -124,6 +125,7 @@ assert.strictEqual(
   storage.getItem('Polish_Red_Autumn_budget_v2_save_a0'),
   null
 );
+assert.strictEqual(storage.getItem('Polish_Red_Autumn_save_v3_0'), null);
 assert.strictEqual(
   storage.getItem('Polish Red Autumn_achievements'),
   '{"kept":true}'
@@ -135,15 +137,15 @@ elements.save_button_1.onclick();
 assert.strictEqual(elements.save_button_0.textContent, 'Load');
 assert.strictEqual(elements.save_button_1.textContent, 'Load');
 assert.strictEqual(
-  JSON.parse(storage.getItem('Polish_Red_Autumn_save_v3_0')).format,
+  JSON.parse(storage.getItem('Polish_Red_Autumn_save_v4_0')).format,
   'polish-red-autumn-save'
 );
 
 elements.delete_button_0.onclick();
-assert.strictEqual(storage.getItem('Polish_Red_Autumn_save_v3_0'), null);
+assert.strictEqual(storage.getItem('Polish_Red_Autumn_save_v4_0'), null);
 assert.strictEqual(elements.save_button_0.textContent, 'Save');
 elements.save_button_0.onclick();
-assert(storage.getItem('Polish_Red_Autumn_save_v3_0'));
+assert(storage.getItem('Polish_Red_Autumn_save_v4_0'));
 
 let autosaves = 0;
 ui.autosave = function() { autosaves += 1; };
@@ -158,7 +160,12 @@ assert.strictEqual(engine.state.qualities.marker, 1);
 assert.strictEqual(autosaves, 0);
 assert.strictEqual(hidden, 1);
 
-storage.setItem('Polish_Red_Autumn_save_v3_1', '{"bad":true}');
+storage.setItem('Polish_Red_Autumn_save_v4_1', JSON.stringify({
+  format: 'polish-red-autumn-save',
+  version: 1,
+  ifid: 'test-ifid',
+  state: validState(7),
+}));
 const stateBeforeBadLoad = engine.state;
 ui.loadSlot(1);
 assert.strictEqual(engine.state, stateBeforeBadLoad);
@@ -168,7 +175,7 @@ assert(alerts.includes(
 
 storage.failNextWrite = true;
 ui.saveSlot(2);
-assert.strictEqual(storage.getItem('Polish_Red_Autumn_save_v3_2'), null);
+assert.strictEqual(storage.getItem('Polish_Red_Autumn_save_v4_2'), null);
 assert(alerts.includes(
   'Browser storage is full. Delete an unused save slot and try again.'
 ));

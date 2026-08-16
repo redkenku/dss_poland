@@ -33,6 +33,7 @@ function load(relativePath) {
 
 [
   'poland_events/poland_events_2023_08.scene.dry',
+  'poland_events/poland_events_2023_12.scene.dry',
   'poland_events/poland_events_2024_01.scene.dry',
   'poland_events/poland_events_2024_07.scene.dry',
   'poland_events/poland_events_2025_02.scene.dry',
@@ -515,6 +516,284 @@ function openCrisis(overrides) {
   assert.strictEqual(carried.justice_crisis_appointment_possible, 1);
   apply('poland_events_2026_06.jc_veto', carried);
   assert.strictEqual(carried.giertych_justice_outcome, 'giertych');
+}
+
+// ---------------------------------------------------------------------------
+// The mirror on the PiS path. Solidarna Polska walks out at signature, the
+// compact pays PiS's base in culture-war currency for thirty months, and in
+// June 2026 the bill arrives as a deputy premiership for Przemysław Czarnek.
+// The two crises are the same shape and are mutually exclusive by
+// government_party, so the same fixtures answer the same questions.
+// ---------------------------------------------------------------------------
+
+// PiS 194 less an 18-seat Solidarna Polska walkout, plus Lewica 26 and PSL 32:
+// a 234-seat cross-bloc cabinet that is 23 short the moment the Left leaves.
+function crossBloc2023(overrides) {
+  return Object.assign(coalition2023({
+    government_party: 'pis',
+    prime_minister: 'Mateusz Morawiecki',
+    pis_leader: 'Jarosław Kaczyński',
+    pis_seats: 176,
+    suwerenna_seats: 18,
+    coalition_seats: 234,
+    ministry_pis_in_cabinet: 1,
+    ministry_ko_in_cabinet: 0,
+    ministry_p2050_in_cabinet: 0,
+    ministry_psl_in_cabinet: 1,
+    ministry_konf_in_cabinet: 0,
+    formation_pis_player_coalition: 1,
+    formation_solpol_exit_triggered: 1,
+    formation_pis_left_safeguards: 2,
+    suwerenna_walkout_2023_done: 0,
+    culture_compact_2025_done: 0,
+    culture_crisis_2026_done: 0,
+    culture_current_pressure: 0,
+    culture_current_standing: 0,
+    united_right_return_blocked: 0,
+    united_right_line_reopened: 0,
+    czarnek_office_outcome: '',
+    czarnek_in_government: 0,
+    deputy_pm_social_brief: '',
+    pis_relation: 48,
+    far_right_agenda: 32,
+    minority_safety: 56,
+    secular_state_left_ownership: 31,
+    pis_collapsed: 0,
+    labor_credibility: 46,
+    household_security: 40,
+    organiser_energy: 30,
+    nik_independence: 30,
+    justice_fund_salience: 20,
+    public_mood_pending_secular_state_salience: 0,
+    public_mood_pending_secular_state_backlash: 0,
+  }), overrides || {});
+}
+
+function openCultureCrisis(overrides) {
+  const Q = crossBloc2023(overrides);
+  apply('poland_events_2023_12.suwerenna_walkout_2023', Q);
+  apply('poland_events_2025_02.culture_compact_2025', Q);
+  apply('poland_events_2026_06.culture_ministry_crisis_2026', Q);
+  apply('poland_events_2026_06.culture_crisis_names', Q);
+  return Q;
+}
+
+// 13. The walkout is counted from the seats that actually left, and the bill it
+//     creates is larger where the Left extracted fewer safeguards.
+{
+  const weak = crossBloc2023({formation_pis_left_safeguards: 0});
+  apply('poland_events_2023_12.suwerenna_walkout_2023', weak);
+  const strong = crossBloc2023({formation_pis_left_safeguards: 3});
+  apply('poland_events_2023_12.suwerenna_walkout_2023', strong);
+  assert.strictEqual(weak.culture_walkout_seats, 18);
+  assert.ok(weak.culture_current_pressure > strong.culture_current_pressure,
+    'a contract with no floor leaves PiS more to prove and fewer ways to prove it');
+  assert.ok(weak.razem_dissent > 35, 'the arrangement is uncomfortable from the first day');
+  // The no-return clause is the mirror of the KO path's closed Konfederacja
+  // channel, and it is bought here or never.
+  const clause = crossBloc2023();
+  apply('poland_events_2023_12.suwerenna_walkout_2023', clause);
+  apply('poland_events_2023_12.walkout_close_door', clause);
+  assert.strictEqual(clause.united_right_return_blocked, 1);
+  assert.strictEqual(clause.resources, 4);
+}
+
+// 14. Enforcing the contract raises the bill rather than lowering it: safeguards
+//     narrow the channel PiS has left, and a narrow channel carries more.
+{
+  function compact(route) {
+    const Q = crossBloc2023();
+    apply('poland_events_2023_12.suwerenna_walkout_2023', Q);
+    apply('poland_events_2025_02.culture_compact_2025', Q);
+    apply('poland_events_2025_02.' + route, Q);
+    return Q;
+  }
+  const enforced = compact('compact_enforce');
+  const traded = compact('compact_trade');
+  assert.ok(enforced.culture_current_pressure > traded.culture_current_pressure,
+    'enforcement builds the pressure that trading discharges');
+  assert.ok(enforced.minority_safety > traded.minority_safety);
+  assert.ok(traded.far_right_agenda > enforced.far_right_agenda);
+  assert.ok(traded.razem_dissent > enforced.razem_dissent,
+    'the trade is paid for inside our own party');
+  assert.ok(enforced.culture_current_standing < traded.culture_current_standing);
+}
+
+// 15. The crisis prints the live chamber, and the reserve that can replace us is
+//     the bloc this coalition was built out of the wreckage of.
+{
+  const Q = openCultureCrisis();
+  assert.strictEqual(Q.culture_crisis_majority, 231);
+  assert.strictEqual(Q.culture_crisis_cabinet_seats, 234);
+  assert.strictEqual(Q.culture_crisis_left_seats, 26);
+  assert.strictEqual(Q.culture_crisis_without_left, 208);
+  assert.strictEqual(Q.culture_crisis_gap, 23);
+  assert.strictEqual(Q.culture_crisis_walkout_seats, 18);
+  assert.strictEqual(Q.culture_crisis_konf_seats, 18);
+  assert.strictEqual(Q.culture_crisis_right_reserve, 36,
+    '208 + 36 clears 231: the United Right can be reassembled without us');
+  assert.strictEqual(Q.culture_crisis_left_pivotal, 0,
+    'and with no clause against their return, our votes are not decisive');
+
+  const clauseHeld = crossBloc2023();
+  apply('poland_events_2023_12.suwerenna_walkout_2023', clauseHeld);
+  apply('poland_events_2023_12.walkout_close_door', clauseHeld);
+  apply('poland_events_2025_02.culture_compact_2025', clauseHeld);
+  apply('poland_events_2026_06.culture_ministry_crisis_2026', clauseHeld);
+  assert.strictEqual(clauseHeld.culture_crisis_left_pivotal, 1,
+    'the December no-return clause is what makes the June red line a lever');
+}
+
+// 16. Same four routes, same gates: relations or the contract block it, a
+//     compromise name takes the rank, and a veto without arithmetic fails.
+{
+  const blocked = openCultureCrisis({pis_relation: 50});
+  apply('poland_events_2026_06.cc_block', blocked);
+  assert.strictEqual(blocked.czarnek_office_outcome, 'blocked');
+  assert.strictEqual(blocked.resources, 3);
+  assert.ok(blocked.pis_relation < 50);
+
+  const compromise = openCultureCrisis();
+  apply('poland_events_2026_06.cc_piontkowski', compromise);
+  assert.strictEqual(compromise.czarnek_office_outcome, 'piontkowski');
+  assert.strictEqual(compromise.deputy_pm_social_brief, 'Dariusz Piontkowski');
+
+  // Without the clause the reserve exists, so the veto is a sentence.
+  const exposed = openCultureCrisis();
+  apply('poland_events_2026_06.cc_veto', exposed);
+  assert.strictEqual(exposed.czarnek_office_outcome, 'czarnek');
+
+  // With it, the same veto holds.
+  const protectedRun = crossBloc2023();
+  apply('poland_events_2023_12.suwerenna_walkout_2023', protectedRun);
+  apply('poland_events_2023_12.walkout_close_door', protectedRun);
+  apply('poland_events_2025_02.culture_compact_2025', protectedRun);
+  apply('poland_events_2026_06.culture_ministry_crisis_2026', protectedRun);
+  apply('poland_events_2026_06.culture_crisis_names', protectedRun);
+  apply('poland_events_2026_06.cc_veto', protectedRun);
+  assert.notStrictEqual(protectedRun.czarnek_office_outcome, 'czarnek',
+    'a clause against the walkout deputies returning makes the Left decisive again');
+}
+
+// 17. Poland 2050 in the Council of Ministers closes the appointment outright,
+//     exactly as it does on the KO path.
+{
+  const p2050 = openCultureCrisis({
+    ministry_p2050_in_cabinet: 1,
+    ministry_psl_in_cabinet: 0,
+    ministry_konf_in_cabinet: 0,
+    far_right_agenda: 70,
+    culture_current_standing: 80,
+  });
+  assert.strictEqual(p2050.culture_crisis_appointment_possible, 0);
+  apply('poland_events_2026_06.cc_veto', p2050);
+  assert.notStrictEqual(p2050.czarnek_office_outcome, 'czarnek');
+  // Konfederacja at the same table restores it.
+  const konf = openCultureCrisis({
+    ministry_p2050_in_cabinet: 1,
+    ministry_psl_in_cabinet: 0,
+    ministry_konf_in_cabinet: 1,
+  });
+  assert.strictEqual(konf.culture_crisis_appointment_possible, 1);
+}
+
+// 18. Both branches of the rupture, and the posture that reassembles the bloc
+//     the coalition replaced.
+{
+  function appointed(overrides, route) {
+    const Q = openCultureCrisis(overrides);
+    apply('poland_events_2026_06.' + (route || 'cc_veto'), Q);
+    assert.strictEqual(Q.czarnek_office_outcome, 'czarnek');
+    apply('poland_events_2026_06.czarnek_appointment_2026', Q);
+    return Q;
+  }
+
+  const stay = appointed();
+  const credibilityBefore = stay.progressive_credibility;
+  const momentumBefore = stay.left_poll_momentum;
+  apply('poland_events_2026_06.pis_rupture_stay', stay);
+  assert.strictEqual(stay.left_in_government, 1);
+  assert.ok(credibilityBefore - stay.progressive_credibility >= 24,
+    'staying under Czarnek costs more than staying under Giertych');
+  assert.ok(momentumBefore - stay.left_poll_momentum >= 1.8);
+
+  const brk = appointed();
+  apply('poland_events_2026_06.pis_rupture_break', brk);
+  assert.strictEqual(brk.left_in_government, 0);
+  assert.strictEqual(brk.coalition_broken, 1);
+  assert.strictEqual(brk.ministry_count, 0);
+  assert.strictEqual(brk.coalition_seats, 208);
+  assert.strictEqual(brk.government_minority, 1);
+  assert.strictEqual(brk.science_minister, 'Przemysław Czarnek');
+  assert.strictEqual(brk.agriculture_minister_party, 'PSL');
+  assert.ok(brk.progressive_credibility > credibilityBefore);
+
+  function ruptured(overrides, route) {
+    const Q = appointed(overrides, route);
+    apply('poland_events_2026_06.pis_rupture_break', Q);
+    apply('poland_events_2026_06.pis_rupture_posture', Q);
+    return Q;
+  }
+
+  const supply = ruptured();
+  apply('poland_events_2026_06.pis_posture_supply', supply);
+  assert.strictEqual(supply.government_support_seats, 234);
+  assert.strictEqual(supply.government_minority, 0);
+  assert.strictEqual(supply.united_right_line_reopened, 0);
+  assert.strictEqual(supply.snap_election_requested, 0);
+
+  const snap = ruptured();
+  apply('poland_events_2026_06.pis_posture_snap', snap);
+  assert.strictEqual(snap.snap_election_requested, 1);
+  assert.ok(snap.early_election_risk >= 70);
+  assert.strictEqual(snap.united_right_line_reopened, 0);
+
+  const dare = ruptured();
+  apply('poland_events_2026_06.pis_posture_dare', dare);
+  assert.strictEqual(dare.united_right_line_reopened, 1,
+    '208 + 36 clears 231, so refusing the floor rebuilds the United Right');
+  assert.strictEqual(dare.pis_konf_coalition_available, 1);
+  assert.ok(dare.far_right_agenda > 32);
+
+  // Where the reserve cannot close the gap, the same refusal reopens nothing —
+  // and the Left is pivotal there, so the appointment has to arrive the other
+  // way: nobody in the room saying no.
+  const unreachable = ruptured(
+    {konf_seats: 2, suwerenna_seats: 3, far_right_agenda: 70},
+    'cc_abstain'
+  );
+  apply('poland_events_2026_06.pis_posture_dare', unreachable);
+  assert.strictEqual(unreachable.united_right_line_reopened, 0);
+}
+
+// 19. The mirror carries the same sponsor gate: only a Kaczyński- or
+//     Szydło-led PiS presents this nomination, and never for its own leader.
+{
+  function viewIfCulture(Q) {
+    const condition = scene('poland_events_2026_06.culture_ministry_crisis_2026').viewIf;
+    return Boolean(condition({}, Q));
+  }
+  const base = crossBloc2023({
+    continuous_campaign: 1, year: 2026, month: 6,
+    government_has_confidence: 1, caretaker_government: 0,
+    culture_current_pressure: 50,
+  });
+  assert.ok(viewIfCulture(Object.assign({}, base, {pis_leader: 'Jarosław Kaczyński'})));
+  assert.ok(viewIfCulture(Object.assign({}, base, {pis_leader: 'Beata Szydło'})));
+  ['Mateusz Morawiecki', 'Mariusz Błaszczak', 'Przemysław Czarnek'].forEach(
+    function(leader) {
+      assert.ok(!viewIfCulture(Object.assign({}, base, {pis_leader: leader})),
+        'no reason for a ' + leader + '-led PiS to present this nomination');
+    }
+  );
+  assert.ok(!viewIfCulture(Object.assign({}, base, {
+    prime_minister: 'Przemysław Czarnek',
+  })), 'a Czarnek premiership is a different scenario, not this one');
+  assert.ok(!viewIfCulture(Object.assign({}, base, {culture_current_pressure: 10})),
+    'the nomination arrives as a bill, so it needs the bill to exist');
+  // And the two crises can never both be live.
+  const koCrisis = scene('poland_events_2026_06.justice_ministry_crisis_2026').viewIf;
+  assert.ok(!koCrisis({}, base), 'the KO crisis is closed on a PiS-led path');
 }
 
 console.log('giertych-crisis-check: all checks passed');

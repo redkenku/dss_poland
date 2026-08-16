@@ -13,7 +13,7 @@ The dispute is over scope and timing. [? if government_party = "pis": PiS
 accepted an Equality Ministry as a cheap office. It did not expect the minister
 to put an equality bill on the cabinet agenda.?]
 
-[? if coalition_values_veto = 1: **The conscience clause signed at formation is
+[? if coalition_values_veto = 1 and (ministry_psl_in_cabinet = 1 or government_party = "psl"): **The conscience clause signed at formation is
 on the table before the bill is.** PSL's negotiators regard values legislation
 as exempt from coalition discipline, and they have it in writing.?]
 [? if left_is_junior_partner = 1: Objection risk on a contested measure under
@@ -45,10 +45,11 @@ Q.minority_safety += Math.max(2, Math.round(5 * scale));
 const coalitionResistance = Math.round(
     7 + salience / 25 + backlash / 35
 );
+const pslVetoLive = Q.ministry_psl_in_cabinet || Q.government_party == "psl";
+Q.government_coalition_dissent += coalitionResistance;
 if (Q.government_party == "pis") {
-    Q.government_coalition_dissent += coalitionResistance;
     Q.pis_relation -= Math.max(2, Math.round(coalitionResistance / 3));
-} else {
+} else if (pslVetoLive) {
     Q.psl_coalition_dissent += coalitionResistance;
 }
 Q.government_delivery += net >= 0 ? 3 : 2;
@@ -68,15 +69,15 @@ Q.public_opinion_last_issue = "LGBT equality";
 Q.public_opinion_last_reception = Q.card_public_response;
 Q.public_opinion_last_delta = net;
 Q.public_opinion_last_action = "Full equality bill";
-// The conscience clause PSL bought at formation is exactly the instrument for
-// this bill, and it does not need coalition strain to be used.
+// A PSL conscience clause is live only while PSL actually sits in cabinet.
 const objectionRoll = this.random.uint32() / 4294967296;
+const valuesVeto = pslVetoLive && Q.coalition_values_veto;
 const objectionChance = Number(Q.coalition_objection_risk) *
-    (Q.coalition_values_veto ? 1.4 : 1.0) +
-    (Q.coalition_values_veto ? 20 : 0);
+    (valuesVeto ? 1.4 : 1.0) +
+    (valuesVeto ? 20 : 0);
 const objected = Q.left_is_junior_partner && objectionRoll * 100 < objectionChance;
 Q.last_card_objection = objected ? 1 : 0;
-Q.last_card_objector = Q.coalition_values_veto
+Q.last_card_objector = valuesVeto
     ? "PSL's conscience clause"
     : Q.coalition_senior_partner;
 if (objected) {
@@ -107,12 +108,12 @@ Q.public_mood_pending_lgbt_equality_support +=
 [? if card_public_response = "breakthrough": Cabinet expected a defensive
 fight and instead finds a public majority asking why the law took so long.
 Coalition conservatives still resist, but their veto is newly expensive. ?]
-[? if card_public_response = "favourable" and government_party != "pis": The
+[? if card_public_response = "favourable" and (ministry_psl_in_cabinet = 1 or government_party = "psl"): The
 proposal wins more approval than alarm. PSL negotiators demand concessions
 without being able to claim the country is behind them. ?]
-[? if card_public_response = "favourable" and government_party = "pis": The
-proposal wins more approval than alarm. PiS can still block it, but can no
-longer pretend that doing so protects a settled public consensus. ?]
+[? if card_public_response = "favourable" and ministry_psl_in_cabinet = 0 and government_party != "psl": The
+proposal wins more approval than alarm. The cabinet parties can still resist,
+but absent PSL has no agenda veto to exercise. ?]
 [? if card_public_response = "contested": The bill mobilises supporters and
 opponents in almost equal measure. Its fate now depends on coalition discipline
 rather than an obvious public verdict. ?]
@@ -151,10 +152,10 @@ const coalitionResistance = Math.max(
     1,
     Math.round(1 + Number(Q.lgbt_equality_backlash) / 45)
 );
+Q.government_coalition_dissent += coalitionResistance;
 if (Q.government_party == "pis") {
-    Q.government_coalition_dissent += coalitionResistance;
     Q.pis_relation -= Math.max(1, Math.round(coalitionResistance / 3));
-} else {
+} else if (Q.ministry_psl_in_cabinet || Q.government_party == "psl") {
     Q.psl_coalition_dissent += coalitionResistance;
 }
 Q.government_delivery += 2;
@@ -213,10 +214,10 @@ const delayScore = Math.round(Math.max(
     Math.min(3, (backlash - salience) / 18)
 ));
 const tensionRelief = 3 + (delayScore > 0 ? 1 : 0);
+Q.government_coalition_dissent -= tensionRelief;
 if (Q.government_party == "pis") {
-    Q.government_coalition_dissent -= tensionRelief;
     Q.pis_relation += 2;
-} else {
+} else if (Q.ministry_psl_in_cabinet || Q.government_party == "psl") {
     Q.psl_coalition_dissent -= tensionRelief;
 }
 Q.progressives_dissent += 4 + (delayScore < 0 ? 2 : 0);

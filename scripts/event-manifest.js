@@ -832,14 +832,41 @@ function validateCorrectnessInvariants() {
     );
   }
 
+  const schedulingTags = [
+    'poland_event_interrupt',
+    'poland_event_calendar',
+    'poland_event_reactive',
+  ];
+  const interruptEvents = [];
   for (const section of sections) {
     if (/^tags:\s*poland_event\b/m.test(section.source)) {
+      const tags = readProperty(section.source, 'tags').split(/\s*[,;]\s*/);
+      const eventClasses = schedulingTags.filter(function(tag) {
+        return tags.includes(tag);
+      });
+      assert.strictEqual(
+        eventClasses.length,
+        1,
+        section.id + ' must have exactly one Polish scheduling-class tag'
+      );
+      if (eventClasses[0] === 'poland_event_interrupt') {
+        interruptEvents.push(section.id);
+      }
       assert(
         /^new-page:\s*true\b/m.test(section.source),
         section.id + ' must open a dated event on a clean page'
       );
     }
   }
+  assert.deepStrictEqual(interruptEvents.sort(), [
+    'poland_events_2026_snap.snap_campaign_result_due_2026',
+    'poland_events_2026_snap.snap_election_2026',
+    'poland_events_2027_10.earlier_election_horizon_2027',
+    'poland_events_2027_10.parliamentary_election_2027',
+    'poland_office_authority.resolve',
+    'poland_scenario_shocks.constitutional_shock',
+    'poland_scenario_shocks.security_shock',
+  ], 'Interrupt events require an explicit architecture decision');
 
   const candidateRollout = [
     'meet_candidates', 'candidate_duda', 'candidate_trzaskowski',

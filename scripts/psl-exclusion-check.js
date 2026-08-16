@@ -34,6 +34,12 @@ function newRun(overrides) {
   return {engine: engine, Q: engine.state.qualities};
 }
 
+function contentText(content) {
+  if (Array.isArray(content)) return content.map(contentText).join(' ');
+  if (content && typeof content === 'object') return contentText(content.content);
+  return content == null ? '' : String(content);
+}
+
 const eventId =
   'poland_events_2023_12.psl_exclusion_succession_2023';
 const event = game.scenes[eventId];
@@ -137,5 +143,111 @@ wholeThirdWay.Q.third_way_ko_left_exclusion_done = 0;
 wholeThirdWay.Q.formation_coalition_support_seats = 260;
 assert(!thirdWayExclusion.viewIf(wholeThirdWay.engine, wholeThirdWay.Q),
   'Third Way is not wholly left behind when the cabinet borrows its votes');
+
+const equalityBase = {
+  left_in_government: 1,
+  government_has_confidence: 1,
+  caretaker_government: 0,
+  government_party: 'ko',
+  ministry_ko_in_cabinet: 1,
+  equality_minister_party: 'Lewica',
+  left_is_junior_partner: 1,
+  coalition_senior_partner: 'KO',
+  coalition_objection_risk: 100,
+  coalition_values_veto: 1,
+  lgbt_equality_support: 55,
+  lgbt_equality_salience: 50,
+  lgbt_equality_backlash: 35,
+  psl_coalition_dissent: 11,
+};
+const equalityWithoutPsl = newRun(Object.assign({}, equalityBase, {
+  ministry_psl_in_cabinet: 0,
+}));
+equalityWithoutPsl.engine.goToScene('poland_equality_bill');
+assert(!contentText(equalityWithoutPsl.engine.state.currentContent)
+  .includes("PSL's negotiators regard values legislation"));
+equalityWithoutPsl.engine.goToScene('poland_equality_bill.full');
+assert.strictEqual(equalityWithoutPsl.Q.last_card_objector, 'KO');
+assert.strictEqual(equalityWithoutPsl.Q.psl_coalition_dissent, 11);
+
+const equalityWithPsl = newRun(Object.assign({}, equalityBase, {
+  ministry_psl_in_cabinet: 1,
+}));
+equalityWithPsl.engine.goToScene('poland_equality_bill');
+assert(contentText(equalityWithPsl.engine.state.currentContent)
+  .includes("PSL's negotiators regard values legislation"));
+equalityWithPsl.engine.goToScene('poland_equality_bill.full');
+assert.strictEqual(
+  equalityWithPsl.Q.last_card_objector,
+  "PSL's conscience clause"
+);
+assert(equalityWithPsl.Q.psl_coalition_dissent > 11);
+
+const ratchetBase = {
+  left_in_government: 1,
+  government_party: 'ko',
+  psl_coalition_dissent: 60,
+  government_coalition_dissent: 50,
+  psl_relation: 45,
+  rural_support: 35,
+  coalition_break_threat: 1,
+  abortion_cabinet_deadline: 1,
+  third_way_response: '',
+};
+const ratchetWithoutPsl = newRun(Object.assign({}, ratchetBase, {
+  ministry_psl_in_cabinet: 0,
+}));
+ratchetWithoutPsl.engine.goToScene(
+  'poland_events_2025_06.td_psl_accounting'
+);
+assert.strictEqual(ratchetWithoutPsl.Q.psl_ratchet_score, 0);
+assert(contentText(ratchetWithoutPsl.engine.state.currentContent)
+  .includes('bargaining from outside government'));
+
+const ratchetWithPsl = newRun(Object.assign({}, ratchetBase, {
+  ministry_psl_in_cabinet: 1,
+}));
+ratchetWithPsl.engine.goToScene('poland_events_2025_06.td_psl_accounting');
+assert(ratchetWithPsl.Q.psl_ratchet_score > ratchetWithoutPsl.Q.psl_ratchet_score);
+
+const ruralBudgetWithoutPsl = newRun({
+  left_in_government: 1,
+  government_party: 'ko',
+  ministry_psl_in_cabinet: 0,
+  horizon_budget_authority: 1,
+  government_coalition_dissent: 20,
+});
+ruralBudgetWithoutPsl.engine.goToScene(
+  'poland_events_2026_09.horizon_rural'
+);
+assert.strictEqual(ruralBudgetWithoutPsl.Q.government_coalition_dissent, 20);
+assert(contentText(ruralBudgetWithoutPsl.engine.state.currentContent)
+  .includes('cannot turn that choice into a cabinet ultimatum'));
+
+const ruralBudgetWithPsl = newRun({
+  left_in_government: 1,
+  government_party: 'ko',
+  ministry_psl_in_cabinet: 1,
+  horizon_budget_authority: 1,
+  government_coalition_dissent: 20,
+});
+ruralBudgetWithPsl.engine.goToScene('poland_events_2026_09.horizon_rural');
+assert.strictEqual(ruralBudgetWithPsl.Q.government_coalition_dissent, 18);
+
+const farmersWithoutPsl = newRun({
+  farmers_psl_in_cabinet: 0,
+  psl_coalition_dissent: 10,
+});
+farmersWithoutPsl.engine.goToScene('poland_events_2024_02.farmers_psl');
+assert.strictEqual(farmersWithoutPsl.Q.psl_coalition_dissent, 10);
+assert(contentText(farmersWithoutPsl.engine.state.currentContent)
+  .includes('parliamentary interlocutor'));
+
+const farmersWithPsl = newRun({
+  farmers_psl_in_cabinet: 1,
+  psl_coalition_dissent: 10,
+});
+farmersWithPsl.engine.goToScene('poland_events_2024_02.farmers_psl');
+assert.strictEqual(farmersWithPsl.Q.psl_coalition_dissent, 5);
 
 console.log('psl-exclusion-check: all assertions passed');

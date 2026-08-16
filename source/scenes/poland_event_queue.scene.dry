@@ -6,6 +6,11 @@ const queueScene =
     this.game.scenes["poland_event_queue.events_choice"];
 const allEventsScene =
     this.game.scenes["poland_event_queue.all_events"];
+const classScenes = {
+    interrupt: this.game.scenes["poland_event_queue.all_interrupt_events"],
+    calendar: this.game.scenes["poland_event_queue.all_calendar_events"],
+    reactive: this.game.scenes["poland_event_queue.all_reactive_events"]
+};
 const rootId = this.state.rootSceneId;
 const millerAuthorityLive =
     Q.continuous_campaign && Q.left_in_government &&
@@ -53,8 +58,17 @@ if (
         Q.miller_accountability_pending = 1;
     }
 }
-const compiled = this._compileChoices(queueScene) || [];
 const allCompiled = this._compileChoices(allEventsScene) || [];
+const classEvents = {};
+for (const name of ["interrupt", "calendar", "reactive"]) {
+    classEvents[name] = (this._compileChoices(classScenes[name]) || [])
+        .filter(function(choice) { return choice.id !== rootId; });
+}
+Q.poland_event_queue_class = classEvents.interrupt.length
+    ? "interrupt"
+    : (classEvents.calendar.length ? "calendar" :
+        (classEvents.reactive.length ? "reactive" : ""));
+const compiled = this._compileChoices(queueScene) || [];
 const activeTier = compiled.filter(function(choice) {
     return choice.id !== rootId;
 });
@@ -88,12 +102,24 @@ leadership table reopens.?]
 [? if poland_event_queue_count > 1: **[+ poland_event_queue_count +]** files
 have to be dealt with before the leadership table reopens, and the month does
 not lengthen to accommodate them.?]
+[? if poland_event_queue_class = "interrupt": **Interrupt file:** an emergency
+or terminal constitutional deadline takes precedence. Calendar and reactive
+files remain on the desk.?]
+[? if poland_event_queue_class = "calendar": **Calendar files:** dated and
+deterministic deadlines are handled before reactive files.?]
+[? if poland_event_queue_class = "reactive": **Reactive files:** threshold and
+pressure events remain after the calendar clears.?]
 [? if poland_event_queue_count > poland_event_queue_tier_count:
 The rest can wait an hour. [? if poland_event_queue_tier_count = 1:This one
 cannot.?][? if poland_event_queue_tier_count != 1:These **[+
 poland_event_queue_tier_count +]** cannot.?]?]
 
-- #poland_event
+- #poland_event_interrupt
+- view-if: poland_event_queue_class = "interrupt"
+- #poland_event_calendar
+- view-if: poland_event_queue_class = "calendar"
+- #poland_event_reactive
+- view-if: poland_event_queue_class = "reactive"
 
 @all_events
 title: Every pending event
@@ -101,8 +127,26 @@ min-choices: 999
 
 - #poland_event
 
+@all_interrupt_events
+title: Every pending interrupt event
+min-choices: 999
+
+- #poland_event_interrupt
+
+@all_calendar_events
+title: Every pending calendar event
+min-choices: 999
+
+- #poland_event_calendar
+
+@all_reactive_events
+title: Every pending reactive event
+min-choices: 999
+
+- #poland_event_reactive
+
 @complete
 title: The desk clears
 new-page: true
-on-arrival: poland_event_phase = 0; poland_event_queue_count = 0; poland_event_queue_tier_count = 0; poland_event_queue_titles = ""; poland_event_queue_tier_titles = ""; poland_event_months_cleared += 1
+on-arrival: poland_event_phase = 0; poland_event_queue_class = ""; poland_event_queue_count = 0; poland_event_queue_tier_count = 0; poland_event_queue_titles = ""; poland_event_queue_tier_titles = ""; poland_event_months_cleared += 1
 go-to: poland_scenario_epilogue.legal if year = 2027 and month >= 10; poland_caucus_dynamics.router if not (year = 2027 and month >= 10) and caucus_crisis_dispatchable = 1; poland_hub if not (year = 2027 and month >= 10) and caucus_crisis_dispatchable = 0

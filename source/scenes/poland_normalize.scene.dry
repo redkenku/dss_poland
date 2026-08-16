@@ -107,18 +107,6 @@ Q.local_affairs_next = localAffairsDue.length ? localAffairsDue[0].id : "";
 Q.local_affairs_dispatchable =
     Number(Q.last_local_affairs_time) != Number(Q.time) &&
     Q.local_affairs_next ? 1 : 0;
-const july2021ChainPending =
-    Q.year == 2021 && Q.month == 7 &&
-    (!Q.tusk_return_2021_done || !Q.left_revolt_event_done ||
-        !Q.kukiz_negotiation_done);
-if (july2021ChainPending) {
-    Q.poland_historical_event_phase = 1;
-} else if (!Number.isFinite(Number(Q.poland_historical_event_phase))) {
-    const historicalCalendar =
-        Q.year < 2023 || (Q.year == 2023 && Q.month <= 7);
-    Q.poland_historical_event_phase =
-        historicalCalendar && Q.polling_has_dated_route ? 1 : 0;
-}
 if (!budgetHost.polandBudgetModel || budgetHost.polandBudgetModel.version < 4) {
     const number = function(value, fallback) {
         return Number.isFinite(Number(value)) ? Number(value) : fallback;
@@ -3100,7 +3088,20 @@ if (Q.started) {
         matysiak_nuclear_program: 0,
         matysiak_regional_program: 0,
         zandberg_election_advantage: 0,
-        matysiak_election_advantage: 0
+        matysiak_election_advantage: 0,
+        red_renaissance_stage: 0,
+        red_renaissance_active: 0,
+        red_renaissance_withered: 0,
+        red_renaissance_party_formed: 0,
+        red_renaissance_launch_time: -1,
+        red_renaissance_next_time: -1,
+        red_renaissance_launch_index: 0,
+        red_renaissance_mayday_bonus: 0,
+        red_renaissance_strength: 0,
+        red_renaissance_city_network: 0,
+        red_renaissance_voter_theft: 0,
+        red_renaissance_ban_pressure: 0,
+        red_renaissance_protest_turnout: 0
     };
     for (const key of Object.keys(rivalNumericDefaults)) {
         if (!Number.isFinite(Number(Q[key]))) {
@@ -3269,6 +3270,15 @@ if (Q.started) {
         matysiak_election_endpoint: "No election endpoint",
         zandberg_project_ai_state: "No separate future project",
         matysiak_project_ai_state: "No separate future project",
+        red_renaissance_identity: "None",
+        red_renaissance_leader: "None",
+        red_renaissance_protest_issue: "None",
+        red_renaissance_protest_demand: "No protest demand",
+        red_renaissance_protest_record: "No government failure selected",
+        red_renaissance_protest_scale: "No national march",
+        red_renaissance_protest_minister: "No responsible minister",
+        red_renaissance_response: "No response",
+        red_renaissance_outcome: "No movement has emerged",
         tak_rozwoj_leader: "Paulina Matysiak",
         tak_rozwoj_legal_status: "policy association",
         tak_rozwoj_list_committee: "tak_rozwoj"
@@ -3302,7 +3312,10 @@ if (Q.started) {
         if (Q.tak_rozwoj_party_name == "Akcja Socjalistyczna") {
             Q.akcja_socjalistyczna_party_formed = 1;
             Q.tak_dla_rozwoju_legal_party_formed = 0;
-            Q.tak_rozwoj_leader = "Adrian Zandberg";
+            Q.tak_rozwoj_leader = Q.red_renaissance_party_formed &&
+                Q.red_renaissance_identity == "Akcja Socjalistyczna"
+                    ? "Paweł Preneta"
+                    : "Adrian Zandberg";
         } else {
             Q.tak_dla_rozwoju_legal_party_formed = 1;
             Q.tak_rozwoj_leader = "Paulina Matysiak";
@@ -9428,8 +9441,7 @@ if (Q.started) {
         ) || stage >= 7;
     }) || authoredLaborCrisisPending ? 1 : 0));
     Q.caucus_crisis_pending = caucusCrisisReady;
-    Q.caucus_crisis_dispatchable =
-        caucusCrisisReady && !Q.caucus_crisis_deferred ? 1 : 0;
+    Q.caucus_crisis_dispatchable = caucusCrisisReady ? 1 : 0;
     Q.faction_stage_highwater = caucusIds.reduce(
         function(highest, caucus) {
             return Math.max(

@@ -9,12 +9,13 @@
                  month: 'short',
                  day: 'numeric' };
 
-  var SAVE_PREFIX = 'Polish_Red_Autumn_save_v3';
+  var SAVE_PREFIX = 'Polish_Red_Autumn_save_v4';
   var SAVE_FORMAT = 'polish-red-autumn-save';
-  var SAVE_VERSION = 1;
+  var SAVE_VERSION = 2;
   var LEGACY_SAVE_PREFIXES = [
     'Polish Red Autumn_redkenku_save',
-    'Polish_Red_Autumn_budget_v2_save'
+    'Polish_Red_Autumn_budget_v2_save',
+    'Polish_Red_Autumn_save_v3'
   ];
 
   var installSaveSystem = function(dendryUI) {

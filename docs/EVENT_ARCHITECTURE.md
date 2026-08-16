@@ -83,7 +83,7 @@ and
 | Surface | Purpose | Page rule | Exit rule |
 | --- | --- | --- | --- |
 | **Leadership table** | Persistent card hand and optional dossiers. | Always opens clean. | One played card advances the month; inspection-only actions return without advancing it. |
-| **Event desk** | Counts every pending dated event and exposes only the highest-priority tier. | Opens clean before the first or next event. | Recompile after every result; open the leadership table only at a zero count. |
+| **Event desk** | Counts every pending event and drains `interrupt`, `calendar`, then `reactive`; numeric priority applies inside the active class. | Opens clean before the first or next event. | Recompile after every result; open the leadership table only at a zero count. |
 | **Dated event** | Gives the historical premise, Lewica's live role and a consequential choice. | `new-page: true` at the event entry. | A decision returns to the event desk, never directly to the hand while the event phase is active. |
 | **Event-local hub** | Resolves several parts of one event or crowded month in any order. | A revisited hub may clear only if it restates completed and remaining work. | No time advance; leave only when every required flag is complete. |
 | **Linear rollout** | Introduces people, counts, arguments or institutional stages in a fixed order. | Append every beat; do not use `new-page` on each Continue button. | End in the real decision, not another generic Continue screen. |
@@ -134,13 +134,28 @@ all eleven registered candidates, explains why five small committees share one
 model field, and accumulates every major profile above Lewica's electoral-line
 choice.
 
-### One queue, with a legacy boundary
+### One queue for the full campaign
 
-The 2019–July 2023 chapters still contain older direct routes and authored
-month-local hubs. They are compatibility code, not a second design standard.
-From August 2023 onward, and for every new dated event, use `#poland_event` and
-the central queue. Do not create another global news desk or route a dated
-choice straight to `poland_hub` while `poland_event_phase` is active.
+Every independent Polish event from 2019 through 2027 uses `#poland_event` and
+exactly one scheduling tag: `poland_event_interrupt`,
+`poland_event_calendar`, or `poland_event_reactive`. The desk drains those
+classes in that order. Dendry's native numeric priority then exposes only the
+highest live tier inside the active class; equal-priority files remain a player
+choice. Hidden lower classes and tiers are counted and remain eligible when the
+desk recompiles after a result.
+
+Do not express precedence as several simultaneously true `go-to` predicates.
+Dendry collects every true destination and chooses one at random; source order
+is not priority. Use the tagged queue for independently resolvable events.
+
+Direct event-to-event routing is reserved for an immediate continuation,
+calculation, institutional callback, or consequence of the incident currently
+on the page. A separately dated or independently resolvable file returns to the
+queue, and puts any prerequisite in its own `view-if`. Intentional event-local
+hubs may still resolve one incident in several parts before their terminal
+result returns to the central desk. Do not create another global news router or
+route a dated choice straight to `poland_hub` while `poland_event_phase` is
+active.
 
 The author check is therefore:
 
@@ -189,6 +204,7 @@ The links it currently protects:
 | August 2027 pre-registration posture (`list_scramble_posture`) and answer to Porozumienie (`gowin_return_2027`) | September 2027 registration day, where the posture moves every marginal merger threshold and a public veto closes the centre routes so the fragment files on the right instead |
 | December 2023 answer to KO's hundred konkrety (`konkrety_line`, `konkrety_receipts`, `konkrety_ownership`) | the January fifty-day briefing, the February allowance retreat, the 22 March hundredth-day audit — which counts delivery from live state and selects KO's deflection target from the player's own record — and the April 2024 local-election campaign |
 | August 2023 answer to Giertych's list place and January 2024 answer to his chairmanship (`giertych_line`, `giertych_standing`) and the February 2025 reckoning route (`reckoning_route`, `reckoning_delivery`, `prosecutor_general_separated`) | the January 2026 courtroom, which decides how much of the flagship indictment survives and how angry that makes the Prime Minister, and the June 2026 justice-ministry crisis, where the same figures decide whether the Left can save the incumbent, impose Żurek, or is made to choose between a cabinet containing Roman Giertych and a minority government |
+| December 2023 answer to the Solidarna Polska walkout (`united_right_return_blocked`, `culture_current_pressure`) and the February 2025 compact audit (`culture_compact_response`) | the June 2026 Czarnek nomination, where the no-return clause is the only thing that makes a Left red line a lever, and the enforcement route that raised the pressure is also the route that blocks the appointment |
 
 The Giertych and reckoning chain has its own check,
 [`giertych-crisis-check.js`](../scripts/giertych-crisis-check.js)
@@ -221,6 +237,29 @@ with a strong chairman still cannot get him sworn in, and the Left's red line is
 free. The two reckoning beats are deliberately *not* behind that gate, because a
 failing reckoning is a government programme rather than his: they run in every
 KO-led timeline and name him only where `reckoning_team_active` is set.
+
+The same check covers the mirror on the PiS path, which is the same crisis seen
+from the other side of the chamber and is mutually exclusive with it by
+`government_party`. Solidarna Polska walks out at the signature of a cross-bloc
+contract (`formation_solpol_exit_triggered`, already produced by the formation
+model but previously unnarrated), which costs PiS the flank that proved it had
+not gone soft and creates `culture_current_pressure`: the bill it now has to
+settle with its own electorate in the only currency the contract did not price.
+The February 2025 audit measures that bill in both ledgers at once, and
+enforcing the safeguards *raises* it rather than lowering it — a narrower
+channel carries more pressure. In June 2026 the bill arrives as a person:
+a deputy premiership for Przemysław Czarnek, over education, culture and family
+policy, above Lewica's own ministers in the order of the Council of Ministers.
+
+The mirror's arithmetic is the inverse of the KO one. There, the bloc that can
+replace the Left is Konfederacja and a closed `ko_konf_partner_line` is what
+makes the veto a lever; here it is the United Right this coalition was built out
+of the wreckage of — `suwerenna_seats` plus `konf_seats` — and the lever is
+`united_right_return_blocked`, a no-return clause that can only be bought in
+December 2023 and is worthless the moment the Left ends the contract it sits in.
+The sponsor gate is `pis_leader` being Kaczyński or Szydło (never Czarnek
+himself), and `culture_crisis_appointment_possible` uses the same partner rule,
+with Konfederacja counting alongside PSL as a partner who would sign.
 
 The 2027 list chain has its own check,
 [`list-registration-check.js`](../scripts/list-registration-check.js)

@@ -51,6 +51,7 @@ function prepare(ctx, pressure, actions) {
 }
 
 function refreshSuccessor(ctx) {
+  ctx.engine.goToScene('poland_normalize');
   ctx.Q.poll_state_month_key = -1;
   ctx.engine.goToScene('poland_polling');
   assert(ctx.Q.tak_rozwoj_component_vote_intent > 0,

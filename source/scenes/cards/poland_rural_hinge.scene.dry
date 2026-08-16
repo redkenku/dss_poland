@@ -1,20 +1,21 @@
 title: The Rural Hinge
-subtitle: PSL is willing to negotiate—and unusually willing to threaten to stop.
+subtitle: [? if ministry_psl_in_cabinet = 1 or government_party = "psl": PSL is willing to negotiate—and unusually willing to threaten the cabinet.?][? if ministry_psl_in_cabinet = 0 and government_party != "psl": PSL is outside government: useful votes, rural reach, no cabinet veto.?]
 new-page: true
 is-card: true
 tags: poland_party_card
-view-if: month_actions < max_month_actions and poland_rural_hinge_timer <= 0 and psl_seats > 0 and (psl_relation < 55 or psl_coalition_dissent >= 15 or early_election_risk >= 30 or coalition_broken = 1)
+view-if: month_actions < max_month_actions and poland_rural_hinge_timer <= 0 and psl_seats > 0 and (psl_relation < 55 or ((ministry_psl_in_cabinet = 1 or government_party = "psl") and psl_coalition_dissent >= 15) or early_election_risk >= 30 or coalition_broken = 1)
 on-arrival: month_actions += 1; poland_rural_hinge_timer = 4
 card-image: img/poland/cards/rural-hinge.webp
 
 = The Rural Hinge
 
-[? if left_in_government = 0: PSL may be indispensable to a future majority.
-Its local governments need clinics, buses and predictable finance. Its
-conservative wing also expects the Left to understand that every cultural vote
-can become a coalition ultimatum. ?]
+[? if ministry_psl_in_cabinet = 0 and government_party != "psl": PSL sits
+outside the cabinet. It may be useful on individual votes or indispensable to a
+future majority, but it cannot make a current cultural bill a coalition
+ultimatum. Its local governments still need clinics, buses and predictable
+finance. ?]
 
-[? if left_in_government = 1: PSL is the coalition's rural hinge and treats
+[? if ministry_psl_in_cabinet = 1 or government_party = "psl": PSL is the coalition's rural hinge and treats
 every difficult vote as a fresh negotiation. Its local governments need
 clinics, buses and predictable finance; its conservative wing is ready to
 threaten the cabinet whenever the Left presses a cultural bill. ?]
@@ -37,8 +38,8 @@ produces an agreement not to discuss abortion today. Everyone knows that
 - #poland_card_finish
 
 @cultural_pause
-title: Promise PSL a pause on cultural legislation
-subtitle: The hinge is secured by handing it an early veto.
+title: [? if ministry_psl_in_cabinet = 1 or government_party = "psl": Promise PSL a pause on cultural legislation?][? if ministry_psl_in_cabinet = 0 and government_party != "psl": Offer opposition PSL a cultural truce?]
+subtitle: [? if ministry_psl_in_cabinet = 1 or government_party = "psl": The hinge is secured by handing it an early veto.?][? if ministry_psl_in_cabinet = 0 and government_party != "psl": Buy a parliamentary channel without pretending PSL can stop the cabinet.?]
 on-arrival: {!
 const support = (
     Number(Q.abortion_rights_support) +
@@ -98,24 +99,37 @@ Q.public_opinion_last_action = "PSL cultural pause";
 Q.news_headline = net >= 1
     ? "A cultural pause reassures a cautious electorate and PSL"
     : (net <= -1
-        ? "The PSL assurance is exposed as a veto over rights"
+        ? (Q.ministry_psl_in_cabinet || Q.government_party == "psl"
+            ? "The PSL assurance is exposed as a veto over rights"
+            : "The PSL assurance is exposed as a concession to the opposition")
         : "A quiet assurance buys louder rural cooperation");
 !}
 
-[? if card_public_response = "breakthrough" or card_public_response = "favourable":
+[? if (card_public_response = "breakthrough" or card_public_response =
+"favourable") and (ministry_psl_in_cabinet = 1 or government_party = "psl"):
 Public opinion is more cautious than the movement. PSL's leadership stops
 threatening to leave, and the pause buys support beyond the coalition room. ?]
-[? if card_public_response = "contested" and left_in_government = 0: PSL's
-leadership stops threatening to leave a coalition that does not yet exist.
-Progressive MPs discover that the price of reassurance was paid with their
-programme. ?]
-[? if card_public_response = "contested" and left_in_government = 1: PSL's
-leadership withdraws its latest threat to leave the cabinet. Progressive MPs
-discover that the price of reassurance was paid with their programme. ?]
-[? if card_public_response = "backlash" or card_public_response = "reversal":
-The electorate has moved while the coalition bargain has not. What was meant
-to be quiet reassurance becomes a visible conservative veto, and the Left pays
-for it among women and younger voters. ?]
+[? if (card_public_response = "breakthrough" or card_public_response =
+"favourable") and ministry_psl_in_cabinet = 0 and government_party != "psl":
+Public opinion is more cautious than the movement. PSL opens a parliamentary
+channel, but no cabinet threat has been withdrawn because none existed. ?]
+[? if card_public_response = "contested" and ministry_psl_in_cabinet = 0 and
+government_party != "psl": PSL receives a programme concession from outside
+government. Progressive MPs discover that the price of reassurance was paid
+with their programme, not with cabinet stability. ?]
+[? if card_public_response = "contested" and (ministry_psl_in_cabinet = 1 or
+government_party = "psl"): PSL's leadership withdraws its latest threat to
+leave the cabinet. Progressive MPs discover that the price of reassurance was
+paid with their programme. ?]
+[? if (card_public_response = "backlash" or card_public_response = "reversal")
+and (ministry_psl_in_cabinet = 1 or government_party = "psl"): The electorate
+has moved while the coalition bargain has not. What was meant to be quiet
+reassurance becomes a visible conservative veto, and the Left pays for it among
+women and younger voters. ?]
+[? if (card_public_response = "backlash" or card_public_response = "reversal")
+and ministry_psl_in_cabinet = 0 and government_party != "psl": The electorate
+has moved while Lewica is still paying an opposition party for reassurance.
+The concession is visible; a PSL cabinet veto is not. ?]
 
 - #poland_card_finish
 
@@ -182,15 +196,25 @@ Q.news_headline = net >= 1
     ? "The Left finds public backing against a conservative veto"
     : (net <= -1
         ? "The coalition red line triggers a public and rural backlash"
-        : "The Left refuses a conservative coalition veto");
+        : (Q.ministry_psl_in_cabinet || Q.government_party == "psl"
+            ? "The Left refuses a conservative coalition veto"
+            : "The Left refuses to buy opposition support with a rights pause"));
 !}
 
-[? if card_public_response = "breakthrough": The declaration catches up with
-a public majority. PSL calls it premature but discovers that its threatened
-veto is less popular than the rights it would block. ?]
+[? if card_public_response = "breakthrough" and (ministry_psl_in_cabinet = 1 or
+government_party = "psl"): The declaration catches up with a public majority.
+PSL calls it premature but discovers that its threatened veto is less popular
+than the rights it would block. ?]
+[? if card_public_response = "breakthrough" and ministry_psl_in_cabinet = 0 and
+government_party != "psl": The declaration catches up with a public majority.
+PSL can oppose it in the Sejm, but cannot present that opposition as a cabinet
+veto. ?]
 [? if card_public_response = "favourable": There will be compromise on
-schedules and spending, but not a partner's veto over bodily autonomy. The
-organisers' red line has support outside the room. ?]
+schedules and spending, but [? if ministry_psl_in_cabinet = 1 or
+government_party = "psl": not a partner's veto over bodily autonomy.?][? if
+ministry_psl_in_cabinet = 0 and government_party != "psl": not a rights pause
+bought from a party outside government.?] The organisers' red line has support
+outside the room. ?]
 [? if card_public_response = "contested": PSL calls the declaration
 premature. Your organisers call it overdue. Neither side can yet claim the
 electorate as an answer. ?]
