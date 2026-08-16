@@ -1,0 +1,1152 @@
+title: January 2025
+
+@left_presidential_split
+# prose-audit: Grade A — The nomination reconciliation and the candidate rollout are model work: every committee is named, the five-way aggregation is explained as arithmetic rather than alliance, and each leading campaign now holds its own page in the same styled field block the 2020 chapter uses. The five campaign operations resolve into consequences the player can read rather than a subtitle and a counter.
+title: The presidential field opens
+subtitle: Turn the nomination into a national campaign
+new-page: true
+tags: poland_event
+priority: 25
+order: 10
+max-visits: 1
+face-image: img/poland/cards/campaigning.webp
+view-if: continuous_campaign = 1 and year = 2025 and month = 1 and election_2027_terminal = 0
+on-arrival: {!
+if (!Q.pres_2025_left_candidate ||
+    Q.pres_2025_left_candidate == "Undecided") {
+    Q.pres_2025_left_candidate = "Magdalena Biejat";
+}
+Q.pres_2025_candidate = Q.pres_2025_left_candidate;
+Q.pres_2025_active = 1;
+Q.pres_2025_phase = "First-round campaign";
+Q.pres_2025_round_one_done = 0;
+Q.pres_2025_first_round_winner = 0;
+Q.pres_2025_first_round_winner_share = 0;
+Q.pres_2025_runoff_done = 0;
+Q.pres_2025_feedback_applied = 0;
+Q.pres_2025_transfer_strategy = "Not chosen";
+Q.pres_2025_transfer_strength = 0;
+Q.pres_2025_runoff_support_target = "none";
+Q.pres_2025_winner = "";
+Q.pres_2025_winner_key = "";
+Q.pres_2025_hostile_president = 0;
+Q.pres_2025_campaign_strength = 0;
+if (!Q.pres_2025_ko_candidate ||
+    Q.pres_2025_ko_candidate == "Undecided") {
+    Q.pres_2025_ko_candidate = "Rafał Trzaskowski";
+}
+Q.pres_2025_ko_surname =
+    Q.pres_2025_ko_candidate == "Radosław Sikorski" ? "Sikorski" :
+    (Q.pres_2025_ko_candidate == "Barbara Nowacka" ? "Nowacka" :
+        "Trzaskowski");
+// Konfederacja chooses between its libertarian chair and the national wing's
+// parliamentary face. The simulation key remains `mentzen` for save
+// compatibility; the name on the ballot is live.
+const mentzenNominationWeight = Math.max(
+    10,
+    Number(Q.konf_mentzenite_share) || 47
+);
+const bosakNominationWeight = Math.max(
+    10,
+    Number(Q.konf_nationalist_share) || 35
+);
+Q.pres_2025_konf_candidate =
+    (this.random.uint32() / 4294967296) *
+        (mentzenNominationWeight + bosakNominationWeight) <
+        mentzenNominationWeight
+        ? "Sławomir Mentzen"
+        : "Krzysztof Bosak";
+Q.pres_2025_konf_surname =
+    Q.pres_2025_konf_candidate == "Krzysztof Bosak" ? "Bosak" : "Mentzen";
+// PiS runs through a civic committee because its own brand is damaged, but the
+// name inside the committee is a live argument between its wings.
+const pisWeights = {
+    "Karol Nawrocki": 52,
+    "Mateusz Morawiecki":
+        Q.morawiecki_advisor || Q.morawiecki_left_defectors
+            ? 0
+            : 16 + Math.max(0, (Number(Q.pis_solidarist_share) || 55) - 55) * 0.9,
+    "Przemysław Czarnek":
+        14 + Math.max(0, (Number(Q.far_right_agenda) || 32) - 32) * 0.7,
+    "Tobiasz Bocheński":
+        12 + Math.max(0, (Number(Q.pis_market_hardliner_share) || 45) - 45) * 0.9
+};
+const pisNames = Object.keys(pisWeights);
+const pisTotal = pisNames.reduce(function(sum, name) {
+    return sum + pisWeights[name];
+}, 0);
+let pisDraw = (this.random.uint32() / 4294967296) * pisTotal;
+Q.pres_2025_right_candidate = "Karol Nawrocki";
+for (const name of pisNames) {
+    pisDraw -= pisWeights[name];
+    if (pisDraw <= 0) {
+        Q.pres_2025_right_candidate = name;
+        break;
+    }
+}
+Q.pres_2025_right_surname =
+    Q.pres_2025_right_candidate == "Mateusz Morawiecki" ? "Morawiecki" :
+    (Q.pres_2025_right_candidate == "Przemysław Czarnek" ? "Czarnek" :
+    (Q.pres_2025_right_candidate == "Tobiasz Bocheński" ? "Bocheński" :
+        "Nawrocki"));
+// Poland 2050 sends its founder unless its market-liberal wing has grown
+// strong enough to argue that a banker's campaign travels further than a
+// television moralist's.
+const petruWeight =
+    Math.max(0, ((Number(Q.p2050_right_score) || 52) - 52) * 3.2) +
+    (Q.p2050_leader && Q.p2050_leader != "Szymon Hołownia" ? 45 : 0) +
+    (Q.p2050_internal_split ? 12 : 0);
+Q.pres_2025_centre_candidate =
+    Q.p2050_2023_exclusion_comeback_done
+        ? "Szymon Hołownia"
+        : (this.random.uint32() / 4294967296) * (100 + petruWeight) > 100
+        ? "Ryszard Petru"
+        : "Szymon Hołownia";
+Q.pres_2025_centre_surname =
+    Q.pres_2025_centre_candidate == "Ryszard Petru" ? "Petru" : "Hołownia";
+// Kanał Zero's candidacy is normally a critique of campaigning rather than a
+// campaign. Occasionally the audience decides to vote.
+const stanowskiRoll = this.random.uint32() / 4294967296;
+const stanowskiScale = this.random.uint32() / 4294967296;
+Q.pres_2025_stanowski_breakout = stanowskiRoll < 0.07 ? 1 : 0;
+Q.pres_2025_stanowski_surge = Q.pres_2025_stanowski_breakout
+    ? 7 + stanowskiScale * 12
+    : 0;
+const razemFederated25 =
+    String(Q.left_merger_structure || "") == "federation" &&
+    Q.merger_razem_present &&
+    String(Q.razem_org_status || "") != "departed";
+const razemOutside25 =
+    Q.razem_split || Q.razem_party_formed || !Q.razem_in_left;
+const razemCampaignStrength25 = razemOutside25
+    ? Math.max(
+        Number(Q.razem_exit_strength) || 0,
+        Number(Q.razem_vote_intent) || 0
+    )
+    : Number(Q.razem_strength) || 0;
+const razemCohesive25 =
+    Q.razem_cooperation_protocol || Q.razem_breakaway_protected ||
+    (Number(Q.razem_cooperation) || 0) >= 55;
+const razemRupture25 = (Number(Q.razem_dissent) || 0) >= 45;
+Q.pres_2025_razem_separate_eligible =
+    !razemFederated25 && !razemCohesive25 && razemRupture25 &&
+    razemCampaignStrength25 >= 8 ? 1 : 0;
+if (Q.pres_2025_left_candidate == "Adrian Zandberg") {
+    Q.pres_2025_united_left = 1;
+    Q.pres_2025_razem_candidate = "None";
+}
+if (!Q.pres_2025_united_left && Q.pres_2025_razem_separate_eligible) {
+    Q.pres_2025_razem_candidate = "Adrian Zandberg";
+    if (!Q.pres_2025_nomination_method ||
+        Q.pres_2025_nomination_method == "Not chosen") {
+        Q.pres_2025_nomination_method = "Separate candidacies";
+        Q.pres_2025_unity_effect = 0;
+    }
+} else {
+    Q.pres_2025_united_left = 1;
+    Q.pres_2025_razem_candidate = "None";
+    if (Q.pres_2025_nomination_method == "Separate candidacies") {
+        Q.pres_2025_nomination_method = "Common Left nomination";
+    } else if (Q.pres_2025_nomination_method == "New Left national council") {
+        Q.pres_2025_nomination_method = "Common Left national council";
+    } else if (!Q.pres_2025_nomination_method ||
+        Q.pres_2025_nomination_method == "Not chosen") {
+        Q.pres_2025_nomination_method = "Inherited common nomination";
+        Q.pres_2025_unity_effect = 0;
+    }
+}
+Q.pres_2025_campaign_actions_remaining = 2;
+Q.pres_2025_campaign_work = 0;
+Q.pres_2025_campaign_rights = 0;
+Q.pres_2025_campaign_counties = 0;
+Q.pres_2025_campaign_constitution = 0;
+Q.pres_2025_campaign_left_ground = 0;
+Q.pres_2025_field_seen = 0;
+Q.pres_2025_debate_bonus = 0;
+Q.pres_2025_debate_shift = 0;
+Q.pres_2025_debate_strategy = "Not chosen";
+Q.pres_2025_debate_upset = "None";
+Q.pres_2025_support_actions_remaining = 2;
+Q.pres_2025_support_holownia = 0;
+Q.pres_2025_support_committees = 0;
+Q.pres_2025_support_stanowski = 0;
+Q.pres_2025_support_movements = 0;
+Q.pres_2025_support_radical = 0;
+Q.pres_2025_support_left = 0;
+Q.pres_2025_support_turnout = 0;
+Q.pres_2025_support_release = 0;
+Q.pres_2025_runoff_target_bonus = 0;
+Q.pres_2025_runoff_push_bonus = 0;
+Q.pres_2025_runoff_campaign = "Not chosen";
+Q.pres_2025_runoff_final_push = "Not chosen";
+Q.pres_2025_runoff_calc_mode = "result";
+Q.pres_2025_runoff_support_name = "No candidate";
+Q.pres_2025_torun_route = "none";
+Q.pres_2025_torun_target_key = "none";
+Q.pres_2025_torun_target_name = "No candidate";
+Q.pres_2025_torun_red_line = "No written line";
+Q.pres_2025_torun_breach = "No breach";
+Q.pres_2025_runoff_breach_shift = 0;
+Q.pres_2025_morawiecki_push = "No personnel bargain";
+for (const id of [
+    "ko", "right", "left", "razem", "mentzen",
+    "braun", "holownia", "stanowski", "other"
+]) {
+    Q["pres_2025_rival_shift_" + id] = 0;
+    Q["pres_2025_trade_boost_" + id] = 0;
+}
+const pollIds = [
+    "ko", "right", "left", "razem", "mentzen",
+    "braun", "holownia", "stanowski", "other"
+];
+for (const id of pollIds) {
+    Q["pres_2025_open_noise_" + id] =
+        (this.random.uint32() / 4294967296 - 0.5) *
+        (Q.hard_mode ? 1.8 : 1.5);
+    Q["pres_2025_track_noise_" + id] =
+        (this.random.uint32() / 4294967296 - 0.5) *
+        (Q.hard_mode ? 1.4 : 1.1);
+}
+Q.news_headline =
+    Q.pres_2025_united_left
+        ? "A common Left candidate opens the presidential year"
+        : Q.pres_2025_left_candidate +
+            " and Zandberg prepare to measure two Left strategies";
+Q.pres_2025_r1_turnout_shock =
+    (this.random.uint32() / 4294967296 - 0.5) *
+    (Q.hard_mode ? 1.4 : 1.0);
+Q.pres_2025_runoff_turnout_shock =
+    (this.random.uint32() / 4294967296 - 0.5) *
+    (Q.hard_mode ? 1.6 : 1.2);
+// The inter-round poll and the second ballot are drawn once, in advance, so
+// that the tracking poll cannot be re-read until it agrees with the campaign.
+Q.pres_2025_runoff_poll_shock =
+    ((this.random.uint32() / 4294967296) * 2 - 1) *
+    (Q.hard_mode ? 1.05 : 0.9);
+Q.pres_2025_runoff_result_shock =
+    ((this.random.uint32() / 4294967296) * 2 - 1) *
+    (Q.hard_mode ? 1.25 : 1.15);
+!}
+
+= January 2025 — Government record or opposition programme
+
+[? if pres_2025_united_left: **[+ pres_2025_left_candidate +]** carries the
+common nomination, but New Left's ministers and Razem's opposition organisers
+still disagree over what the candidacy is meant to prove: delivery from office
+or freedom from coalition compromise.?]
+[? if not pres_2025_united_left: New Left has chosen **[+
+pres_2025_left_candidate +]**. [? if pres_2025_left_candidate = "Magdalena
+Biejat": The deputy marshal of the Senate brings a campaign built around
+housing, care and cooperation.?][? if pres_2025_left_candidate = "Agnieszka
+Dziemianowicz-Bąk": The former labour minister brings a campaign built around
+work, schools and public services.?] Razem answers with its co-founder and
+economic spokesman <span class="party-razem"><b>Adrian Zandberg</b></span>, who can ask why office has left so much
+undone.?]
+
+[? if pres_2025_united_left: One name on the ballot does not erase the
+organisational split. Local branches share volunteers, while ministers and
+opposition organisers still want the candidacy to prove different things.?][?
+if not pres_2025_united_left: The split is not merely two names on a ballot.
+Local branches share volunteers, trade unions want a reliable transfer in the
+second round, and both campaigns need the same younger renters without allowing
+the other to define the whole Left.?] We must decide whether competition stops
+at the office door.
+
+- @left_campaign_shared
+- @left_campaign_compete
+- @left_campaign_last_offer
+
+@left_campaign_shared
+title: Build a shared field operation across the Left
+subtitle: Cost: 2 resources. Preserves transfer channels without hiding disagreement.
+choose-if: resources >= 2
+unavailable-subtitle: The party cannot finance shared organisers.
+on-arrival: {!
+Q.resources -= 2;
+Q.pres_2025_campaign_strength += 4;
+Q.razem_cooperation += 5;
+Q.local_network += 3;
+Q.party_unity += 2;
+Q.news_headline = Q.pres_2025_united_left
+    ? "The common Left campaign unites its field operation"
+    : "Two Left campaigns share organisers and anti-right mobilisation";
+!}
+
+[? if pres_2025_united_left: Ministers, Razem organisers and local branches
+share rooms and canvass lists behind **[+ pres_2025_left_candidate +]**, while
+retaining the right to argue over the programme. The common nomination gains a
+field organisation broad enough to make its claim of unity credible.?][? if not
+pres_2025_united_left: **[+ pres_2025_left_candidate +]** and Zandberg keep
+separate headquarters and programmes but share rooms, canvass lists and a
+promise not to strand the other's voters in a runoff. District organisers gain
+a campaign they can survive even when their preferred candidate loses.?]
+
+- @presidential_field_2025: Meet the presidential field
+
+@left_campaign_compete
+title: Let government delivery compete openly with Razem's opposition
+subtitle: A sharper campaign wins attention but teaches the two Left camps to treat each other as rivals.
+on-arrival: pres_2025_campaign_strength += 2; media_capacity += 2; razem_cooperation -= 5; razem_dissent += 3; party_unity -= 2; news_headline = "The presidential campaign becomes a referendum on Left strategy"
+
+[? if pres_2025_united_left: Ministers present **[+ pres_2025_left_candidate
++]** as proof that office can deliver, while Razem organisers use the same
+candidacy to attack coalition compromises. Coverage improves because the
+argument is real; voters may wonder which of the two programmes the common
+nominee would actually carry.?][? if not pres_2025_united_left: The governing
+Left puts ministers and delivered programmes behind **[+
+pres_2025_left_candidate +]**; Razem sends Zandberg into workplaces and studios
+to prosecute the compromises. Coverage improves, as does the chance that local
+members learn to see the other campaign as the opponent rather than the
+reserve.?]
+
+- @presidential_field_2025: Meet the presidential field
+
+@left_campaign_last_offer
+title: Make one final common-candidate offer to Zandberg
+subtitle: Requires substantial Razem cooperation.
+view-if: pres_2025_united_left = 0
+choose-if: razem_cooperation >= 55
+unavailable-subtitle: The split has become part of both campaigns' legitimacy.
+on-arrival: pres_2025_left_candidate = "Adrian Zandberg"; pres_2025_candidate = "Adrian Zandberg"; pres_2025_razem_candidate = "None"; pres_2025_united_left = 1; pres_2025_nomination_method = "Late leadership withdrawal"; pres_2025_unity_effect = -0.8; pres_2025_campaign_strength += 6; razem_cooperation += 4; barons_dissent += 7; spring_dissent += 4; party_unity += 3; news_headline = "The Left makes Zandberg its common presidential candidate"
+
+Zandberg receives the common nomination, replacing the nominee chosen in
+December. That candidate's network and every team already assigned to a joint
+campaign are asked to transfer their organisers.
+The old apparatus and the Wiosna inheritance have not suddenly become Zandberg
+loyalists; unity arrives as a bargain they will expect his programme to repay.
+
+- @presidential_field_2025: Meet the presidential field
+
+@presidential_field_2025
+title: [? if pres_2025_united_left: Twelve candidates, eight electoral fields?][? if not pres_2025_united_left: Thirteen candidates, nine electoral fields?]
+new-page: true
+on-arrival: pres_2025_field_seen = 1
+
+= The ballot after the nominations close
+
+The official ballot contains [? if pres_2025_united_left: twelve?][? if not
+pres_2025_united_left: thirteen?] names in this timeline. Headquarters models
+the five smallest committees together, but voters will see every candidate
+separately. The aggregation is arithmetic, not a shared ideology.
+
+<div class="candidate-field">
+<div class="candidate-field-heading">[? if pres_2025_united_left: The twelve candidates?][? if not pres_2025_united_left: The thirteen candidates?]</div>
+
+<div class="candidate-field-group">Leading campaigns</div>
+
+<div class="candidate-entry">
+<div class="candidate-copy">
+<span class="party party-ko"><b>[+ pres_2025_ko_candidate +]</b></span>
+<small>KO · Civic Coalition</small>
+</div>
+<span class="candidate-badge">[? if pres_2025_incumbent: incumbent?][? if not pres_2025_incumbent: main challenger?]</span>
+</div>
+
+<div class="candidate-entry">
+<div class="candidate-copy">
+<span class="party party-pis"><b>[+ pres_2025_right_candidate +]</b></span>
+<small>PiS-backed civic committee</small>
+</div>
+<span class="candidate-badge">national conservative</span>
+</div>
+
+<div class="candidate-field-group">Other contenders</div>
+
+<div class="candidate-entry">
+<div class="candidate-copy">
+<span class="party party-konf"><b>[+ pres_2025_konf_candidate +]</b></span>
+<small>Konfederacja</small>
+</div>
+</div>
+
+<div class="candidate-entry">
+<div class="candidate-copy">
+<span class="party party-korona"><b>Grzegorz Braun</b></span>
+<small>Korona · personal committee</small>
+</div>
+</div>
+
+<div class="candidate-entry">
+<div class="candidate-copy">
+<span class="party party-p2050"><b>[+ pres_2025_centre_candidate +]</b></span>
+<small>Poland 2050</small>
+</div>
+</div>
+
+<div class="candidate-entry">
+<div class="candidate-copy">
+<b>Krzysztof Stanowski</b>
+<small>Independent media committee</small>
+</div>
+</div>
+
+<div class="candidate-entry candidate-entry-left">
+<div class="candidate-copy">
+<span class="party party-lewica"><b>[+ pres_2025_left_candidate +]</b></span>
+<small>Lewica</small>
+</div>
+<span class="candidate-badge">our nominee</span>
+</div>
+
+[? if not pres_2025_united_left: <div class="candidate-entry">
+<div class="candidate-copy">
+<span class="party party-razem"><b>Adrian Zandberg</b></span>
+<small>Razem</small>
+</div>
+<span class="candidate-badge">rival Left</span>
+</div>?]
+
+<div class="candidate-field-group">Smaller committees</div>
+
+<div class="candidate-minor-list">
+
+<div class="candidate-minor">
+<b>Joanna Senyszyn</b>
+<small>Independent · former SLD</small>
+</div>
+
+<div class="candidate-minor">
+<b>Artur Bartoszewicz</b>
+<small>Independent · economist</small>
+</div>
+
+<div class="candidate-minor">
+<b>Marek Jakubiak</b>
+<small>Free Republicans</small>
+</div>
+
+<div class="candidate-minor">
+<b>Maciej Maciak</b>
+<small>Wspólnota Samorządowa</small>
+</div>
+
+<div class="candidate-minor">
+<b>Marek Woch</b>
+<small>Normalny Kraj</small>
+</div>
+
+</div>
+
+</div>
+
+- @pres25_meet_candidates: Meet the candidates one by one
+
+@pres25_meet_candidates
+title: [? if pres_2025_united_left: Twelve candidates, eight electoral fields?][? if not pres_2025_united_left: Thirteen candidates, nine electoral fields?]
+
+Only two candidates will survive the first ballot. Our nominee begins outside
+those places, but the first round still decides what the Left is worth: whether
+its electorate can be found again, whether its issues survive into the runoff,
+and what either finalist must offer to borrow its voters for a fortnight.
+
+Before the campaign board opens, we should look at each field the campaign will
+be competing against.
+
+- @pres25_meet_trzaskowski: First, the democratic camp's candidate
+- @pres25_meet_sikorski: First, the democratic camp's candidate
+- @pres25_meet_nowacka: First, the democratic camp's candidate
+
+@pres25_meet_trzaskowski
+title: Rafał Trzaskowski — the democratic camp's candidate
+view-if: pres_2025_ko_candidate = "Rafał Trzaskowski"
+face-image: img/poland/events/pres-candidate-trzaskowski-2025.webp
+
+**Rafał Trzaskowski — Civic Coalition**
+
+He carries KO's liberal and local-government electorate, the mayors, the
+metropolitan professionals and the voters who treat any anti-PiS ballot as the
+only serious use of an election. [? if pres_2025_incumbent: As President, he
+must defend five years of signatures, vetoes and cohabitation as well as his
+campaign programme.?][? if not pres_2025_incumbent: As Warsaw mayor and the
+2020 runner-up, he offers the democratic camp a route from city hall to the
+Palace.?]
+
+His weakness is the same as his strength: the camp that must finish the change
+of government is also the camp that has been in office long enough to be asked
+what it finished.
+
+- @pres25_meet_nawrocki: The right has found a new face
+- @pres25_meet_morawiecki: The right has returned to its former prime minister
+- @pres25_meet_czarnek: The right has chosen the culture warrior
+- @pres25_meet_bochenski: The right has chosen the young manager
+
+@pres25_meet_sikorski
+title: Radosław Sikorski — security before the social agenda
+view-if: pres_2025_ko_candidate = "Radosław Sikorski"
+face-image: img/poland/events/pres-candidate-sikorski.webp
+
+**Radosław Sikorski — foreign minister and Civic Coalition Atlanticist**
+
+Sikorski holds the pro-European security constituency: voters who want NATO,
+Washington and a President able to speak the language of allied power without
+translation. His campaign is for a Palace that treats deterrence, diplomacy
+and the eastern border as the organising work of the office.
+
+He has little interest in making the social agenda part of that work. Labour,
+housing and reproductive rights return to Parliament as matters for somebody
+else, which gives Lewica a clear argument and leaves KO's progressive voters
+wondering what, beyond security, this presidency is for.
+
+- @pres25_meet_nawrocki: The right has found a new face
+- @pres25_meet_morawiecki: The right has returned to its former prime minister
+- @pres25_meet_czarnek: The right has chosen the culture warrior
+- @pres25_meet_bochenski: The right has chosen the young manager
+
+@pres25_meet_nowacka
+title: Barbara Nowacka — rights and the secular school
+view-if: pres_2025_ko_candidate = "Barbara Nowacka"
+face-image: img/poland/events/pres-candidate-nowacka.webp
+
+**Barbara Nowacka — education minister and Civic Coalition progressive**
+
+Nowacka holds the secular, feminist part of the democratic electorate. Her
+campaign is for schools free of clerical direction and a presidential pen
+committed to reproductive rights, equal citizenship and the legislation that
+the coalition has postponed.
+
+That programme competes directly for our voters, organisers and movement
+partners. Its vulnerability is ownership: every undelivered rights promise is
+also part of the government's record, and a KO candidacy can absorb Lewica's
+language while leaving Lewica to answer for the compromises.
+
+- @pres25_meet_nawrocki: The right has found a new face
+- @pres25_meet_morawiecki: The right has returned to its former prime minister
+- @pres25_meet_czarnek: The right has chosen the culture warrior
+- @pres25_meet_bochenski: The right has chosen the young manager
+
+@pres25_meet_nawrocki
+title: Karol Nawrocki — the borrowed civic committee
+view-if: pres_2025_right_candidate = "Karol Nawrocki"
+face-image: img/poland/events/pres-candidate-nawrocki.webp
+
+**Karol Nawrocki — historian, president of the Institute of National
+Remembrance, backed by PiS**
+
+Nawrocki runs through a formally civic committee with the whole PiS
+organisation behind it. The arrangement lets the right exchange a damaged party
+brand for a new face without surrendering a single position on the courts, the
+church or the shape of the state.
+
+Everything therefore depends on whether voters read the committee as
+independence or as a costume. He begins with the largest disciplined electorate
+in the field and the least freedom to define himself against the people who
+built it.
+
+- @pres25_meet_mentzen: Konfederacja has a leader and a defector
+- @pres25_meet_bosak: Konfederacja has a candidate and a defector
+
+@pres25_meet_morawiecki
+title: Mateusz Morawiecki — the whole record returns to the ballot
+view-if: pres_2025_right_candidate = "Mateusz Morawiecki"
+face-image: img/poland/cards/advisor-morawiecki.webp
+
+**Mateusz Morawiecki — PiS's former prime minister**
+
+Morawiecki holds the part of the PiS electorate that wants an active state,
+family transfers and a right able to administer more than grievance. The
+party's own former prime minister runs for a Palace credible on state capacity,
+economic intervention and the social programmes his governments built.
+
+He also carries the whole record: judicial conflict, pandemic procurement,
+inflation, European isolation and every promise financed or deferred from the
+premiership. There is no civic costume between the candidate and eight years
+of government, and no failure he can assign to an unfamiliar predecessor.
+
+- @pres25_meet_mentzen: Konfederacja has a leader and a defector
+- @pres25_meet_bosak: Konfederacja has a candidate and a defector
+
+@pres25_meet_czarnek
+title: Przemysław Czarnek — the parish campaign
+view-if: pres_2025_right_candidate = "Przemysław Czarnek"
+face-image: img/poland/events/pres-candidate-czarnek.webp
+
+**Przemysław Czarnek — former education minister and PiS culture warrior**
+
+Czarnek holds the parish networks, the parents' committees organised against
+liberal schooling and the voters who want the presidency to defend a Catholic
+nation rather than arbitrate among citizens. His campaign is for permanent
+cultural mobilisation from the Palace.
+
+The same record that fills church halls empties almost every room beyond them.
+Teachers, younger women, cities and moderate conservatives know his education
+ministry already; he can mobilise the right at full volume and repel everyone
+else before a second-round appeal begins.
+
+- @pres25_meet_mentzen: Konfederacja has a leader and a defector
+- @pres25_meet_bosak: Konfederacja has a candidate and a defector
+
+@pres25_meet_bochenski
+title: Tobiasz Bocheński — PiS with the edges filed off
+view-if: pres_2025_right_candidate = "Tobiasz Bocheński"
+face-image: img/poland/events/pres-candidate-bochenski.webp
+
+**Tobiasz Bocheński — former voivode and Warsaw-facing PiS manager**
+
+Bocheński holds younger administrators, metropolitan conservatives and PiS
+voters who want the state run competently without another daily culture war.
+His campaign is for a managerial Palace: disciplined, technically fluent and
+able to meet Warsaw on its own ground.
+
+He is PiS with the edges filed off, which creates the vulnerability as well as
+the opening. The party machine, court record and veto programme remain behind
+him; loyalists may find the polish bloodless, while swing voters can still ask
+whether a smoother manager changes anything he would sign.
+
+- @pres25_meet_mentzen: Konfederacja has a leader and a defector
+- @pres25_meet_bosak: Konfederacja has a candidate and a defector
+
+@pres25_meet_mentzen
+title: Sławomir Mentzen — the cheap state on the ballot
+face-image: img/poland/events/pres-candidate-mentzen-2025.webp
+view-if: pres_2025_konf_candidate = "Sławomir Mentzen"
+
+**Sławomir Mentzen — Konfederacja chair, tax adviser**
+
+Mentzen combines market radicalism with nationalist social politics and sells
+both as ordinary common sense to men under forty. He competes with **[+
+pres_2025_right_surname +]** for
+the young right and with everyone for the voters who believe the existing
+parties are a cost rather than a choice.
+
+He is also the candidate whose programme can be priced. Every promise he makes
+about taxes is a promise about a hospital, a school or a pension that somebody
+else will have to close.
+
+- @pres25_meet_braun: The Crown runs separately
+
+@pres25_meet_bosak
+title: Krzysztof Bosak — the national movement's disciplined face
+face-image: img/poland/events/pres-candidate-bosak.webp
+view-if: pres_2025_konf_candidate = "Krzysztof Bosak"
+
+**Krzysztof Bosak — Sejm deputy and National Movement leader**
+
+Bosak holds Konfederacja's national-conservative constituency: the organised
+national movement, younger Catholic conservatives and voters who want a harder
+state on borders, family and sovereignty without Braun's permanent spectacle.
+His campaign is for a disciplined nationalist Palace rather than Mentzen's
+cheap-state insurgency.
+
+That discipline also narrows him. PiS competes for the same patriotic voter,
+Braun can always accuse him of moderation, and the campaign lacks Mentzen's
+anti-tax digital audience. He can consolidate a movement more easily than he
+can explain what lies beyond it.
+
+- @pres25_meet_braun: The Crown runs separately
+
+@pres25_meet_braun
+title: Grzegorz Braun — the campaign that wants the scandal
+face-image: img/poland/events/grzegorz-braun-2025.webp
+
+**Grzegorz Braun — MEP, leader of the Crown**
+
+Braun has left Konfederacja's common discipline for a personal campaign built
+out of confrontation, antisemitic provocation and the certainty that no
+broadcaster can ignore him. His candidacy is a bid to prove that Konfederacja
+has become another managed party.
+
+[+ pres_2025_konf_surname +] needs Braun's voters without becoming answerable for his conduct. That
+gap between the two campaigns is the only part of the radical-right vote any
+other candidate can work on.
+
+- @pres25_meet_holownia: Two campaigns claim the space outside the blocs
+- @pres25_meet_petru: Two campaigns claim the space outside the blocs
+
+@pres25_meet_holownia
+title: Szymon Hołownia — the outsider who returned
+view-if: pres_2025_centre_candidate = "Szymon Hołownia"
+face-image: img/poland/events/pres-candidate-holownia-2025.webp
+
+**Szymon Hołownia — founder and leader of Poland 2050**
+
+[? if p2050_2023_exclusion_comeback_done: Hołownia enters the race after
+refounding his movement against both PiS and KO. The campaign is no longer an
+appeal to remember 2020: Poland 2050 has taken support from Konfederacja,
+absorbed Zieloni and proved that it can survive outside the two dominant
+blocs. He begins as a serious third contender for the runoff.?]
+[? if not p2050_2023_exclusion_comeback_done:
+Hołownia can no longer run as a man untouched by parliamentary power. He offers
+institutional reform and a centrist escape from the leading pair while
+defending what his movement did with its share of government, which is a harder
+speech than the one he gave in 2020.?]
+
+His voters are the most genuinely undecided electorate on the ballot, and in a
+runoff they will be the most expensive to buy.
+
+- @pres25_meet_stanowski: And the campaign about campaigns
+
+@pres25_meet_petru
+title: Ryszard Petru — the centre prices the state
+view-if: pres_2025_centre_candidate = "Ryszard Petru"
+face-image: img/poland/events/pres-candidate-petru.webp
+
+**Ryszard Petru — Poland 2050's market-liberal economist**
+
+Petru holds the market-liberal wing of Poland 2050: entrepreneurs, urban
+professionals and centrist voters who want every promise accompanied by a
+cost. His campaign is for a presidency that audits legislation, restrains
+spending and treats economic credibility as the first institutional reform.
+
+He prices everything, including the public services and transfers his party's
+less liberal voters depend on. That makes him legible and vulnerable at once:
+Lewica can answer every veto threat with the ward, school or household that
+would pay for it, while Hołownia's personal electorate may simply stay home.
+
+- @pres25_meet_stanowski: And the campaign about campaigns
+
+@pres25_meet_stanowski
+title: Krzysztof Stanowski — the candidacy as commentary
+face-image: img/poland/events/pres-candidate-stanowski.webp
+
+**Krzysztof Stanowski — media entrepreneur, founder of Kanał Zero**
+
+Stanowski campaigns partly as an investigation of campaign ritual itself: he
+files his spending, mocks the format and interviews his rivals in it. His
+audience gives him reach that no party office can match and no party
+organisation can convert.
+
+Every studio that treats him as comic relief supplies his critique with another
+exhibit. His vote is small; the argument he makes about who gets heard is not.
+
+- @pres25_meet_minor: The five smaller committees
+
+@pres25_meet_minor
+title: Five smaller committees, five separate candidacies
+
+Five further candidates complete the ballot.
+
+**Joanna Senyszyn**, a former SLD parliamentarian, offers secular social
+democracy outside Lewica's organisation.
+
+**Artur Bartoszewicz**, an economist, runs an expert and anti-party campaign.
+
+**Marek Jakubiak**, a former MP and brewer, offers a national-conservative
+business voice.
+
+**Maciej Maciak**, a local broadcaster, and **Marek Woch**, a legal campaigner,
+complete the ballot from outside every national organisation.
+
+They share one row only in the simulation. Senyszyn can take disappointed older
+Left voters; Jakubiak competes on the nationalist flank; together they can turn
+a small combined vote into a much larger argument about whose campaign was
+allowed to be heard.
+
+- @pres25_meet_left: Finally, our own nominee
+
+@pres25_meet_left
+title: [+ pres_2025_left_candidate +] — our nominee
+
+**[+ pres_2025_left_candidate +]** carries the campaign selected through **[+
+pres_2025_nomination_method +]**.
+
+[? if pres_2025_left_candidate = "Magdalena Biejat": Biejat joins housing,
+care and reproductive freedom to the claim that the Left can use institutions
+without disappearing inside them.?][? if pres_2025_left_candidate = "Agnieszka
+Dziemianowicz-Bąk": Dziemianowicz-Bąk joins labour law, public services and
+social security to a record that can be inspected rather than merely
+promised.?][? if pres_2025_left_candidate = "Adrian Zandberg": Zandberg joins
+wages, housing and public investment to a refusal of the liberal economic
+limits accepted by every leading camp.?]
+
+<div class="face-figure left-candidate-portrait" data-candidate-quality="pres_2025_left_candidate"><img class="face-img" alt="Portrait of the Left's presidential nominee"></div>
+
+[? if not pres_2025_united_left: <span class="party-razem"><b>Adrian Zandberg</b></span> also appears on the
+ballot for Razem. He is a rival candidate with an overlapping electorate—not a
+second version of our nominee.?][? if pres_2025_united_left: Razem has no
+second candidate. Its organisers are bound to the same nomination, and
+Zandberg cannot appear in two campaign rows.?]
+
+- @pres25_opening_poll: Release the opening poll
+
+@calculate_presidential_poll_2025
+on-arrival: {!
+const finitePoll25 = function(value, fallback) {
+    return Number.isFinite(Number(value)) ? Number(value) : fallback;
+};
+const pollIds25 = [
+    "ko", "right", "left", "razem", "mentzen",
+    "braun", "holownia", "stanowski", "other"
+];
+const candidateBase25 =
+    Q.pres_2025_left_candidate == "Adrian Zandberg" ? 4.86 :
+    (Q.pres_2025_left_candidate == "Agnieszka Dziemianowicz-Bąk"
+        ? 4.55 : 4.23);
+const leftIntent25 = finitePoll25(Q.left_vote_intent, 8.61);
+const breakthrough25 = Math.max(0, leftIntent25 - 12);
+const campaign25 = finitePoll25(Q.pres_2025_campaign_strength, 0);
+const debate25 = Q.pres_2025_poll_stage == "tracking"
+    ? finitePoll25(Q.pres_2025_debate_bonus, 0)
+    : 0;
+const leftBase25 = Q.pres_2025_united_left
+    ? 7.70 + (candidateBase25 - 4.23) * 0.45 +
+        (leftIntent25 - 8.61) * 0.55 + breakthrough25 * 1.30 +
+        campaign25 * 0.20 + debate25
+    : candidateBase25 +
+        (leftIntent25 - 8.61) * 0.28 + breakthrough25 * 1.80 +
+        campaign25 * 0.20 + debate25;
+const razemBase25 = Q.pres_2025_united_left ? 0 :
+    4.86 +
+    (finitePoll25(Q.razem_vote_intent, 4.86) - 4.86) * 0.80 +
+    (finitePoll25(Q.razem_strength, 20) - 20) * 0.06;
+const rawPoll25 = {
+    ko: 31.36 +
+        (finitePoll25(Q.ko_vote_intent, 30.70) - 30.70) * 0.34 -
+        Math.max(0, leftBase25 + razemBase25 - 10) * 0.18,
+    right: 29.54 +
+        (finitePoll25(Q.pis_vote_intent, 35.38) - 35.38) * 0.25 +
+        (finitePoll25(Q.far_right_agenda, 32) - 32) * 0.018,
+    left: Math.max(0.4, leftBase25),
+    razem: Math.max(0, razemBase25),
+    mentzen: (Q.pres_2025_konf_candidate == "Krzysztof Bosak" ? 13.9 : 14.81) +
+        (finitePoll25(Q.konf_vote_intent, 7.16) - 7.16) * 0.35 +
+        (Q.pres_2025_konf_candidate == "Krzysztof Bosak"
+            ? (finitePoll25(Q.konf_nationalist_share, 35) - 35) * 0.03
+            : (finitePoll25(Q.konf_mentzenite_share, 47) - 47) * 0.025),
+    braun: 6.34 + finitePoll25(Q.braun_martyrdom, 0) * 0.06 +
+        (finitePoll25(Q.konf_braunist_share, 18) - 18) * 0.025,
+    holownia: 4.99 +
+        (finitePoll25(Q.p2050_vote_intent, 4) - 4) * 0.25 +
+        finitePoll25(Q.p2050_holownia_presidential_bonus, 0),
+    stanowski: 1.24 +
+        (finitePoll25(Q.kanal_zero_capacity, 12) - 12) * 0.025 +
+        finitePoll25(Q.pres_2025_stanowski_surge, 0),
+    other: 2.63
+};
+if (Q.pres_2025_incumbent) {
+    rawPoll25.ko += 1.2 +
+        (finitePoll25(Q.public_trust, 43) - 43) * 0.035 +
+        finitePoll25(Q.trz_vetoes, 0) * 0.10;
+}
+if (Q.pres_2025_poll_stage == "tracking") {
+    for (const id of pollIds25) {
+        if (id == "other") continue;
+        rawPoll25[id] += finitePoll25(Q["pres_2025_rival_shift_" + id], 0);
+    }
+}
+const noisePrefix25 = Q.pres_2025_poll_stage == "opening"
+    ? "pres_2025_open_noise_" : "pres_2025_track_noise_";
+for (const id of pollIds25) {
+    if (id == "razem" && Q.pres_2025_united_left) {
+        rawPoll25[id] = 0;
+    } else {
+        rawPoll25[id] = Math.max(
+            id == "other" ? 0.3 : 0.1,
+            rawPoll25[id] + finitePoll25(Q[noisePrefix25 + id], 0)
+        );
+    }
+}
+const pollTotal25 = pollIds25.reduce(function(sum, id) {
+    return sum + rawPoll25[id];
+}, 0);
+const displayPoll25 = {};
+for (const id of pollIds25) {
+    displayPoll25[id] = Math.round(
+        rawPoll25[id] * 1000 / Math.max(1, pollTotal25)
+    ) / 10;
+}
+const roundedTotal25 = pollIds25.reduce(function(sum, id) {
+    return sum + displayPoll25[id];
+}, 0);
+displayPoll25.other = Math.round(
+    (displayPoll25.other + 100 - roundedTotal25) * 10
+) / 10;
+for (const id of pollIds25) {
+    Q["pres_2025_poll_" + id] = displayPoll25[id];
+}
+Q.stanowski_best_poll = Math.max(
+    finitePoll25(Q.stanowski_best_poll, 1.24),
+    finitePoll25(Q.pres_2025_poll_stanowski, 0)
+);
+Q.stanowski_trigger_score = Math.max(
+    finitePoll25(Q.stanowski_trigger_score, 0),
+    finitePoll25(Q.pres_2025_poll_stanowski, 0)
+);
+if (Q.pres_2025_poll_stage == "tracking") {
+    Q.pres_2025_debate_shift = Math.round(
+        (displayPoll25.left -
+            finitePoll25(Q.pres_2025_debate_poll_before_left, 0)) * 10
+    ) / 10;
+}
+!}
+
+@pres25_opening_poll
+title: The opening presidential poll
+new-page: true
+on-arrival: pres_2025_poll_stage = "opening"
+call: calculate_presidential_poll_2025
+
+= A national race with a ±2.2 point working margin
+
+The estimate uses current party support, candidate strength, organisation and
+the nomination settlement. The five smallest committees remain aggregated;
+their candidates remain separate on the real ballot.
+
+<div class="poll-table">
+<div class="poll-row"><span class="party party-ko"><b>[+ pres_2025_ko_candidate +]</b></span><span>[+ pres_2025_poll_ko +]%</span><span>KO</span></div>
+<div class="poll-row"><span class="party party-pis"><b>[+ pres_2025_right_surname +]</b></span><span>[+ pres_2025_poll_right +]%</span><span>PiS-backed</span></div>
+<div class="poll-row"><span class="party party-konf"><b>[+ pres_2025_konf_surname +]</b></span><span>[+ pres_2025_poll_mentzen +]%</span><span>Konf.</span></div>
+<div class="poll-row"><span class="party party-konf"><b>Braun</b></span><span>[+ pres_2025_poll_braun +]%</span><span>Korona</span></div>
+<div class="poll-row"><span class="party party-p2050"><b>[+ pres_2025_centre_surname +]</b></span><span>[+ pres_2025_poll_holownia +]%</span><span>PL2050</span></div>
+<div class="poll-row"><span><b>Stanowski</b></span><span>[+ pres_2025_poll_stanowski +]%</span><span>independent</span></div>
+<div class="poll-row"><span class="party party-lewica"><b>[+ pres_2025_left_candidate +]</b></span><span>[+ pres_2025_poll_left +]%</span><span>Lewica</span></div>
+[? if not pres_2025_united_left: <div class="poll-row"><span class="party party-razem"><b>Zandberg</b></span><span>[+ pres_2025_poll_razem +]%</span><span>Razem</span></div>?]
+<div class="poll-row"><span><b>Five smaller committees</b></span><span>[+ pres_2025_poll_other +]%</span><span>combined estimate</span></div>
+</div>
+
+- @pres25_campaign_menu: Open the two-move campaign board
+
+@pres25_campaign_menu
+title: Two decisions before the national debates
+new-page: true
+
+= Campaign board — [+ pres_2025_campaign_actions_remaining +] moves remain
+
+Every operation can be used once. The poll describes the present; the campaign
+decides which electorate the nominee will try to change.
+
+- @pres25_campaign_work
+- @pres25_campaign_rights
+- @pres25_campaign_counties
+- @pres25_campaign_constitution
+- @pres25_campaign_left_ground
+
+@pres25_campaign_work
+title: Put wages, housing and public services on one tour
+subtitle: Free. Strong material ownership; less room for democratic-camp positioning.
+view-if: pres_2025_campaign_work = 0
+on-arrival: pres_2025_campaign_work = 1; pres_2025_campaign_actions_remaining -= 1; pres_2025_campaign_strength += 3; labor_credibility += 3; workers_support += 2; household_security += 1; public_mood_pending_social_spending_support += 9; public_mood_pending_social_spending_left_ownership += 8; news_headline = "The presidential campaign becomes a test of wages, homes and services"
+
+The tour drops the constitutional vocabulary and runs on rent statements, ward
+closures and pay slips. It is the cheapest operation on the board because the
+material is already ours: every union branch and tenants' committee the party
+has ever worked with can host it without a fee.
+
+The cost is positional. KO's people complain that the Left is campaigning
+against the government rather than against **[+ pres_2025_right_surname +]**,
+and the studios ask, more
+than once, whether **[+ pres_2025_left_candidate +]** understands what this
+election is actually about.
+
+- @pres25_campaign_next
+- @pres25_campaign_done
+
+@pres25_campaign_rights
+title: Join equality organisations to the national tour
+subtitle: Cost: 1 resource. Mobilises women and younger voters; deepens the break with PSL.
+view-if: pres_2025_campaign_rights = 0
+choose-if: resources >= 1
+unavailable-subtitle: The campaign cannot finance the legal and organiser network.
+on-arrival: resources -= 1; pres_2025_campaign_rights = 1; pres_2025_campaign_actions_remaining -= 1; pres_2025_campaign_strength += 2.5; progressive_credibility += 3; feminist_trust += 4; women_support += 2; psl_relation -= 3; public_mood_pending_lgbt_equality_support += 10; public_mood_pending_abortion_rights_support += 8; public_mood_pending_lgbt_equality_backlash += 7; news_headline = "Equality organisations enter the presidential ground campaign"
+
+The abortion-rights networks, the legal clinics and the student organisations
+bring their own lists, their own lawyers and an audience that has spent two
+years being told the promise would come later. They do not campaign for us out
+of loyalty; they campaign because the presidential signature is the exact
+obstacle they keep meeting.
+
+PSL's county chairs read the same footage and conclude that the Left has chosen
+its side of the coalition argument in public. They are not wrong, and they will
+remember it in the runoff bargaining.
+
+- @pres25_campaign_next
+- @pres25_campaign_done
+
+@pres25_campaign_counties
+title: Build a county tour beyond the metropolitan Left
+subtitle: Cost: 1 resource. Slower media rhythm; durable local and rural reach.
+view-if: pres_2025_campaign_counties = 0
+choose-if: resources >= 1
+unavailable-subtitle: The campaign cannot finance the county route.
+on-arrival: resources -= 1; pres_2025_campaign_counties = 1; pres_2025_campaign_actions_remaining -= 1; pres_2025_campaign_strength += 2.2; local_network += 4; rural_support += 3; psl_relation += 1; media_capacity -= 1; news_headline = "The nominee leaves the studio circuit for the county map"
+
+Two buses, forty towns, a bus timetable that no longer serves half of them.
+**[+ pres_2025_left_candidate +]** spends the month in places where Lewica has
+never had a functioning branch and where the argument about hospital wards and
+rail connections needs no translation.
+
+National coverage suffers: a county market at nine in the morning does not make
+the evening bulletin. What it makes instead is a list of names in districts
+that had none, and the campaign will still have that list after the count.
+
+- @pres25_campaign_next
+- @pres25_campaign_done
+
+@pres25_campaign_constitution
+title: Publish a lawful-presidency and veto standard
+subtitle: Free. Builds governing credibility; makes the current Palace and KO answer the same test.
+view-if: pres_2025_campaign_constitution = 0
+on-arrival: pres_2025_campaign_constitution = 1; pres_2025_campaign_actions_remaining -= 1; pres_2025_campaign_strength += 1.8; constitutional_restraint += 3; judicial_repair_mandate += 2; public_trust += 2; president_relation -= 2; public_mood_pending_rule_of_law_support += 9; public_mood_pending_rule_of_law_salience += 8; news_headline = "The Left publishes one constitutional standard for every president"
+
+The document is short and deliberately unflattering to everyone: what a
+president may refuse to sign, what a president may not refuse to do, and which
+appointments must be published before they are made. It commits our own nominee
+first, which is the only reason anyone else has to answer it.
+
+The Palace treats the publication as an attack, because it is one applied
+evenly. KO's lawyers find nothing in it they can disown, and start quoting the
+parts that embarrass the other camp.
+
+- @pres25_campaign_next
+- @pres25_campaign_done
+
+@pres25_campaign_left_ground
+title: [? if pres_2025_united_left: Put every Left organisation behind one field operation?][? if not pres_2025_united_left: Negotiate a no-fratricide ground pact with Razem?]
+subtitle: Cost: 2 resources. Protects Left turnout; blurs the line between rival programmes.
+view-if: pres_2025_campaign_left_ground = 0
+choose-if: resources >= 2
+unavailable-subtitle: Parallel organiser networks cannot be financed.
+on-arrival: resources -= 2; pres_2025_campaign_left_ground = 1; pres_2025_campaign_actions_remaining -= 1; pres_2025_campaign_strength += 3.5; razem_cooperation += 5; party_unity += 2; local_network += 2; news_headline = "The Left protects its shared ground before the presidential count"
+
+[? if pres_2025_united_left: Every current that lost the nomination is given
+something to run: a region, a constituency, a phone bank of its own. Nobody is
+asked to pretend the argument is settled, only to keep it inside the same
+campaign until the ballots are counted.?][? if not pres_2025_united_left: The
+two headquarters sign a short list of things neither campaign will do to the
+other: no attack material, no poaching of local organisers, no briefing against
+the other's candidate in the last fortnight. Zandberg's people insist the pact
+be published, so that breaking it costs something.?]
+
+The operation is expensive and its benefit is invisible until the count: a Left
+electorate that stays a Left electorate instead of leaking to KO out of anxiety
+or to the sofa out of boredom.
+
+- @pres25_campaign_next
+- @pres25_campaign_done
+
+@pres25_campaign_next
+title: Return to the campaign board
+view-if: pres_2025_campaign_actions_remaining > 0
+go-to: pres25_campaign_menu
+
+@pres25_campaign_done
+title: Close the campaign board and let the month run
+view-if: pres_2025_campaign_actions_remaining <= 0
+go-to: poland_event_queue
+
+@braun_breaks_konf
+# scenario-ledger: FAR-02
+# prose-audit: Grade B — Braun and Mentzen are introduced as rival radical-right organisers with different constituencies, and each Lewica response now changes the public meaning of the split on screen.
+title: Braun's place inside Konfederacja is decided
+subtitle: Organisational strength determines whether the federation disciplines him, bargains or breaks
+face-image: img/poland/events/grzegorz-braun-2025.webp
+new-page: true
+tags: poland_event
+priority: 25
+order: 11
+max-visits: 1
+view-if: continuous_campaign = 1 and year = 2025 and month = 1
+on-arrival: {!
+Q.braun_legal_preparation = Number(Q.braun_legal_preparation) || 0;
+const kkpRecord = (Q.rival_group_records || []).find(function(record) {
+    return record && record.id == "kkp";
+});
+const braunistOrganisation = Math.max(
+    Number(Q.konf_braunist_share) || 0,
+    kkpRecord ? Number(kkpRecord.organisation) || 0 : 0
+);
+const braunStays = braunistOrganisation >= 55 &&
+    Number(Q.far_right_fragmentation || 0) < 35;
+if (braunStays) {
+    Q.far_right_split = 0;
+    Q.braun_federation_outcome = braunistOrganisation >= 68
+        ? "Konfederacja accepts Braun's presidential candidacy"
+        : "Konfederacja buys Braun's withdrawal with protected list places";
+    if (braunistOrganisation >= 68) {
+        Q.pres_2025_konf_candidate = "Grzegorz Braun";
+    }
+    Q.konf_braunist_share += 3;
+    Q.far_right_fragmentation += 2;
+    if (Q.trz_freebie_law) {
+        Q.konf_normalisation -= 3;
+        Q.far_right_agenda += 3;
+        Q.minority_safety -= 2;
+    }
+Q.public_mood_pending_secular_state_salience += 6;
+Q.public_mood_pending_refugee_solidarity_backlash += 5;
+    Q.news_headline = Q.braun_federation_outcome;
+} else {
+    Q.far_right_split = 1;
+    Q.braun_federation_outcome =
+        "Braun leaves Konfederacja with Korona as an independent vehicle";
+    if (Q.konf_seats >= 1) {
+        Q.korona_seats += 1;
+        Q.konf_seats -= 1;
+    }
+    if (kkpRecord) {
+        kkpRecord.active = 1;
+        kkpRecord.contesting = 1;
+        kkpRecord.list_committee = "kkp";
+        kkpRecord.exclusive_seats = Math.max(1, kkpRecord.exclusive_seats || 0);
+    }
+    Q.konf_braunist_share -= 8;
+    Q.konf_mentzenite_share += 5;
+    Q.konf_nationalist_share += 3;
+    if (Q.trz_freebie_law) {
+        Q.konf_normalisation += 5;
+        Q.far_right_fragmentation += 5;
+    }
+    Q.news_headline =
+        "Braun takes a seat and an electoral vehicle out of Konfederacja";
+}
+!}
+
+= January 2025 — Two radical-right electorates
+
+Far-right MEP <span class="party-korona"><b>Grzegorz Braun</b></span> challenges
+New Hope leader <span class="party-konf"><b>Sławomir Mentzen</b></span> for the
+federation's presidential nomination. Mentzen wants younger anti-tax voters
+and coalition respectability; Braun wants a personal movement unrestrained by
+the federation's discipline.
+
+**[+ braun_federation_outcome +].** [? if far_right_split: Any elected
+representation declared for Braun moves with his organisation; no undeclared
+MP is reassigned.?][? if not far_right_split: Crown keeps its organisation
+inside the federation. Protected places or a nomination settle this congress,
+but do not erase the rivalry.?]
+
+Jewish organisations, minority advocates and people targeted by Braun's public
+actions need protection. Lewica also has to understand that calling every
+Konfederacja voter a Braun supporter can hand Mentzen the respectable image he
+could not earn alone. The split presents two threats, not one convenient label.
+
+- @braun_isolate
+- @braun_attack_all
+- @braun_watch
+
+@braun_isolate
+title: Treat Braun and Mentzen as distinct threats
+subtitle: Deny Braun a common persecution story, while Mentzen tries to pass for the responsible successor.
+on-arrival: public_trust += 2; media_capacity += 2; braun_martyrdom -= 2; braun_legal_preparation += 1; konf_relation += 1; far_right_agenda -= 1; news_headline = "The Left refuses to reunite the radical right rhetorically"
+
+Lewica's briefings name Braun's Crown movement and Mentzen's Konfederacja
+separately, then document what each one says and organises. Mentzen receives no
+absolution for expelling a rival; Braun loses the larger federation he needs
+for a ready-made persecution story.
+
+- @poland_event_queue: File the two-threat briefing
+
+@braun_attack_all
+title: Make every Konfederacja figure answer for Braun
+subtitle: Satisfy anti-fascist organisers, at the risk of giving both successor camps the contrast they want.
+on-arrival: progressive_credibility += 3; konf_mentzenite_share += 3; braun_martyrdom += 3; braun_legal_preparation -= 1 if braun_legal_preparation >= 1; far_right_agenda += 2; konf_poll_momentum += 0.2; news_headline = "Mentzen uses Braun's expulsion to advertise respectability"
+
+Every camera appearance treats Braun as proof of what Konfederacja always was.
+The line satisfies anti-fascist organisers, but Mentzen answers with the image
+of the man who imposed discipline while Braun tells supporters that the whole
+system fears him. Both successor campaigns find a use for our simplification.
+
+- @poland_event_queue: Record the unified attack
+
+@braun_watch
+title: Build a legal and media watch around both successor camps
+subtitle: Cost: 1 resource.
+choose-if: resources >= 1
+unavailable-subtitle: Monitoring capacity is already committed.
+on-arrival: resources -= 1; media_capacity += 3; minority_safety += 3; prosecution_oversight_capacity += 1; braun_martyrdom -= 1; braun_legal_preparation += 4; news_headline = "Two far-right organisations receive one evidence archive"
+
+Party lawyers, minority organisations and local monitors build one archive
+with two clearly marked files. Threats can reach potential victims before they
+become clips, and later prosecutors will not need a campaign slogan to tell one
+organisation's conduct from the other's.
+
+- @poland_event_queue: Send the archive to the events desk

@@ -1,0 +1,3246 @@
+title: snap (2026)
+
+@snap_election_2026
+# prose-audit: Grade B — The constitutional thresholds are stated exactly and the Palace decision is properly narrated, but the two trigger choices that reach it carry no prose, and the opening is an explainer of routes rather than a scene with anyone in it.
+title: The constitutional route to a snap election
+subtitle: Budget failure creates a choice, not an automatic dissolution
+face-image: img/poland/events/election-2023-ballot.webp
+new-page: true
+tags: poland_event
+priority: 50
+order: 1
+view-if: continuous_campaign = 1 and snap_election_held = 0 and snap_campaign_active = 0 and time > snap_event_deferred_time and (snap_election_requested = 1 or (budget_deadline_active = 1 and budget_deadline_time >= 0 and time >= budget_deadline_time))
+on-arrival: {!
+let dissolutionSupport =
+    Math.max(0, Number(Q.left_committed_seats) || 0);
+const oppositionToPiS = Q.government_party == "pis";
+if (
+    (Number(Q.ko_relation) || 0) >= 52 ||
+    oppositionToPiS ||
+    (Number(Q.ko_poll_momentum) || 0) >= 0.6
+) {
+    dissolutionSupport +=
+        Math.max(0, Number(Q.ko_seats) || 0);
+}
+if (
+    (
+        (Number(Q.psl_relation) || 0) >= 55 &&
+        (Number(Q.early_election_risk) || 0) >= 45
+    ) ||
+    (Number(Q.psl_poll_momentum) || 0) >= 0.7
+) {
+    dissolutionSupport +=
+        Math.max(0, Number(Q.psl_seats) || 0);
+}
+if (
+    (
+        (Number(Q.p2050_relation) || 0) >= 50 &&
+        (Number(Q.early_election_risk) || 0) >= 45
+    ) ||
+    (Number(Q.p2050_poll_momentum) || 0) >= 0.7
+) {
+    dissolutionSupport +=
+        Math.max(0, Number(Q.p2050_seats) || 0);
+    if ((Number(Q.centrum_relation) || 0) >= 45) {
+        dissolutionSupport +=
+            Math.max(0, Number(Q.centrum_seats) || 0);
+    }
+}
+if (
+    Q.government_party != "pis" &&
+    (Number(Q.pis_poll_momentum) || 0) >= 0.8
+) {
+    dissolutionSupport +=
+        Math.max(0, Number(Q.pis_seats) || 0);
+}
+if (
+    (Number(Q.konf_poll_momentum) || 0) >= 0.8
+) {
+    dissolutionSupport +=
+        Math.max(0, Number(Q.konf_seats) || 0) +
+        Math.max(0, Number(Q.korona_seats) || 0);
+}
+Q.snap_self_dissolution_support = Math.max(
+    0,
+    Math.min(460, Math.round(dissolutionSupport))
+);
+Q.snap_budget_deadline_ready =
+    Number.isFinite(Number(Q.budget_deadline_time)) &&
+    Number(Q.time) >= Number(Q.budget_deadline_time)
+        ? 1
+        : 0;
+Q.snap_budget_petition_advocacy = 0;
+Q.snap_left_can_resign_cabinet =
+    Q.caretaker_government ||
+    Q.government_party == "lewica" ||
+    (
+        Q.government_party == "independent" &&
+        String(Q.government_owner || "").includes("Left-led")
+    ) ? 1 : 0;
+Q.news_headline = Q.snap_election_requested
+    ? "A snap-election demand reaches its constitutional route"
+    : "The expired budget clock reaches the President";
+!}
+
+= Which legal trigger?
+
+This is an **alternative path**, not historical chronology. The Sejm may
+self-dissolve with 307 votes. The President may shorten the term after the
+four-month budget deadline. A third failed formation attempt obliges
+dissolution. A political defeat by itself does none of those things.
+
+[? if snap_election_requested: We put the election demand on record in **[+
+snap_election_request_month +]/[+ snap_election_request_year +]**. Now every
+party must decide whether it will supply the votes.?][? if not
+snap_election_requested: No party demand brought us here. The four-month budget
+clock did.?] [? if snap_self_dissolution_support >= 307: Public declarations
+now put the two-thirds majority within reach.?][? if snap_self_dissolution_support
+< 307: The declared supporters still fall short of the 307 votes required to
+end the term.?] [? if snap_budget_deadline_ready: The budget deadline has also
+expired, leaving the Palace a separate route.?][? if not
+snap_budget_deadline_ready: The budget route is not open yet.?]
+
+- @snap_self_dissolve
+- @snap_budget_deadline
+- @snap_formation_ladder
+- @snap_defer
+- @snap_avoid
+- @snap_waive_deadline
+
+@snap_self_dissolve
+title: Assemble 307 votes for Sejm self-dissolution
+subtitle: Put every party's declaration to the constitutional two-thirds test.
+choose-if: snap_self_dissolution_support >= 307
+unavailable-subtitle: The current party-by-party count is below the constitutional two-thirds threshold.
+on-arrival: snap_election_trigger = "Two-thirds Sejm self-dissolution"; position = "Snap-election campaign"; public_trust += 2; news_headline = "The Sejm shortens its own term with a two-thirds vote"
+go-to: snap_campaign_launch
+
+@snap_budget_deadline
+title: Petition the President after the four-month budget deadline
+subtitle: The Palace decides independently whether to shorten the term.
+choose-if: snap_budget_deadline_ready = 1
+unavailable-subtitle: Four months have not elapsed since the recorded draft-budget submission.
+on-arrival: snap_election_trigger = "Article 225 petition after the budget deadline"; snap_budget_petition_advocacy = 4; president_relation -= 1; public_trust -= 1; news_headline = "The Article 225 petition reaches the President"
+go-to: snap_budget_palace_decision
+
+@snap_budget_palace_decision
+title: The Palace decides under Article 225
+new-page: true
+on-arrival: {!
+Q.snap_budget_petition_roll =
+    Math.floor((this.random.uint32() / 4294967296) * 11) - 5;
+const hostileToCabinet =
+    (
+        Q.pres_2025_hostile_president &&
+        Q.government_party != "pis"
+    ) ||
+    (
+        Q.president_name == "Andrzej Duda" &&
+        Q.government_party != "pis"
+    ) ||
+    (
+        Q.president_name == "Rafał Trzaskowski" &&
+        Q.government_party == "pis"
+    );
+Q.snap_budget_petition_score = Math.round(
+    (Number(Q.early_election_risk) || 0) * 0.30 +
+    (Number(Q.government_coalition_dissent) || 0) * 0.25 +
+    Math.max(0, 50 - (Number(Q.public_trust) || 0)) * 0.20 +
+    (hostileToCabinet ? 14 : -4) +
+    (Number(Q.snap_budget_petition_advocacy) || 0) +
+    Q.snap_budget_petition_roll
+);
+Q.snap_budget_petition_approved =
+    Q.snap_budget_petition_score >= 35 ? 1 : 0;
+Q.news_headline = Q.snap_budget_petition_approved
+    ? "The President decides to shorten the Sejm term"
+    : "The President declines to shorten the Sejm term";
+!}
+
+Our petition forces a decision, not an election. The President weighs the
+cabinet's disorder, the public cost of another campaign and the advantage the
+Palace expects from acting now.
+
+[? if snap_budget_petition_approved: The President signs the order shortening
+the term. Parties leave the Palace for an election they can no longer defer.?]
+[? if not snap_budget_petition_approved: The President refuses. The failed
+budget remains the cabinet's burden, and our demand has exposed how little
+control we have over the Palace.?]
+
+- @snap_budget_approved
+- @snap_budget_declined
+
+@snap_budget_approved
+title: Record the presidential shortening
+view-if: snap_budget_petition_approved = 1
+on-arrival: snap_election_trigger = "Presidential shortening after the budget deadline"; budget_deadline_active = 0; court_user_trust += 1; public_trust -= 1; news_headline = "The President uses Article 225 to shorten the term"
+go-to: snap_campaign_launch
+
+@snap_budget_declined
+title: Record the President's refusal
+view-if: snap_budget_petition_approved = 0
+on-arrival: {!
+Q.snap_election_requested = 0;
+Q.budget_deadline_active = 0;
+Q.early_election_risk = Math.max(
+    35,
+    Q.early_election_risk - 15
+);
+Q.president_relation -= 2;
+Q.news_headline =
+    "The Article 225 window closes without an election";
+!}
+go-to: poland_event_queue
+
+@snap_formation_ladder
+title: Enter the three constitutional formation attempts
+subtitle: Available to a Lewica cabinet that resigns, or when a caretaker already requires formation.
+view-if: snap_left_can_resign_cabinet = 1
+on-arrival: snap_formation_attempt = 1; snap_formation_context = "Pre-election dissolution ladder"; snap_left_cabinet_commitment = 0; snap_cabinet_commitments_recorded = 0; snap_psl_cabinet_committed = 0; snap_p2050_cabinet_committed = 0; snap_centrum_cabinet_committed = 0; caretaker_government = 1; government_has_confidence = 0; constitutional_restraint += 1; public_trust -= 1; news_headline = "The caretaker period opens the first constitutional formation attempt"
+go-to: snap_formation_attempt_one
+
+@snap_campaign_launch
+title: The dissolution opens a campaign
+subtitle: The vote is next month, not on the day the term ends
+new-page: true
+on-arrival: {!
+Q.snap_campaign_active = 1;
+// A dissolution before the ordinary term ends means the 2021-2023 dated
+// calendar no longer describes this timeline, and the events that assume it
+// stop firing.
+if (Number(Q.year) < 2023 ||
+    (Number(Q.year) == 2023 && Number(Q.month) <= 7)) {
+    Q.historical_2023_calendar = 0;
+}
+Q.snap_campaign_start_time = Number(Q.time) || 0;
+Q.snap_campaign_due_time = Q.snap_campaign_start_time + 1;
+Q.snap_campaign_start_year = Number(Q.year) || 0;
+Q.snap_campaign_start_month = Number(Q.month) || 0;
+Q.snap_campaign_beyond_horizon =
+    Q.snap_campaign_start_year > 2027 ||
+    Q.snap_campaign_start_year == 2027 &&
+        Q.snap_campaign_start_month >= 10 ? 1 : 0;
+Q.snap_campaign_strategy = "Unchosen";
+Q.snap_campaign_left_bonus = 0;
+Q.snap_election_requested = 0;
+Q.snap_election_held = 0;
+Q.snap_election_complete = 0;
+Q.budget_deadline_active = 0;
+Q.caretaker_government = 1;
+Q.government_has_confidence = 0;
+Q.formation_complete = 0;
+Q.formation_in_progress = 0;
+Q.early_election_risk = 100;
+Q.position = "Snap-election campaign";
+Q.news_headline = "Dissolution starts a month-long election campaign";
+!}
+
+The legal trigger was **[+ snap_election_trigger +]**. The outgoing cabinet
+now serves in a caretaker role. Ballots are counted only after a campaign month
+has passed. [? if snap_campaign_beyond_horizon: Because dissolution occurred
+at or after October 2027, the constitutional timetable pushes polling day into
+the next year. The outgoing cabinet remains in care until voters choose a new
+Sejm.?]
+
+- @snap_campaign_social
+- @snap_campaign_democratic
+- @snap_campaign_independent
+
+@snap_campaign_social
+title: Campaign on wages, housing and public services
+subtitle: Give our organizers a distinct offer and make material security the election's dividing line.
+on-arrival: snap_campaign_strategy = "Material security"; snap_campaign_left_bonus = 1.3; labor_credibility += 3; economic_issue_salience += 4; public_mood_pending_social_spending_support += 10; public_mood_pending_social_spending_salience += 9; news_headline = "Lewica makes material security the snap-election argument"
+
+Union halls and tenant groups finally hear a campaign built around their own
+demands. KO warns that we are turning a constitutional election into a contest
+inside the opposition.
+
+- @poland_regional_campaign.snap_open: Put it on the regional map
+
+@snap_campaign_democratic
+title: Defend a joint democratic majority
+subtitle: Reassure coalition voters, even if Lewica's own programme becomes less distinct.
+on-arrival: snap_campaign_strategy = "Democratic majority"; snap_campaign_left_bonus = 0.6; ko_relation += 5; coalition_clarity += 2; party_unity -= 1; news_headline = "Lewica campaigns as the social pillar of a democratic majority"
+
+KO welcomes us back onto a common stage. Our candidates gain a clear coalition
+answer at every debate, while activists grumble that voters are again being
+asked to save someone else's government.
+
+- @poland_regional_campaign.snap_open: Put it on the regional map
+
+@snap_campaign_independent
+title: Run against both conservative blocs
+subtitle: Rally the party behind its own banner and accept a colder relationship with KO.
+on-arrival: snap_campaign_strategy = "Independent Left"; snap_campaign_left_bonus = 1; party_unity += 2; ko_relation -= 4; progressive_credibility += 2; news_headline = "Lewica fights the snap election under its own banner"
+
+Our factions close ranks around an autonomous Left campaign. KO responds by
+treating every vote we take from it as a threat to the next majority.
+
+- @poland_regional_campaign.snap_open: Put it on the regional map
+
+@snap_campaign_result_due_2026
+# prose-audit: Grade B — A clean three-line handoff into the count, well voiced from the campaign's side; it is a transition beat rather than an event, with no decision of its own.
+title: The snap-election campaign reaches polling day
+subtitle: One month has passed since dissolution
+face-image: img/poland/events/polling-queue-2024.webp
+new-page: true
+tags: poland_event
+priority: 60
+order: 1
+max-visits: 2
+view-if: continuous_campaign = 1 and snap_campaign_active = 1 and time >= snap_campaign_due_time
+
+One month after **[+ snap_election_trigger +]**, we bring the **[+
+snap_campaign_strategy +]** campaign to the polling stations. The slogans,
+alliances and party splits are over; voters now decide which of those parties
+will return through the filed lists or district pacts.
+
+- @poland_regional_campaign.snap_close: Make the closing regional choice
+
+@snap_campaign_count
+title: Count the ballots
+go-to: snap_result_2026
+
+@snap_defer
+title: Wait for another legal trigger
+subtitle: Keep the election request alive and review the count next month.
+view-if: snap_election_requested = 1 and snap_budget_deadline_ready = 0
+on-arrival: snap_event_deferred_time = time; public_trust -= 1; news_headline = "The election request remains pending while constitutional clocks run"
+go-to: poland_event_queue
+
+@snap_avoid
+title: Withdraw the election demand and return to a minority budget bargain
+subtitle: Preserve the present cabinet at the cost of an obvious retreat.
+view-if: snap_election_requested = 1
+on-arrival: snap_election_requested = 0; early_election_risk = 45; party_unity -= 4; ko_relation += 2; psl_relation += 3; public_trust -= 2; news_headline = "A minority bargain avoids immediate dissolution without changing who holds office"
+
+PSL and KO take the reopened budget talks. Our own caucus must explain why an
+election described as necessary yesterday can be traded away today.
+
+- @poland_event_queue: Withdraw the demand
+
+@snap_waive_deadline
+title: Submit the case against shortening the term
+subtitle: Lewica may argue for continuity, but the President still decides independently.
+view-if: snap_election_requested = 0 and snap_budget_deadline_ready = 1
+on-arrival: {!
+Q.snap_election_trigger =
+    "Article 225 review after the budget deadline";
+Q.snap_budget_petition_advocacy = -8;
+Q.news_headline =
+    "Lewica asks the Palace not to shorten the term";
+!}
+go-to: snap_budget_palace_decision
+
+@snap_formation_attempt_one
+title: First formation attempt — the President's nominee
+new-page: true
+# Runs after this scene's own on-arrival, so the player's join option is
+# judged on the relations this stage just moved.
+call: poland_normalize
+on-arrival: {!
+const firstRight =
+    Q.government_party == "pis" ||
+    Q.president_name == "Andrzej Duda" ||
+    Boolean(Q.pres_2025_hostile_president);
+const successionNominee =
+    Q.office_incompatibility_pm_formation &&
+    String(Q.office_incompatibility_pm_nominee || "").length &&
+    Q.office_incompatibility_pm_nominee != Q.president_name
+        ? Q.office_incompatibility_pm_nominee
+        : "";
+const rightNominee = Q.president_name == "Mateusz Morawiecki"
+    ? "Beata Szydło"
+    : "Mateusz Morawiecki";
+Q.snap_formation_candidate = successionNominee || (firstRight
+    ? rightNominee
+    : (
+        String(Q.prime_minister || "").length &&
+        !String(Q.prime_minister || "").includes("Vacant") &&
+        Q.prime_minister != Q.president_name
+            ? Q.prime_minister
+            : (Q.ko_leader || "KO nominee")
+    ));
+const firstNomineeParty = successionNominee
+    ? String(Q.office_incompatibility_pm_nominee_party || "")
+    : "";
+Q.snap_formation_first_right = successionNominee
+    ? (firstNomineeParty == "pis" ? 1 : 0)
+    : (firstRight ? 1 : 0);
+Q.snap_formation_nominee_is_left =
+    firstNomineeParty == "lewica" || [
+        "Agnieszka Dziemianowicz-Bąk", "Magdalena Biejat",
+        "Krzysztof Gawkowski", "Włodzimierz Czarzasty",
+        "Robert Biedroń", "Adrian Zandberg"
+    ].includes(Q.snap_formation_candidate) ? 1 : 0;
+const sharedRightFormation = Math.max(
+    0,
+    Number(Q.snap_election_right_2027_seats) || 0
+);
+const pisKonfPledge = sharedRightFormation > 0
+    ? Math.max(0, sharedRightFormation - Number(Q.pis_seats || 0))
+    : (Q.coalition_viable_pis_konf &&
+        (Number(Q.rival_relation_pis_konf) || 0) >= 50
+        ? Math.max(0, Number(Q.konf_seats) || 0) +
+            Math.max(0, Number(Q.new_hope_seats) || 0) +
+            Math.max(0, Number(Q.national_movement_seats) || 0) +
+            Math.max(0, Number(Q.korona_seats) || 0)
+        : 0);
+const pisPslPledge =
+    Q.coalition_viable_pis_psl &&
+    (Number(Q.rival_relation_pis_psl) || 0) >= 55 &&
+    (Number(Q.psl_coalition_dissent) || 0) < 65
+        ? Math.max(0, Number(Q.psl_seats) || 0)
+        : 0;
+const koPslPledge =
+    Q.coalition_viable_ko_psl &&
+    (Number(Q.rival_relation_ko_psl) || 0) >= 55 &&
+    (Number(Q.psl_coalition_dissent) || 0) < 65
+        ? Math.max(0, Number(Q.psl_seats) || 0)
+        : 0;
+const koP2050Pledge =
+    Q.coalition_viable_ko_p2050 &&
+    (Number(Q.rival_relation_ko_p2050) || 0) >= 55 &&
+    (Number(Q.p2050_coalition_dissent) || 0) < 65
+        ? Math.max(0, Number(Q.p2050_seats) || 0)
+        : 0;
+const centrumPledge =
+    (Number(Q.centrum_relation) || 0) >= 55
+        ? Math.max(0, Number(Q.centrum_seats) || 0)
+        : 0;
+Q.right_committed_seats =
+    Math.max(0, Number(Q.pis_seats) || 0) + pisKonfPledge +
+    (sharedRightFormation > 0
+        ? Math.max(0, Number(Q.duda_seats) || 0) +
+            Math.max(0, Number(Q.social_conservative_seats) || 0)
+        : ((Number(Q.pis_relation) || 0) >= 45
+            ? Math.max(0, Number(Q.rozwoj_seats) || 0) +
+                Math.max(0, Number(Q.duda_seats) || 0) +
+                Math.max(0, Number(Q.social_conservative_seats) || 0)
+            : 0));
+Q.democratic_committed_seats =
+    Math.max(0, Number(Q.ko_seats) || 0) + koPslPledge +
+    koP2050Pledge + centrumPledge;
+Q.snap_psl_cabinet_committed = Q.snap_formation_first_right
+    ? (pisPslPledge > 0 ? 1 : 0)
+    : (koPslPledge > 0 ? 1 : 0);
+Q.snap_p2050_cabinet_committed =
+    !Q.snap_formation_first_right && koP2050Pledge > 0 ? 1 : 0;
+Q.snap_centrum_cabinet_committed =
+    !Q.snap_formation_first_right && centrumPledge > 0 ? 1 : 0;
+Q.snap_left_cabinet_commitment = 0;
+if (Q.snap_formation_first_right) {
+    Q.snap_formation_base = Q.right_committed_seats + pisPslPledge;
+    Q.snap_formation_pledge_basis =
+        "PiS" + (pisKonfPledge ? " · Konfederacja pact" : "") +
+        (pisPslPledge ? " · PSL pact" : "");
+} else {
+    Q.snap_formation_base = Q.democratic_committed_seats;
+    Q.snap_formation_pledge_basis =
+        "KO" + (koPslPledge ? " · PSL pact" : "") +
+        (koP2050Pledge ? " · Poland 2050 pact" : "") +
+        (centrumPledge ? " · Centrum pact" : "");
+}
+Q.snap_formation_base = Math.max(
+    0,
+    Math.min(460, Math.round(Q.snap_formation_base))
+);
+Q.snap_formation_left_votes = 0;
+if (typeof polandCoalitionModel != "undefined") {
+    const roles = {};
+    if (Q.snap_formation_first_right) {
+        roles.pis = "cabinet";
+        if (pisKonfPledge) roles.konf = "support";
+    } else {
+        roles.ko = "cabinet";
+        if (Q.snap_p2050_cabinet_committed) roles.p2050 = "cabinet";
+    }
+    if (Q.snap_psl_cabinet_committed) roles.psl = "cabinet";
+    if (Q.snap_centrum_cabinet_committed &&
+        polandCoalitionModel.parties(Q).some(function(party) {
+            return party.id == "unia_centrum";
+        })) roles.unia_centrum = "cabinet";
+    const locked = polandCoalitionModel.parties(Q).filter(function(party) {
+        return party.id != "lewica";
+    }).map(function(party) { return party.id; });
+    polandCoalitionModel.initialise(Q, {
+        mode: "snap_formation", candidate: Q.snap_formation_candidate,
+        candidate_family: Q.snap_formation_nominee_is_left
+            ? "left" : (Q.snap_formation_first_right ? "pis" : "ko"),
+        sponsor: Q.snap_formation_nominee_is_left
+            ? "lewica" : (Q.snap_formation_first_right ? "pis" : "ko"),
+        seed_current: false, roles: roles, locked: locked,
+        majority: 231, allow_failed_vote: true,
+        submit_scene: "snap_attempt_one_vote",
+        submit_label: "Bring this named agreement to the first vote"
+    });
+}
+Q.news_headline =
+    Q.president_name + " nominates " +
+    Q.snap_formation_candidate + " in the first attempt";
+!}
+
+= An appointment still needs 231
+
+The nominee begins with **[+ snap_formation_base +]** expected votes from **[+
+snap_formation_pledge_basis +]**. Other parties are possible partners, not
+automatic yes votes; Lewica controls
+only its own **[+ left_committed_seats +]** committed votes.
+
+{!<div class="coalition-builder-host" data-coalition-mode="snap-formation"></div>!}
+
+- @snap_attempt_one_support
+- @snap_attempt_one_join
+- @snap_attempt_one_reject
+
+@snap_attempt_one_support
+title: Supply confidence for a time-limited constitutional cabinet
+view-if: snap_formation_nominee_is_left = 0
+on-arrival: {!
+Q.snap_formation_left_votes = Q.left_committed_seats;
+Q.snap_left_cabinet_commitment = 0;
+if (typeof polandCoalitionModel != "undefined" && Q.coalition_builder) {
+    polandCoalitionModel.setRole(Q, "lewica", "support");
+}
+Q.party_unity -= 5;
+Q.public_trust -= 1;
+if (Q.snap_formation_first_right) Q.pis_relation += 5;
+else Q.ko_relation += 3;
+Q.news_headline = "Lewica offers confidence without claiming to control the nominee";
+!}
+go-to: snap_attempt_one_vote
+
+@snap_attempt_one_join
+title: Join a non-hostile nominee under a written cabinet agreement
+subtitle: Confidence entails real collective responsibility and ministries.
+view-if: snap_formation_first_right = 0
+choose-if: coalition_viable_left_ko = 1
+unavailable-subtitle: KO and Lewica are too far apart, in trust and in programme, to sign a cabinet agreement; confidence from outside is still on offer.
+on-arrival: {!
+Q.snap_formation_left_votes = Q.left_committed_seats;
+Q.snap_left_cabinet_commitment = 1;
+if (typeof polandCoalitionModel != "undefined" && Q.coalition_builder) {
+    polandCoalitionModel.setRole(Q, "lewica", "cabinet");
+}
+Q.party_unity += 1;
+Q.ko_relation += 3;
+Q.government_coalition_dissent += 2;
+Q.news_headline = "Lewica joins the first-attempt cabinet under a written programme";
+!}
+go-to: snap_attempt_one_vote
+
+@snap_attempt_one_reject
+title: Reject the presidential nominee
+on-arrival: {!
+Q.snap_formation_left_votes = 0;
+Q.snap_left_cabinet_commitment = 0;
+if (typeof polandCoalitionModel != "undefined" && Q.coalition_builder) {
+    polandCoalitionModel.setRole(Q, "lewica", "out");
+}
+Q.party_unity += 2;
+if (Q.snap_formation_first_right) Q.pis_relation -= 3;
+Q.news_headline = "Lewica withholds confidence from the first attempt";
+!}
+go-to: snap_attempt_one_vote
+
+@snap_attempt_one_vote
+title: First-attempt confidence vote
+new-page: true
+on-arrival: {!
+const agreement = typeof polandCoalitionModel != "undefined" &&
+    Q.coalition_builder && Q.coalition_builder.context.mode == "snap_formation"
+        ? polandCoalitionModel.preview(Q) : null;
+const attemptOneRoll = agreement ? 0 :
+    Math.floor((this.random.uint32() / 4294967296) * 7) - 3;
+Q.snap_formation_variance = attemptOneRoll;
+Q.confidence_candidate = Q.snap_formation_candidate;
+Q.confidence_yes = agreement ? agreement.effective_seats : Math.max(
+    0,
+    Math.min(
+        460,
+        Q.snap_formation_base +
+        (Number(Q.snap_formation_left_votes) || 0) +
+        attemptOneRoll
+    )
+);
+Q.confidence_abstain = Math.max(
+    0,
+    Math.min(24, 460 - Q.confidence_yes)
+);
+Q.confidence_no = Math.max(
+    0,
+    460 - Q.confidence_yes - Q.confidence_abstain
+);
+Q.confidence_present = 460;
+Q.confidence_threshold = 231;
+Q.government_has_confidence = agreement
+    ? (agreement.ok ? 1 : 0)
+    : (Q.confidence_yes >= 231 ? 1 : 0);
+Q.snap_formation_attempt = 1;
+!}
+
+**[+ confidence_yes +] yes · [+ confidence_no +] no · [+
+confidence_abstain +] abstain.** The first attempt requires 231 yes votes.
+
+- @snap_formation_success
+- @snap_formation_attempt_two
+
+@snap_formation_attempt_two
+title: Second formation attempt — the Sejm's nominee
+new-page: true
+view-if: government_has_confidence = 0
+call: poland_normalize
+on-arrival: {!
+const leftCandidate =
+    (Number(Q.ko_relation) || 0) < 34 &&
+    (Number(Q.left_committed_seats) || 0) >= 45;
+const eligibleLeftNominees = [
+    Q.pres_2025_left_candidate,
+    "Agnieszka Dziemianowicz-Bąk",
+    "Magdalena Biejat",
+    "Krzysztof Gawkowski",
+    "Katarzyna Kotula"
+].filter(function(name) {
+    return name && name != "Undecided" && name != Q.president_name;
+});
+Q.snap_formation_candidate = leftCandidate
+    ? eligibleLeftNominees[0]
+    : (
+        Q.president_name == Q.ko_leader
+            ? Q.snap_progressive_ko_candidate
+            : (Q.ko_leader || "KO nominee")
+    );
+Q.snap_formation_nominee_is_left = leftCandidate ? 1 : 0;
+const sejmKoPslPledge =
+    Q.coalition_viable_ko_psl &&
+    (Number(Q.rival_relation_ko_psl) || 0) >= 55 &&
+    (Number(Q.psl_coalition_dissent) || 0) < 65
+        ? Math.max(0, Number(Q.psl_seats) || 0)
+        : 0;
+const sejmKoP2050Pledge =
+    Q.coalition_viable_ko_p2050 &&
+    (Number(Q.rival_relation_ko_p2050) || 0) >= 55 &&
+    (Number(Q.p2050_coalition_dissent) || 0) < 65
+        ? Math.max(0, Number(Q.p2050_seats) || 0)
+        : 0;
+const sejmCentrumPledge =
+    (Number(Q.centrum_relation) || 0) >= 55
+        ? Math.max(0, Number(Q.centrum_seats) || 0)
+        : 0;
+Q.democratic_committed_seats =
+    Math.max(0, Number(Q.ko_seats) || 0) + sejmKoPslPledge +
+    sejmKoP2050Pledge + sejmCentrumPledge;
+Q.snap_psl_cabinet_committed = sejmKoPslPledge > 0 ? 1 : 0;
+Q.snap_p2050_cabinet_committed = sejmKoP2050Pledge > 0 ? 1 : 0;
+Q.snap_centrum_cabinet_committed = sejmCentrumPledge > 0 ? 1 : 0;
+Q.snap_left_cabinet_commitment = 0;
+Q.snap_formation_base = Q.democratic_committed_seats;
+Q.snap_formation_pledge_basis =
+    "KO" + (sejmKoPslPledge ? " · PSL pact" : "") +
+    (sejmKoP2050Pledge ? " · Poland 2050 pact" : "") +
+    (sejmCentrumPledge ? " · Centrum pact" : "");
+if (leftCandidate) {
+    Q.snap_formation_base -= Math.round(
+        Math.max(0, Number(Q.ko_seats) || 0) * 0.16
+    );
+}
+Q.snap_formation_base = Math.max(
+    0,
+    Math.min(460, Math.round(Q.snap_formation_base))
+);
+Q.snap_formation_left_votes = 0;
+Q.news_headline =
+    "The Sejm proposes " + Q.snap_formation_candidate +
+    " in the second attempt";
+!}
+
+The Sejm nominee begins with **[+ snap_formation_base +]** votes from **[+
+snap_formation_pledge_basis +]** before Lewica commits its caucus. This stage
+also requires an absolute majority of 231.
+
+- @snap_attempt_two_support
+- @snap_attempt_two_join
+- @snap_attempt_two_reject
+
+@snap_attempt_two_support
+title: Supply confidence to the Sejm nominee without taking ministries
+view-if: snap_formation_nominee_is_left = 0
+on-arrival: snap_formation_left_votes = left_committed_seats; snap_left_cabinet_commitment = 0; ko_relation += 4; party_unity += 1; news_headline = "Lewica supplies the second-attempt majority from outside cabinet"
+go-to: snap_attempt_two_vote
+
+@snap_attempt_two_join
+title: Join the Sejm nominee under a written coalition agreement
+subtitle: Required when Lewica itself supplies the prime minister.
+choose-if: snap_formation_nominee_is_left = 1 or coalition_viable_left_ko = 1
+unavailable-subtitle: KO and Lewica are too far apart, in trust and in programme, to sign a cabinet agreement; confidence from outside is still on offer.
+on-arrival: snap_formation_left_votes = left_committed_seats; snap_left_cabinet_commitment = 1; ko_relation += 3; party_unity += 2; government_coalition_dissent += 2; news_headline = "Lewica accepts cabinet responsibility in the second attempt"
+go-to: snap_attempt_two_vote
+
+@snap_attempt_two_reject
+title: Withhold Lewica's votes and demand the third attempt
+on-arrival: snap_formation_left_votes = 0; ko_relation -= 7; party_unity -= 2; public_trust -= 2; news_headline = "Lewica blocks the Sejm nominee"
+go-to: snap_attempt_two_vote
+
+@snap_attempt_two_vote
+title: Second-attempt confidence vote
+new-page: true
+on-arrival: {!
+const attemptTwoRoll =
+    Math.floor((this.random.uint32() / 4294967296) * 7) - 3;
+Q.snap_formation_variance = attemptTwoRoll;
+Q.confidence_candidate = Q.snap_formation_candidate;
+Q.confidence_yes = Math.max(
+    0,
+    Math.min(
+        460,
+        Q.snap_formation_base +
+        (Number(Q.snap_formation_left_votes) || 0) +
+        attemptTwoRoll
+    )
+);
+Q.confidence_abstain = Math.max(
+    0,
+    Math.min(20, 460 - Q.confidence_yes)
+);
+Q.confidence_no = Math.max(
+    0,
+    460 - Q.confidence_yes - Q.confidence_abstain
+);
+Q.confidence_present = 460;
+Q.confidence_threshold = 231;
+Q.government_has_confidence =
+    Q.confidence_yes >= 231 ? 1 : 0;
+Q.snap_formation_attempt = 2;
+!}
+
+**[+ confidence_yes +] yes · [+ confidence_no +] no · [+
+confidence_abstain +] abstain.**
+
+- @snap_formation_success
+- @snap_formation_attempt_three
+
+@snap_formation_attempt_three
+title: Third formation attempt — simple majority
+new-page: true
+view-if: government_has_confidence = 0
+call: poland_normalize
+on-arrival: {!
+const incumbentPresident = String(Q.president_name || "");
+const electedPresidentIsInOffice =
+    incumbentPresident.length > 0 &&
+    incumbentPresident == String(Q.pres_2025_winner || "");
+/*
+ * Before the August 2025 inauguration, the election result describes the
+ * president-elect, not the office-holder exercising Article 155. Duda and the
+ * drawn PiS-backed winner are right-aligned incumbents; otherwise the election
+ * result flag matters only once that winner's name is actually in the Palace.
+ */
+const hostileThird =
+    incumbentPresident == "Andrzej Duda" ||
+    incumbentPresident == String(Q.pres_2025_right_candidate || "") ||
+    (
+        electedPresidentIsInOffice &&
+        Boolean(Q.pres_2025_hostile_president)
+    );
+Q.snap_third_player_nomination_authority =
+    Boolean(Q.left_president) && electedPresidentIsInOffice ? 1 : 0;
+if (hostileThird) {
+    Q.snap_third_hostile_nominee = 1;
+    Q.snap_formation_candidate =
+        Q.pis_split ? "Mateusz Morawiecki" : "Beata Szydło";
+    const thirdKonfPledge =
+        Q.coalition_viable_pis_konf &&
+    (Number(Q.rival_relation_pis_konf) || 0) >= 50
+            ? Math.max(0, Number(Q.konf_seats) || 0)
+            : 0;
+    const thirdPslRightPledge =
+        Q.coalition_viable_pis_psl &&
+    (Number(Q.rival_relation_pis_psl) || 0) >= 55 &&
+        (Number(Q.psl_coalition_dissent) || 0) < 65
+            ? Math.max(0, Number(Q.psl_seats) || 0)
+            : 0;
+    Q.snap_formation_base =
+        Math.max(0, Number(Q.pis_seats) || 0) + thirdKonfPledge +
+        thirdPslRightPledge;
+    Q.snap_formation_pledge_basis =
+        "PiS" + (thirdKonfPledge ? " · Konfederacja pact" : "") +
+        (thirdPslRightPledge ? " · PSL pact" : "");
+    Q.snap_psl_cabinet_committed =
+        thirdPslRightPledge > 0 ? 1 : 0;
+    Q.snap_p2050_cabinet_committed = 0;
+    Q.snap_centrum_cabinet_committed = 0;
+    Q.snap_third_nomination_reason =
+        "A hostile Palace tests a right-wing nominee under Article 155.";
+} else {
+    Q.snap_third_hostile_nominee = 0;
+    const thirdPslPledge =
+        Q.coalition_viable_ko_psl &&
+    (Number(Q.rival_relation_ko_psl) || 0) >= 55 &&
+        (Number(Q.psl_coalition_dissent) || 0) < 65
+            ? Math.max(0, Number(Q.psl_seats) || 0)
+            : 0;
+    const thirdP2050Pledge =
+        Q.coalition_viable_ko_p2050 &&
+    (Number(Q.rival_relation_ko_p2050) || 0) >= 55 &&
+        (Number(Q.p2050_coalition_dissent) || 0) < 65
+            ? Math.max(0, Number(Q.p2050_seats) || 0)
+            : 0;
+    const thirdCentrumPledge =
+        (Number(Q.centrum_relation) || 0) >= 55
+            ? Math.max(0, Number(Q.centrum_seats) || 0)
+            : 0;
+    Q.snap_formation_base =
+        Math.max(0, Number(Q.ko_seats) || 0) + thirdPslPledge +
+        thirdP2050Pledge + thirdCentrumPledge;
+    Q.snap_formation_pledge_basis =
+        "KO" + (thirdPslPledge ? " · PSL pact" : "") +
+        (thirdP2050Pledge ? " · Poland 2050 pact" : "") +
+        (thirdCentrumPledge ? " · Centrum pact" : "");
+    Q.snap_psl_cabinet_committed = thirdPslPledge > 0 ? 1 : 0;
+    Q.snap_p2050_cabinet_committed =
+        thirdP2050Pledge > 0 ? 1 : 0;
+    Q.snap_centrum_cabinet_committed =
+        thirdCentrumPledge > 0 ? 1 : 0;
+    if (Q.snap_third_player_nomination_authority) {
+        Q.snap_formation_candidate = "Undecided compromise nominee";
+        Q.snap_third_nomination_reason =
+            "A Lewica President holds the Article 155 nomination power.";
+    } else if (incumbentPresident == "Szymon Hołownia") {
+        Q.snap_formation_candidate = "Katarzyna Pełczyńska-Nałęcz";
+        Q.snap_third_nomination_reason =
+            "President Hołownia chooses his party's institutional compromise candidate.";
+    } else if (incumbentPresident == "Adrian Zandberg") {
+        Q.snap_formation_candidate = "Magdalena Biejat";
+        Q.snap_third_nomination_reason =
+            "President Zandberg chooses a social candidate able to seek wider support.";
+    } else if (incumbentPresident == "Rafał Trzaskowski") {
+        Q.snap_formation_candidate =
+            Number(Q.psl_seats) >= Number(Q.p2050_seats)
+                ? "Władysław Kosiniak-Kamysz"
+                : "Katarzyna Pełczyńska-Nałęcz";
+        Q.snap_third_nomination_reason =
+            "President Trzaskowski chooses the stronger available centrist bridge; Lewica may respond but not substitute its nominee.";
+    } else if (Number(Q.p2050_seats) > Number(Q.psl_seats)) {
+        Q.snap_formation_candidate = "Katarzyna Pełczyńska-Nałęcz";
+        Q.snap_third_nomination_reason =
+            "The Palace selects the larger centrist partner's compromise candidate.";
+    } else if (Number(Q.psl_seats) > 0) {
+        Q.snap_formation_candidate = "Władysław Kosiniak-Kamysz";
+        Q.snap_third_nomination_reason =
+            "The Palace selects the agrarian compromise with the stronger parliamentary base.";
+    } else {
+        Q.snap_formation_candidate = "Magdalena Biejat";
+        Q.snap_third_nomination_reason =
+            "With no centrist bridge left, the Palace tests a social compromise nominee.";
+    }
+}
+Q.snap_formation_base = Math.max(
+    0,
+    Math.min(460, Math.round(Q.snap_formation_base))
+);
+Q.snap_formation_left_votes = 0;
+Q.snap_formation_left_abstentions = 0;
+Q.snap_left_cabinet_commitment = 0;
+Q.news_headline =
+    hostileThird
+        ? Q.president_name + " names " +
+            Q.snap_formation_candidate + " for the third attempt"
+        : (Q.snap_third_player_nomination_authority
+            ? "The Lewica President must name an Article 155 nominee"
+            : Q.president_name + " independently names " +
+                Q.snap_formation_candidate);
+!}
+
+The available nominee begins with **[+ snap_formation_base +]** expected yes
+votes from **[+ snap_formation_pledge_basis +]**. [? if
+snap_third_player_nomination_authority: President **[+ president_name +]** must
+now choose the Article 155 nominee.?]
+[? if not snap_third_player_nomination_authority: **[+
+snap_third_nomination_reason +]** Lewica controls only its response.?]
+Unlike the first two stages, this vote uses a simple majority of votes cast
+with at least half of Deputies present. Lewica may support, oppose or abstain.
+
+- @snap_third_president_nominee
+- @snap_third_kosiniak
+- @snap_third_pelczynska
+- @snap_third_biejat
+- @snap_third_dziemianowicz
+
+@snap_third_president_nominee
+title: Receive President [+ president_name +]'s nominee: [+ snap_formation_candidate +]
+view-if: snap_third_player_nomination_authority = 0
+go-to: snap_attempt_three_decision
+
+@snap_third_kosiniak
+title: Choose Władysław Kosiniak-Kamysz as the agrarian-conservative compromise
+view-if: snap_third_player_nomination_authority = 1 and president_name != "Władysław Kosiniak-Kamysz"
+on-arrival: snap_formation_candidate = "Władysław Kosiniak-Kamysz"; psl_relation += 7; progressives_dissent += 5; left_right_score += 2; news_headline = "Lewica accepts Kosiniak-Kamysz as the right-wing compromise nominee"
+go-to: snap_attempt_three_decision
+
+@snap_third_pelczynska
+title: Choose Katarzyna Pełczyńska-Nałęcz as the institutional-centrist compromise
+view-if: snap_third_player_nomination_authority = 1 and president_name != "Katarzyna Pełczyńska-Nałęcz"
+on-arrival: snap_formation_candidate = "Katarzyna Pełczyńska-Nałęcz"; p2050_relation += 7; psl_relation -= 2; public_trust += 1; news_headline = "Lewica accepts Pełczyńska-Nałęcz as the centrist compromise nominee"
+go-to: snap_attempt_three_decision
+
+@snap_third_biejat
+title: Choose Magdalena Biejat as the social compromise
+view-if: snap_third_player_nomination_authority = 1 and president_name != "Magdalena Biejat"
+on-arrival: snap_formation_candidate = "Magdalena Biejat"; party_unity += 3; ko_relation -= 3; psl_relation -= 4; news_headline = "Lewica nominates Biejat for a social compromise cabinet"
+go-to: snap_attempt_three_decision
+
+@snap_third_dziemianowicz
+title: Choose Agnieszka Dziemianowicz-Bąk as the labour compromise
+view-if: snap_third_player_nomination_authority = 1 and president_name != "Agnieszka Dziemianowicz-Bąk"
+on-arrival: snap_formation_candidate = "Agnieszka Dziemianowicz-Bąk"; labor_credibility += 4; ko_relation -= 2; psl_relation -= 3; news_headline = "Lewica nominates Dziemianowicz-Bąk for a labour compromise cabinet"
+go-to: snap_attempt_three_decision
+
+@snap_attempt_three_decision
+title: Decide the third-attempt vote
+new-page: true
+
+The nominee is **[+ snap_formation_candidate +]**, with **[+
+snap_formation_base +]** pledged votes before Lewica acts.
+
+- @snap_attempt_three_support
+- @snap_attempt_three_join
+- @snap_attempt_three_reject
+- @snap_attempt_three_abstain
+
+@snap_attempt_three_support
+title: Vote confidence from outside the cabinet
+on-arrival: {!
+Q.snap_formation_left_votes = Q.left_committed_seats;
+Q.snap_formation_left_abstentions = 0;
+Q.snap_left_cabinet_commitment = 0;
+Q.party_unity -= 2;
+Q.news_headline =
+    "Lewica gives outside confidence to " + Q.snap_formation_candidate;
+!}
+go-to: snap_attempt_three_vote
+
+@snap_attempt_three_join
+title: Join the compromise cabinet under a written programme
+subtitle: Available only for a non-hostile third-attempt nominee.
+view-if: snap_third_hostile_nominee = 0
+choose-if: coalition_viable_left_ko = 1 or coalition_viable_left_psl = 1 or coalition_viable_left_p2050 = 1
+unavailable-subtitle: No centrist party will sign a cabinet programme with Lewica on the trust and distance this chamber records; support and abstention remain.
+on-arrival: snap_formation_left_votes = left_committed_seats; snap_formation_left_abstentions = 0; snap_left_cabinet_commitment = 1; government_coalition_dissent += 3; party_unity += 1; news_headline = "Lewica binds its confidence votes to cabinet entry"
+go-to: snap_attempt_three_vote
+
+@snap_attempt_three_reject
+title: Vote no and accept a mandatory election if the nominee fails
+on-arrival: snap_formation_left_votes = 0; snap_formation_left_abstentions = 0; party_unity += 2; news_headline = "Lewica opposes the final nominee"
+go-to: snap_attempt_three_vote
+
+@snap_attempt_three_abstain
+title: Abstain on a caretaker programme
+on-arrival: snap_formation_left_votes = 0; snap_formation_left_abstentions = left_committed_seats; party_unity -= 1; public_trust -= 1; news_headline = "Lewica withholds yes votes but lowers the third-attempt majority"
+go-to: snap_attempt_three_vote
+
+@snap_attempt_three_vote
+title: Third-attempt confidence vote
+new-page: true
+on-arrival: {!
+const attemptThreeRoll =
+    Math.floor((this.random.uint32() / 4294967296) * 9) - 4;
+Q.snap_formation_variance = attemptThreeRoll;
+Q.confidence_candidate = Q.snap_formation_candidate;
+Q.confidence_yes = Math.max(
+    0,
+    Math.min(
+        460,
+        Q.snap_formation_base +
+        (Number(Q.snap_formation_left_votes) || 0) +
+        attemptThreeRoll
+    )
+);
+Q.confidence_abstain = Math.max(
+    0,
+    Math.min(
+        460 - Q.confidence_yes,
+        8 + (Number(Q.snap_formation_left_abstentions) || 0)
+    )
+);
+Q.confidence_no = Math.max(
+    0,
+    460 - Q.confidence_yes - Q.confidence_abstain
+);
+Q.confidence_present =
+    Q.confidence_yes + Q.confidence_no + Q.confidence_abstain;
+Q.confidence_threshold =
+    Math.floor(
+        (Q.confidence_yes + Q.confidence_no) / 2
+    ) + 1;
+Q.government_has_confidence =
+    Q.confidence_yes > Q.confidence_no ? 1 : 0;
+Q.snap_formation_attempt = 3;
+!}
+
+**[+ confidence_yes +] yes · [+ confidence_no +] no · [+
+confidence_abstain +] abstain.** The simple-majority threshold is **[+
+confidence_threshold +]**.
+
+- @snap_formation_success
+- @snap_formation_mandatory_election
+
+@snap_formation_success
+title: A cabinet wins confidence
+view-if: government_has_confidence = 1
+on-arrival: {!
+// A confidence vote can be reached without a name having been recorded, and
+// an unset candidate used to be printed literally as the prime minister.
+if (typeof Q.confidence_candidate != "string" || !Q.confidence_candidate) {
+    Q.confidence_candidate = String(
+        Q.office_incompatibility_pm_nominee ||
+        Q.formation_pm_nominee ||
+        Q.prime_minister ||
+        "Mateusz Morawiecki"
+    );
+}
+Q.prime_minister = Q.confidence_candidate;
+Q.prime_minister_intro_return = "ministries_or_event_queue";
+Q.prime_minister_intro_pending = 1;
+Q.government_name =
+    Q.confidence_candidate + " constitutional formation cabinet";
+const recordedNomineeParty =
+    Q.confidence_candidate == Q.office_incompatibility_pm_nominee
+        ? String(Q.office_incompatibility_pm_nominee_party || "")
+        : "";
+const leftPrimeMinister =
+    recordedNomineeParty == "lewica" ||
+    Q.confidence_candidate == Q.pres_2025_left_candidate ||
+    [
+        "Agnieszka Dziemianowicz-Bąk",
+        "Magdalena Biejat",
+        "Krzysztof Gawkowski",
+        "Włodzimierz Czarzasty",
+        "Robert Biedroń",
+        "Adrian Zandberg"
+    ].includes(Q.confidence_candidate);
+const leftCabinetParticipation =
+    Boolean(Q.snap_left_cabinet_commitment);
+Q.left_in_government = leftCabinetParticipation ? 1 : 0;
+const rightPrimeMinister = [
+    "Mateusz Morawiecki",
+    "Beata Szydło",
+    "Przemysław Czarnek"
+].includes(Q.confidence_candidate);
+if (leftPrimeMinister && leftCabinetParticipation) {
+    Q.government_party = "lewica";
+    Q.government_owner = Q.left_party_name;
+} else if (rightPrimeMinister) {
+    // Checked before any recorded nominee party: a Morawiecki cabinet is a
+    // PiS cabinet, and testing the nominee record first used to leave the
+    // default opposition portfolio map in place and hand PiS nothing.
+    Q.government_party = "pis";
+    Q.government_owner = "PiS-led constitutional cabinet";
+} else if (
+    recordedNomineeParty &&
+    recordedNomineeParty != "lewica"
+) {
+    Q.government_party = recordedNomineeParty;
+    Q.government_owner =
+        Q.confidence_candidate + "'s constitutional cabinet";
+} else if (rightPrimeMinister) {
+    Q.government_party = "pis";
+    Q.government_owner = "PiS-led constitutional cabinet";
+} else if (
+    Q.confidence_candidate == "Władysław Kosiniak-Kamysz"
+) {
+    Q.government_party = "psl";
+    Q.government_owner = "PSL-led constitutional cabinet";
+} else if (
+    Q.confidence_candidate == "Katarzyna Pełczyńska-Nałęcz"
+) {
+    Q.government_party = "p2050";
+    Q.government_owner = "Poland 2050-led constitutional cabinet";
+} else if (leftPrimeMinister) {
+    Q.government_party = "independent";
+    Q.government_owner =
+        "Independent Left-led constitutional cabinet";
+} else {
+    Q.government_party = "ko";
+    Q.government_owner = "KO-led constitutional cabinet";
+}
+const formationPortfolios = [
+    "labor", "equality", "housing", "health", "digital", "science",
+    "interior", "finance", "economy", "justice", "foreign",
+    "agriculture", "defence"
+];
+let formationCabinet = {
+    labor: ["KO", "Marzena Okła-Drewnowicz"],
+    equality: ["KO", "Monika Rosa"],
+    housing: ["KO", "Krystyna Sibińska"],
+    health: ["KO", "Izabela Leszczyna"],
+    digital: Q.snap_p2050_cabinet_committed
+        ? ["Poland 2050", "Michał Gramatyka"]
+        : ["KO", "Jan Grabiec"],
+    science: ["KO", "Barbara Nowacka"],
+    interior: ["KO", "Marcin Kierwiński"],
+    finance: ["KO", "Andrzej Domański"],
+    economy: Q.snap_psl_cabinet_committed
+        ? ["PSL", "Krzysztof Hetman"]
+        : ["KO", "Borys Budka"],
+    justice: ["KO", "Adam Bodnar"],
+    foreign: ["KO", "Radosław Sikorski"],
+    agriculture: Q.snap_psl_cabinet_committed
+        ? ["PSL", "Czesław Siekierski"]
+        : ["KO", "Dorota Niedziela"],
+    defence: Q.snap_psl_cabinet_committed
+        ? ["PSL", "Władysław Kosiniak-Kamysz"]
+        : ["KO", "Tomasz Siemoniak"]
+};
+if (Q.government_party == "pis") {
+    const rightMinisters = {
+        labor: "Dorota Bojemska",
+        equality: "Anna Schmidt",
+        housing: "Piotr Uściński",
+        health: "Ewa Krajewska",
+        digital: "Janusz Cieszyński",
+        science: "Krzysztof Szczucki",
+        interior: "Paweł Szefernaker",
+        finance: "Andrzej Kosztowniak",
+        economy: "Marlena Maląg",
+        justice: "Marcin Warchoł",
+        foreign: "Szymon Szynkowski vel Sęk",
+        agriculture: "Anna Gembicka",
+        defence: "Mariusz Błaszczak"
+    };
+    for (const portfolio of formationPortfolios) {
+        formationCabinet[portfolio] = ["PiS", rightMinisters[portfolio]];
+    }
+} else if (
+    Q.government_party == "other" ||
+    Q.government_party == "independent"
+) {
+    const independentMinisters = {
+        labor: "Gertruda Uścińska",
+        equality: "Zuzanna Rudzińska-Bluszcz",
+        housing: "Joanna Erbel",
+        health: "Maria Libura",
+        digital: "Alek Tarkowski",
+        science: "Michał Kleiber",
+        interior: "Marek Biernacki",
+        finance: "Paweł Wojciechowski",
+        economy: "Jerzy Hausner",
+        justice: "Ewa Łętowska",
+        foreign: "Jacek Czaputowicz",
+        agriculture: "Monika Stanny",
+        defence: "Stanisław Koziej"
+    };
+    for (const portfolio of formationPortfolios) {
+        formationCabinet[portfolio] = [
+            "Cabinet", independentMinisters[portfolio]
+        ];
+    }
+    if (Q.snap_p2050_cabinet_committed) {
+        formationCabinet.digital = ["Poland 2050", "Michał Gramatyka"];
+    }
+    if (Q.snap_psl_cabinet_committed) {
+        formationCabinet.economy = ["PSL", "Krzysztof Hetman"];
+        formationCabinet.agriculture = ["PSL", "Czesław Siekierski"];
+        formationCabinet.defence = ["PSL", "Władysław Kosiniak-Kamysz"];
+    }
+} else if (leftCabinetParticipation) {
+    formationCabinet.labor = [
+        "Lewica", "Agnieszka Dziemianowicz-Bąk"
+    ];
+    formationCabinet.digital = ["Lewica", "Krzysztof Gawkowski"];
+}
+for (const portfolio of formationPortfolios) {
+    Q[portfolio + "_minister_party"] = formationCabinet[portfolio][0];
+    Q[portfolio + "_minister"] = formationCabinet[portfolio][1];
+}
+Q.family_minister_party = Q.labor_minister_party;
+Q.family_minister = Q.labor_minister;
+Q.cabinet_roster_government_party = Q.government_party;
+Q.snap_cabinet_commitments_recorded = 1;
+Q.position = Q.left_in_government
+    ? "Governing coalition"
+    : (
+        (Number(Q.snap_formation_left_votes) || 0) > 0
+            ? "Confidence-and-supply opposition"
+            : "Parliamentary opposition"
+    );
+Q.coalition_status =
+    "Cabinet formed on constitutional attempt " +
+    Q.snap_formation_attempt;
+const formationSeatByParty = {
+    PiS: Math.max(0, Number(Q.pis_seats) || 0),
+    KO: Math.max(0, Number(Q.ko_seats) || 0),
+    Lewica: Math.max(0, Number(Q.left_seats) || 0),
+    PSL: Math.max(0, Number(Q.psl_seats) || 0),
+    "Poland 2050": Math.max(0, Number(Q.p2050_seats) || 0)
+};
+const formationCabinetParties = [];
+for (const portfolio of formationPortfolios) {
+    const party = Q[portfolio + "_minister_party"];
+    if (
+        Object.prototype.hasOwnProperty.call(formationSeatByParty, party) &&
+        formationCabinetParties.indexOf(party) < 0
+    ) {
+        formationCabinetParties.push(party);
+    }
+}
+Q.coalition_seats = Math.min(
+    Number(Q.sejm_total) || 460,
+    formationCabinetParties.reduce(function(total, party) {
+        return total + formationSeatByParty[party];
+    }, 0)
+);
+const formationNonLeftCabinetSeats = formationCabinetParties.reduce(
+    function(total, party) {
+        return total + (
+            party == "Lewica" ? 0 : formationSeatByParty[party]
+        );
+    },
+    0
+);
+Q.government_support_seats = Math.max(
+    formationNonLeftCabinetSeats,
+    Math.max(0, Number(Q.snap_formation_base) || 0)
+);
+if (typeof polandCoalitionModel != "undefined") {
+    const independentCabinet = Q.government_party == "independent" ||
+        Q.government_party == "other";
+    const roles = {};
+    if (Q.government_party == "pis") {
+        roles.pis = "cabinet";
+        if (String(Q.snap_formation_pledge_basis || "").includes("Konfederacja")) {
+            roles.konf = "support";
+        }
+    } else {
+        roles.ko = "cabinet";
+    }
+    if (Q.snap_psl_cabinet_committed) {
+        roles.psl = "cabinet";
+    }
+    if (Q.snap_p2050_cabinet_committed) {
+        roles.p2050 = "cabinet";
+    }
+    if (Q.snap_centrum_cabinet_committed &&
+        polandCoalitionModel.parties(Q).some(function(party) {
+            return party.id == "unia_centrum";
+        })) {
+        roles.unia_centrum = independentCabinet ? "support" : "cabinet";
+    }
+    if (leftCabinetParticipation) roles.lewica = "cabinet";
+    else if ((Number(Q.snap_formation_left_votes) || 0) > 0) {
+        roles.lewica = "support";
+    }
+    polandCoalitionModel.initialise(Q, {
+        mode: "snap_formation", candidate: Q.confidence_candidate,
+        candidate_family: Q.government_party == "independent"
+            ? "left" : Q.government_party,
+        sponsor: Q.government_party == "pis"
+            ? "pis" : (leftCabinetParticipation ? "lewica" : "ko"),
+        seed_current: false, roles: roles,
+        concessions: {
+            psl: Q.snap_psl_cabinet_committed ? 1 : 0,
+            p2050: Q.snap_p2050_cabinet_committed ? 1 : 0
+        }
+    });
+    const snapAgreement = polandCoalitionModel.preview(Q);
+    if (snapAgreement.ok) polandCoalitionModel.commit(Q);
+}
+Q.caretaker_government = 0;
+Q.snap_election_requested = 0;
+Q.snap_election_held =
+    Q.snap_formation_context == "Post-election formation"
+        ? 1
+        : 0;
+Q.coalition_broken = 0;
+Q.formation_complete = 1;
+Q.formation_in_progress = 0;
+Q.office_incompatibility_pm_formation = 0;
+Q.budget = Q.left_in_government ? 2 : 0;
+Q.budget_authority = Q.left_in_government
+    ? "Formation reserve"
+    : "Opposition — no state spending authority";
+Q.left_cabinet_committed = Q.left_in_government ? 1 : 0;
+Q.left_cabinet_model = Q.left_in_government
+    ? "Programme-bound cooperating Left entry"
+    : (
+        (Number(Q.snap_formation_left_votes) || 0) > 0
+            ? "Confidence and supply from opposition"
+            : (
+                leftPrimeMinister
+                    ? "Opposition to an independently elected Left nominee"
+                    : "Opposition"
+            )
+    );
+Q.ministries_finalized = Q.left_in_government ? 0 : 1;
+Q.ministry_allocation_mode = Q.left_in_government
+    ? "formation"
+    : "settled";
+Q.ministry_return_mode = "event_queue";
+Q.news_headline =
+    Q.confidence_candidate + " wins confidence on attempt " +
+    Q.snap_formation_attempt;
+!}
+go-to: poland_prime_minister_intro.show
+
+@snap_formation_mandatory_election
+title: The third attempt fails
+view-if: government_has_confidence = 0
+on-arrival: snap_election_trigger = "Mandatory dissolution after the third failed cabinet"; constitutional_restraint += 3; public_trust -= 3; early_election_risk = 100; news_headline = "Failure of the third cabinet attempt makes another election mandatory"
+go-to: snap_campaign_launch if snap_election_cycle < 2; snap_repeated_deadlock_ending if snap_election_cycle >= 2
+
+@snap_repeated_deadlock_ending
+title: Two elections, no investiture
+new-page: true
+on-arrival: {!
+Q.snap_repeated_deadlock = 1;
+Q.snap_election_requested = 0;
+Q.snap_election_held = 1;
+Q.snap_election_complete = 1;
+Q.caretaker_government = 1;
+Q.government_has_confidence = 0;
+Q.formation_complete = 0;
+Q.formation_in_progress = 1;
+Q.position = "Opposition during constitutional deadlock";
+Q.coalition_status =
+    "Two elections and two failed formation ladders";
+Q.budget = 0;
+Q.budget_authority =
+    "Caretaker period — no state spending authority";
+Q.ending_name = "Constitutional deadlock";
+Q.ending_score -= 8;
+Q.news_headline =
+    "A second election still produces no investiture majority";
+!}
+
+A second campaign has produced a fresh seat result, yet all three
+constitutional attempts have failed again. The outgoing cabinet remains
+caretaker while the parties search for a majority and the constitutional
+crisis enters another year.
+
+- @snap_repeated_deadlock_return: Record the unresolved outcome
+
+@snap_repeated_deadlock_return
+go-to: poland_event_queue
+
+@snap_result_2026
+title: Parliamentary election result
+new-page: true
+call: poland_normalize
+on-arrival: {!
+if (Q.year == 2027) Q.election_2027_terminal = 1;
+const previousMainLeftSeats = Math.max(
+    0,
+    Math.round(Number(Q.left_seats) || 0)
+);
+const previousCooperativeSeats = Math.max(
+    0,
+    Math.round(Number(Q.left_cooperative_independent_seats) || 0)
+);
+const previousTrzaskowskiCurrentSeats = Math.max(
+    0,
+    Math.round(Number(Q.left_trzaskowski_current_seats) || 0)
+);
+const previousIplCurrentSeats = Math.max(
+    0,
+    Math.round(Number(Q.left_ipl_current_seats) || 0)
+);
+const previousP2050CurrentSeats = Math.max(
+    0,
+    Math.round(Number(Q.left_p2050_current_seats) || 0)
+);
+const previousGreenCurrentSeats = Math.max(
+    0,
+    Math.round(Number(Q.left_green_current_seats) || 0)
+);
+const previousRozwojCurrentSeats = Math.max(
+    0,
+    Math.round(Number(Q.left_rozwoj_current_seats) || 0)
+);
+const matysiakListBeforeElection = String(
+    Q.matysiak_party || ""
+).toLowerCase();
+Q.snap_campaign_active = 0;
+Q.snap_campaign_due_time = -1;
+Q.snap_election_held = 1;
+Q.snap_election_cycle =
+    Math.max(0, Math.round(Number(Q.snap_election_cycle) || 0)) + 1;
+const ids = [
+    "pis", "ko", "p2050", "psl", "left", "konf", "p0", "other",
+    "sld_breakaway", "social_patriot", "spring_breakaway", "labor_left", "young_left",
+    "razem", "pps", "tak_rozwoj", "centrum", "rozwoj", "korona",
+    "ko_splinter", "suwerenna", "porozumienie", "republikanie",
+    "odnowa", "kukiz",
+    "new_hope", "national_movement", "duda", "social_conservative"
+];
+const seatQuality = function(id) {
+    if (id == "razem") return "razem_party_seats";
+    if (id == "pps") return "pps_party_seats";
+    return id + "_seats";
+};
+const sejmListOutcome = String(Q.sejm_list_outcome || "left_5");
+let thirdWayJoint =
+    Number(Q.third_way_joint_list) == 1 || (
+        (Q.third_way_active || Q.third_way_2023_done) &&
+        !Q.third_way_split &&
+        sejmListOutcome != "third_host_5"
+    );
+const liveVote = function(id) {
+    if (id == "third_way") {
+        const poll = Number(Q.third_way_poll);
+        if (Number.isFinite(poll) && poll > 0) return poll;
+        const pslPoll = Math.max(0, Number(Q.psl_poll) || 0);
+        const p2050Poll = Math.max(0, Number(Q.p2050_poll) || 0);
+        if (pslPoll + p2050Poll > 0) return pslPoll + p2050Poll;
+        return Math.max(
+            0,
+            (Number(Q.psl_component_vote_intent) || 0) +
+                (Number(Q.p2050_component_vote_intent) || 0)
+        );
+    }
+    const intent = Number(Q[id + "_vote_intent"]);
+    if (Number.isFinite(intent) && intent > 0) return intent;
+    const componentIntent = Number(Q[id + "_component_vote_intent"]);
+    if (Number.isFinite(componentIntent) && componentIntent > 0) {
+        return componentIntent;
+    }
+    const poll = Number(Q[id + "_poll"]);
+    if (Number.isFinite(poll) && poll > 0) return poll;
+    return Math.max(0, Number(Q[seatQuality(id)]) || 0) * 100 / 460;
+};
+const countIds = ids.filter(function(id) { return id != "other"; });
+const activeCountIds = countIds.filter(function(id) {
+    return liveVote(id) > 0.02;
+});
+if (!activeCountIds.length) {
+    activeCountIds.push("pis", "ko", "left", "konf");
+}
+const countShocks = {};
+const shockRange = Q.snap_election_cycle > 1 ? 4.4 : 3;
+const shockedVotes = {};
+for (const id of activeCountIds) {
+    const shock =
+        (this.random.uint32() / 4294967296 - 0.5) * shockRange;
+    countShocks[id] = shock;
+    shockedVotes[id] = Math.max(0.02, liveVote(id) + shock);
+}
+if (Object.prototype.hasOwnProperty.call(shockedVotes, "left")) {
+    shockedVotes.left += Math.max(
+        0,
+        Number(Q.snap_campaign_left_bonus) || 0
+    );
+}
+const aggregateOther = Math.max(
+    0,
+    Number(Q.other_poll) || Number(Q.other_vote_intent) || 0
+);
+const shockedTotal = aggregateOther + activeCountIds.reduce(
+    function(total, id) {
+        return total + shockedVotes[id];
+    },
+    0
+);
+const normalizedOther =
+    aggregateOther * 100 / Math.max(1, shockedTotal);
+for (const id of activeCountIds) {
+    shockedVotes[id] = shockedVotes[id] * 100 / Math.max(1, shockedTotal);
+}
+
+const committeeFor = {};
+for (const id of ids) committeeFor[id] = id;
+if (thirdWayJoint) {
+    committeeFor.psl = "third_way";
+    committeeFor.p2050 = "third_way";
+}
+const breakawayCommitteeQualities = {
+    spring_breakaway: "spring_list_committee",
+    labor_left: "labor_list_committee",
+    young_left: "progressives_list_committee",
+    razem: "razem_list_committee",
+    social_patriot: "social_patriot_list_committee",
+    tak_rozwoj: "tak_rozwoj_list_committee"
+};
+for (const id of Object.keys(breakawayCommitteeQualities)) {
+    const requestedCommittee = String(
+        Q[breakawayCommitteeQualities[id]] || id
+    );
+    if (
+        ["left", "razem", "left_coalition", "right_2027"].includes(requestedCommittee) ||
+        (id == "social_patriot" &&
+            ["pis", "konf"].includes(requestedCommittee))
+    ) {
+        committeeFor[id] = requestedCommittee;
+    }
+}
+if (sejmListOutcome == "left_coalition_8") {
+    committeeFor.left = "left_coalition";
+} else if (sejmListOutcome == "razem_5" && Q.razem_party_formed) {
+    committeeFor.left = "razem";
+} else if (sejmListOutcome == "democratic_8") {
+    committeeFor.left = "democratic_list";
+    committeeFor.ko = "democratic_list";
+    committeeFor.psl = "democratic_list";
+    if (Q.p2050_emerged) committeeFor.p2050 = "democratic_list";
+} else if (sejmListOutcome == "ko_5") {
+    committeeFor.left = "ko";
+} else if (sejmListOutcome == "third_way_8") {
+    committeeFor.left = "third_way";
+    committeeFor.psl = "third_way";
+    if (Q.p2050_emerged) committeeFor.p2050 = "third_way";
+} else if (sejmListOutcome == "third_host_5") {
+    committeeFor.left = ["psl", "p2050"].includes(Q.sejm_list_host)
+        ? Q.sejm_list_host
+        : "psl";
+} else if (sejmListOutcome == "pis_5") {
+    committeeFor.left = "pis";
+} else if (sejmListOutcome == "konf_5") {
+    committeeFor.left = "konf";
+}
+const electionRecordIds = {
+    pis: "pis_party", ko: "ko_party", psl: "psl_party",
+    p0: "p0_party", tak_rozwoj: "tak_rozwoj_party",
+    republikanie: "republikanie", odnowa: "odnowa",
+    p2050: "p2050_party", konf: "konf_committee",
+    korona: "kkp", rozwoj: "rozwoj_plus",
+    ko_splinter: "ko_splinter", centrum: "unia_centrum",
+    suwerenna: "solidarna", porozumienie: "porozumienie",
+    kukiz: "kukiz15",
+    new_hope: "nowa_nadzieja",
+    national_movement: "ruch_narodowy", duda: "duda_movement",
+    social_conservative: "pis_welfare"
+};
+const electionRecord = function(id) {
+    return (Q.rival_group_records || []).find(function(record) {
+        return record && record.id == electionRecordIds[id];
+    });
+};
+// Mirrors the polling model: a small organisation may rent a place on a larger
+// party's own ballot line instead of founding a new coalition committee.
+const hostListRoutes = {
+    p0: ["pis", "konf"],
+    suwerenna: ["pis", "konf"],
+    psl: ["konf"],
+    p2050: ["ko", "psl"],
+    rozwoj: ["pis", "psl", "p2050"],
+    tak_rozwoj: ["rozwoj"],
+    republikanie: ["pis"],
+    odnowa: ["pis"],
+    kukiz: ["pis", "psl", "ko", "konf", "third_way"],
+    porozumienie: ["pis", "psl", "ko", "third_way"]
+};
+for (const id of Object.keys(electionRecordIds)) {
+    const record = electionRecord(id);
+    if (!record || !record.active || !record.contesting) continue;
+    const committee = String(record.list_committee || id);
+    if ((hostListRoutes[id] || []).includes(committee) ||
+        ["right_2027", "common_centre_2027", "third_way_2027",
+        "social_conservative_2027", "new_hope", "national_movement",
+        "duda"].includes(committee)) {
+        committeeFor[id] = committee;
+    }
+}
+if (Q.prawica_formed) {
+    for (const id of Q.prawica_member_source_ids || []) {
+        if (ids.includes(id) && id != "korona") {
+            committeeFor[id] = "right_2027";
+        }
+    }
+    for (const id of ids) {
+        if (committeeFor[id] == "right_2027" &&
+            !(Q.prawica_member_source_ids || []).includes(id)) {
+            committeeFor[id] = id;
+        }
+    }
+}
+const componentBaseVotes = {};
+for (const id of ids) {
+    if (id == "other") continue;
+    componentBaseVotes[id] = Math.max(0, liveVote(id));
+}
+
+const snapElectionModel = (typeof window !== "undefined"
+    ? window : globalThis).polandElectionModel;
+if (![5, 8].includes(Number(Q.konf_list_threshold))) {
+    Q.konf_list_threshold = snapElectionModel.konfederacjaListThreshold(
+        liveVote("konf"),
+        Q.poll_margin_error
+    );
+}
+const thresholds = {
+    pis: 5,
+    ko: Q.ko_consolidated || sejmListOutcome == "ko_5" ? 5 : 8,
+    p2050: 5,
+    psl: 5,
+    left: 5,
+    konf: Q.konf_list_threshold,
+    p0: 5,
+    sld_breakaway: 5,
+    social_patriot: 5,
+    spring_breakaway: 5,
+    labor_left: 5,
+    young_left: 5,
+    razem: 5,
+    pps: 5,
+    tak_rozwoj: 5,
+    centrum: 5,
+    rozwoj: 5,
+    korona: 5,
+    ko_splinter: 5,
+    suwerenna: 5,
+    porozumienie: 5,
+    republikanie: 5,
+    odnowa: 5,
+    kukiz: 5,
+    left_coalition: 8,
+    democratic_list: 8,
+    third_way: 8
+};
+thresholds.new_hope = 5;
+thresholds.national_movement = 5;
+thresholds.duda = 5;
+thresholds.social_conservative = 5;
+thresholds.right_2027 = 8;
+thresholds.common_centre_2027 = 8;
+thresholds.third_way_2027 = 8;
+thresholds.social_conservative_2027 = 5;
+
+const snapCommitteeHosts = {
+    left: "left", razem: "razem", ko: "ko", psl: "psl",
+    p2050: "p2050", pis: "pis", konf: "konf", kukiz: "kukiz",
+    social_conservative_2027: "social_conservative"
+};
+const eligibleSnapParties = ids.filter(function(id) {
+    const record = electionRecord(id);
+    if (committeeFor[id] == "right_2027" && Q.prawica_formed) {
+        return (Q.prawica_member_source_ids || []).includes(id);
+    }
+    return id != "other" && (componentBaseVotes[id] > 0.02 ||
+        ((committeeFor[id] || id) != id && record && record.active &&
+            record.contesting));
+});
+Object.assign(committeeFor, snapElectionModel.reconcileCommittees({
+    partyIds: ids,
+    committeeFor: committeeFor,
+    componentVotes: componentBaseVotes,
+    eligiblePartyIds: eligibleSnapParties,
+    committeeThresholds: thresholds,
+    committeeHosts: snapCommitteeHosts
+}));
+if (["right_2027", "common_centre_2027", "third_way_2027"].includes(
+    committeeFor.psl
+) || ["right_2027", "common_centre_2027", "third_way_2027"].includes(
+    committeeFor.p2050
+)) {
+    thirdWayJoint = false;
+} else if (committeeFor.psl == "third_way" &&
+    committeeFor.p2050 == "third_way") {
+    thirdWayJoint = true;
+}
+const committeeVotes = snapElectionModel.aggregateCommitteeVotes(
+    activeCountIds, committeeFor, shockedVotes
+);
+
+let qualifiedCommittees = Object.keys(committeeVotes).filter(function(id) {
+    return committeeVotes[id] >= (thresholds[id] || 5);
+});
+if (!qualifiedCommittees.length) {
+    qualifiedCommittees = Object.keys(committeeVotes).sort(function(a, b) {
+        return committeeVotes[b] - committeeVotes[a];
+    }).slice(0, 1);
+}
+
+const snapNegotiatedShares = {};
+for (const id of ids) {
+    if (Q.prawica_formed && (committeeFor[id] || id) == "right_2027" &&
+        Number(Q.prawica_member_shares && Q.prawica_member_shares[id]) > 0) {
+        snapNegotiatedShares[id] = Number(Q.prawica_member_shares[id]);
+        continue;
+    }
+    const record = electionRecordIds[id] ? electionRecord(id) : null;
+    snapNegotiatedShares[id] = record
+        ? Math.max(0, Number(record.negotiated_list_share) || 0)
+        : 0;
+}
+const snapModelVotes = Object.assign({}, committeeVotes);
+if (normalizedOther > 0) {
+    snapModelVotes.other = normalizedOther;
+    componentBaseVotes.other = normalizedOther;
+}
+const snapAllocation = snapElectionModel.allocateSejm({
+    state: Q,
+    system: Q.sejm_electoral_system,
+    partyIds: ids,
+    committeeFor: committeeFor,
+    componentVotes: componentBaseVotes,
+    committeeVotes: snapModelVotes,
+    qualifiedCommittees: qualifiedCommittees,
+    negotiatedShares: snapNegotiatedShares,
+    eligiblePartyIds: eligibleSnapParties,
+    committeeThresholds: thresholds,
+    committeeHosts: snapCommitteeHosts
+});
+const committeeSeats = snapAllocation.committeeSeats;
+for (const committee of [
+    "right_2027", "common_centre_2027", "third_way_2027",
+    "social_conservative_2027"
+]) {
+    Q["snap_election_" + committee + "_vote"] = Math.round(
+        Math.max(0, Number(committeeVotes[committee]) || 0) * 100
+    ) / 100;
+    Q["snap_election_" + committee + "_seats"] = Math.max(
+        0,
+        Math.round(Number(committeeSeats[committee]) || 0)
+    );
+}
+
+const resultSeats = snapAllocation.partySeats;
+resultSeats.third_way = 0;
+
+for (const id of ids) {
+    Q[seatQuality(id)] = resultSeats[id] || 0;
+    Q[id + "_projected_seats"] = Q[seatQuality(id)];
+    Q[id + "_list_seats"] = snapAllocation.listPartySeats[id] || 0;
+    Q[id + "_urban_seats"] = snapAllocation.urbanPartySeats[id] || 0;
+    Q[id + "_rural_seats"] = snapAllocation.ruralPartySeats[id] || 0;
+    Q[id + "_projected_list_seats"] = Q[id + "_list_seats"];
+    Q[id + "_projected_urban_seats"] = Q[id + "_urban_seats"];
+    Q[id + "_projected_rural_seats"] = Q[id + "_rural_seats"];
+    if (id == "other") {
+        Q["snap_election_" + id + "_vote"] =
+            Math.round(normalizedOther * 100) / 100;
+        continue;
+    }
+    const committee = committeeFor[id] || id;
+    const committeeVote = Math.max(0, committeeVotes[committee] || 0);
+    if (committeeVote <= 0) {
+        Q["snap_election_" + id + "_vote"] = 0;
+        continue;
+    }
+    const committeeMembers = ids.filter(function(member) {
+        if (member == "other") return false;
+        if (thirdWayJoint && committee == "third_way") {
+            return member == "psl" || member == "p2050";
+        }
+        return (committeeFor[member] || member) == committee &&
+            componentBaseVotes[member] > 0.001;
+    });
+    const committeeWeight = committeeMembers.reduce(function(total, member) {
+        return total + componentBaseVotes[member];
+    }, 0);
+    const memberVote = committeeVote * componentBaseVotes[id] /
+        Math.max(0.01, committeeWeight);
+    Q["snap_election_" + id + "_vote"] =
+        Math.round(memberVote * 100) / 100;
+}
+Q.sejm_result_system = snapAllocation.system;
+Q.sejm_result_list_seats = snapAllocation.listSeatCount;
+Q.sejm_result_urban_seats = snapAllocation.urbanSeatCount;
+Q.sejm_result_rural_seats = snapAllocation.ruralSeatCount;
+Q.left_result_stronghold_count = snapAllocation.leftStrongholdCount;
+const snapArchiveKey = Q.election_2027_terminal
+    ? "2027-10"
+    : Q.year + "-" + String(Q.month).padStart(2, "0") +
+        "-snap-" + Q.snap_election_cycle;
+snapElectionModel.archiveSejm(
+    Q,
+    snapAllocation,
+    snapArchiveKey,
+    Q.election_2027_terminal
+        ? "2027 parliamentary election"
+        : "Snap parliamentary election " + snapArchiveKey
+);
+for (const id of Object.keys(electionRecordIds)) {
+    const record = electionRecord(id);
+    if (!record) continue;
+    record.projected_seats = Math.max(0, Math.round(resultSeats[id] || 0));
+    record.exclusive_seats = record.projected_seats;
+    record.sejm_mps = record.projected_seats;
+    record.mp_count = record.projected_seats;
+    record.vote_intent = Math.max(
+        0,
+        Number(Q["snap_election_" + id + "_vote"]) || 0
+    );
+}
+
+// A new election replaces the old main-list caucus ledger. Reapportion only
+// among currents that remained inside the list, so later ministry and
+// defection mechanics cannot spend MPs from the previous Sejm.
+const apportionSnapCaucuses = function(total, entries) {
+    const safeTotal = Math.max(0, Math.round(Number(total) || 0));
+    const weights = entries.map(function(entry) {
+        return {
+            id: entry.id,
+            weight: Math.max(0, Number(entry.weight) || 0)
+        };
+    });
+    let weightTotal = weights.reduce(function(sum, entry) {
+        return sum + entry.weight;
+    }, 0);
+    if (weightTotal <= 0 && weights.length) {
+        weightTotal = weights.length;
+        for (const entry of weights) entry.weight = 1;
+    }
+    const allocated = {};
+    const remainders = [];
+    let used = 0;
+    for (const entry of weights) {
+        const exact = safeTotal * entry.weight / Math.max(1, weightTotal);
+        const base = Math.floor(exact);
+        allocated[entry.id] = base;
+        used += base;
+        remainders.push({
+            id: entry.id,
+            remainder: exact - base
+        });
+    }
+    remainders.sort(function(a, b) {
+        if (b.remainder != a.remainder) return b.remainder - a.remainder;
+        return a.id < b.id ? -1 : 1;
+    });
+    for (let i = 0; i < safeTotal - used && remainders.length; i += 1) {
+        allocated[remainders[i % remainders.length].id] += 1;
+    }
+    return allocated;
+};
+let liveLeftCaucuses = [
+    {
+        id: "barons",
+        active: Q.barons_active && Q.barons_in_left,
+        weight: Q.left_barons_seats
+    },
+    {
+        id: "spring",
+        active: Q.spring_active && Q.spring_in_left,
+        weight: Q.left_spring_seats
+    },
+    {
+        id: "labor",
+        active: Q.labor_active && Q.labor_in_left,
+        weight: Q.left_labor_seats
+    },
+    {
+        id: "progressives",
+        active: Q.progressives_active && Q.progressives_in_left,
+        weight: Q.left_progressives_seats
+    },
+    {
+        id: "razem",
+        active: Q.razem_active && Q.razem_in_left,
+        weight: Q.razem_seats
+    },
+    {
+        id: "pps",
+        active: Q.pps_active && Q.pps_in_left,
+        weight: Q.left_pps_seats
+    },
+    {
+        id: "social_patriot",
+        active: Q.social_patriot_active && Q.social_patriot_in_left,
+        weight: Q.left_social_patriot_seats
+    }
+].filter(function(entry) {
+    return entry.active;
+});
+if (!liveLeftCaucuses.length && Q.left_seats > 0) {
+    Q.progressives_active = 1;
+    Q.progressives_in_left = 1;
+    liveLeftCaucuses = [{id: "progressives", active: 1, weight: 1}];
+}
+const snapLeftCaucuses = apportionSnapCaucuses(
+    Q.left_seats,
+    liveLeftCaucuses
+);
+Q.left_barons_seats = snapLeftCaucuses.barons || 0;
+Q.left_spring_seats = snapLeftCaucuses.spring || 0;
+Q.left_labor_seats = snapLeftCaucuses.labor || 0;
+Q.left_progressives_seats = snapLeftCaucuses.progressives || 0;
+Q.razem_seats = snapLeftCaucuses.razem || 0;
+Q.left_pps_seats = snapLeftCaucuses.pps || 0;
+Q.left_social_patriot_seats = snapLeftCaucuses.social_patriot || 0;
+Q.left_new_generation_seats =
+    Q.left_labor_seats + Q.left_progressives_seats;
+Q.nowa_lewica_seats =
+    Q.left_barons_seats + Q.left_spring_seats +
+    Q.left_labor_seats + Q.left_progressives_seats;
+Q.left_cooperative_independent_seats = Math.min(
+    Q.left_progressives_seats,
+    previousMainLeftSeats > 0
+        ? Math.round(
+            previousCooperativeSeats * Q.left_seats /
+                previousMainLeftSeats
+        )
+        : 0
+);
+const snapCurrentScale = previousMainLeftSeats > 0
+    ? Q.left_seats / previousMainLeftSeats
+    : 0;
+Q.left_trzaskowski_current_seats = Math.min(
+    Q.left_seats,
+    Math.round(previousTrzaskowskiCurrentSeats * snapCurrentScale)
+);
+Q.left_ipl_current_seats = Math.min(
+    Math.max(0, Q.left_seats - Q.left_trzaskowski_current_seats),
+    Math.round(previousIplCurrentSeats * snapCurrentScale)
+);
+Q.left_p2050_current_seats = Math.min(
+    Math.max(
+        0,
+        Q.left_seats - Q.left_trzaskowski_current_seats -
+            Q.left_ipl_current_seats
+    ),
+    Math.round(previousP2050CurrentSeats * snapCurrentScale)
+);
+Q.left_green_current_seats = Math.min(
+    Math.max(
+        0,
+        Q.left_seats - Q.left_trzaskowski_current_seats -
+            Q.left_ipl_current_seats - Q.left_p2050_current_seats
+    ),
+    Math.round(previousGreenCurrentSeats * snapCurrentScale)
+);
+Q.left_rozwoj_current_seats = Math.min(
+    Math.max(
+        0,
+        Q.left_seats - Q.left_trzaskowski_current_seats -
+            Q.left_ipl_current_seats - Q.left_p2050_current_seats -
+            Q.left_green_current_seats
+    ),
+    Math.round(previousRozwojCurrentSeats * snapCurrentScale)
+);
+
+// Shortening the Sejm term also shortens the Senate term. Certify a new
+// winner in each of the 100 single-member Senate districts from this same
+// election, retaining the live pact choice instead of the stale 2023 chamber.
+Q.senate_election_2023_certified = 0;
+Q.senate_total = 100;
+const snapSenateVote = function(id) {
+    return Math.max(
+        0,
+        Number(Q["snap_election_" + id + "_vote"]) || 0
+    );
+};
+const snapSenateVotes = {
+    pis: snapSenateVote("pis") + snapSenateVote("rozwoj") +
+        snapSenateVote("duda") + snapSenateVote("social_conservative"),
+    konf: snapSenateVote("konf") + snapSenateVote("korona") +
+        snapSenateVote("new_hope") + snapSenateVote("national_movement"),
+    ko: snapSenateVote("ko") + snapSenateVote("ko_splinter"),
+    p2050: snapSenateVote("p2050") + snapSenateVote("centrum"),
+    psl: snapSenateVote("psl"),
+    left: [
+        "left", "sld_breakaway", "social_patriot", "spring_breakaway", "labor_left",
+        "young_left", "razem", "pps", "tak_rozwoj"
+    ].reduce(function(total, id) {
+        return total + snapSenateVote(id);
+    }, 0),
+    independent: snapSenateVote("other")
+};
+const snapLeftPactMode = String(Q.senate_left_pact_mode || "full");
+const snapLeftNominationWeight = snapLeftPactMode == "full"
+    ? 1
+    : (snapLeftPactMode == "reserved" ? 0.2 : 0);
+const snapLeftVoteInsidePact = snapLeftPactMode != "outside";
+const snapDemocraticSenateVote =
+    snapSenateVotes.ko + snapSenateVotes.p2050 + snapSenateVotes.psl +
+    (snapLeftVoteInsidePact ? snapSenateVotes.left : 0);
+const snapPactStrength = Math.max(
+    0,
+    Math.min(100, Number(Q.senate_pact_strength) || 0)
+);
+const snapPactNomineeParts = apportionSnapCaucuses(
+    Q.senate_total,
+    [
+        {id: "ko", weight: snapSenateVotes.ko},
+        {id: "p2050", weight: snapSenateVotes.p2050},
+        {id: "psl", weight: snapSenateVotes.psl},
+        {
+            id: "left",
+            weight: snapSenateVotes.left * snapLeftNominationWeight
+        }
+    ]
+);
+const snapThirdNomineeParts = apportionSnapCaucuses(
+    Q.senate_total,
+    [
+        {id: "p2050", weight: snapSenateVotes.p2050},
+        {id: "psl", weight: snapSenateVotes.psl}
+    ]
+);
+const snapNomineeSequence = function(parts, ids) {
+    const nominees = [];
+    for (const id of ids) {
+        for (let seat = 0; seat < (parts[id] || 0); seat += 1) {
+            nominees.push(id);
+        }
+    }
+    while (nominees.length < Q.senate_total) nominees.push(ids[0]);
+    for (let i = nominees.length - 1; i > 0; i -= 1) {
+        const swap = this.random.uint32() % (i + 1);
+        const current = nominees[i];
+        nominees[i] = nominees[swap];
+        nominees[swap] = current;
+    }
+    return nominees;
+}.bind(this);
+const snapPactNominees = snapNomineeSequence(
+    snapPactNomineeParts,
+    ["ko", "p2050", "psl", "left"]
+);
+const snapThirdNominees = snapNomineeSequence(
+    snapThirdNomineeParts,
+    ["p2050", "psl"]
+);
+const snapSenateWinners = {
+    pis: 0, konf: 0, ko: 0, p2050: 0,
+    psl: 0, left: 0, independent: 0
+};
+let snapSenateClosestMargin = 100;
+const snapSenateRandom = function() {
+    return this.random.uint32() / 4294967296;
+}.bind(this);
+for (let district = 0; district < Q.senate_total; district += 1) {
+    const democraticLean = (snapSenateRandom() - 0.5) * 44;
+    const candidates = [];
+    const addCandidate = function(id, score) {
+        if (score > 0) candidates.push({id: id, score: score});
+    };
+    if (Q.senate_pact_coordinated) {
+        const transfer = 0.88 + snapPactStrength / 1000;
+        addCandidate(
+            snapPactNominees[district],
+            snapDemocraticSenateVote * transfer + democraticLean +
+                (snapSenateRandom() - 0.5) * 8
+        );
+        if (snapLeftPactMode == "outside") {
+            addCandidate(
+                "left",
+                snapSenateVotes.left + democraticLean * 0.55 +
+                    (snapSenateRandom() - 0.5) * 18
+            );
+        }
+    } else {
+        addCandidate(
+            "ko",
+            snapSenateVotes.ko + democraticLean +
+                (snapSenateRandom() - 0.5) * 12
+        );
+        addCandidate(
+            snapThirdNominees[district],
+            snapSenateVotes.p2050 + snapSenateVotes.psl +
+                democraticLean * 0.45 +
+                (snapSenateRandom() - 0.5) * 18
+        );
+        addCandidate(
+            "left",
+            snapSenateVotes.left + democraticLean * 0.55 +
+                (snapSenateRandom() - 0.5) * 18
+        );
+    }
+    addCandidate(
+        "pis",
+        snapSenateVotes.pis - democraticLean +
+            (snapSenateRandom() - 0.5) * 10
+    );
+    addCandidate(
+        "konf",
+        snapSenateVotes.konf - democraticLean * 0.35 +
+            (snapSenateRandom() - 0.5) * 16
+    );
+    addCandidate(
+        "independent",
+        snapSenateVotes.independent + snapSenateRandom() * 42
+    );
+    candidates.sort(function(a, b) {
+        return b.score - a.score;
+    });
+    const winner = candidates[0] || {id: "independent", score: 0};
+    snapSenateWinners[winner.id] += 1;
+    if (candidates.length > 1) {
+        snapSenateClosestMargin = Math.min(
+            snapSenateClosestMargin,
+            winner.score - candidates[1].score
+        );
+    }
+}
+Q.senate_pis_seats = snapSenateWinners.pis;
+Q.senate_konf_seats = snapSenateWinners.konf;
+Q.senate_ko_seats = snapSenateWinners.ko;
+Q.senate_p2050_seats = snapSenateWinners.p2050;
+Q.senate_psl_seats = snapSenateWinners.psl;
+Q.senate_left_seats = snapSenateWinners.left;
+Q.senate_independent_seats = snapSenateWinners.independent;
+Q.senate_democratic_seats =
+    Q.senate_ko_seats + Q.senate_p2050_seats +
+    Q.senate_psl_seats + Q.senate_left_seats;
+Q.senate_right_seats = Q.senate_pis_seats + Q.senate_konf_seats;
+Q.senate_opposition_seats = Q.senate_total;
+Q.senate_government_seats = 0;
+Q.senate_coordinated_seats = Q.senate_left_seats;
+Q.senate_working_votes = Q.senate_left_seats;
+Q.snap_senate_marshal_return = 0;
+Q.senate_marshal = Q.senate_democratic_seats >= 51
+    ? "Małgorzata Kidawa-Błońska"
+    : (
+        Q.senate_right_seats >= 51
+            ? "Stanisław Karczewski"
+            : "Vacant — Senate election pending"
+    );
+Q.senate_control = Q.senate_democratic_seats >= 51
+    ? "Democratic Senate majority"
+    : (
+        Q.senate_right_seats >= 51
+            ? "Right-aligned Senate majority"
+            : "Hung Senate"
+    );
+if (Q.senate_democratic_seats < 51 && Q.senate_right_seats < 51) {
+    Q.office_incompatibility_pending = 1;
+    Q.office_incompatibility_resolved = 0;
+    Q.office_incompatibility_kind = "Senate Marshal";
+    Q.snap_senate_marshal_return = 1;
+}
+Q.senate_cohesion = Math.max(
+    0,
+    Math.min(
+        100,
+        (Number(Q.senate_cohesion) || 50) +
+            (Q.senate_pact_coordinated ? 4 : -6)
+    )
+);
+Q.senate_left_leverage = Math.max(
+    0,
+    Math.min(100, 10 + Q.senate_left_seats * 3)
+);
+Q.senate_amendment_credit = 0;
+Q.senate_pending_bill_type = "none";
+Q.senate_docket_ready = 1;
+Q.senate_election_rule =
+    "100 single-member districts; the leading candidate wins";
+Q.senate_election_closest_margin =
+    Math.round(Math.max(0, snapSenateClosestMargin) * 100) / 100;
+Q.senate_election_2023_certified = 1;
+Q.senate_snap_election_cycle = Q.snap_election_cycle;
+Q.senate_last_vote =
+    "The snap election certified a new 100-seat Senate";
+
+if (matysiakListBeforeElection == "left") {
+    Q.matysiak_has_sejm_mandate = Q.left_seats > 0 ? 1 : 0;
+} else if (matysiakListBeforeElection == "razem") {
+    Q.matysiak_has_sejm_mandate = Q.razem_party_formed
+        ? (Q.razem_party_seats > 0 ? 1 : 0)
+        : (Q.left_seats > 0 ? 1 : 0);
+} else if (matysiakListBeforeElection == "tak_rozwoj") {
+    Q.matysiak_has_sejm_mandate = Q.tak_rozwoj_seats > 0 ? 1 : 0;
+} else if (matysiakListBeforeElection == "rozwoj") {
+    Q.matysiak_has_sejm_mandate = Q.rozwoj_seats > 0 ? 1 : 0;
+} else {
+    Q.matysiak_has_sejm_mandate = 0;
+}
+if (!Q.matysiak_has_sejm_mandate) {
+    Q.matysiak_status = "Party organiser without a Sejm mandate";
+}
+const largestMover = activeCountIds.slice().sort(function(a, b) {
+    return Math.abs(countShocks[b]) - Math.abs(countShocks[a]);
+})[0];
+Q.snap_repeat_campaign_roll =
+    Math.round(countShocks[largestMover] * 100) / 100;
+Q.snap_election_day_summary = largestMover + " " +
+    (Q.snap_repeat_campaign_roll >= 0 ? "+" : "") +
+    Q.snap_repeat_campaign_roll +
+    (Q.sejm_electoral_system == "proportional"
+        ? " points; thresholds and d'Hondt recalculated"
+        : " points; national and district contests recalculated");
+Q.left_splinter_seats =
+    Q.sld_breakaway_seats + Q.social_patriot_seats +
+    Q.spring_breakaway_seats +
+    Q.labor_left_seats + Q.young_left_seats +
+    Q.razem_party_seats + Q.pps_party_seats + Q.tak_rozwoj_seats;
+Q.left_family_seats = Q.left_seats + Q.left_splinter_seats;
+Q.left_splinter_support_votes =
+    (Q.barons_party_relation >= 45 ? Q.sld_breakaway_seats : 0) +
+    (!["pis", "konf"].includes(Q.social_patriot_list_committee) &&
+        Q.social_patriot_party_relation >= 45
+        ? Q.social_patriot_seats : 0) +
+    (Q.spring_party_relation >= 45 ? Q.spring_breakaway_seats : 0) +
+    (Q.labor_party_relation >= 45 ? Q.labor_left_seats : 0) +
+    (
+        Q.progressives_party_relation >= 45
+            ? Q.young_left_seats
+            : 0
+    ) +
+    (Q.razem_party_relation >= 45 ? Q.razem_party_seats : 0) +
+    (Q.pps_party_relation >= 45 ? Q.pps_party_seats : 0) +
+    (Q.tak_rozwoj_parent_relation >= 45 ? Q.tak_rozwoj_seats : 0);
+Q.left_committed_seats =
+    Q.left_seats + Q.left_splinter_support_votes;
+const snapCentrumCommitted =
+    Q.centrum_relation >= 45 ? Q.centrum_seats : 0;
+const snapLeftOnRightList = ["pis_5", "konf_5"].includes(sejmListOutcome);
+Q.coalition_democratic_seats =
+    Q.ko_seats + Q.ko_splinter_seats + Q.psl_seats + Q.p2050_seats +
+    snapCentrumCommitted +
+    (snapLeftOnRightList ? 0 : Q.left_committed_seats);
+Q.coalition_right_seats =
+    Q.pis_seats + Q.konf_seats + Q.rozwoj_seats + Q.korona_seats +
+    Q.new_hope_seats + Q.national_movement_seats + Q.duda_seats +
+    Q.social_conservative_seats +
+    (snapLeftOnRightList ? Q.left_seats : 0) +
+    (["pis", "konf"].includes(Q.social_patriot_list_committee)
+        ? Q.social_patriot_seats : 0);
+const snapKoPslPledge =
+    Q.coalition_viable_ko_psl &&
+    (Number(Q.rival_relation_ko_psl) || 0) >= 55 &&
+    (Number(Q.psl_coalition_dissent) || 0) < 65
+        ? Q.psl_seats
+        : 0;
+const snapKoP2050Pledge =
+    Q.coalition_viable_ko_p2050 &&
+    (Number(Q.rival_relation_ko_p2050) || 0) >= 55 &&
+    (Number(Q.p2050_coalition_dissent) || 0) < 65
+        ? Q.p2050_seats
+        : 0;
+Q.democratic_committed_seats =
+    Q.ko_seats + snapKoPslPledge + snapKoP2050Pledge +
+    (Q.centrum_relation >= 55 ? Q.centrum_seats : 0);
+Q.snap_psl_cabinet_committed = snapKoPslPledge > 0 ? 1 : 0;
+Q.snap_p2050_cabinet_committed = snapKoP2050Pledge > 0 ? 1 : 0;
+Q.snap_centrum_cabinet_committed =
+    Q.centrum_relation >= 55 && Q.centrum_seats > 0 ? 1 : 0;
+Q.snap_cabinet_commitments_recorded = 1;
+const sharedRightSeats = Number(Q.snap_election_right_2027_seats) || 0;
+Q.right_committed_seats = sharedRightSeats > 0
+    ? sharedRightSeats
+    : Q.pis_seats +
+        (Q.coalition_viable_pis_konf && Q.rival_relation_pis_konf >= 50
+            ? Q.konf_seats + Q.new_hope_seats +
+                Q.national_movement_seats + Q.korona_seats
+            : 0) +
+        (Q.pis_relation >= 45 ? Q.rozwoj_seats + Q.duda_seats +
+            Q.social_conservative_seats : 0);
+Q.seat_subvention_seats = Q.left_seats;
+Q.snap_election_complete = 1;
+Q.caretaker_government = 1;
+Q.government_has_confidence = 0;
+Q.news_headline =
+    Q.snap_election_cycle > 1
+        ? "A fresh second campaign shifts the balance but again fragments the Sejm"
+        : "The alternative election returns a fragmented Sejm";
+Q.snap_third_way_joint_list = thirdWayJoint ? 1 : 0;
+Q.snap_election_third_way_vote = Math.round(
+    (
+        (Number(Q.snap_election_psl_vote) || 0) +
+        (Number(Q.snap_election_p2050_vote) || 0)
+    ) * 100
+) / 100;
+const snapBroadMembers = ["left", "ko", "psl", "p2050"].filter(
+    function(id) { return (committeeFor[id] || id) == "democratic_list"; }
+);
+const snapBroadList = snapBroadMembers.length > 1;
+Q.snap_result_broad_list = snapBroadList ? 1 : 0;
+Q.snap_election_democratic_list_vote = Math.round(
+    Math.max(0, Number(committeeVotes.democratic_list) || 0) * 100
+) / 100;
+Q.snap_election_democratic_list_seats = Math.max(
+    0, Math.round(Number(committeeSeats.democratic_list) || 0)
+);
+const snapCommonCentre = Q.snap_election_common_centre_2027_seats > 0;
+const snapPermanentThirdWay = Q.snap_election_third_way_2027_seats > 0;
+const snapPrawica = Q.snap_election_right_2027_seats > 0;
+const resultCommitteeClass = "election-tree-row--committee";
+const resultChildClass = "election-tree-row--child";
+const resultGrandchildClass = "election-tree-row--grandchild";
+Q.result_snap_ko_row_class = snapBroadList || snapCommonCentre
+    ? resultChildClass : resultCommitteeClass;
+Q.result_snap_ko_member_class = snapBroadList || snapCommonCentre
+    ? resultGrandchildClass : resultChildClass;
+Q.result_snap_third_way_row_class = snapBroadList
+    ? resultChildClass : resultCommitteeClass;
+Q.result_snap_third_way_member_class = snapBroadList
+    ? resultGrandchildClass : resultChildClass;
+Q.result_snap_left_row_class = snapBroadList
+    ? resultChildClass : resultCommitteeClass;
+Q.result_snap_left_member_class = snapBroadList
+    ? resultGrandchildClass : resultChildClass;
+Q.result_snap_centre_party_row_class =
+    snapCommonCentre || snapPermanentThirdWay
+        ? resultChildClass : resultCommitteeClass;
+const snapPrawicaSources = Q.prawica_member_source_ids || [];
+for (const id of [
+    "pis", "konf", "p0", "suwerenna", "porozumienie", "republikanie",
+    "odnowa", "kukiz", "rozwoj", "new_hope", "national_movement",
+    "duda", "social_conservative", "tak_rozwoj", "ko_splinter", "psl"
+]) {
+    const isMember = snapPrawica && snapPrawicaSources.includes(id);
+    Q["result_prawica_member_" + id] = isMember ? 1 : 0;
+    Q["result_snap_" + id + "_row_class"] = isMember
+        ? resultChildClass : resultCommitteeClass;
+}
+Q.result_snap_konf_member_class = Q.result_prawica_member_konf
+    ? resultGrandchildClass : resultChildClass;
+!}
+go-to: snap_result_2026_display
+
+@snap_result_2026_display
+title: Parliamentary election result
+new-page: true
+call: poland_normalize
+on-display: {!
+const data = [];
+const certifiedParties = [
+    ["left", "NL", Q.left_party_name || "Lewica", Q.left_seats],
+    ["sld_breakaway", "SLD", Q.barons_party_name, Q.sld_breakaway_seats],
+    ["social_patriot", "LP", Q.social_patriot_party_name, Q.social_patriot_seats],
+    ["spring_breakaway", "Spring", Q.spring_party_name, Q.spring_breakaway_seats],
+    ["labor_left", "Labour", Q.labor_party_name, Q.labor_left_seats],
+    ["young_left", "Young", Q.progressives_party_name, Q.young_left_seats],
+    ["razem", "Razem", Q.razem_party_name, Q.razem_party_seats],
+    ["pps", "PPS", Q.pps_party_name, Q.pps_party_seats],
+    ["tak_rozwoj", "Razem-F", Q.tak_rozwoj_party_name, Q.tak_rozwoj_seats],
+    ["ko", "KO", "KO", Q.ko_seats],
+    ["centrum", "Centrum", "Unia Centrum", Q.centrum_seats],
+    ["pis", "PiS", "PiS", Q.pis_seats],
+    ["p0", "P0", Q.p0_name || "Partia Zero", Q.p0_seats],
+    ["rozwoj", "Rozwój+", "Rozwój Plus", Q.rozwoj_seats],
+    ["konf", "Konf.", "Konfederacja", Q.konf_seats],
+    ["korona", "Korona", "Korona", Q.korona_seats],
+    ["new_hope", "NN", "Nowa Nadzieja", Q.new_hope_seats],
+    ["national_movement", "RN", "Ruch Narodowy", Q.national_movement_seats],
+    ["duda", "Duda", "Ruch Dudy", Q.duda_seats],
+    ["suwerenna", "SP", "Solidarna / Suwerenna Polska", Q.suwerenna_seats],
+    ["porozumienie", "Por.", "Porozumienie", Q.porozumienie_seats],
+    ["republikanie", "PR", "Partia Republikańska", Q.republikanie_seats],
+    ["odnowa", "OdNowa", "OdNowa RP", Q.odnowa_seats],
+    ["kukiz", "K'15", "Kukiz'15", Q.kukiz_seats],
+    ["social_conservative", "Soc.", "Konserwatyści społeczni", Q.social_conservative_seats],
+    ["ko_splinter", "KO-S", Q.ko_splinter_name || "KO breakaway", Q.ko_splinter_seats],
+    ["other", "Inni", "Inni", Q.other_seats]
+];
+if (Q.snap_third_way_joint_list) {
+    certifiedParties.splice(
+        11,
+        0,
+        [
+            "third_way",
+            "Third Way",
+            "Trzecia Droga",
+            (Number(Q.psl_seats) || 0) + (Number(Q.p2050_seats) || 0)
+        ]
+    );
+} else {
+    certifiedParties.splice(
+        11,
+        0,
+        ["psl", "PSL", "PSL", Q.psl_seats],
+        ["p2050", "PL2050", "Polska 2050", Q.p2050_seats]
+    );
+}
+for (const party of certifiedParties) {
+    if (party[3] > 0) {
+        data.push({
+            id: party[0],
+            legend: party[1],
+            name: party[2],
+            seats: party[3]
+        });
+    }
+}
+if (
+    typeof window !== "undefined" &&
+    typeof d3 !== "undefined" &&
+    document.getElementById("poland-sejm-snap")
+) {
+    let width = 500;
+    let height = 500;
+    const content = document.getElementById("content");
+    if (content && content.offsetWidth < 450) {
+        width = Math.max(260, content.offsetWidth - 30);
+        height = width;
+        document.getElementById("poland-sejm-snap").style.height =
+            Math.round(width / 2) + "px";
+    }
+    const parliament = d3.parliament();
+    parliament.width(width).height(height).innerRadiusCoef(0.4);
+    parliament.enter.fromCenter(true).smallToBig(true);
+    parliament.exit.toCenter(false).bigToSmall(true);
+    d3.select("#poland-sejm-snap").datum(data).call(parliament);
+}
+!}
+
+[? if election_2027_terminal = 1: = 2027 Sejm and Senate result ?]
+[? if election_2027_terminal = 0: = Alternative Sejm result ?]
+
+[? if snap_election_cycle > 1: This is the **[+ snap_election_cycle +]**th
+election in the constitutional sequence. Voters have moved again during the
+fresh campaign; the parties do not simply inherit the previous count.?]
+
+**Sejm system:** [+ sejm_electoral_system_label +] — [+
+sejm_result_list_seats +] list, [+ sejm_result_urban_seats +] urban district
+and [+ sejm_result_rural_seats +] rural district seats. **Lewica:** [+
+left_list_seats +] list · [+ left_urban_seats +] urban · [+
+left_rural_seats +] rural.
+
+{!<svg id="poland-sejm-snap" class="poland-sejm-chart"></svg>!}
+
+{!<div class="election-map-host" data-election-map-source="sejm-latest"></div>!}
+
+<div class="election-table election-tree">
+<div class="election-table-head"><span>Committee / member</span><span>Vote</span><span>Seats</span><span>Status</span></div>
+[? if snap_result_broad_list: <div class="election-table-row election-tree-row--committee election-tree-row--broad"><span class="party party-lewica">Broad democratic coalition</span><span>[+ snap_election_democratic_list_vote +]%</span><b>[+ snap_election_democratic_list_seats +]</b><span>one certified common list</span></div>?]
+[? if snap_election_common_centre_2027_seats > 0: <div class="election-table-row election-tree-row--committee election-tree-row--broad"><span class="party party-ko">Wspólne Centrum 2027</span><span>[+ snap_election_common_centre_2027_vote +]%</span><b>[+ snap_election_common_centre_2027_seats +]</b><span>one certified coalition list</span></div>?]
+[? if snap_election_third_way_2027_seats > 0: <div class="election-table-row election-tree-row--committee election-tree-row--broad"><span class="party party-third-way">Trzecia Droga 2027</span><span>[+ snap_election_third_way_2027_vote +]%</span><b>[+ snap_election_third_way_2027_seats +]</b><span>one certified coalition list</span></div>?]
+<div class="election-table-row [+ result_snap_ko_row_class +]"><span class="party party-ko">Koalicja Obywatelska</span><span>[+ snap_election_ko_vote +]%</span><b>[+ ko_seats +]</b><span>[? if snap_result_broad_list or snap_election_common_centre_2027_seats > 0: common-list component?][? if not snap_result_broad_list and snap_election_common_centre_2027_seats = 0: certified committee?]</span></div>
+[? if result_member_po_sejm > 0 and result_member_po_family = "ko": <div class="election-table-row [+ result_snap_ko_member_class +]"><span class="party party-ko">[+ result_member_po_name +]</span><span aria-label="no separate ballot share">—</span><b>[+ result_member_po_sejm +]</b><span>KO member party</span></div>?]
+[? if result_member_nowoczesna_sejm > 0 and result_member_nowoczesna_family = "ko": <div class="election-table-row [+ result_snap_ko_member_class +]"><span class="party party-ko">[+ result_member_nowoczesna_name +]</span><span aria-label="no separate ballot share">—</span><b>[+ result_member_nowoczesna_sejm +]</b><span>KO member party</span></div>?]
+[? if result_member_ipl_sejm > 0 and result_member_ipl_family = "ko": <div class="election-table-row [+ result_snap_ko_member_class +]"><span class="party party-ko">[+ result_member_ipl_name +]</span><span aria-label="no separate ballot share">—</span><b>[+ result_member_ipl_sejm +]</b><span>KO member party</span></div>?]
+[? if result_member_greens_sejm > 0 and result_member_greens_family = "ko": <div class="election-table-row [+ result_snap_ko_member_class +]"><span class="party party-ko">[+ result_member_greens_name +]</span><span aria-label="no separate ballot share">—</span><b>[+ result_member_greens_sejm +]</b><span>KO member party</span></div>?]
+[? if result_member_ko_party_sejm > 0 and result_member_ko_party_family = "ko": <div class="election-table-row [+ result_snap_ko_member_class +]"><span class="party party-ko">[+ result_member_ko_party_name +]</span><span aria-label="no separate ballot share">—</span><b>[+ result_member_ko_party_sejm +]</b><span>consolidated KO party</span></div>?]
+[? if result_member_porozumienie_sejm > 0 and result_member_porozumienie_family = "ko": <div class="election-table-row [+ result_snap_ko_member_class +]"><span class="party party-agreement">[+ result_member_porozumienie_name +]</span><span aria-label="no separate ballot share">—</span><b>[+ result_member_porozumienie_sejm +]</b><span>KO list partner</span></div>?]
+[? if result_member_ko_independent_parliamentarians_sejm > 0: <div class="election-table-row [+ result_snap_ko_member_class +]"><span>KO-affiliated independents</span><span aria-label="no separate ballot share">—</span><b>[+ result_member_ko_independent_parliamentarians_sejm +]</b><span>non-party nominees</span></div>?]
+[? if snap_third_way_joint_list = 1 and snap_election_third_way_2027_seats = 0 and snap_election_common_centre_2027_seats = 0 and not result_prawica_member_psl: <div class="election-table-row [+ result_snap_third_way_row_class +]"><span class="party party-third-way">Trzecia Droga</span><span>[+ snap_election_third_way_vote +]%</span><b>[+ p2050_seats + psl_seats +]</b><span>[? if snap_result_broad_list: common-list component?][? if not snap_result_broad_list: joint committee?]</span></div><div class="election-table-row [+ result_snap_third_way_member_class +]"><span class="party party-p2050">Polska 2050</span><span>[+ snap_election_p2050_vote +]%</span><b>[+ result_member_p2050_party_sejm +]</b><span>Third Way member</span></div><div class="election-table-row [+ result_snap_third_way_member_class +]"><span class="party party-psl">PSL</span><span>[+ snap_election_psl_vote +]%</span><b>[+ result_member_psl_party_sejm +]</b><span>Third Way member</span></div>?]
+[? if result_member_kukiz15_sejm > 0 and result_member_kukiz15_family = "kp": <div class="election-table-row [+ result_snap_third_way_member_class +]"><span class="party party-kukiz">[+ result_member_kukiz15_name +]</span><span aria-label="no separate ballot share">—</span><b>[+ result_member_kukiz15_sejm +]</b><span>member party</span></div>?]
+[? if result_member_kp_partners_sejm > 0 and result_member_kp_partners_family = "kp": <div class="election-table-row [+ result_snap_third_way_member_class +]"><span class="party party-ued">[+ result_member_kp_partners_name +]</span><span aria-label="no separate ballot share">—</span><b>[+ result_member_kp_partners_sejm +]</b><span>member party</span></div>?]
+[? if result_member_porozumienie_sejm > 0 and result_member_porozumienie_family = "kp": <div class="election-table-row [+ result_snap_third_way_member_class +]"><span class="party party-agreement">[+ result_member_porozumienie_name +]</span><span aria-label="no separate ballot share">—</span><b>[+ result_member_porozumienie_sejm +]</b><span>list partner</span></div>?]
+[? if snap_election_common_centre_2027_seats > 0 or snap_election_third_way_2027_seats > 0: <div class="election-table-row election-tree-row--child"><span class="party party-p2050">Polska 2050</span><span>[+ snap_election_p2050_vote +]%</span><b>[+ p2050_seats +]</b><span>common-list component</span></div>?]
+[? if (snap_election_common_centre_2027_seats > 0 or snap_election_third_way_2027_seats > 0) and not result_prawica_member_psl: <div class="election-table-row election-tree-row--child"><span class="party party-psl">PSL</span><span>[+ snap_election_psl_vote +]%</span><b>[+ psl_seats +]</b><span>common-list component</span></div>?]
+[? if snap_third_way_joint_list = 0 and snap_result_broad_list and snap_election_third_way_2027_seats = 0 and snap_election_common_centre_2027_seats = 0: <div class="election-table-row election-tree-row--child"><span class="party party-p2050">Polska 2050</span><span>[+ snap_election_p2050_vote +]%</span><b>[+ p2050_seats +]</b><span>common-list component</span></div><div class="election-table-row election-tree-row--child"><span class="party party-psl">PSL</span><span>[+ snap_election_psl_vote +]%</span><b>[+ psl_seats +]</b><span>common-list component</span></div>?]
+[? if snap_third_way_joint_list = 0 and not snap_result_broad_list and snap_election_third_way_2027_seats = 0 and snap_election_common_centre_2027_seats = 0 and not result_prawica_member_psl: <div class="election-table-row election-tree-row--committee"><span class="party party-p2050">Polska 2050</span><span>[+ snap_election_p2050_vote +]%</span><b>[+ p2050_seats +]</b><span>separate committee</span></div><div class="election-table-row election-tree-row--committee"><span class="party party-psl">PSL</span><span>[+ snap_election_psl_vote +]%</span><b>[+ psl_seats +]</b><span>separate committee</span></div>?]
+[? if centrum_seats > 0 or unia_centrum_formed = 1: <div class="election-table-row [+ result_snap_centre_party_row_class +]"><span class="party party-centrum">Unia Centrum</span><span>[+ snap_election_centrum_vote +]%</span><b>[+ centrum_seats +]</b><span>[? if snap_election_common_centre_2027_seats > 0: common-list component?][? if snap_election_common_centre_2027_seats = 0: PL2050 split?]</span></div>?]
+<div class="election-table-row [+ result_snap_left_row_class +]"><span class="party party-lewica">[+ left_party_name +]</span><span>[+ snap_election_left_vote +]%</span><b>[+ left_seats +]</b><span>[? if snap_result_broad_list: common-list component?][? if not snap_result_broad_list: certified committee?]</span></div>
+[? if left_barons_seats > 0: <div class="election-table-row [+ result_snap_left_member_class +]"><span class="party party-lewica">[+ barons_name +]</span><span aria-label="no separate ballot share">—</span><b>[+ left_barons_seats +]</b><span>constituent organisation</span></div>?]
+[? if left_spring_seats > 0: <div class="election-table-row [+ result_snap_left_member_class +]"><span class="party party-wiosna">[+ spring_name +]</span><span aria-label="no separate ballot share">—</span><b>[+ left_spring_seats +]</b><span>constituent organisation</span></div>?]
+[? if left_labor_seats > 0: <div class="election-table-row [+ result_snap_left_member_class +]"><span class="party party-left-labor">[+ labor_name +]</span><span aria-label="no separate ballot share">—</span><b>[+ left_labor_seats +]</b><span>constituent network</span></div>?]
+[? if left_progressives_seats > 0: <div class="election-table-row [+ result_snap_left_member_class +]"><span class="party party-progressive">[+ progressives_name +]</span><span aria-label="no separate ballot share">—</span><b>[+ left_progressives_seats +]</b><span>constituent current</span></div>?]
+[? if razem_seats > 0: <div class="election-table-row [+ result_snap_left_member_class +]"><span class="party party-razem">Razem</span><span aria-label="no separate ballot share">—</span><b>[+ razem_seats +]</b><span>internal allocation</span></div>?]
+[? if left_pps_seats > 0: <div class="election-table-row [+ result_snap_left_member_class +]"><span class="party party-pps">PPS</span><span aria-label="no separate ballot share">—</span><b>[+ left_pps_seats +]</b><span>internal allocation</span></div>?]
+[? if left_social_patriot_seats > 0: <div class="election-table-row [+ result_snap_left_member_class +]"><span class="party party-social-patriot">Social-patriot current</span><span aria-label="no separate ballot share">—</span><b>[+ left_social_patriot_seats +]</b><span>internal allocation</span></div>?]
+[? if snap_election_right_2027_seats > 0: <div class="election-table-row election-tree-row--committee election-tree-row--right"><span class="party party-prawica">Prawica</span><span>[+ snap_election_right_2027_vote +]%</span><b>[+ snap_election_right_2027_seats +]</b><span>one certified coalition list</span></div>?]
+[? if snap_election_right_2027_seats > 0 and result_prawica_member_pis: <div class="election-table-row election-tree-row--child"><span class="party party-pis">Prawo i Sprawiedliwość</span><span>[+ snap_election_pis_vote +]%</span><b>[+ pis_seats +]</b><span>Prawica member</span></div>?]
+[? if snap_election_right_2027_seats = 0: <div class="election-table-row election-tree-row--committee election-tree-row--right"><span class="party party-pis">Zjednoczona Prawica</span><span>[+ snap_election_pis_vote +]%</span><b>[+ pis_seats +]</b><span>one certified committee</span></div>?]
+[? if snap_election_right_2027_seats = 0 and result_member_pis_party_sejm > 0 and result_member_pis_party_family = "zp": <div class="election-table-row election-tree-row--child"><span class="party party-pis">[+ result_member_pis_party_name +]</span><span aria-label="no separate ballot share">—</span><b>[+ result_member_pis_party_sejm +]</b><span>lead party</span></div>?]
+[? if snap_election_right_2027_seats = 0 and result_member_solidarna_sejm > 0 and result_member_solidarna_family = "zp": <div class="election-table-row election-tree-row--child"><span class="party party-pis">[+ result_member_solidarna_name +]</span><span aria-label="no separate ballot share">—</span><b>[+ result_member_solidarna_sejm +]</b><span>ZP member party</span></div>?]
+[? if snap_election_right_2027_seats = 0 and result_member_porozumienie_sejm > 0 and result_member_porozumienie_family = "zp": <div class="election-table-row election-tree-row--child"><span class="party party-pis">[+ result_member_porozumienie_name +]</span><span aria-label="no separate ballot share">—</span><b>[+ result_member_porozumienie_sejm +]</b><span>ZP member party</span></div>?]
+[? if snap_election_right_2027_seats = 0 and result_member_republikanie_sejm > 0 and result_member_republikanie_family = "zp": <div class="election-table-row election-tree-row--child"><span class="party party-republicans">[+ result_member_republikanie_name +]</span><span aria-label="no separate ballot share">—</span><b>[+ result_member_republikanie_sejm +]</b><span>ZP member party</span></div>?]
+[? if snap_election_right_2027_seats = 0 and result_member_odnowa_sejm > 0 and result_member_odnowa_family = "zp": <div class="election-table-row election-tree-row--child"><span class="party party-odnowa">[+ result_member_odnowa_name +]</span><span aria-label="no separate ballot share">—</span><b>[+ result_member_odnowa_sejm +]</b><span>ZP member party</span></div>?]
+[? if snap_election_right_2027_seats = 0 and result_member_kukiz15_sejm > 0 and result_member_kukiz15_family = "zp": <div class="election-table-row election-tree-row--child"><span class="party party-kukiz">[+ result_member_kukiz15_name +]</span><span aria-label="no separate ballot share">—</span><b>[+ result_member_kukiz15_sejm +]</b><span>ZP list partner</span></div>?]
+[? if p0_seats > 0 or p0_formed = 1: <div class="election-table-row [+ result_snap_p0_row_class +]"><span class="party party-p0">[+ p0_name +]</span><span>[+ snap_election_p0_vote +]%</span><b>[+ p0_seats +]</b><span>[? if result_prawica_member_p0: Prawica member?][? if not result_prawica_member_p0: separate committee?]</span></div>?]
+[? if suwerenna_seats > 0: <div class="election-table-row [+ result_snap_suwerenna_row_class +]"><span class="party party-solidary-poland">Solidarna / Suwerenna Polska</span><span>[+ snap_election_suwerenna_vote +]%</span><b>[+ suwerenna_seats +]</b><span>[? if result_prawica_member_suwerenna: Prawica member?][? if not result_prawica_member_suwerenna: separate committee?]</span></div>?]
+[? if porozumienie_seats > 0: <div class="election-table-row [+ result_snap_porozumienie_row_class +]"><span class="party party-agreement">Porozumienie</span><span>[+ snap_election_porozumienie_vote +]%</span><b>[+ porozumienie_seats +]</b><span>[? if result_prawica_member_porozumienie: Prawica member?][? if not result_prawica_member_porozumienie: separate committee?]</span></div>?]
+[? if republikanie_seats > 0: <div class="election-table-row [+ result_snap_republikanie_row_class +]"><span class="party party-republicans">Partia Republikańska</span><span>[+ snap_election_republikanie_vote +]%</span><b>[+ republikanie_seats +]</b><span>[? if result_prawica_member_republikanie: Prawica member?][? if not result_prawica_member_republikanie: separate committee?]</span></div>?]
+[? if odnowa_seats > 0: <div class="election-table-row [+ result_snap_odnowa_row_class +]"><span class="party party-odnowa">OdNowa RP</span><span>[+ snap_election_odnowa_vote +]%</span><b>[+ odnowa_seats +]</b><span>[? if result_prawica_member_odnowa: Prawica member?][? if not result_prawica_member_odnowa: separate committee?]</span></div>?]
+[? if kukiz_seats > 0: <div class="election-table-row [+ result_snap_kukiz_row_class +]"><span class="party party-kukiz">Kukiz'15</span><span>[+ snap_election_kukiz_vote +]%</span><b>[+ kukiz_seats +]</b><span>[? if result_prawica_member_kukiz: Prawica member?][? if not result_prawica_member_kukiz: separate committee?]</span></div>?]
+[? if result_prawica_member_psl: <div class="election-table-row election-tree-row--child"><span class="party party-psl">PSL</span><span>[+ snap_election_psl_vote +]%</span><b>[+ psl_seats +]</b><span>Prawica member</span></div>?]
+[? if ko_splinter_seats > 0 or ko_splinter_active = 1: <div class="election-table-row [+ result_snap_ko_splinter_row_class +]"><span class="party party-ko">[+ ko_splinter_name +]</span><span>[+ snap_election_ko_splinter_vote +]%</span><b>[+ ko_splinter_seats +]</b><span>[? if result_prawica_member_ko_splinter: Prawica member?][? if not result_prawica_member_ko_splinter: KO split?]</span></div>?]
+[? if rozwoj_seats > 0 or rozwoj_party_formed = 1: <div class="election-table-row [+ result_snap_rozwoj_row_class +]"><span class="party party-rozwoj">Rozwój Plus</span><span>[+ snap_election_rozwoj_vote +]%</span><b>[+ rozwoj_seats +]</b><span>[? if result_prawica_member_rozwoj: Prawica member?][? if not result_prawica_member_rozwoj: PiS split?]</span></div>?]
+[? if tak_rozwoj_seats > 0 or tak_dla_rozwoju_party_formed = 1: <div class="election-table-row [+ result_snap_tak_rozwoj_row_class +]"><span class="party party-razem">[+ tak_rozwoj_party_name +]</span><span>[+ snap_election_tak_rozwoj_vote +]%</span><b>[+ tak_rozwoj_seats +]</b><span>[? if result_prawica_member_tak_rozwoj: Prawica member?][? if not result_prawica_member_tak_rozwoj: separate committee?]</span></div>?]
+[? if snap_election_right_2027_seats > 0 and result_prawica_member_konf: <div class="election-table-row election-tree-row--child"><span class="party party-konf">Konfederacja</span><span>[+ snap_election_konf_vote +]%</span><b>[+ konf_seats +]</b><span>Prawica member alliance</span></div>?]
+[? if snap_election_right_2027_seats = 0 and (konf_seats > 0 or mentzen_bosak_split = 0): <div class="election-table-row election-tree-row--committee election-tree-row--right"><span class="party party-konf">Konfederacja</span><span>[+ snap_election_konf_vote +]%</span><b>[+ konf_seats +]</b><span>one certified committee</span></div>?]
+[? if result_member_nowa_nadzieja_sejm > 0 and mentzen_bosak_split = 0: <div class="election-table-row [+ result_snap_konf_member_class +]"><span class="party party-konf">[+ result_member_nowa_nadzieja_name +]</span><span aria-label="no separate ballot share">—</span><b>[+ result_member_nowa_nadzieja_sejm +]</b><span>Konfederacja member</span></div>?]
+[? if result_member_ruch_narodowy_sejm > 0 and mentzen_bosak_split = 0: <div class="election-table-row [+ result_snap_konf_member_class +]"><span class="party party-konf">[+ result_member_ruch_narodowy_name +]</span><span aria-label="no separate ballot share">—</span><b>[+ result_member_ruch_narodowy_sejm +]</b><span>Konfederacja member</span></div>?]
+[? if result_member_kkp_sejm > 0 and mentzen_bosak_split = 0: <div class="election-table-row [+ result_snap_konf_member_class +]"><span class="party party-konf">[+ result_member_kkp_name +]</span><span aria-label="no separate ballot share">—</span><b>[+ result_member_kkp_sejm +]</b><span>Konfederacja member</span></div>?]
+[? if new_hope_seats > 0: <div class="election-table-row [+ result_snap_new_hope_row_class +]"><span class="party party-konf">Nowa Nadzieja</span><span>[+ snap_election_new_hope_vote +]%</span><b>[+ new_hope_seats +]</b><span>[? if result_prawica_member_new_hope: Prawica member?][? if not result_prawica_member_new_hope: separate committee?]</span></div>?]
+[? if national_movement_seats > 0: <div class="election-table-row [+ result_snap_national_movement_row_class +]"><span class="party party-konf">Ruch Narodowy</span><span>[+ snap_election_national_movement_vote +]%</span><b>[+ national_movement_seats +]</b><span>[? if result_prawica_member_national_movement: Prawica member?][? if not result_prawica_member_national_movement: separate committee?]</span></div>?]
+[? if korona_seats > 0 or far_right_split > 0: <div class="election-table-row election-tree-row--committee"><span class="party party-korona">Korona</span><span>[+ snap_election_korona_vote +]%</span><b>[+ korona_seats +]</b><span>outside Prawica</span></div>?]
+[? if duda_seats > 0: <div class="election-table-row [+ result_snap_duda_row_class +]"><span class="party party-pis">Ruch Dudy</span><span>[+ snap_election_duda_vote +]%</span><b>[+ duda_seats +]</b><span>[? if result_prawica_member_duda: Prawica member?][? if not result_prawica_member_duda: separate committee?]</span></div>?]
+[? if social_conservative_seats > 0: <div class="election-table-row [+ result_snap_social_conservative_row_class +]"><span class="party party-pis">Konserwatyści społeczni</span><span>[+ snap_election_social_conservative_vote +]%</span><b>[+ social_conservative_seats +]</b><span>[? if result_prawica_member_social_conservative: Prawica member?][? if not result_prawica_member_social_conservative: separate committee?]</span></div>?]
+[? if sld_breakaway_seats > 0 or barons_party_formed = 1: <div class="election-table-row election-tree-row--committee"><span class="party party-sld">[+ barons_party_name +]</span><span>[+ snap_election_sld_breakaway_vote +]%</span><b>[+ sld_breakaway_seats +]</b><span>breakaway committee</span></div>?]
+[? if social_patriot_seats > 0 or social_patriot_party_formed = 1: <div class="election-table-row election-tree-row--committee"><span class="party party-social-patriot">[+ social_patriot_party_name +]</span><span>[+ snap_election_social_patriot_vote +]%</span><b>[+ social_patriot_seats +]</b><span>separate committee</span></div>?]
+[? if spring_breakaway_seats > 0 or spring_party_formed = 1: <div class="election-table-row election-tree-row--committee"><span class="party party-wiosna">[+ spring_party_name +]</span><span>[+ snap_election_spring_breakaway_vote +]%</span><b>[+ spring_breakaway_seats +]</b><span>breakaway committee</span></div>?]
+[? if labor_left_seats > 0 or labor_party_formed = 1: <div class="election-table-row election-tree-row--committee"><span class="party party-left-labor">[+ labor_party_name +]</span><span>[+ snap_election_labor_left_vote +]%</span><b>[+ labor_left_seats +]</b><span>breakaway committee</span></div>?]
+[? if young_left_seats > 0 or progressives_party_formed = 1: <div class="election-table-row election-tree-row--committee"><span class="party party-progressive">[+ progressives_party_name +]</span><span>[+ snap_election_young_left_vote +]%</span><b>[+ young_left_seats +]</b><span>breakaway committee</span></div>?]
+[? if razem_party_seats > 0 or razem_party_formed = 1: <div class="election-table-row election-tree-row--committee"><span class="party party-razem">Razem</span><span>[+ snap_election_razem_vote +]%</span><b>[+ razem_party_seats +]</b><span>independent committee</span></div>?]
+[? if pps_party_seats > 0 or pps_party_formed = 1: <div class="election-table-row election-tree-row--committee"><span class="party party-pps">PPS</span><span>[+ snap_election_pps_vote +]%</span><b>[+ pps_party_seats +]</b><span>independent committee</span></div>?]
+</div>
+
+Election-day movement: **[+ snap_election_day_summary +]**.
+
+== Senate result
+
+<div class="election-table election-tree election-tree--senate">
+<div class="election-table-head"><span>Bloc / party</span><span>Seats</span><span>Position</span><span>Status</span></div>
+<div class="election-table-row election-tree-row--committee election-tree-row--broad"><span class="party party-ko">Democratic camp</span><b>[+ senate_democratic_seats +]</b><span>democratic</span><span>all district winners</span></div>
+<div class="election-table-row election-tree-row--child"><span class="party party-ko">Koalicja Obywatelska</span><b>[+ senate_ko_seats +]</b><span>democratic</span><span>party nominees</span></div>
+[? if senate_p2050_seats + senate_psl_seats > 0: <div class="election-table-row election-tree-row--child"><span class="party party-third-way">Third Way parties</span><b>[+ senate_p2050_seats + senate_psl_seats +]</b><span>democratic</span><span>all member winners</span></div>?]
+[? if senate_p2050_seats > 0: <div class="election-table-row election-tree-row--grandchild"><span class="party party-p2050">Polska 2050</span><b>[+ senate_p2050_seats +]</b><span>centrist</span><span>party nominees</span></div>?]
+[? if senate_psl_seats > 0: <div class="election-table-row election-tree-row--grandchild"><span class="party party-psl">PSL</span><b>[+ senate_psl_seats +]</b><span>agrarian</span><span>party nominees</span></div>?]
+[? if senate_left_seats > 0: <div class="election-table-row election-tree-row--child"><span class="party party-lewica">Lewica</span><b>[+ senate_left_seats +]</b><span>democratic</span><span>party nominees</span></div>?]
+[? if snap_election_right_2027_seats > 0: <div class="election-table-row election-tree-row--committee election-tree-row--right"><span class="party party-prawica">Prawica-aligned winners</span><b>[+ senate_right_seats +]</b><span>right</span><span>all district winners</span></div><div class="election-table-row election-tree-row--child"><span class="party party-pis">PiS-aligned nominees</span><b>[+ senate_pis_seats +]</b><span>Prawica</span><span>district winners</span></div><div class="election-table-row election-tree-row--child"><span class="party party-konf">Konfederacja-aligned nominees</span><b>[+ senate_konf_seats +]</b><span>Prawica</span><span>district winners</span></div>?]
+[? if snap_election_right_2027_seats = 0: <div class="election-table-row election-tree-row--committee election-tree-row--right"><span class="party party-pis">Zjednoczona Prawica</span><b>[+ senate_pis_seats +]</b><span>right</span><span>all district winners</span></div>?]
+[? if snap_election_right_2027_seats = 0 and result_member_pis_party_senate > 0: <div class="election-table-row election-tree-row--child"><span class="party party-pis">[+ result_member_pis_party_name +]</span><b>[+ result_member_pis_party_senate +]</b><span>ZP member</span><span>party nominees</span></div>?]
+[? if snap_election_right_2027_seats = 0 and result_member_solidarna_senate > 0: <div class="election-table-row election-tree-row--child"><span class="party party-pis">[+ result_member_solidarna_name +]</span><b>[+ result_member_solidarna_senate +]</b><span>ZP member</span><span>party nominees</span></div>?]
+[? if snap_election_right_2027_seats = 0 and senate_konf_seats > 0: <div class="election-table-row election-tree-row--committee election-tree-row--right"><span class="party party-konf">Konfederacja</span><b>[+ senate_konf_seats +]</b><span>right</span><span>all district winners</span></div>?]
+[? if senate_independent_seats > 0: <div class="election-table-row election-tree-row--committee"><span>Independent candidates</span><b>[+ senate_independent_seats +]</b><span>unaligned</span><span>district winners</span></div>?]
+</div>
+
+**[+ senate_control +]** under 100 single-member district results.
+
+- @poland_election.sejm_threshold_defeat: Concede the election
+- @snap_resolve_senate_marshal
+- @snap_palace_pick
+- @election_2027_epilogue
+
+@snap_resolve_senate_marshal
+title: Hold the Senate Marshal vote before cabinet formation
+view-if: left_seats > 0 and snap_senate_marshal_return = 1 and office_incompatibility_pending = 1 and election_2027_terminal = 0
+go-to: poland_office_authority.resolve
+
+@snap_senate_marshal_resume
+on-arrival: snap_senate_marshal_return = 0
+go-to: snap_palace_pick
+
+@snap_palace_pick
+title: The President receives the first move
+view-if: snap_senate_marshal_return = 0 and election_2027_terminal = 0
+new-page: true
+on-arrival: {!
+Q.snap_senate_marshal_return = 0;
+const hostilePalace =
+    Boolean(Q.pres_2025_hostile_president) ||
+    Q.president_name == "Andrzej Duda";
+const pisSeats = Math.max(0, Number(Q.pis_seats) || 0);
+const pslSeats = Math.max(0, Number(Q.psl_seats) || 0);
+const morawieckiCamp = Math.max(
+    0,
+    Number(Q.pis_morawiecki_camp) || 0
+);
+const democraticClaim = Math.max(
+    0,
+    (Number(Q.democratic_committed_seats) || 0) +
+        (Number(Q.left_committed_seats) || 0)
+);
+const democraticCore = Math.max(
+    0,
+    Number(Q.democratic_committed_seats) || 0
+);
+const rightClaim = Math.max(
+    0,
+    Number(Q.right_committed_seats) || 0
+);
+const leftPresidentInPalace =
+    Boolean(Q.left_president) ||
+    [
+        "Adrian Zandberg",
+        "Magdalena Biejat",
+        "Agnieszka Dziemianowicz-Bąk",
+        "Krzysztof Gawkowski",
+        "Katarzyna Kotula",
+        "Włodzimierz Czarzasty",
+        "Robert Biedroń"
+    ].includes(Q.president_name);
+Q.snap_left_cabinet_commitment = 0;
+if (
+    !hostilePalace &&
+    democraticClaim >= 231 &&
+    democraticClaim > rightClaim
+) {
+    if (leftPresidentInPalace) {
+        const leftOrNeutralNominee = [
+            Q.pres_2025_left_candidate,
+            "Magdalena Biejat",
+            "Agnieszka Dziemianowicz-Bąk",
+            Q.snap_progressive_ko_candidate,
+            "Władysław Kosiniak-Kamysz"
+        ].find(function(name) {
+            return (
+                name &&
+                name != "Undecided" &&
+                name != Q.president_name
+            );
+        });
+        Q.snap_pm_candidate = leftOrNeutralNominee ||
+            Q.ko_leader || "KO nominee";
+        Q.snap_pm_party =
+            Q.snap_pm_candidate == Q.snap_progressive_ko_candidate
+                ? "ko"
+                : (
+                    Q.snap_pm_candidate == "Władysław Kosiniak-Kamysz"
+                        ? "psl"
+                        : "lewica"
+                );
+        Q.snap_nomination_reason =
+            "A left presidency with a democratic majority prefers a neutral or left compromise nominee over an automatic KO designation.";
+    } else {
+        Q.snap_pm_candidate = Q.ko_leader || "KO nominee";
+        Q.snap_pm_party = "ko";
+        Q.snap_nomination_reason =
+            "A non-hostile Palace recognises the bloc that can demonstrate a clear democratic majority.";
+    }
+    Q.snap_pm_is_right = 0;
+    Q.snap_pm_base = democraticCore;
+} else if (Q.pis_split || morawieckiCamp >= 25) {
+    Q.snap_pm_candidate = "Mateusz Morawiecki";
+    Q.snap_pm_party = "pis";
+    Q.snap_pm_is_right = 1;
+    Q.snap_pm_base =
+        (Q.pis_split ? 0 : pisSeats) +
+        (Q.pis_split ? (Number(Q.rozwoj_seats) || 0) : 0) +
+        (Q.coalition_viable_pis_konf && Q.rival_relation_pis_konf >= 50
+            ? Q.konf_seats : 0);
+    Q.snap_nomination_reason =
+        "The PiS rupture makes Morawiecki the right-wing figure with the broadest recruitment claim.";
+} else if (
+    hostilePalace &&
+    (Number(Q.far_right_agenda) || 0) >= 45
+) {
+    Q.snap_pm_candidate = "Przemysław Czarnek";
+    Q.snap_pm_party = "pis";
+    Q.snap_pm_is_right = 1;
+    Q.snap_pm_base =
+        pisSeats +
+        (Q.coalition_viable_pis_konf && Q.rival_relation_pis_konf >= 50
+            ? Q.konf_seats : 0);
+    Q.snap_nomination_reason =
+        "A hostile Palace prioritises right-wing consolidation over centrist recruitment.";
+    Q.far_right_agenda += 3;
+} else if (hostilePalace) {
+    Q.snap_pm_candidate = "Beata Szydło";
+    Q.snap_pm_party = "pis";
+    Q.snap_pm_is_right = 1;
+    Q.snap_pm_base =
+        pisSeats +
+        (Q.coalition_viable_pis_psl && Q.rival_relation_pis_psl >= 55 &&
+            Q.psl_coalition_dissent < 65 ? pslSeats : 0);
+    Q.snap_nomination_reason =
+        "The Palace tests whether a welfare-nationalist nominee can recruit rural deputies.";
+    Q.pis_solidarist_share += 4;
+} else {
+    Q.snap_pm_candidate = "Mateusz Morawiecki";
+    Q.snap_pm_party = "pis";
+    Q.snap_pm_is_right = 1;
+    Q.snap_pm_base =
+        pisSeats +
+        (Q.coalition_viable_pis_konf && Q.rival_relation_pis_konf >= 50
+            ? Q.konf_seats : 0) +
+        (Q.coalition_viable_pis_psl && Q.rival_relation_pis_psl >= 55 &&
+            Q.psl_coalition_dissent < 65 ? pslSeats : 0);
+    Q.snap_nomination_reason =
+        "A non-hostile Palace follows the largest plausible right-led formation claim without endorsing it.";
+}
+// The shared formation sequence was written for October 2023. Give it an
+// explicit post-election context instead of letting it inherit that chapter's
+// leftover flags, and carry the Palace designation into the nominee stage.
+Q.formation_continuous = 1;
+Q.formation_in_progress = 1;
+Q.formation_complete = 0;
+Q.formation_requested = 0;
+Q.formation_return_ready = 0;
+Q.formation_coalition_selected = 0;
+Q.formation_coalition_code = "none";
+Q.formation_coalition_locked = 0;
+Q.formation_marshal_elected = 0;
+Q.presidential_majority_designation = 1;
+Q.formation_president_nominee = Q.snap_pm_candidate;
+Q.formation_president_nominee_party = Q.snap_pm_party;
+Q.news_headline =
+    Q.president_name + " gives " +
+    Q.snap_pm_candidate + " the first cabinet attempt";
+!}
+
+= A nominee before a majority
+
+President **[+ president_name +]**, not Lewica, designates **[+
+snap_pm_candidate +]**. [+ snap_nomination_reason +]
+
+The nominee begins with **[+ snap_pm_base +]** expected votes outside Lewica
+and still needs 231. Lewica now decides whether its votes also entail cabinet
+responsibility.
+
+- @poland_government_formation.formation_coalition_menu: Open the coalition-first formation sequence
+
+@election_2027_epilogue
+title: Read the final assessment
+view-if: election_2027_terminal = 1
+go-to: poland_scenario_epilogue.legal
+
+@snap_left_offer
+title: The Palace nominee courts the Left
+new-page: true
+call: poland_normalize
+
+= Confidence is not the same thing as office
+
+**[+ snap_pm_candidate +]** begins with **[+ snap_pm_base +]** expected votes.
+A confidence vote needs 231 yes votes; abstaining does not add yes votes.
+
+- @snap_left_reject
+- @snap_left_welfare
+- @snap_left_abstain
+- @snap_left_join_democratic
+- @snap_left_supply_democratic
+- @snap_left_reject_democratic
+
+@snap_left_reject
+title: Reject the offer as a right-wing restoration
+subtitle: A clean refusal keeps Lewica together and reassures KO that no rescue is coming from the red benches.
+view-if: snap_pm_is_right = 1
+on-arrival: snap_left_transfer = 0; snap_left_abstentions = 0; party_unity += 3; ko_relation += 3; razem_cooperation += 2; news_headline = "The Left closes the first-attempt auction"
+go-to: snap_first_vote
+
+@snap_left_welfare
+title: Demand labour law, public housing and a constitutional restraint pact
+subtitle: A minority of the caucus will accept the bargain; KO and Razem will call those votes a rescue of the right.
+view-if: snap_pm_is_right = 1
+on-arrival: {!
+Q.snap_left_transfer = Math.round(Number(Q.left_seats) * 0.22);
+Q.snap_left_abstentions = 0;
+Q.party_unity -= 7;
+Q.barons_dissent -= 4;
+Q.progressives_dissent += 8;
+Q.razem_dissent += 10;
+Q.ko_relation -= 10;
+Q.pis_relation += 8;
+Q.public_mood_pending_social_spending_support += 9;
+Q.public_mood_pending_social_spending_left_ownership += 8;
+Q.news_headline =
+    "A welfare pact splits the Left before the confidence vote";
+!}
+go-to: snap_first_vote
+
+@snap_left_abstain
+title: Abstain in exchange for a short caretaker programme
+subtitle: The nominee gains no Lewica votes, but a united abstention can still keep a short caretaker programme alive.
+view-if: snap_pm_is_right = 1
+on-arrival: {!
+Q.snap_left_transfer = 0;
+Q.snap_left_abstentions = Math.max(
+    0,
+    Math.round(Number(Q.left_seats) || 0)
+);
+Q.party_unity -= 3;
+Q.ko_relation -= 5;
+Q.pis_relation += 3;
+Q.early_election_risk -= 5;
+Q.news_headline =
+    "The Left withholds confidence votes while negotiating caretaker limits";
+!}
+go-to: snap_first_vote
+
+@snap_left_join_democratic
+title: Enter the democratic cabinet under a written coalition agreement
+subtitle: Lewica votes yes, takes collective responsibility and receives governing capacity.
+view-if: snap_pm_is_right = 0
+choose-if: coalition_viable_left_ko = 1
+unavailable-subtitle: KO and Lewica are too far apart, in trust and in programme, to sign a cabinet agreement; supply and confidence remain available.
+on-arrival: {!
+Q.snap_left_transfer =
+    Math.max(0, Number(Q.left_committed_seats) || 0);
+Q.snap_left_abstentions = 0;
+Q.snap_left_cabinet_commitment = 1;
+Q.party_unity += 2;
+Q.ko_relation += 4;
+Q.psl_relation -= 1;
+Q.news_headline =
+    "Lewica signs a cabinet agreement before the first-attempt vote";
+!}
+go-to: snap_first_vote
+
+@snap_left_supply_democratic
+title: Supply confidence from outside the cabinet
+subtitle: The same yes votes, but no ministries and no state-budget authority.
+view-if: snap_pm_is_right = 0
+on-arrival: {!
+Q.snap_left_transfer =
+    Math.max(0, Number(Q.left_committed_seats) || 0);
+Q.snap_left_abstentions = 0;
+Q.snap_left_cabinet_commitment = 0;
+Q.razem_dissent -= 4;
+Q.barons_dissent += 3;
+Q.ko_relation += 1;
+Q.news_headline =
+    "Lewica offers confidence and supply without entering cabinet";
+!}
+go-to: snap_first_vote
+
+@snap_left_reject_democratic
+title: Withhold confidence and remain full opposition
+subtitle: No Lewica votes are added to the nominee's base.
+view-if: snap_pm_is_right = 0
+on-arrival: {!
+Q.snap_left_transfer = 0;
+Q.snap_left_abstentions = 0;
+Q.snap_left_cabinet_commitment = 0;
+Q.party_unity += 1;
+Q.ko_relation -= 6;
+Q.news_headline =
+    "Lewica withholds confidence from the democratic nominee";
+!}
+go-to: snap_first_vote
+
+@snap_first_vote
+title: First-attempt confidence
+new-page: true
+on-arrival: {!
+const randomVotes = Math.floor(
+    (this.random.uint32() / 4294967296) * 7
+) - 3;
+Q.snap_first_variance = randomVotes;
+Q.confidence_candidate = Q.snap_pm_candidate;
+Q.confidence_yes = Math.max(
+    0,
+    Math.min(
+        460,
+        Math.round(Number(Q.snap_pm_base) || 0) +
+            Math.round(Number(Q.snap_left_transfer) || 0) +
+            randomVotes
+    )
+);
+Q.confidence_abstain = Math.max(
+    0,
+    Math.min(
+        460 - Q.confidence_yes,
+        60,
+        4 + (Number(Q.snap_left_abstentions) || 0)
+    )
+);
+Q.confidence_no = Math.max(
+    0,
+    460 - Q.confidence_yes - Q.confidence_abstain
+);
+Q.confidence_present = 460;
+Q.confidence_threshold = 231;
+Q.government_has_confidence = Q.confidence_yes >= 231 ? 1 : 0;
+Q.confidence_mode = "Post-snap presidential first attempt";
+!}
+
+= First confidence roll call
+
+**[+ snap_pm_candidate +]: [+ confidence_yes +] yes · [+
+confidence_no +] no · [+ confidence_abstain +] abstain**
+
+Yes count: **[+ snap_pm_base +] nominee base** + **[+
+snap_left_transfer +] Lewica transfers** + **[+ snap_first_variance +]
+roll-call variance**. Threshold: **231**.
+
+- @snap_first_pass
+- @snap_sejm_candidate
+
+@snap_first_pass
+title: The presidential nominee takes office
+view-if: government_has_confidence = 1
+on-arrival: {!
+Q.prime_minister = Q.snap_pm_candidate;
+Q.prime_minister_intro_return = "ministries_or_event_queue";
+Q.prime_minister_intro_pending = 1;
+Q.government_name = Q.snap_pm_candidate + " cabinet";
+Q.government_party = Q.snap_pm_party;
+Q.government_owner = Q.snap_pm_is_right
+    ? "PiS-led presidential nominee"
+    : "KO-led democratic coalition";
+Q.left_in_government =
+    Q.snap_left_cabinet_commitment ? 1 : 0;
+Q.budget = Q.left_in_government ? 3 : 0;
+Q.budget_authority = Q.left_in_government
+    ? "Post-election coalition reserve"
+    : "Opposition — no state spending authority";
+Q.position = Q.left_in_government
+    ? "Governing coalition"
+    : (
+        (Number(Q.snap_left_transfer) || 0) > 0
+            ? "Confidence-and-supply opposition"
+            : "Parliamentary opposition"
+    );
+Q.coalition_status = "Presidential nominee won confidence";
+Q.coalition_seats = Q.government_party == "pis"
+    ? Math.max(0, Number(Q.right_committed_seats) || 0)
+    : Math.min(
+        Number(Q.sejm_total) || 460,
+        Math.max(0, Number(Q.democratic_committed_seats) || 0) +
+        (Q.left_in_government
+            ? Math.max(0, Number(Q.left_seats) || 0)
+            : 0)
+    );
+Q.government_support_seats = Q.snap_pm_is_right
+    ? Math.max(0, Number(Q.snap_pm_base) || 0)
+    : Math.max(0, Number(Q.democratic_committed_seats) || 0);
+Q.caretaker_government = 0;
+Q.formation_complete = 1;
+Q.formation_in_progress = 0;
+Q.snap_election_requested = 0;
+Q.left_cabinet_committed = Q.left_in_government ? 1 : 0;
+Q.left_cabinet_model = Q.left_in_government
+    ? "New Left ministers · Razem external support"
+    : (
+        (Number(Q.snap_left_transfer) || 0) > 0
+            ? "Confidence and supply from opposition"
+            : "Opposition"
+    );
+Q.ministries_finalized = Q.left_in_government ? 0 : 1;
+Q.ministry_allocation_mode = Q.left_in_government
+    ? "formation"
+    : "settled";
+Q.ministry_return_mode = "event_queue";
+Q.news_headline =
+    Q.snap_pm_candidate + " forms the post-election government";
+!}
+go-to: poland_prime_minister_intro.show
+
+@snap_sejm_candidate
+title: The Sejm receives the second attempt
+view-if: government_has_confidence = 0
+new-page: true
+
+= A democratic candidate needs 231
+
+The President's nominee has failed. The Sejm now chooses its own candidate for
+prime minister, and Lewica's support will affect both the nominee and the
+coalition assembled around that person.
+
+- @snap_sejm_tusk
+- @snap_sejm_trzaskowski
+- @snap_sejm_nowacka
+- @snap_sejm_sikorski
+- @snap_sejm_left
+
+@snap_sejm_tusk
+title: Donald Tusk
+subtitle: The established coalition choice begins with the democratic core outside Lewica and reassures KO.
+on-arrival: {!
+Q.snap_dem_candidate = "Donald Tusk";
+Q.snap_dem_candidate_left = 0;
+Q.snap_dem_base = Math.max(
+    0,
+    Q.democratic_committed_seats
+);
+Q.ko_relation += 2;
+!}
+go-to: snap_democratic_role
+
+@snap_sejm_trzaskowski
+title: Rafał Trzaskowski
+subtitle: Available only outside the Palace; he consolidates KO while a few rural centrists fall away.
+view-if: president_name != "Rafał Trzaskowski"
+on-arrival: {!
+Q.snap_dem_candidate = "Rafał Trzaskowski";
+Q.snap_dem_candidate_left = 0;
+Q.snap_dem_base = Math.max(
+    0,
+    Q.democratic_committed_seats - 2
+);
+Q.ko_relation += 3;
+Q.psl_relation -= 1;
+!}
+go-to: snap_democratic_role
+
+@snap_sejm_nowacka
+title: [+ snap_progressive_ko_candidate +]
+subtitle: A more progressive premiership warms Lewica's cultural wing and asks PSL to travel farther than it wants.
+on-arrival: {!
+Q.snap_dem_candidate = Q.snap_progressive_ko_candidate;
+Q.snap_dem_candidate_left = 0;
+Q.snap_dem_base = Math.max(
+    0,
+    Q.democratic_committed_seats - 4
+);
+Q.progressives_dissent -= 2;
+Q.psl_relation -= 3;
+!}
+go-to: snap_democratic_role
+
+@snap_sejm_sikorski
+title: Radosław Sikorski
+subtitle: His security credentials reassure the military and PSL, though they do not hold every democratic deputy.
+on-arrival: {!
+Q.snap_dem_candidate = "Radosław Sikorski";
+Q.snap_dem_candidate_left = 0;
+Q.snap_dem_base = Math.max(
+    0,
+    Q.democratic_committed_seats - 3
+);
+Q.military_trust += 2;
+Q.psl_relation += 1;
+!}
+go-to: snap_democratic_role
+
+@snap_sejm_left
+title: A Left compromise candidate
+subtitle: A Left nominee can attract defectors beyond the red benches, but some of KO will refuse to follow.
+new-page: true
+
+Lewica must nominate a person, not an abstract “Left compromise”. Each option
+uses the same parliamentary arithmetic; the choice decides the cabinet's
+political centre and who owns its programme.
+
+- @snap_left_campaign_nominee
+- @snap_left_dziemianowicz
+- @snap_left_biejat
+- @snap_left_gawkowski
+- @snap_left_kotula
+
+@snap_left_campaign_nominee
+title: Re-nominate Lewica's 2025 presidential candidate
+view-if: pres_2025_left_candidate != "Undecided" and pres_2025_left_candidate != president_name and pres_2025_left_candidate != "Agnieszka Dziemianowicz-Bąk" and pres_2025_left_candidate != "Magdalena Biejat" and pres_2025_left_candidate != "Krzysztof Gawkowski" and pres_2025_left_candidate != "Katarzyna Kotula"
+on-arrival: snap_dem_candidate = pres_2025_left_candidate
+go-to: snap_left_nominee_ready
+
+@snap_left_dziemianowicz
+title: Nominate Agnieszka Dziemianowicz-Bąk on a labour programme
+view-if: president_name != "Agnieszka Dziemianowicz-Bąk"
+on-arrival: snap_dem_candidate = "Agnieszka Dziemianowicz-Bąk"; labor_credibility += 3
+go-to: snap_left_nominee_ready
+
+@snap_left_biejat
+title: Nominate Magdalena Biejat on a social and housing programme
+view-if: president_name != "Magdalena Biejat"
+on-arrival: snap_dem_candidate = "Magdalena Biejat"; public_trust += 2; public_mood_pending_social_spending_support += 8; public_mood_pending_abortion_rights_support += 6
+go-to: snap_left_nominee_ready
+
+@snap_left_gawkowski
+title: Nominate Krzysztof Gawkowski as the coalition manager
+view-if: president_name != "Krzysztof Gawkowski"
+on-arrival: snap_dem_candidate = "Krzysztof Gawkowski"; ko_relation += 2; party_unity -= 1
+go-to: snap_left_nominee_ready
+
+@snap_left_kotula
+title: Nominate Katarzyna Kotula on a rights and equality programme
+view-if: president_name != "Katarzyna Kotula"
+on-arrival: snap_dem_candidate = "Katarzyna Kotula"; progressive_credibility += 3; psl_relation -= 3; public_mood_pending_lgbt_equality_support += 9; public_mood_pending_lgbt_equality_salience += 8; public_mood_pending_lgbt_equality_backlash += 7
+go-to: snap_left_nominee_ready
+
+@snap_left_nominee_ready
+title: A named Left compromise goes to the Sejm
+new-page: true
+on-arrival: {!
+Q.snap_dem_candidate_left = 1;
+Q.snap_dem_base =
+    Number(Q.democratic_committed_seats) +
+    Number(Q.left_committed_seats) -
+    Math.round(Number(Q.ko_seats) * 0.08) +
+    Math.round((Number(Q.other_seats) || 0) * 0.20);
+Q.party_unity += 4;
+Q.ko_relation -= 5;
+Q.snap_left_cabinet_commitment = 1;
+Q.snap_dem_left_support = 1;
+Q.news_headline =
+    "Lewica nominates " + Q.snap_dem_candidate + " for prime minister";
+!}
+
+**[+ snap_dem_candidate +]** leads a Left programme with **[+
+snap_dem_base +]** expected votes.
+
+- @snap_left_nominee_vote
+
+@snap_left_nominee_vote
+title: Put the named compromise to a vote
+go-to: snap_dem_vote
+
+@snap_democratic_role
+title: Define Lewica's relationship to the nominee
+new-page: true
+call: poland_normalize
+on-arrival: snap_left_cabinet_commitment = 0; snap_dem_left_support = 0
+
+**[+ snap_dem_candidate +]** has **[+ snap_dem_base +]** expected votes
+outside Lewica. Supporting the investiture does not by itself put Lewica in
+government; cabinet entry requires a separate coalition agreement.
+
+- @snap_dem_join
+- @snap_dem_supply
+- @snap_dem_oppose
+
+@snap_dem_join
+title: Join the cabinet and accept collective responsibility
+subtitle: Adds every committed Lewica vote and grants governing capacity only if the cabinet wins.
+choose-if: snap_dem_candidate_left = 1 or coalition_viable_left_ko = 1
+unavailable-subtitle: KO and Lewica are too far apart, in trust and in programme, to sign a cabinet agreement; supply and confidence remain available.
+on-arrival: {!
+Q.snap_dem_base +=
+    Math.max(0, Number(Q.left_committed_seats) || 0);
+Q.snap_left_cabinet_commitment = 1;
+Q.snap_dem_left_support = 1;
+Q.party_unity += 2;
+Q.ko_relation += 3;
+Q.news_headline =
+    "Lewica signs a coalition agreement with the Sejm nominee";
+!}
+go-to: snap_dem_vote
+
+@snap_dem_supply
+title: Vote confidence from opposition under a written supply pact
+subtitle: Adds the same votes, but grants no ministries or state-budget capacity.
+on-arrival: {!
+Q.snap_dem_base +=
+    Math.max(0, Number(Q.left_committed_seats) || 0);
+Q.snap_left_cabinet_commitment = 0;
+Q.snap_dem_left_support = 1;
+Q.razem_dissent -= 4;
+Q.barons_dissent += 3;
+Q.news_headline =
+    "Lewica offers confidence and supply without cabinet entry";
+!}
+go-to: snap_dem_vote
+
+@snap_dem_oppose
+title: Withhold Lewica's votes
+subtitle: The nominee must find 231 without the Left.
+on-arrival: {!
+Q.snap_left_cabinet_commitment = 0;
+Q.snap_dem_left_support = 0;
+Q.party_unity += 1;
+Q.ko_relation -= 5;
+Q.news_headline =
+    "Lewica withholds its votes from the Sejm nominee";
+!}
+go-to: snap_dem_vote
+
+@snap_dem_vote
+title: Sejm-led cabinet vote
+new-page: true
+on-arrival: {!
+const roll = Math.floor(
+    (this.random.uint32() / 4294967296) * 9
+) - 4;
+Q.snap_dem_variance = roll;
+Q.confidence_candidate = Q.snap_dem_candidate;
+Q.confidence_yes = Math.max(
+    0,
+    Math.min(
+        460,
+        Math.round(Number(Q.snap_dem_base) || 0) + roll
+    )
+);
+Q.confidence_abstain = Math.min(
+    460 - Q.confidence_yes,
+    18,
+    4 + Math.abs(Math.min(0, roll))
+);
+Q.confidence_no = Math.max(
+    0,
+    460 - Q.confidence_yes - Q.confidence_abstain
+);
+Q.confidence_present = 460;
+Q.confidence_threshold = 231;
+Q.government_has_confidence = Q.confidence_yes >= 231 ? 1 : 0;
+Q.confidence_mode = "Post-snap Sejm second attempt";
+if (Q.government_has_confidence) {
+    Q.prime_minister = Q.snap_dem_candidate;
+    Q.prime_minister_intro_return = "ministries_or_event_queue";
+    Q.prime_minister_intro_pending = 1;
+    Q.government_name = Q.snap_dem_candidate + " democratic cabinet";
+    const leftLedSnapCabinet =
+        Number(Q.snap_dem_candidate_left) == 1;
+    Q.government_party = leftLedSnapCabinet ? "lewica" : "ko";
+    Q.government_owner = leftLedSnapCabinet
+        ? Q.left_party_name
+        : "KO-led democratic coalition";
+    Q.left_in_government =
+        Q.snap_left_cabinet_commitment ? 1 : 0;
+    Q.position = Q.left_in_government
+        ? "Governing coalition"
+        : (
+            Q.snap_dem_left_support
+                ? "Confidence-and-supply opposition"
+                : "Parliamentary opposition"
+        );
+    Q.coalition_status = Q.left_in_government
+        ? "Sejm-elected democratic coalition cabinet"
+        : "Sejm-elected cabinet with external Lewica support";
+    Q.coalition_seats = Math.min(
+        Number(Q.sejm_total) || 460,
+        Math.max(0, Number(Q.democratic_committed_seats) || 0) +
+        (Q.left_in_government
+            ? Math.max(0, Number(Q.left_seats) || 0)
+            : 0)
+    );
+    Q.government_support_seats = Math.max(
+        0,
+        Number(Q.democratic_committed_seats) || 0
+    );
+    Q.caretaker_government = 0;
+    Q.formation_complete = 1;
+    Q.formation_in_progress = 0;
+    Q.budget = Q.left_in_government ? 3 : 0;
+    Q.budget_authority = Q.left_in_government
+        ? "Post-election coalition reserve"
+        : "Opposition — no state spending authority";
+    Q.left_cabinet_committed =
+        Q.left_in_government ? 1 : 0;
+    Q.left_cabinet_model = Q.left_in_government
+        ? (
+            leftLedSnapCabinet
+                ? "Programme-bound cooperating Left entry"
+                : "New Left ministers · Razem external support"
+        )
+        : (
+            Q.snap_dem_left_support
+                ? "Confidence and supply from opposition"
+                : "Opposition"
+        );
+    Q.ministries_finalized =
+        Q.left_in_government ? 0 : 1;
+    Q.ministry_allocation_mode = Q.left_in_government
+        ? "formation"
+        : "settled";
+    Q.ministry_return_mode = "event_queue";
+    Q.news_headline =
+        Q.snap_dem_candidate + " wins the Sejm's cabinet vote";
+} else {
+    Q.caretaker_government = 1;
+    Q.early_election_risk = 100;
+    Q.news_headline =
+        "The Sejm's second attempt fails and a third presidential attempt remains";
+}
+!}
+
+= Second confidence roll call
+
+**[+ snap_dem_candidate +]: [+ confidence_yes +] yes · [+
+confidence_no +] no · [+ confidence_abstain +] abstain**
+
+Yes count: **[+ snap_dem_base +] negotiated base** + **[+
+snap_dem_variance +] roll-call variance**. Threshold: **231**.
+
+[? if government_has_confidence: The Sejm elects its own cabinet after the
+President's nominee fails.?]
+[? if not government_has_confidence: The third stage remains. It uses a
+simple majority of votes cast; only failure there requires another election.?]
+
+- @snap_return_2026
+- @snap_post_election_third
+
+@snap_return_2026
+title: Record the formed government
+view-if: government_has_confidence = 1
+on-arrival: snap_election_requested = 0
+go-to: poland_prime_minister_intro.show
+
+@snap_post_election_third
+title: Proceed to the President's third attempt
+view-if: government_has_confidence = 0
+on-arrival: snap_formation_context = "Post-election formation"; snap_formation_attempt = 3; news_headline = "The post-election formation enters its final constitutional attempt"
+go-to: snap_formation_attempt_three
+
+
+@airspace_standing_review
+title: Convert the record into a standing parliamentary security review
+subtitle: Requires the command-continuity file opened in 2023. Turns four years of separate incidents into one permanent institution.
+choose-if: defence_command_response = "Operational record demanded" or defence_command_response = "Brokered continuity statement" or defence_command_response = "Joint opposition demand"
+unavailable-subtitle: There is no continuous command record to build on — the 2023 vacancy was answered with a campaign argument, not a file.
+on-arrival: {!
+Q.airspace_response = "Standing security review";
+Q.security_incident_pressure = Math.max(
+    0, (Number(Q.security_incident_pressure) || 0) - 10
+);
+Q.defence_readiness =
+    (Number(Q.defence_readiness) || 46) + 8;
+Q.civil_military_trust =
+    (Number(Q.civil_military_trust) || 50) + 8;
+Q.institutional_trust =
+    (Number(Q.institutional_trust) || 0) + 6;
+Q.administrative_capacity = (Number(Q.administrative_capacity) || 0) +
+    (Q.left_in_government ? 3 : 1);
+Q.constitutional_restraint =
+    (Number(Q.constitutional_restraint) || 0) + 3;
+Q.public_trust = (Number(Q.public_trust) || 0) + 3;
+Q.public_mood_pending_national_security_support += 7;
+Q.public_mood_pending_rule_of_law_support += 5;
+Q.news_headline =
+    "A standing parliamentary review replaces four years of separate incidents";
+!}
+
+The 2023 file, the drone incursions, the border, the sabotage arrests and this
+month's fragments go into one standing review with a fixed reporting cycle, a
+cross-party membership and a duty on the services to appear. It is the
+institution that should have existed in 2022 and was never built because every
+incident was answered on its own.
+
+Officers who have spent four years being quoted selectively by whichever camp
+found it useful now have a venue that outlasts a news week. So does the next
+government, whoever forms it.
+
+- @poland_event_queue: Establish the standing review

@@ -6,6 +6,7 @@ const path = require('path');
 
 const projectRoot = path.resolve(__dirname, '..');
 const scenesRoot = path.join(projectRoot, 'source', 'scenes');
+const { eventsDir, eventSource } = require('./event-sources');
 const manifestPath = path.join(projectRoot, 'docs', 'EVENT_MANIFEST.json');
 const writeMode = process.argv.includes('--write');
 
@@ -259,11 +260,11 @@ function headlineValues(block) {
 }
 
 const majorEventIds = new Set([
-  'poland_events.candidate',
-  'poland_events.budget_2019',
-  'poland_events.budget_2020',
+  'poland_events_2019_11.candidate',
+  'poland_events_2019_12.budget_2019',
+  'poland_events_2020_11.budget_2020',
   'poland_office_authority.resolve',
-  'poland_events_2026.partnership_veto_2026',
+  'poland_events_2026_07.partnership_veto_2026',
 ]);
 
 function eventRecord(section) {
@@ -400,12 +401,19 @@ function validateScenarioCoverage() {
   }
 }
 
+// `fileName` is a scene file's basename, or 'poland_events/' to look the local
+// id up across the whole dated-event directory rather than in one month's file.
 function sectionNamed(fileName, localId) {
-  const target = sections.find(function(section) {
-    return path.basename(section.file) === fileName && section.localId === localId;
+  const inEventsDir = fileName === 'poland_events/';
+  const matches = sections.filter(function(section) {
+    return section.localId === localId && (inEventsDir
+      ? path.dirname(section.file) === eventsDir
+      : path.basename(section.file) === fileName);
   });
-  assert(target, 'Missing source section ' + fileName + ':' + localId);
-  return target.source;
+  assert(matches.length, 'Missing source section ' + fileName + ':' + localId);
+  assert.strictEqual(matches.length, 1,
+    'Ambiguous source section ' + fileName + ':' + localId);
+  return matches[0].source;
 }
 
 function validateArchitecture() {
@@ -491,29 +499,31 @@ function validateCorrectnessInvariants() {
   assert(primary.includes('Math.round(Q.primary_turnout) - allocatedVotes'),
     'Primary candidate tallies must reconcile to turnout');
 
-  const events2025 = read('source/scenes/poland_events_2025.scene.dry');
+  const events2025 = eventSource(function(id) {
+    return id.startsWith('poland_events_2025_');
+  });
   assert(
     /return\s+key\s*!=\s*["']other["']\s*&&\s*raw\[key\]\s*>\s*0/.test(events2025),
     'The aggregate other field cannot become a 2025 runoff finalist'
   );
   assert(
-    !/sejm_speaker\s*=/.test(sectionNamed('poland_events_2025.scene.dry', 'left_leadership_2025')),
+    !/sejm_speaker\s*=/.test(sectionNamed('poland_events/', 'left_leadership_2025')),
     'A party congress cannot appoint the Sejm Marshal'
   );
   const oathCrisis2025 = sectionNamed(
-    'poland_events_2025.scene.dry',
+    'poland_events/',
     'presidential_oath_crisis_2025'
   );
   const oathInauguration2025 = sectionNamed(
-    'poland_events_2025.scene.dry',
+    'poland_events/',
     'presidential_inauguration_2025'
   );
   const oathDelay2025 = sectionNamed(
-    'poland_events_2025.scene.dry',
+    'poland_events/',
     'oath_delay_2025'
   );
   const oathActingWindow2025 = sectionNamed(
-    'poland_events_2025.scene.dry',
+    'poland_events/',
     'oath_acting_window_2025'
   );
   assert(
@@ -556,11 +566,11 @@ function validateCorrectnessInvariants() {
     ['poland_coalition_actions.scene.dry', 'pis_social'],
     ['poland_foreign_events.scene.dry', 'biden_social'],
     ['poland_foreign_events.scene.dry', 'harris_social'],
-    ['poland_events_2023_2024.scene.dry', 'suwerenna_merger_social'],
-    ['poland_events_2023_2024.scene.dry', 'refugee_rules'],
-    ['poland_events_2023_2024.scene.dry', 'sovereign_merger_social'],
-    ['poland_events_2025.scene.dry', 'pis_school_pilots'],
-    ['poland_events_2025.scene.dry', 'holownia_partner'],
+    ['poland_events/', 'suwerenna_merger_social'],
+    ['poland_events/', 'refugee_rules'],
+    ['poland_events/', 'sovereign_merger_social'],
+    ['poland_events/', 'pis_school_pilots'],
+    ['poland_events/', 'holownia_partner'],
     ['poland_presidential_election.scene.dry', 'debate_rights_dignity'],
     ['poland_trzaskowski.scene.dry', 'judicial_trade'],
     ['poland_trzaskowski.scene.dry', 'palace_social'],
@@ -584,9 +594,9 @@ function validateCorrectnessInvariants() {
   const advance = read('source/scenes/poland_advance.scene.dry');
   assert(!/Q\.(?:ko_leader|p2050_leader)\s*=(?!=)/.test(advance),
     'Monthly normalization cannot silently replace a party leader');
-  const extensionEvents = read(
-    'source/scenes/poland_events_2021_2023.scene.dry'
-  );
+  const extensionEvents = eventSource(function(id) {
+    return /^poland_events_(2021|2022|2023)_/.test(id);
+  });
   assert(
     !extensionEvents.includes(
       'poland_leadership_events.sovereign_rename_2023'
@@ -594,9 +604,11 @@ function validateCorrectnessInvariants() {
     'A smaller party rebrand cannot become another mandatory leadership event'
   );
 
-  const events2026 = read('source/scenes/poland_events_2026.scene.dry');
+  const events2026 = eventSource(function(id) {
+    return id.startsWith('poland_events_2026_');
+  });
   assert(
-    readProperty(sectionNamed('poland_events_2026.scene.dry', 'constructive_motion_2026'), 'view-if')
+    readProperty(sectionNamed('poland_events/', 'constructive_motion_2026'), 'view-if')
       .includes('government_party != "pis"'),
     'Opposition PiS cannot move against an existing PiS cabinet'
   );
@@ -782,7 +794,7 @@ function validateCorrectnessInvariants() {
   );
 
   assert.strictEqual(
-    readProperty(sectionNamed('poland_events.scene.dry', 'budget_consequence'), 'go-to'),
+    readProperty(sectionNamed('poland_events/', 'budget_consequence'), 'go-to'),
     'poland_polling',
     'The December 2020 budget cannot bypass the warning-period system'
   );

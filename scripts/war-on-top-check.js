@@ -109,7 +109,7 @@ function openAtTribunal(run, camp, overrides) {
   setCamp(run.Q, camp, overrides);
   normalize(run.engine);
   assert.strictEqual(run.Q.war_top_eligible, 1, camp + ' should be eligible');
-  run.engine.goToScene('poland_events_2026.tribunal_competence_2026');
+  run.engine.goToScene('poland_events_2026_06.tribunal_competence_2026');
   assert.strictEqual(run.Q.war_top_stage, 1, camp + ' chain did not open');
   assert.strictEqual(run.Q.war_top_camp, camp);
 }
@@ -124,7 +124,7 @@ for (const cohabitation of [
   setCamp(run.Q, cohabitation.cabinet, cohabitation);
   normalize(run.engine);
   assert.strictEqual(run.Q.war_top_eligible, 0);
-  run.engine.goToScene('poland_events_2026.tribunal_competence_2026');
+  run.engine.goToScene('poland_events_2026_06.tribunal_competence_2026');
   assert.strictEqual(run.Q.war_top_stage, 0,
     'Cohabitation must not open the chain');
 }
@@ -280,7 +280,7 @@ const configurations = [
   { name: 'opposition', camp: 'pis' },
 ];
 const decisionScenes = [
-  'poland_events_2026.tribunal_competence_2026',
+  'poland_events_2026_06.tribunal_competence_2026',
   'poland_war_on_top.war_top_palace_alone',
   'poland_war_on_top.war_top_camp_splits',
   'poland_war_on_top.war_top_nomination',
@@ -327,7 +327,7 @@ for (const configuration of configurations) {
     war_top_left_side: 'institutions',
     snap_campaign_left_bonus: 0.5,
   });
-  run.engine.goToScene('poland_events_2027.campaign_closes_2027');
+  run.engine.goToScene('poland_events_2027_09.campaign_closes_2027');
   assert.strictEqual(run.Q.war_top_2027_bonus, 0.85);
   assert.strictEqual(run.Q.snap_campaign_left_bonus, 1.35);
   assert(contentText(run.engine.state.currentContent)

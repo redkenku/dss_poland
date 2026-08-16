@@ -281,8 +281,8 @@ function borderFixture(seed, documented) {
     us_president: 'Donald Trump',
     resources: 2,
   });
-  run.engine.goToScene('poland_events_2026.ambassador_crisis_2026');
-  run.choose('poland_events_2026.ambassador_rules');
+  run.engine.goToScene('poland_events_2026_02.ambassador_crisis_2026');
+  run.choose('poland_events_2026_02.ambassador_rules');
   assert.strictEqual(run.Q.ambassador_done, 1);
   assert.strictEqual(run.Q.ambassador_stage, 5);
   run.Q.time = Number(run.Q.ambassador_due_time) + 10;
@@ -649,7 +649,7 @@ for (const displaced of [
   }, 0);
   assert.strictEqual(projectedSeats, 460,
     'Projected Sejm seats must sum to 460');
-  run.engine.goToScene('poland_events_2026.snap_result_2026');
+  run.engine.goToScene('poland_events_2026_snap.snap_result_2026');
   assert.strictEqual(
     Number(run.Q.snap_election_right_2027_seats || 0),
     run.Q.prawica_member_source_ids.reduce(function(total, id) {

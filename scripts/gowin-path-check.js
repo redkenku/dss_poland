@@ -628,14 +628,14 @@ function runAugust2021(kukizAlignment, lexChoice) {
 // point for an old-SLD leadership restoration.
 {
   const { engine } = newEngine();
-  engine.goToScene('poland_events_2021_2023.august_2021');
+  engine.goToScene('poland_events_2021_08.august_2021');
   const choiceIds = engine.getCurrentChoices().map(function(choice) {
     return choice.id;
   });
   assert(!choiceIds.some(function(id) { return id.includes('miller'); }),
     'The Gowin/minority-government event still offers Miller restoration');
   assert.strictEqual(
-    game.scenes['poland_events_2021_2023.aug21_restore_miller'],
+    game.scenes['poland_events_2021_08.aug21_restore_miller'],
     undefined,
     'The deleted direct Miller restoration scene was rebuilt'
   );
@@ -1014,9 +1014,9 @@ console.log('gowin-path-check: Koalicja Polska / Trzecia Droga committee OK');
   Q.caucus_crisis_pending = 0;
   engine.goToScene('poland_polling');
   assert.strictEqual(Q.legacy_congestion_pending, 0);
-  assert.strictEqual(engine.state.sceneId, 'poland_events.fiore_braun_2020');
+  assert.strictEqual(engine.state.sceneId, 'poland_events_2020_09.fiore_braun_2020');
   Q.resources = 5;
-  choose('poland_events.fiore_prosecutors');
+  choose('poland_events_2020_09.fiore_prosecutors');
   assert.strictEqual(Q.fiore_braun_2020_done, 1);
   assert.strictEqual(Q.fiore_2020_response, 'Referral and procedure');
   // Fragmentation pressure, not a Konfederacja split.
@@ -1045,7 +1045,7 @@ console.log('gowin-path-check: Koalicja Polska / Trzecia Droga committee OK');
   for (const [expected, state] of palaces) {
     const { engine, Q } = newEngine();
     Object.assign(Q, state);
-    engine.goToScene('poland_events.fiore_braun_2020');
+    engine.goToScene('poland_events_2020_09.fiore_braun_2020');
     assert.strictEqual(Q.fiore_palace, expected,
       expected + ' presidency resolved as ' + Q.fiore_palace);
     rendered[expected] = JSON.stringify(engine.state.currentContent);
@@ -1094,14 +1094,14 @@ console.log('gowin-path-check: Koalicja Polska / Trzecia Droga committee OK');
   const koBefore = Q.ko_poll_momentum;
   const backlashBefore = Q.trz_right_backlash;
   engine.goToScene('poland_polling');
-  assert.strictEqual(engine.state.sceneId, 'poland_events.czajka_2020');
+  assert.strictEqual(engine.state.sceneId, 'poland_events_2020_09.czajka_2020');
   assert.strictEqual(Q.czajka_2020_done, 1);
   assert.strictEqual(Q.ko_poll_momentum, koBefore - 1);
   assert.strictEqual(Q.trz_right_backlash, backlashBefore + 4);
   assert(JSON.stringify(engine.state.currentContent)
     .includes('Presidential Palace'));
   const momentumAfterArrival = Q.ko_poll_momentum;
-  choose('poland_events.czajka_meme');
+  choose('poland_events_2020_09.czajka_meme');
   assert.strictEqual(Q.czajka_2020_stance, 'Weaponise the sewage meme');
   assert.strictEqual(Q.ko_poll_momentum, momentumAfterArrival - 0.5);
 }
@@ -1127,8 +1127,8 @@ console.log('gowin-path-check: Koalicja Polska / Trzecia Droga committee OK');
     'poland_legacy_event_desk.events_choice');
   assert.strictEqual(Q.poland_legacy_event_queue_count, 3);
   choose('poland_legacy_event_desk.czajka_2020');
-  choose('poland_events.czajka_defend');
-  assert.strictEqual(engine.state.sceneId, 'poland_events.czajka_defend');
+  choose('poland_events_2020_09.czajka_defend');
+  assert.strictEqual(engine.state.sceneId, 'poland_events_2020_09.czajka_defend');
   assert(JSON.stringify(engine.state.currentContent)
     .includes('same critical route failed twice'));
   choose('poland_hub');
@@ -1294,7 +1294,7 @@ console.log('gowin-path-check: alliance split invariant OK');
   const pending = (engine._compileChoices(
     game.scenes['poland_event_queue.all_events']
   ) || []).map(function (c) { return c.id; });
-  assert(!pending.includes('poland_events_2023_2024.migration_pivot_2024'),
+  assert(!pending.includes('poland_events_2024_10.migration_pivot_2024'),
     'A Lewica prime minister must not propose the KO asylum suspension');
 
   Q.year = 2025; Q.month = 3;
@@ -1302,7 +1302,7 @@ console.log('gowin-path-check: alliance split invariant OK');
     game.scenes['poland_event_queue.all_events']
   ) || []).map(function (c) { return c.id; });
   assert(!leftMarchPending.includes(
-    'poland_events_2025.asylum_suspension_2025'
+    'poland_events_2025_03.asylum_suspension_2025'
   ), 'A Lewica prime minister must not enact the asylum suspension');
 
   // A KO prime minister still gets it.
@@ -1313,7 +1313,7 @@ console.log('gowin-path-check: alliance split invariant OK');
   const koPending = (engine._compileChoices(
     game.scenes['poland_event_queue.all_events']
   ) || []).map(function (c) { return c.id; });
-  assert(koPending.includes('poland_events_2023_2024.migration_pivot_2024'),
+  assert(koPending.includes('poland_events_2024_10.migration_pivot_2024'),
     'A KO prime minister should still reach it');
 
   Q.year = 2025; Q.month = 3;
@@ -1321,7 +1321,7 @@ console.log('gowin-path-check: alliance split invariant OK');
     game.scenes['poland_event_queue.all_events']
   ) || []).map(function (c) { return c.id; });
   assert(koMarchPending.includes(
-    'poland_events_2025.asylum_suspension_2025'
+    'poland_events_2025_03.asylum_suspension_2025'
   ), 'A KO prime minister should still reach the asylum roll call');
 }
 

@@ -70,24 +70,24 @@ function buildFederation(seed, leadership, finance, registration, candidate,
 }
 
 function resolveLeftCoalitionList(ctx) {
-  ctx.engine.goToScene('poland_events_2023_2024.august_lists');
+  ctx.engine.goToScene('poland_events_2023_08.august_lists');
   const choices = (ctx.engine.getCurrentChoices() || []).map(function(choice) {
     return choice.id;
   });
   for (const forbidden of [
-    'poland_events_2023_2024.list_target_left_host',
-    'poland_events_2023_2024.list_target_razem_host',
-    'poland_events_2023_2024.list_target_ko_host',
-    'poland_events_2023_2024.list_target_third_host',
-    'poland_events_2023_2024.list_target_pis_host',
-    'poland_events_2023_2024.list_target_alone',
+    'poland_events_2023_08.list_target_left_host',
+    'poland_events_2023_08.list_target_razem_host',
+    'poland_events_2023_08.list_target_ko_host',
+    'poland_events_2023_08.list_target_third_host',
+    'poland_events_2023_08.list_target_pis_host',
+    'poland_events_2023_08.list_target_alone',
   ]) {
     assert(!choices.includes(forbidden), forbidden + ' remained available');
   }
-  ctx.choose('poland_events_2023_2024.list_target_left_coalition');
-  ctx.choose('poland_events_2023_2024.list_terms');
-  ctx.choose('poland_events_2023_2024.list_terms_equal');
-  ctx.choose('poland_events_2023_2024.list_resolution');
+  ctx.choose('poland_events_2023_08.list_target_left_coalition');
+  ctx.choose('poland_events_2023_08.list_terms');
+  ctx.choose('poland_events_2023_08.list_terms_equal');
+  ctx.choose('poland_events_2023_08.list_resolution');
   assert.strictEqual(ctx.Q.sejm_list_threshold, 8);
   assert.strictEqual(ctx.Q.sejm_list_structure, 'Coalition committee');
 }
@@ -187,11 +187,11 @@ assert(strong.Q.sejm_list_partner_score > weak.Q.sejm_list_partner_score,
   ctx.Q.razem_cooperation = -100;
   ctx.Q.internal_dissent = 100;
   ctx.Q.faction_vetoes = 10;
-  ctx.engine.goToScene('poland_events_2023_2024.august_lists');
-  ctx.choose('poland_events_2023_2024.list_target_left_coalition');
-  ctx.choose('poland_events_2023_2024.list_terms');
-  ctx.choose('poland_events_2023_2024.list_terms_command');
-  ctx.choose('poland_events_2023_2024.list_resolution');
+  ctx.engine.goToScene('poland_events_2023_08.august_lists');
+  ctx.choose('poland_events_2023_08.list_target_left_coalition');
+  ctx.choose('poland_events_2023_08.list_terms');
+  ctx.choose('poland_events_2023_08.list_terms_command');
+  ctx.choose('poland_events_2023_08.list_resolution');
   assert.strictEqual(ctx.Q.sejm_list_outcome, 'left_coalition_8');
   assert.strictEqual(ctx.Q.sejm_list_threshold, 8);
   assert(ctx.Q.sejm_list_result.includes('federation files'));
@@ -271,7 +271,7 @@ function realignmentName(name, targets, options) {
     greens.active = targets.includes('Zieloni') ? 1 : 0;
     greens.exclusive_seats = targets.includes('Zieloni') ? 1 : 0;
   }
-  ctx.engine.goToScene('poland_events_2026.left_realign_result');
+  ctx.engine.goToScene('poland_events_2026_11.left_realign_result');
   assert.strictEqual(Q.left_realign_name, name);
   assert.strictEqual(Q.left_merger_structure, 'unified_party');
   assert.strictEqual(Q.left_constitution, 'protected_currents');
@@ -290,12 +290,12 @@ realignmentName('Lewica Rozwoju', 'Rozwój+', { lowEstablishment: false });
 // forbidden parallel quality.
 const structuralSources = [
   'source/scenes/poland_merger_events.scene.dry',
-  'source/scenes/poland_events_2023_2024.scene.dry',
-  'source/scenes/poland_events_2026.scene.dry',
   'source/scenes/poland_normalize.scene.dry',
 ].map(function(file) {
   return fs.readFileSync(path.join(projectRoot, file), 'utf8');
-}).join('\n');
+}).concat(require('./event-sources').eventSource(function(id) {
+  return /^poland_events_(2023|2024|2026)_/.test(id);
+})).join('\n');
 assert(!/Q\.party_structure\b/.test(structuralSources),
   'A parallel party_structure quality was introduced');
 

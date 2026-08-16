@@ -1,0 +1,240 @@
+title: June 2022
+
+@electoral_reform_constitution
+# prose-audit: Grade A — The scene exposes both constitutional thresholds, derives the roll call from the live chambers and names the distinct electoral calculation made by PiS, KO, Kukiz and the Left before the President signs.
+call: poland_normalize
+title: Article 96 is put to a recorded vote
+subtitle: PiS expects a rural advantage; KO expects coordinated challengers; the Left discovers how many of its MPs believe the promise
+face-image: img/poland/events/sejm-voting-device.webp
+new-page: true
+on-arrival: {!
+Q.electoral_reform_constitution_done = 1;
+const fullJow = Q.electoral_reform_proposal == "fptp_460";
+const pisRate = fullJow ? 0.85 : 0.90;
+const koRate = fullJow ? 0.75 : 0.85;
+const leftRate = fullJow ? 0.65 : 0.85;
+const centreRate = fullJow ? 0.45 : 0.60;
+const koEnabled = Q.electoral_reform_ko_support ? 1 : 0;
+const pisSeats = Math.max(0, Math.round(Number(Q.pis_seats) || 0));
+const koSeats = Math.max(0, Math.round(Number(Q.ko_seats) || 0));
+const leftSeats = Math.max(0, Math.round(Number(Q.left_seats) || 0));
+const kukizSeats = Math.max(0, Math.round(Number(Q.kukiz_seats) || 0));
+const centreSeats = Math.max(0, Math.round(
+    (Number(Q.psl_seats) || 0) + (Number(Q.p2050_seats) || 0) +
+    (Number(Q.porozumienie_seats) || 0)
+));
+Q.electoral_reform_sejm_yes = Math.min(460,
+    Math.round(pisSeats * pisRate) +
+    Math.round(koSeats * koRate) * koEnabled +
+    Math.round(leftSeats * leftRate) + kukizSeats +
+    Math.round(centreSeats * centreRate)
+);
+const senatePis = Math.max(0, Math.round(Number(Q.senate_pis_seats) || 0));
+const senateKo = Math.max(0, Math.round(Number(Q.senate_ko_seats) || 0));
+const senateLeft = Math.max(0, Math.round(Number(Q.senate_left_seats) || 0));
+const senateCentre = Math.max(0, Math.round(
+    (Number(Q.senate_psl_seats) || 0) +
+    (Number(Q.senate_p2050_seats) || 0) +
+    (Number(Q.senate_independent_seats) || 0)
+));
+Q.electoral_reform_senate_yes = Math.min(100,
+    Math.round(senatePis * pisRate) +
+    Math.round(senateKo * koRate) * koEnabled +
+    Math.round(senateLeft * leftRate) +
+    Math.round(senateCentre * centreRate)
+);
+if (Q.electoral_reform_sejm_yes >= 307 &&
+    Q.electoral_reform_senate_yes >= 51) {
+    Q.sejm_electoral_system = Q.electoral_reform_proposal;
+    Q.electoral_reform_stage = "enacted";
+    Q.electoral_reform_constitution_passed = 1;
+    Q.electoral_reform_president_signed = 1;
+    Q.electoral_reform_code_enacted = 1;
+    Q.electoral_law_reformed = 1;
+    Q.sejm_electoral_system_label = fullJow
+        ? "460 single-member plurality districts"
+        : "230 list MPs plus 230 single-member districts";
+    Q.sejm_electoral_system_summary = fullJow
+        ? "276 urban JOW · 184 rural JOW"
+        : "230 list · 138 urban JOW · 92 rural JOW";
+    Q.electoral_reform_result = "Article 96 amended and the guarded Electoral Code signed for the 2023 election";
+    Q.public_trust += 5;
+    Q.kukiz_programme_credit += 18;
+    Q.news_headline = "The President signs the Article 96 amendment and the new Electoral Code";
+} else {
+    Q.electoral_reform_stage = "failed";
+    Q.electoral_reform_constitution_passed = 0;
+    Q.electoral_reform_president_signed = 0;
+    Q.electoral_reform_code_enacted = 0;
+    Q.electoral_reform_result = "The Article 96 amendment failed its constitutional threshold";
+    Q.kukiz_relation -= 16;
+    Q.public_trust -= 5;
+    Q.news_headline = "The JOW amendment falls short of the constitutional threshold";
+}
+!}
+
+= June 2022 — The count
+
+The Sejm records **[+ electoral_reform_sejm_yes +] votes for the amendment**;
+307 are required. The Senate records **[+ electoral_reform_senate_yes +]**;
+51 are required.
+
+[? if electoral_reform_stage = "enacted": Both thresholds are cleared. The
+President has no ordinary veto over the completed Article 235 procedure and
+signs within twenty-one days. The accompanying Electoral Code establishes the
+independent commission, equal-population districts, published boundary data
+and voter nomination access. **[+ sejm_electoral_system_label +]** will govern
+the 2023 election and every election after it.?]
+[? if electoral_reform_stage = "failed": One chamber falls short. The
+referendum remains a political fact, but Article 96 remains unchanged and all
+future Sejm elections stay proportional.?]
+
+- @poland_events_2020_11.router: Return to the dated news desk
+
+@june_2022
+# prose-audit: Grade A — European approval is separated from payment and domestic authority, while four Lewica strategies now end in concrete ownership, coalition and delivery consequences.
+title: KPO approved, money withheld
+face-image: img/poland/events/kpo.webp
+new-page: true
+on-arrival: {!
+const finiteKpo = function(value, fallback) {
+    return Number.isFinite(Number(value)) ? Number(value) : fallback;
+};
+const kpoFrontFit = (
+    finiteKpo(Q.ko_accept_rights, 52) +
+    finiteKpo(Q.p2050_accept_rights, 47) +
+    finiteKpo(Q.ko_coalition_openness, 50) +
+    finiteKpo(Q.p2050_coalition_openness, 46)
+) / 4;
+const kpoGovernmentFit = (
+    finiteKpo(Q.pis_accept_rights, 24) +
+    finiteKpo(Q.pis_accept_social, 46) +
+    finiteKpo(Q.pis_coalition_openness, 25)
+) / 3;
+Q.kpo_democratic_front_open = kpoFrontFit >= 42 ? 1 : 0;
+Q.kpo_government_bargain_open = kpoGovernmentFit >= 31 ? 1 : 0;
+Q.kpo_front_relation_payoff = Math.max(
+    1,
+    Math.min(6, Math.round((kpoFrontFit - 25) / 8))
+);
+Q.kpo_government_relation_payoff = Math.max(
+    1,
+    Math.min(5, Math.round((kpoGovernmentFit - 18) / 7))
+);
+Q.kpo_2022_done = 1;
+if (Q.recovery_fund_ratified) {
+    Q.kpo_milestones += 2;
+} else {
+    Q.kpo_deadline_pressure += 8;
+}
+Q.institutional_issue_salience += 7;
+Q.news_headline =
+    "Europe approves Poland's plan but attaches judicial milestones";
+!}
+
+= June 2022 — Approval is not payment
+
+The **European Commission** approves Poland's recovery plan after its long
+dispute with Morawiecki's government. Approval is not a transfer: payments
+still depend on judicial milestones and evidence that the government has met
+them. [? if recovery_fund_ratified: The domestic ratification
+route was **[+ recovery_fund_vote_basis +]**; the 2021 strategy was **[+
+recovery_fund_strategy +]**.?][? if not recovery_fund_ratified: The 2021
+strategy produced no ratification majority. Approval therefore exposes an
+additional domestic legal and timing failure rather than reopening a bargain
+that never passed.?]
+
+- @jun22_enforce
+- @jun22_opposition
+- @jun22_speed
+- @jun22_refuse
+
+@jun22_enforce
+title: Audit every promise in the Left's 2021 strategy
+subtitle: Make our own votes answerable before assigning all blame to Brussels or PiS.
+on-arrival: kpo_scrutiny += 3; public_trust += 3; labor_credibility += 2; pis_relation -= 2; ko_relation -= 1; barons_dissent += 2; last_policy_stage = "Audit"; last_policy_authority = "Parliamentary opposition"; last_policy_implementation = 0; news_headline = "The Left publishes a recovery-fund promise ledger"
+
+Lewica publishes the safeguards, social promises and deadlines attached to its
+2021 position, then marks which actor was supposed to deliver each one. The
+record prevents PiS from treating our votes as unconditional and prevents us
+from rewriting the bargain after the fact.
+
+It also exposes promises our own negotiators accepted without an enforcement
+route. SLD officials dislike the embarrassment; the audit is credible because
+it does not spare them.
+
+- @poland_hub: Continue
+
+
+@jun22_opposition
+title: Require one opposition standard for judicial milestones
+subtitle: Bind KO and Poland 2050 to a common test before the government offers each party a different compromise.
+choose-if: kpo_democratic_front_open = 1
+unavailable-subtitle: Opposition partners will not yet bind themselves to one standard.
+on-arrival: {!
+Q.ko_relation += Q.kpo_front_relation_payoff;
+Q.p2050_relation += Math.max(1, Q.kpo_front_relation_payoff - 1);
+Q.judicial_legitimacy += 5;
+Q.constitutional_restraint += 3;
+Q.rival_relation_ko_p2050 += 2;
+Q.news_headline =
+    "The opposition agrees that approval cannot certify the courts";
+!}
+
+KO, Poland 2050 and Lewica sign one test for judicial independence and agree
+that Commission approval cannot certify institutions it has not yet examined.
+Morawiecki loses the ability to sell a different minimum repair to each club.
+
+The common standard improves opposition discipline. It also places Lewica
+beside KO on a constitutional stage where our social conditions receive less
+attention.
+
+- @poland_hub: Continue
+
+
+@jun22_speed
+title: Accept partial repair to accelerate investment
+subtitle: Projects may be prepared sooner, but Brussels still controls payment and the government still controls delivery.
+choose-if: kpo_government_bargain_open = 1
+unavailable-subtitle: PiS will take the votes but will not sustain this bargain.
+on-arrival: {!
+Q.kpo_2022_concession_pending = 1;
+Q.kpo_scrutiny += 5;
+Q.judicial_legitimacy -= 3;
+Q.pis_relation += Q.kpo_government_relation_payoff;
+Q.ko_relation -= 4;
+Q.household_policy_pressure += 2;
+Q.razem_dissent += 6;
+Q.last_policy_stage = "Negotiated concession";
+Q.last_policy_authority = "PiS cabinet and Lewica parliamentary clubs";
+Q.last_policy_implementation =
+    "Pending Commission milestones and government execution";
+Q.news_headline = "Investment speed outruns judicial repair";
+!}
+
+The government accepts a narrower judicial concession and promises to move
+prepared housing and service projects as soon as the Commission permits.
+Morawiecki gains another opposition channel and Lewica can point to work that
+might begin sooner.
+
+No payment has moved and no milestone has been certified. Razem records that
+the party has again exchanged political cover for implementation controlled by
+PiS and Brussels.
+
+- @poland_hub: Continue
+
+
+@jun22_refuse
+title: Declare the milestones cosmetic and withdraw cooperation
+subtitle: Preserve a clean judicial line while accepting further delay to investment.
+on-arrival: judicial_legitimacy += 3; constitutional_restraint += 2; pis_relation -= 6; ko_relation += 2; kpo_delivery -= 2; public_trust -= 1; news_headline = "The Left rejects a recovery plan without credible courts"
+
+Lewica refuses further bargaining until the judicial changes can survive
+independent scrutiny. KO welcomes the harder line and PiS loses the votes it
+hoped to separate from the wider opposition.
+
+Municipalities with prepared projects still receive no money. A principled
+refusal protects the standard; it does not build the nursery or insulate the
+housing block while the file remains frozen.
+
+- @poland_hub: Continue

@@ -224,7 +224,7 @@ function fileList(ctx, filingChoice) {
     ctx.Q.konf_relation = 70;
     ctx.Q.konf_mentzenite_share = 30;
   }
-  ctx.engine.goToScene('poland_events_2023_2024.august_lists');
+  ctx.engine.goToScene('poland_events_2023_08.august_lists');
   assert.strictEqual(ctx.engine.state.sceneId,
     'poland_sld_populist.list_filing');
   ctx.choose('poland_sld_populist.' + filingChoice);
@@ -339,7 +339,7 @@ function assertElectionSync(ctx, committee, outcome) {
     konf_mentzenite_share: 100,
     social_patriot_strength: 1,
   });
-  ctx.engine.goToScene('poland_events_2023_2024.august_lists');
+  ctx.engine.goToScene('poland_events_2023_08.august_lists');
   const konfChoice = ctx.engine.getCurrentChoices().find(function(choice) {
     return choice.id === 'poland_sld_populist.file_konf';
   });

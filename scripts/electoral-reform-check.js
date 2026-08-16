@@ -20,11 +20,12 @@ dendry.convertJSONToGame(json, function(error, converted) {
 });
 const reformProse = [
   'poland_porozumienie_war.scene.dry',
-  'poland_events_2021_2023.scene.dry',
 ].map(function(file) {
   return fs.readFileSync(path.join(__dirname, '..', 'source', 'scenes', file),
     'utf8');
-}).join('\n');
+}).concat(require('./event-sources').eventSource(function(id) {
+  return /^poland_events_(2019|2020|2021|2022|2023)_/.test(id);
+})).join('\n');
 for (const partyClass of [
   'party party-kukiz', 'party party-pis', 'party party-ko',
   'party party-lewica', 'party party-razem', 'party party-agreement',
@@ -216,12 +217,12 @@ function enact(choice, system) {
   run.choose('poland_porozumienie_war.kukiz_resolution');
   assert.strictEqual(run.Q.kukiz_alignment, 'refused');
   const before = run.Q.resources;
-  run.engine.goToScene('poland_events_2021_2023.electoral_reform_ko_talks');
-  run.choose('poland_events_2021_2023.electoral_reform_ko_accept');
+  run.engine.goToScene('poland_events_2021_12.electoral_reform_ko_talks');
+  run.choose('poland_events_2021_12.electoral_reform_ko_accept');
   assert.strictEqual(run.Q.resources, before - 2);
   assert.strictEqual(run.Q.electoral_reform_boundary_safeguards, 1);
   assert.strictEqual(run.Q.electoral_reform_opposition_pact_channel, 1);
-  run.engine.goToScene('poland_events_2021_2023.electoral_reform_referendum');
+  run.engine.goToScene('poland_events_2022_04.electoral_reform_referendum');
   assert.deepStrictEqual(
     [run.Q.electoral_reform_referendum_turnout,
       run.Q.electoral_reform_referendum_yes],
@@ -234,7 +235,7 @@ function enact(choice, system) {
     senate_psl_seats: 3, senate_p2050_seats: 1,
     senate_independent_seats: 3,
   });
-  run.engine.goToScene('poland_events_2021_2023.electoral_reform_constitution');
+  run.engine.goToScene('poland_events_2022_06.electoral_reform_constitution');
   assert(run.Q.electoral_reform_sejm_yes >= 307);
   assert(run.Q.electoral_reform_senate_yes >= 51);
   assert.strictEqual(run.Q.electoral_reform_stage, 'enacted');
@@ -264,7 +265,7 @@ Object.assign(failed.Q, {
   senate_independent_seats: 3,
 });
 failed.engine.goToScene(
-  'poland_events_2021_2023.electoral_reform_constitution'
+  'poland_events_2022_06.electoral_reform_constitution'
 );
 assert.strictEqual(failed.Q.electoral_reform_stage, 'failed');
 assert.strictEqual(failed.Q.sejm_electoral_system, 'proportional');
@@ -360,7 +361,7 @@ for (const year of [2023, 2024, 2025, 2026, 2027]) {
   snap.Q.electoral_reform_stage = 'enacted';
   snap.Q.electoral_reform_proposal = 'mixed_230';
   snap.Q.sejm_electoral_system = 'mixed_230';
-  snap.engine.goToScene('poland_events_2026.snap_result_2026');
+  snap.engine.goToScene('poland_events_2026_snap.snap_result_2026');
   assert.strictEqual(snap.Q.sejm_result_system, 'mixed_230');
   assert.deepStrictEqual(
     [snap.Q.sejm_result_list_seats, snap.Q.sejm_result_urban_seats,
@@ -400,7 +401,7 @@ assert.strictEqual(
   'left',
   'A dissolved broad list left Lewica stranded on a ghost 8% committee'
 );
-commonCentre.engine.goToScene('poland_events_2026.snap_result_2026');
+commonCentre.engine.goToScene('poland_events_2026_snap.snap_result_2026');
 assert.strictEqual(sejmTotal(commonCentre.Q, snapIds), 460,
   'A live common-centre list orphaned seats from the certified Sejm');
 assert.strictEqual(commonCentre.Q.snap_third_way_joint_list, 0,

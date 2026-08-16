@@ -228,20 +228,20 @@ function sikorskiRun(choice, seed) {
     ko_konf_partner_line: 'governing',
     psl_konf_partner_line: 'open'
   });
-  current.engine.goToScene('poland_events_2026.constructive_motion_2026');
+  current.engine.goToScene('poland_events_2026_11.constructive_motion_2026');
   assert.strictEqual(current.Q.constructive_candidate, 'Radosław Sikorski');
   current.choose(choice);
-  current.choose('poland_events_2026.constructive_roll_2026');
+  current.choose('poland_events_2026_11.constructive_roll_2026');
   return current.Q;
 }
 
 const repaired = sikorskiRun(
-  'poland_events_2026.constructive_defend_2026', 'sikorski-repair'
+  'poland_events_2026_11.constructive_defend_2026', 'sikorski-repair'
 );
 assert.strictEqual(repaired.constructive_passed, 0,
   'a full coalition repair must be able to stop Sikorski');
 const mishandled = sikorskiRun(
-  'poland_events_2026.constructive_sikorski_dismiss', 'sikorski-dismiss'
+  'poland_events_2026_11.constructive_sikorski_dismiss', 'sikorski-dismiss'
 );
 assert.strictEqual(mishandled.constructive_passed, 1);
 assert.strictEqual(mishandled.sikorski_nightmare, 1);

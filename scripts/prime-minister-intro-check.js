@@ -32,7 +32,7 @@ assert.strictEqual(
   'the pre-click subtitle reuses the previous cabinet label'
 );
 const thirdMorawiecki = game.scenes[
-  'poland_events_2021_2023.aug21_cabinet_result'
+  'poland_events_2021_08.aug21_cabinet_result'
 ];
 assert(
   thirdMorawiecki.onArrival.some(function(action) {

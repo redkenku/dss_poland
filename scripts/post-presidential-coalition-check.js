@@ -5,10 +5,9 @@ const fs = require('fs');
 const path = require('path');
 const sceneParser = require('dendrynexus/lib/parsers/scene');
 
-const sourcePath = path.resolve(
-  __dirname,
-  '../source/scenes/poland_events_2025.scene.dry'
-);
+const sourcePaths = require('./event-sources').eventFiles(function(id) {
+  return id.startsWith('poland_events_2025_');
+});
 const formationSourcePath = path.resolve(
   __dirname,
   '../source/scenes/poland_government_formation.scene.dry'
@@ -37,19 +36,23 @@ const CASES = [
   ['ko_konf_tolerated', 'ko', 'post_presidential_ko_konf'],
 ];
 
-sceneParser.parseFromContent(
-  sourcePath,
-  fs.readFileSync(sourcePath, 'utf8'),
-  function(error, parsed) {
-    if (error) throw error;
-    runChecks(parsed);
-  }
-);
+const parsedSections = [];
+sourcePaths.forEach(function(sourcePath) {
+  sceneParser.parseFromContent(
+    sourcePath,
+    fs.readFileSync(sourcePath, 'utf8'),
+    function(error, parsed) {
+      if (error) throw error;
+      parsedSections.push.apply(parsedSections, parsed.sections || []);
+    }
+  );
+});
+runChecks(parsedSections);
 
-function runChecks(parsed) {
-  const prefix = 'poland_events_2025.';
-  const scenes = new Map((parsed.sections || []).map(function(scene) {
-    return [scene.id, scene];
+function runChecks(parsedSections) {
+  // Sections now live in per-month files, so index them by their local id.
+  const scenes = new Map(parsedSections.map(function(scene) {
+    return [scene.id.slice(scene.id.indexOf('.') + 1), scene];
   }));
   const localIds = Array.from(new Set(CASES.map(function(entry) {
     return entry[2];
@@ -76,7 +79,7 @@ function runChecks(parsed) {
   );
 
   function scene(localId) {
-    const result = scenes.get(prefix + localId);
+    const result = scenes.get(localId);
     assert(result, 'Missing scene ' + localId);
     return result;
   }

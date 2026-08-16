@@ -60,8 +60,8 @@ function chooseOutcome(id) {
   ctx.Q.razem_cooperation = 60;
   ctx.Q.party_unity = 60;
   ctx.before = snapshot(ctx.Q);
-  ctx.engine.goToScene('poland_events_2023_2024.razem_split_2024');
-  ctx.choose('poland_events_2023_2024.' + id);
+  ctx.engine.goToScene('poland_events_2024_10.razem_split_2024');
+  ctx.choose('poland_events_2024_10.' + id);
   return ctx;
 }
 
@@ -137,9 +137,9 @@ function assertAffiliations(Q, organisation) {
 
   ctx.engine.goToScene('poland_party_ai');
   assert.strictEqual(Q.razem_ai_active, 1, 'independent Razem enters party AI');
-  ctx.engine.goToScene('poland_events_2023_2024.august_lists');
+  ctx.engine.goToScene('poland_events_2023_08.august_lists');
   const razemList = ctx.engine.getCurrentChoices().find(function(choice) {
-    return choice.id === 'poland_events_2023_2024.list_target_razem_host';
+    return choice.id === 'poland_events_2023_08.list_target_razem_host';
   });
   assert(razemList && razemList.canChoose,
     'independent Razem enters list bargaining');

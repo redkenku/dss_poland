@@ -1,0 +1,635 @@
+title: July 2024
+
+@abortion_defeat
+# prose-audit: Grade B — Six branches correctly cover passage and defeat, but the payoff of the chapter's strongest arc opens on a raw tally and two conditional lines. Neither Kotula nor Lempart is in the chamber, no deputy is seen crossing or refusing, and each response gets one short paragraph where abortion_first_reading gave two. The result beat is thinner than the setup that earned it.
+title: The decriminalisation roll call
+subtitle: The result follows seats, relations and the April strategy
+face-image: img/poland/events/womens-strike-2020.webp
+new-page: true
+tags: poland_event
+priority: 28
+order: 10
+max-visits: 1
+view-if: continuous_campaign = 1 and year = 2024 and month = 7 and government_party != "pis" and caretaker_government = 0 and abortion_reform_settled = 0
+on-arrival: {!
+const leftVotes =
+    Math.max(0, Number(Q.left_seats) || 0) +
+    Math.max(0, Number(Q.left_splinter_support_votes) || 0);
+let pslShare =
+    0.12 + Math.max(0, Number(Q.psl_relation) || 0) / 180;
+if (Q.abortion_strategy == "Free vote with constituency pressure") {
+    pslShare += 0.12;
+}
+if (Q.abortion_strategy == "Decriminalisation sequence") {
+    pslShare += 0.08;
+}
+pslShare = Math.max(0.08, Math.min(0.72, pslShare));
+const roll =
+    Math.floor((this.random.uint32() / 4294967296) * 9) - 4;
+Q.abortion_vote_left = leftVotes;
+Q.abortion_vote_ko = Math.round(
+    Math.max(0, Number(Q.ko_seats) || 0) * 0.86
+);
+Q.abortion_vote_p2050 = Math.round(
+    (
+        Math.max(0, Number(Q.p2050_seats) || 0) +
+        Math.max(0, Number(Q.centrum_seats) || 0)
+    ) * 0.68
+);
+Q.abortion_vote_psl = Math.round(
+    Math.max(0, Number(Q.psl_seats) || 0) * pslShare
+);
+Q.abortion_vote_yes = Math.max(
+    0,
+    Math.min(
+        460,
+        leftVotes + Q.abortion_vote_ko +
+        Q.abortion_vote_p2050 + Q.abortion_vote_psl + roll
+    )
+);
+Q.abortion_vote_no = Math.max(
+    0,
+    Math.min(
+        460 - Q.abortion_vote_yes,
+        Math.round(
+            (Number(Q.pis_seats) || 0) +
+            (Number(Q.konf_seats) || 0) +
+            (Number(Q.korona_seats) || 0) +
+            Math.max(
+                0,
+                (Number(Q.psl_seats) || 0) -
+                Q.abortion_vote_psl
+            ) +
+            Math.max(
+                0,
+                (Number(Q.ko_seats) || 0) -
+                Q.abortion_vote_ko
+            )
+        )
+    )
+);
+Q.abortion_vote_abstain = Math.max(
+    0,
+    460 - Q.abortion_vote_yes - Q.abortion_vote_no
+);
+Q.abortion_vote_passed =
+    Q.abortion_vote_yes > Q.abortion_vote_no ? 1 : 0;
+if (Q.abortion_vote_passed) {
+    Q.feminist_trust += 6;
+    Q.psl_coalition_dissent += 3;
+    Q.government_coalition_dissent += 2;
+    Q.news_headline =
+        "Decriminalisation passes " + Q.abortion_vote_yes +
+        "–" + Q.abortion_vote_no;
+} else {
+    Q.feminist_trust -= 5;
+    Q.psl_coalition_dissent += 8;
+    Q.government_coalition_dissent += 8;
+    Q.news_headline =
+        "Decriminalisation fails " + Q.abortion_vote_yes +
+        "–" + Q.abortion_vote_no;
+}
+!}
+
+= July 2024 — Is a free vote still a coalition?
+
+**[+ abortion_vote_yes +] yes · [+ abortion_vote_no +] no · [+
+abortion_vote_abstain +] abstain.**
+
+[? if abortion_vote_passed: Earlier organisation and coalition relations
+produced a parliamentary majority. The President and implementation remain
+separate fights.?]
+[? if not abortion_vote_passed: The defeat reveals exactly how many PSL,
+centre and KO deputies the April strategy moved. Retaliation can still damage
+other policy before it changes a vote.?]
+
+- @abort_shame
+- @abort_trade
+- @abort_crisis
+- @abort_rebuild
+- @abort_pass_claim
+- @abort_pass_prepare
+
+@abort_shame
+title: Publish the roll call and campaign in every dissenting district
+subtitle: Cost: 1 resource.
+choose-if: resources >= 1
+unavailable-subtitle: No constituency operation is ready.
+view-if: abortion_vote_passed = 0
+on-arrival: resources -= 1; feminist_trust += 6; local_network += 3; psl_relation -= 10; government_coalition_dissent += 5; public_trust += 1; news_headline = "The abortion roll call follows PSL deputies home"
+
+We print every name and take the vote back to the districts that supplied the
+noes. Movement organisers gain a concrete target; PSL deputies treat every
+local meeting as the opening of a coalition reprisal.
+
+- @poland_event_queue: Put the district campaign on the events desk
+
+@abort_trade
+title: Negotiate a narrower clinical-access and decriminalisation package
+view-if: abortion_vote_passed = 0
+on-arrival: feminist_trust += 2; government_delivery += 2 if left_in_government = 1; psl_relation += 5; progressives_dissent += 5; razem_dissent += 4; barons_dissent -= 2; news_headline = "A narrower reproductive-health package keeps the talks alive"
+
+Clinical access and decriminalisation remain on the table, but the settlement
+abandons the clean victory promised in spring. PSL reopens talks; progressive
+and Razem organisers ask how many defeats will be renamed sequencing.
+
+- @poland_event_queue: Put the narrower settlement on the events desk
+
+@abort_crisis
+title: Make the next coalition council a confidence test
+view-if: abortion_vote_passed = 0 and left_in_government = 1
+on-arrival: coalition_break_threat = 1; psl_relation -= 14; government_coalition_dissent += 14; party_unity += 2; progressive_credibility += 4; barons_dissent += 5; early_election_risk += 12; news_headline = "The Left threatens office over abortion"
+
+We tell the coalition council that office without bodily autonomy is no longer
+worth holding. The ultimatum unites our activists and forces every governing
+partner to prepare for a cabinet collapse.
+
+- @poland_event_queue: Put the coalition ultimatum on the events desk
+
+@abort_rebuild
+title: Accept defeat, rebuild the social movement and return later
+view-if: abortion_vote_passed = 0
+on-arrival: organiser_energy += 5; feminist_trust += 3; psl_relation += 1; government_coalition_dissent -= 2; government_delivery -= 2; public_trust -= 1; news_headline = "The parliamentary defeat returns the issue to organisers"
+
+We refuse a theatrical retaliation and return staff to clinics, legal aid and
+the movement. Organisers recover; voters who expected governing power to
+deliver the bill hear a request for patience instead.
+
+- @poland_event_queue: Put the movement rebuild on the events desk
+
+@abort_pass_claim
+title: Publish the coalition and constituency path to passage
+view-if: abortion_vote_passed = 1
+on-arrival: feminist_trust += 3; public_trust += 2; local_network += 2; psl_relation += 1; public_mood_pending_abortion_rights_support += 10; public_mood_pending_abortion_rights_salience += 8; news_headline = "Lewica publishes how district pressure assembled the majority"
+
+We show which district campaigns and reluctant deputies completed the
+majority. The movement receives authorship rather than a government victory
+lap, and wavering PSL MPs can defend how they crossed the aisle.
+
+- @abortion_presidential_decision: Send the passed bill to the President
+
+@abort_pass_prepare
+title: Prepare clinical guidance and a presidential legal brief
+subtitle: Cost: 1 budget capacity in government; opposition can fund only the legal brief.
+choose-if: (left_in_government = 1 and budget >= 1) or (left_in_government = 0 and resources >= 1)
+unavailable-subtitle: No administrative or legal-aid capacity is available.
+view-if: abortion_vote_passed = 1
+on-arrival: {!
+Q.abortion_implementation_prepared = 1;
+if (Q.left_in_government) {
+    Q.budget -= 1;
+    Q.news_headline =
+        "The health administration prepares guidance that still needs a signature";
+} else {
+    Q.resources -= 1;
+    Q.news_headline =
+        "Opposition Lewica prepares the presidential and constitutional case";
+}
+!}
+
+[? if left_in_government: Health officials draft the clinical guidance while
+our lawyers prepare for the Palace. Nothing reaches a patient until the bill is
+signed, but implementation will not begin from an empty desk.?]
+[? if not left_in_government: We finance the presidential and constitutional
+brief from opposition. The government still owns clinical implementation; our
+case makes a veto or referral harder to disguise.?]
+
+- @abortion_presidential_decision: Send the prepared bill to the President
+
+@abortion_presidential_decision
+title: The bill reaches the President
+subtitle: A Sejm majority is not a signature
+new-page: true
+on-arrival: {!
+const abortionRightWingPresident = [
+    "Andrzej Duda",
+    String(Q.pres_2025_right_candidate || ""),
+    "Sławomir Mentzen",
+    "Grzegorz Braun"
+].includes(Q.president_name);
+const abortionHostilePresident =
+    abortionRightWingPresident && Q.government_party != "pis";
+Q.abortion_presidential_score = Math.round(
+    (Number(Q.president_relation) || 0) +
+    (Q.abortion_implementation_prepared ? 8 : 0) +
+    (Q.abortion_strategy == "Decriminalisation sequence" ? 5 : 0) +
+    (Q.abortion_strategy == "Material compromise" ? 4 : 0) +
+    ((Number(Q.public_trust) || 45) - 45) * 0.15
+);
+if (!abortionHostilePresident || Q.abortion_presidential_score >= 55) {
+    Q.abortion_presidential_action = "Signed into law";
+    Q.abortion_law_enacted = 1;
+    Q.abortion_cabinet_deadline = 0;
+    Q.feminist_trust += 5;
+    Q.president_relation += 2;
+    Q.news_headline = Q.president_name + " signs decriminalisation";
+} else if (Q.abortion_presidential_score >= 34) {
+    Q.abortion_presidential_action = "Referred to the Constitutional Tribunal";
+    Q.abortion_law_enacted = 0;
+    Q.court_user_trust -= 2;
+    Q.feminist_trust -= 2;
+    Q.news_headline =
+        Q.president_name + " refers decriminalisation to the Tribunal";
+} else {
+    Q.abortion_presidential_action = "Presidential veto";
+    Q.abortion_law_enacted = 0;
+    Q.feminist_trust -= 4;
+    Q.president_relation -= 4;
+    Q.news_headline = Q.president_name + " vetoes decriminalisation";
+}
+Q.last_policy_stage = "Presidential consideration";
+Q.last_policy_authority = Q.president_name;
+Q.last_policy_implementation = Q.abortion_law_enacted
+    ? "Enacted; clinical delivery remains to be funded"
+    : "Blocked before implementation";
+!}
+
+= Presidential action: [+ abortion_presidential_action +]
+
+[? if abortion_presidential_action = "Signed into law": The President accepts
+the Sejm's answer and puts a signature beneath decriminalisation. The breadth
+of the bill, the relationship built with the Palace and the prepared clinical
+brief have made assent easier; enactment still leaves hospitals to change
+their practice.?]
+[? if abortion_presidential_action = "Referred to the Constitutional Tribunal":
+The President refuses both assent and an immediate veto, sending the bill to
+the Constitutional Tribunal instead. The Palace calls that caution. Patients,
+clinicians and organisers experience it as delay with no date of release.?]
+[? if abortion_presidential_action = "Presidential veto": The President uses
+the veto and returns the bill to a Sejm that cannot presently muster the votes
+to override it. A parliamentary victory has become a presidential campaign,
+while the criminal law remains in force.?]
+
+The incumbent's politics, Lewica's relationship with the Palace and the
+credibility of its implementation plan all shaped this decision. None of them
+allows a ministry to treat an unsigned bill as law.
+
+- @abort_pass_implement
+- @abort_signed_monitor
+- @abort_veto_campaign
+- @abort_veto_rewrite
+- @abort_referral_defend
+- @abort_referral_wait
+
+@abort_pass_implement
+title: Issue guidance, fund legal defence and monitor access
+subtitle: Cost: 1 budget capacity in government; opposition can fund only legal aid.
+choose-if: (left_in_government = 1 and budget >= 1) or (left_in_government = 0 and resources >= 1)
+unavailable-subtitle: No implementation or legal-aid capacity is available.
+view-if: abortion_law_enacted = 1
+on-arrival: {!
+if (Q.left_in_government) {
+    Q.budget -= 1;
+    Q.health_capacity += 5;
+    Q.government_delivery += 3;
+    Q.news_headline =
+        "Signed decriminalisation receives clinical guidance and legal defence";
+} else {
+    Q.resources -= 1;
+    Q.movement_autonomy += 3;
+    Q.feminist_trust += 3;
+    Q.news_headline =
+        "Opposition Lewica funds legal aid under the signed law";
+}
+!}
+
+[? if left_in_government: The Health Ministry sends the first guidance to
+clinics and funds counsel for staff and patients challenged under the old
+practice. The law is now the cabinet's responsibility: every hospital that
+ignores it will also be evidence about Lewica's capacity to govern.?]
+[? if not left_in_government: Lewica cannot command hospitals from opposition.
+Its legal-aid network takes the first access disputes, publishes them and
+forces the cabinet to answer for a statute it now has to administer.?]
+
+- @poland_event_queue: Carry the implementation fight to the event desk
+
+@abort_signed_monitor
+title: Let the signed law enter force and publish an access monitor
+view-if: abortion_law_enacted = 1
+on-arrival: feminist_trust += 2; media_capacity += 2; government_delivery += 1 if left_in_government = 1; news_headline = "Lewica records enactment without pretending delivery is complete"
+
+Clinics, patient organisations and lawyers begin a common access record. It
+will show where the new law changes treatment and where fear or obstruction
+survives it. Lewica claims the vigilance, not an imaginary instant victory.
+
+- @poland_event_queue: Put the access monitor on the event desk
+
+@abort_veto_campaign
+title: Publish the veto and organise a presidential accountability campaign
+view-if: abortion_presidential_action = "Presidential veto"
+on-arrival: feminist_trust += 5; local_network += 3; president_relation -= 7; public_trust += 1; public_mood_pending_abortion_rights_support += 11; public_mood_pending_abortion_rights_salience += 12; public_mood_pending_abortion_rights_backlash += 8; news_headline = "The presidential veto becomes a constituency campaign"
+
+The Palace's objections are printed beside testimony from patients and
+clinicians in every presidential constituency. The veto gives the campaign a
+person and an office to hold responsible; it also closes the quiet channel to
+the incumbent.
+
+- @poland_event_queue: Carry the veto campaign to the event desk
+
+@abort_veto_rewrite
+title: Return with a narrower bill that can split the conservative bloc
+view-if: abortion_presidential_action = "Presidential veto"
+on-arrival: abortion_rewrite_pending = 1; psl_relation += 5; feminist_trust -= 2; progressives_dissent += 3; public_mood_pending_abortion_rights_support += 4; public_mood_pending_abortion_rights_salience += 5; news_headline = "A narrower decriminalisation bill returns to committee"
+
+PSL agrees to reopen the text around a narrower protection from prosecution.
+That may divide the conservative bloc at the next vote. Organisers who had
+already accepted one compromise hear another retreat, and will judge the new
+bill by whom it leaves exposed.
+
+- @poland_event_queue: Return the narrower bill to committee
+
+@abort_referral_defend
+title: Fund the constitutional defence and expose the delay
+subtitle: Cost: 1 resource.
+choose-if: resources >= 1
+unavailable-subtitle: No legal campaign can be funded.
+view-if: abortion_presidential_action = "Referred to the Constitutional Tribunal"
+on-arrival: resources -= 1; court_user_trust += 3; feminist_trust += 3; media_capacity += 2; news_headline = "Lewica contests the presidential referral in law and public"
+
+Constitutional lawyers challenge the referral while organisers publish the
+human cost of every month the Tribunal holds the bill. The Palace no longer
+gets to describe delay as a proceeding without patients, dates or authors.
+
+- @poland_event_queue: Take the constitutional defence to the event desk
+
+@abort_referral_wait
+title: Preserve the coalition while the Tribunal holds the bill
+view-if: abortion_presidential_action = "Referred to the Constitutional Tribunal"
+on-arrival: psl_relation += 3; government_coalition_dissent -= 2; feminist_trust -= 4; public_trust -= 1; public_mood_pending_abortion_rights_support += -5; public_mood_pending_abortion_rights_left_ownership += -5; news_headline = "The coalition waits while the Tribunal freezes decriminalisation"
+
+Coalition leaders avoid an immediate quarrel with the Palace and promise to
+respect the proceeding. The government survives the week intact. Patients and
+clinicians receive no new protection, and equality organisers record whose
+peace required their waiting.
+
+- @poland_event_queue: Carry the frozen bill to the event desk
+
+@romanowski_immunity_2024
+# prose-audit: Grade C — The arrest, the overlooked immunity and the Justice Fund chain are correctly connected, with three answers that separate procedure from politics; the fund's beneficiaries are still abstract.
+title: An arrest undone by an overlooked immunity
+subtitle: The Justice Fund investigation loses its first suspect in a day
+face-image: img/poland/events/supreme-court.webp
+new-page: true
+tags: poland_event
+priority: 24
+order: 15
+max-visits: 1
+view-if: continuous_campaign = 1 and year = 2024 and month = 7 and romanowski_immunity_2024_done = 0
+on-arrival: {!
+Q.romanowski_immunity_2024_done = 1;
+Q.romanowski_case_stage = 1;
+if (Q.government_party == "ko") {
+    Q.ko_poll_momentum -= 0.45;
+    if (Q.left_in_government) Q.left_poll_momentum -= 0.15;
+    if (Q.ministry_psl_in_cabinet) Q.psl_poll_momentum -= 0.1;
+    if (Q.ministry_p2050_in_cabinet) Q.p2050_poll_momentum -= 0.1;
+}
+Q.prosecution_command_clarity = Math.max(
+    0, (Number(Q.prosecution_command_clarity) || 0) - 8
+);
+Q.institutional_trust = Math.max(
+    0, (Number(Q.institutional_trust) || 0) - 4
+);
+Q.justice_fund_salience =
+    (Number(Q.justice_fund_salience) || 0) + 14;
+Q.news_headline =
+    "Romanowski is detained over the Justice Fund and released the same day";
+!}
+
+= July 2024 — Released before the paperwork
+
+**Marcin Romanowski**, a former deputy justice minister and PiS deputy, is
+detained over the Justice Fund: a compensation fund for crime victims that was
+distributed, according to the charges, to organisations selected for their
+politics rather than their applicants. The Sejm had waived his parliamentary
+immunity.
+
+He is released within hours. Nobody in the prosecution chain had checked that
+he also holds immunity as a member of the Parliamentary Assembly of the
+Council of Europe, which the Sejm cannot waive. The substance of the case is
+untouched. The competence of the people running it is not.
+
+[? if left_in_government = 1: The prosecution service answers to a ministry
+inside this coalition, so the failure is administratively ours whatever we
+think of the case.?][? if left_in_government = 0: We hold no justice
+portfolio, and the temptation is to enjoy a rival government's procedural
+collapse at the expense of a case we want prosecuted.?]
+
+- @romanowski_procedure
+- @romanowski_fund
+- @romanowski_attack
+- @romanowski_chamber
+
+@romanowski_procedure
+title: Demand a written procedure for immunity checks before any arrest
+subtitle: Protects the case from becoming a story about its own investigators; concedes the news cycle entirely.
+on-arrival: {!
+Q.romanowski_response = "Procedural repair";
+Q.prosecution_command_clarity =
+    (Number(Q.prosecution_command_clarity) || 0) + 10;
+Q.prosecution_oversight_capacity =
+    (Number(Q.prosecution_oversight_capacity) || 0) + 3;
+Q.institutional_trust = (Number(Q.institutional_trust) || 0) + 5;
+Q.judicial_legitimacy = (Number(Q.judicial_legitimacy) || 0) + 3;
+Q.administrative_capacity = (Number(Q.administrative_capacity) || 0) +
+    (Q.left_in_government ? 2 : 0);
+Q.public_trust = (Number(Q.public_trust) || 0) + 1;
+Q.news_headline =
+    "A written immunity check becomes a precondition for every detention";
+!}
+
+One page, binding on every prosecutor: before a detention involving any
+office-holder, the immunity list is checked and the check is signed. It is an
+insultingly basic requirement, which is the point — the case was lost to a
+box nobody ticked.
+
+It buys no headlines and it protects the only thing that matters here, which
+is that the Justice Fund file survives contact with a defence lawyer. Every
+subsequent stage of this case will be tried under it.
+
+- @poland_event_queue: Issue the immunity procedure
+
+@romanowski_fund
+title: Take the Justice Fund itself to the audit chamber and the victims
+subtitle: Cost: 1 resource. Moves the story from one deputy to the money and the applicants who were refused.
+choose-if: resources >= 1
+unavailable-subtitle: No research capacity is free to reconstruct the fund's grant history.
+on-arrival: resources -= 1; romanowski_response = "Fund publication"; justice_fund_salience += 10; nik_independence += 4; institutional_trust += 4; public_trust += 4; administrative_reform_pressure += 3; pis_relation -= 7; media_capacity += 3; news_headline = "The Justice Fund's refused applicants are put on the public record"
+
+We stop discussing the arrest and start publishing the grants: which victim
+support organisations applied, which were refused, which received money for
+purposes unrelated to victims, and which parish, foundation or association
+received a fire engine instead. The audit chamber gets a formal request.
+
+It is the version of this scandal that reaches people who do not care which
+deputy was detained. It is also slower than the case, and it will still be
+producing findings long after the courts have decided whether anybody is
+guilty of anything.
+
+- @poland_event_queue: Publish the fund's grant record
+
+@romanowski_attack
+title: Use the failed arrest to attack the government's justice ministry
+subtitle: Available in or out of government; it makes the coalition's competence the story and the fund's victims the footnote.
+on-arrival: prosecution_command_clarity -= 4; justice_fund_salience -= 4; ko_relation -= 6; left_poll_momentum += 0.15; public_trust -= 1; institutional_trust -= 3; pis_relation += 2; news_headline = "The Left turns the botched detention into a competence charge"
+
+Eight months of promising a repaired prosecution service ended with a suspect
+walking out of a building because nobody read a list. We say so, repeatedly,
+and the ministry has no answer that is not an excuse.
+
+PiS says the same thing from the other side, and by the weekend the Justice
+Fund is being discussed as a story about a failed arrest rather than about
+money taken from crime victims. That framing survives; the fund's applicants
+do not reappear in it.
+
+- @poland_event_queue: Press the competence charge
+
+@romanowski_chamber
+title: Put the whole Justice Fund under a statutory audit
+subtitle: Requires an open referral channel. The fund outlives the defendant; the audit outlives the government.
+choose-if: nik_referral_channel = 1
+unavailable-subtitle: We have no channel into the Supreme Audit Office, and the fund's grant history is held by the ministry being investigated.
+on-arrival: romanowski_response = "Fund audit"; justice_fund_salience += 16; nik_government_hostility += 5; institutional_trust += 6; administrative_reform_pressure += 4; public_trust += 4; prosecution_oversight_capacity += 2; media_capacity += 2; pis_relation -= 6; news_headline = "The Justice Fund's entire grant history goes to the audit chamber"
+
+Every grant since the fund was created, with the applicant, the assessment
+score, the decision and the disbursement. The chamber can compel the files; a
+committee can only ask for them and be refused politely.
+
+It is the version of this that survives the defendant leaving the country,
+which nobody in the room yet knows he is going to do. When he does, the case
+against the fund continues without him because it was never only about him.
+
+- @poland_event_queue: Refer the whole fund
+
+# Research:
+# https://zero.pl/news/kim-jest-roman-giertych-kalendarium-kariery-wplywowego-posla-ko
+@giertych_absent_2024
+# prose-audit: Grade A — The absence is measured against the roll call the player has just read, the club penalty is stated exactly as KO imposed it, and each response separates what the Left can prove from what it can only complain about.
+title: The chairman of the reckoning was not in the chamber
+subtitle: Giertych misses the decriminalisation vote; KO suspends his club rights until 15 October and calls the matter closed
+face-image: img/poland/events/sejm-voting-device.webp
+new-page: true
+tags: poland_event
+priority: 26
+order: 8
+max-visits: 1
+view-if: continuous_campaign = 1 and year = 2024 and month = 7 and government_party != "pis" and reckoning_team_active = 1 and abortion_vote_yes > 0 and giertych_absent_2024_done = 0
+on-arrival: {!
+Q.giertych_absent_2024_done = 1;
+Q.giertych_standing = Math.max(
+    0, (Number(Q.giertych_standing) || 46) - 5
+);
+Q.ko_social_liberal_share = Math.max(
+    0, (Number(Q.ko_social_liberal_share) || 42) - 2
+);
+Q.ko_classical_liberal_share = Math.min(
+    100, (Number(Q.ko_classical_liberal_share) || 58) + 2
+);
+Q.ko_right_score = (Number(Q.ko_right_score) || 50) + 3;
+Q.feminist_trust = Math.max(0, (Number(Q.feminist_trust) || 0) - 2);
+Q.ko_coalition_dissent += 4;
+Q.public_mood_pending_abortion_rights_salience += 6;
+Q.news_headline = Q.abortion_vote_passed
+    ? "KO suspends Giertych's club rights over the missed decriminalisation vote"
+    : "The reckoning team's chairman missed the vote that failed";
+!}
+
+= July 2024 — The absent deputy
+
+The board shows **[+ abortion_vote_yes +] yes · [+ abortion_vote_no +] no · [+
+abortion_vote_abstain +] abstain**. It does not show **Roman Giertych**, who is
+not in the chamber and does not vote.
+
+The KO club's discipline commission suspends his membership rights until **15
+October**. That is the whole penalty: he remains a deputy, he remains chairman
+of the reckoning team, and he continues to file notifications with prosecutors
+throughout the suspension. The club's explanation is that an unexcused absence
+from a declared party vote has consequences, which it does, in the form of not
+being allowed to attend club meetings for eleven weeks.
+
+[? if not abortion_vote_passed: The arithmetic is what makes this unbearable.
+The bill failed. Every absence in that column is a vote that did not need to be
+won from PSL, and one of them belongs to the man whose entire public function
+is to demonstrate that this government keeps its promises.?]
+[? if abortion_vote_passed: The bill survived without him, which is the only
+reason this is a discipline story rather than a catastrophe. It also means the
+majority that carried it was assembled from deputies who did turn up, none of
+whom are running a coordinating body on the government's behalf.?]
+
+**Anna Maria Żukowska** does not need to write a new statement. She wrote it in
+2023: nobody put him on the senate pact because nobody wanted to own his votes
+on partnerships and abortion. This is what owning them looks like.
+
+Tusk's office briefs that the suspension settles it and that the reckoning team
+has a fuller calendar than the discipline commission. That is also true, and it
+is the point.
+
+- @giertych_absence_price
+- @giertych_absence_code
+- @giertych_absence_recruit
+- @giertych_absence_accept
+
+@giertych_absence_price
+title: Make the absence the headline of the defeat
+subtitle: Force KO to defend the empty seat for a week; the cost is that the campaign is about one man rather than the bill.
+on-arrival: giertych_line = "Absence campaign"; giertych_standing -= 7; media_capacity += 4; progressive_credibility += 4; feminist_trust += 5; ko_relation -= 6; ko_coalition_dissent += 4; left_poll_momentum += 0.25; ko_poll_momentum -= 0.2; reckoning_noise += 4; news_headline = "The Left makes an empty seat the record of the decriminalisation vote"
+
+Our press team puts the seating plan on every screen with one chair marked, and
+keeps it there. Journalists ask KO's spokespeople the same question for six
+days, and the answers get worse: a scheduling conflict, then a legal
+obligation, then that the vote had a known outcome anyway.
+
+We win the week. We also teach every editor that Lewica's abortion politics is
+now a story about Roman Giertych, which is the frame in which it is easiest to
+ignore what the bill actually said.
+
+- @poland_event_queue: Put the seating plan on screen
+
+@giertych_absence_code
+title: Demand a coalition rule: no rights-vote absentee runs a coalition body
+subtitle: Cost: 1 resource. A general rule, written and dull, that will still exist when this quarrel is forgotten.
+choose-if: resources >= 1
+unavailable-subtitle: There is no free capacity to negotiate and police a written attendance rule.
+on-arrival: resources -= 1; giertych_line = "Attendance rule for coalition bodies"; giertych_standing -= 6; reckoning_delivery += 4; government_procedural_restraint += 3; institutional_trust += 2; party_unity += 2; ko_relation -= 3; progressive_credibility += 3; news_headline = "The coalition writes an attendance rule for its own coordinating bodies"
+
+We do not ask for his removal. We ask for a rule: a deputy who does not vote on
+a declared coalition bill on rights or the courts does not chair a body that
+speaks for the coalition on rights or the courts, for as long as the suspension
+lasts.
+
+KO signs it because refusing a rule about attendance is impossible in public.
+The rule will one day be quoted at one of our own deputies, and we will deserve
+it. Giertych keeps the chair by the length of his suspension and knows exactly
+who put a clock on it.
+
+- @poland_event_queue: Write the attendance rule
+
+@giertych_absence_recruit
+title: Go around him: co-sign the next bill with KO's own progressives
+subtitle: Build the majority that was missing instead of prosecuting the deputy who was missing.
+on-arrival: giertych_line = "Cross-party progressive bloc"; ko_social_liberal_share += 3; ko_classical_liberal_share -= 3; giertych_standing -= 3; feminist_trust += 6; progressive_credibility += 5; ko_relation += 2; progressives_dissent -= 4; razem_cooperation += 3; movement_autonomy += 3; news_headline = "Left and KO progressives put their names on one rights bill"
+
+Barbara Nowacka's people and ours put the next clinical-access text out with
+both sets of signatures on the first page, and we ask the women's organisations
+to count deputies in public rather than parties.
+
+It does nothing about Giertych, which is the criticism our own left makes of
+it. It does move three or four KO deputies from a private position to a
+published one, and published positions are the only kind that can be held to.
+
+- @poland_event_queue: Publish the joint text
+
+@giertych_absence_accept
+title: Accept the suspension as sufficient and protect the coalition
+subtitle: The government survives the week intact and the Left's own voters read the archive later.
+on-arrival: giertych_line = "Suspension accepted"; giertych_standing += 5; ko_relation += 5; government_coalition_dissent -= 4; progressive_credibility -= 6; feminist_trust -= 4; progressives_dissent += 6; razem_dissent += 5; public_trust -= 1; news_headline = "The Left treats KO's internal penalty as the end of the matter"
+
+We say that the club imposed a penalty, that the penalty is a matter for the
+club, and that the coalition has a housing bill next week. The Chancellery is
+grateful and the coalition council is quiet.
+
+The women's organisations that spent April counting deputies for us notice that
+we counted this one differently. It is a small entry, and it goes in the same
+file as every other week we chose the government over the reason we joined it.
+
+- @poland_event_queue: Move to the housing bill

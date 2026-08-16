@@ -181,8 +181,8 @@ assertIdempotent('Wiosna congress transfer', function() {
     caucus_crisis_pending: 0, party_unity: 80, internal_dissent: 10,
   });
   ctx.engine.goToScene('poland_advance');
-  ctx.choose('poland_events_2021_2023.oct21_congress');
-  ctx.choose('poland_events_2021_2023.oct21_dual');
+  ctx.choose('poland_events_2021_10.oct21_congress');
+  ctx.choose('poland_events_2021_10.oct21_dual');
   return ctx;
 });
 
@@ -460,7 +460,7 @@ for (const endpoint of [
   ctx.engine.goToScene('poland_hub');
   const ids = queuedEventIds(ctx.engine);
   const razemConfrontation = ids.filter(function(id) {
-    return id.startsWith('poland_events_2025.') && /razem/.test(id);
+    return id.startsWith('poland_events_2025_') && /razem/.test(id);
   });
   assert(razemConfrontation.length > 0,
     'No 2025 Razem confrontation reaches the dated-event desk');

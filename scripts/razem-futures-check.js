@@ -47,7 +47,7 @@ function prepare(ctx, pressure, actions) {
   ctx.Q.left_right_score = 50;
   ctx.Q.left_poll = 18;
   ctx.Q.party_system_left_pull = 30;
-  ctx.engine.goToScene('poland_events_2025.matysiak_razem_2025');
+  ctx.engine.goToScene('poland_events_2025_11.matysiak_razem_2025');
 }
 
 function refreshSuccessor(ctx) {
@@ -79,7 +79,7 @@ function queuedPayoffs(ctx) {
   const beforeSeats = seatTotal(ctx.Q);
   const beforeStrength = ctx.Q.razem_strength;
   prepare(ctx, 45, 4);
-  ctx.choose('poland_events_2025.matysiak_leadership');
+  ctx.choose('poland_events_2025_11.matysiak_leadership');
   const Q = ctx.Q;
   assert.strictEqual(Q.razem_future_route, 'matysiak_razem');
   assert.strictEqual(Q.razem_leader, 'Paulina Matysiak');
@@ -118,7 +118,7 @@ function queuedPayoffs(ctx) {
   const beforeSeats = seatTotal(ctx.Q);
   const beforeStrength = ctx.Q.razem_strength;
   prepare(ctx, 30, 3);
-  ctx.choose('poland_events_2025.matysiak_own_party');
+  ctx.choose('poland_events_2025_11.matysiak_own_party');
   const Q = ctx.Q;
   assert.strictEqual(Q.razem_future_route, 'akcja_socjalistyczna');
   assert.strictEqual(Q.razem_leader, 'Paulina Matysiak');
@@ -156,13 +156,13 @@ function queuedPayoffs(ctx) {
 {
   const low = newGame('razem-future-tak-low');
   prepare(low, 5, 0);
-  low.choose('poland_events_2025.matysiak_expulsion');
+  low.choose('poland_events_2025_11.matysiak_expulsion');
 
   const ctx = newGame('razem-future-tak-high');
   const beforeSeats = seatTotal(ctx.Q);
   const beforeStrength = ctx.Q.razem_strength;
   prepare(ctx, 55, 0);
-  ctx.choose('poland_events_2025.matysiak_expulsion');
+  ctx.choose('poland_events_2025_11.matysiak_expulsion');
   const Q = ctx.Q;
   assert.strictEqual(Q.razem_future_route, 'tak_dla_rozwoju');
   assert.strictEqual(Q.razem_leader, 'Adrian Zandberg');

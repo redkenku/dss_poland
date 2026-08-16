@@ -1,9 +1,9 @@
 title: KPO — money, milestones and credit
 
 @kpo_payment_dossier_2024
-# prose-audit: Grade A — The action plan is correctly separated from a transfer, and all five routes now end in authored consequence: an open ledger nobody wanted to sign, a raid on a common fund defended as such, a fortnight's speed bought at the cost of a signature, and two opposition instruments honest about their own thinness.
+# prose-audit: Grade A — The action plan is correctly separated from a transfer, the coalition's KPO committee is a room with named people arguing in it, and all five routes now write a persistent ownership record: a common ledger that binds its authors, an earmark raid that names the party it is taken from, a fortnight bought with somebody else's signature, and two opposition instruments honest about their own thinness.
 title: The KPO payment dossier
-subtitle: An action plan is not yet a transfer.
+subtitle: An action plan is not yet a transfer, and €59.8 billion expires in August 2026.
 face-image: img/poland/events/kpo.webp
 new-page: true
 tags: poland_event
@@ -34,6 +34,43 @@ if (Q.kpo_2022_concession_pending) {
     Q.last_policy_implementation =
         "The 2022 concession reaches the 2024 payment dossier";
 }
+const kpoNames24a = {
+    ko: "KO",
+    p2050: "Poland 2050",
+    psl: "PSL",
+    pis: "PiS",
+    konf: "Konfederacja"
+};
+const kpoSeats24a = function(code) {
+    return Q["ministry_" + code + "_in_cabinet"]
+        ? Math.max(0, Number(Q[code + "_seats"]) || 0)
+        : 0;
+};
+// The senior party is the partner whether or not it is the largest; below it,
+// the biggest cabinet club is the one whose ministries a credit fight costs.
+Q.kpo_partner_code = Object.keys(kpoNames24a)
+    .filter(function(code) { return kpoSeats24a(code) > 0; })
+    .sort(function(first, second) {
+        return (second == Q.government_party ? 1e6 : kpoSeats24a(second)) -
+            (first == Q.government_party ? 1e6 : kpoSeats24a(first));
+    })[0] || "";
+Q.kpo_partner_name =
+    kpoNames24a[Q.kpo_partner_code] || "the coalition's other parties";
+Q.kpo_partner_leader =
+    String(Q[Q.kpo_partner_code + "_leader"] || "").trim() ||
+    String(Q.prime_minister || "the senior partner");
+// The chain's own memory. Later events read who signed the ledger, whose name
+// is on the file, and which partner is still owed an argument.
+Q.kpo_ledger_public = 0;
+Q.kpo_opposition_file = 0;
+Q.kpo_owner = "none";
+Q.kpo_prior_owner = "none";
+Q.kpo_owner_label = "No party has attached itself to the file";
+Q.kpo_grudge_active = 0;
+Q.kpo_grudge_code = "";
+Q.kpo_grudge_name = "";
+Q.kpo_grudge_leader = "";
+Q.kpo_grudge_reason = "";
 Q.kpo_last_credit_change = 0;
 Q.kpo_last_delivery_change = 0;
 Q.kpo_last_funds_change = 0;
@@ -48,14 +85,19 @@ Q.news_headline = "The rule-of-law plan becomes a recovery-fund payment file";
 
 = February 2024 — From action plan to payment
 
-The government has presented its rule-of-law action plan. The Commission will
-still assess milestones before money moves, while every coalition party wants
-credit for the first funded projects.
+The recovery plan is worth **€59.8 billion** and it has an expiry date. Every
+milestone has to be met, invoiced and certified by **31 August 2026**; after
+that, money not drawn is not delayed, it is gone. The rule-of-law action plan
+went to Brussels this month, which unfreezes the argument without moving a
+single euro: the Commission still has to assess the milestones, and the payment
+request is one file in a queue on a desk in the Berlaymont.
 
-[? if kpo_delivery >= 6: Earlier Left pressure has already produced a usable
-delivery ledger. The argument is now over ownership.?]
-[? if kpo_delivery < 6: Earlier KPO bargains produced more promises than
-administrative preparation. The first claim needs a credible ledger.?]
+[? if left_in_government = 1: The coalition's KPO committee meets with three documents in front of it — the milestone schedule, the list of ministries answerable for each line, and a draft communications plan. Only the third has been read by everybody in the room.?]
+[? if left_in_government = 1: **[+ prime_minister +]** wants an announcement that is clean and singular. **[+ kpo_partner_leader +]** wants [+ kpo_partner_name +]'s ministries named inside it. **[+ finance_minister +]** wants nobody promising a złoty before Brussels has promised one first. Our own delegation wants to know which line on this schedule will still have Lewica's name attached to it in 2027, when none of the people currently arguing will be in the room.?]
+[? if left_in_government = 0: We are not in the room. The committee sits in the Chancellery under **[+ prime_minister +]**, the schedule is a government document, and the first any opposition party will see of the annexes is when somebody leaks them or we go and read them ourselves.?]
+
+[? if kpo_delivery >= 6: Earlier Left pressure has already produced a delivery ledger somebody can actually use. Nobody is arguing about whether the projects exist. They are arguing about whose logo goes on the hoarding.?]
+[? if kpo_delivery < 6: Earlier KPO bargains produced more promises than administrative preparation. There are ministries on this schedule that cannot say, this month, how many of their milestones have a named official behind them.?]
 
 - @dossier_public_ledger
 - @dossier_left_earmarks
@@ -65,7 +107,7 @@ administrative preparation. The first claim needs a credible ledger.?]
 
 @dossier_public_ledger
 title: Put every milestone, ministry and deadline on one public ledger
-subtitle: Make every coalition ministry own a deadline that voters can inspect later.
+subtitle: Every cabinet party signs a dated column, including ours. The ledger stays readable until August 2026.
 view-if: left_in_government = 1
 on-arrival: {!
 Q.kpo_milestones += 4;
@@ -76,26 +118,38 @@ Q.public_trust += 3;
 Q.ko_relation += 2;
 Q.psl_relation += 1;
 Q.razem_dissent -= 3;
+Q.kpo_ledger_public = 1;
+Q.kpo_owner = "shared";
+Q.kpo_owner_label =
+    "A dated public ledger carries every cabinet party's column, ours included";
 Q.kpo_last_credit_change = 2;
 Q.kpo_last_delivery_change = 2;
 Q.kpo_last_summary = "A common public ledger makes later credit claims auditable.";
 Q.news_headline = "The coalition publishes a ministry-by-ministry KPO ledger";
 !}
 
-Every milestone goes onto one page with a ministry beside it and a date beneath
-it. Nothing about the document is generous: a minister who misses a deadline
-will be missing it in public, against a line somebody else in the same cabinet
-met on time.
+Every milestone goes onto one page: the line, the ministry answerable for it,
+the date it is due. Nothing about the document is generous. A minister who
+misses a deadline misses it in public, printed directly beneath a line somebody
+else in the same cabinet delivered on time.
 
-Our partners sign it because refusing to sign looks worse than signing. They
-understand what they have agreed to by the second week, when a journalist
-telephones about a housing line rather than about the fund in general.
+**[+ kpo_partner_leader +]** signs because refusing to sign is the only version
+of this week that makes the evening news. [+ kpo_partner_name +] understands
+what it has agreed to by the second Tuesday, when a journalist telephones a
+named deputy minister about one housing line rather than telephoning the
+Chancellery about the fund in general.
+
+So do we. Our own columns are on the same page, in the same typeface, and
+**[+ razem_leader +]** observes that Lewica has just published the evidence for
+its own prosecution eighteen months early. That is the trade: the instrument
+that will hold a partner to a date in 2025 is the instrument that will hold us
+to one.
 
 - @kpo_result: File the ledger
 
 @dossier_left_earmarks
 title: Reserve the Left's claim for housing, care and local services
-subtitle: Cost: 1 resource. Put Lewica's name on social investment and provoke a coalition credit fight.
+subtitle: Cost: 1 resource. Lewica's name goes on the social annexes, and [+ kpo_partner_name +] is told which lines it has lost.
 view-if: left_in_government = 1
 choose-if: resources >= 1
 unavailable-subtitle: The party cannot staff a parallel investment team.
@@ -104,37 +158,68 @@ Q.resources -= 1;
 Q.kpo_milestones += 2;
 Q.kpo_delivery += 4;
 Q.kpo_public_credit += 5;
-Q.ko_relation -= 3;
-Q.psl_relation -= 1;
+if (Q.kpo_partner_code == "ko") {
+    Q.ko_relation -= 4;
+    Q.ko_coalition_dissent += 3;
+} else if (Q.kpo_partner_code == "p2050") {
+    Q.p2050_relation -= 4;
+    Q.p2050_coalition_dissent += 3;
+} else if (Q.kpo_partner_code == "psl") {
+    Q.psl_relation -= 4;
+    Q.psl_coalition_dissent += 3;
+} else if (Q.kpo_partner_code == "pis") {
+    Q.pis_relation -= 4;
+} else {
+    Q.ko_relation -= 3;
+    Q.psl_relation -= 1;
+}
 Q.government_coalition_dissent += 2;
 Q.labor_credibility += 3;
 Q.local_network += 2;
+Q.kpo_owner = "lewica";
+Q.kpo_owner_label = "Lewica's name is on the social annexes and nobody else's";
+Q.kpo_grudge_active = 1;
+Q.kpo_grudge_code = Q.kpo_partner_code;
+Q.kpo_grudge_name = Q.kpo_partner_name;
+Q.kpo_grudge_leader = Q.kpo_partner_leader;
+Q.kpo_grudge_reason = "the February 2024 raid on the social annexes";
 Q.kpo_last_credit_change = 5;
 Q.kpo_last_delivery_change = 4;
 Q.kpo_last_summary = "The Left attaches its name to a concrete social-investment file.";
 Q.news_headline = "Lewica marks housing, care and local services as its KPO share";
 !}
 
-Our own people go through the annexes and come back with the lines that can be
-photographed: social housing, care places, the bus routes that stopped running
-in 2019. Those become the Lewica file, staffed by Lewica officials, defended in
-committee under our name.
+Our own people spend four days inside the annexes and come back with the lines
+that photograph: social housing, care places, the bus routes that stopped
+running in 2019 and were never restored. Those become the Lewica file — staffed
+by Lewica officials, costed by Lewica economists, defended in committee under
+our name and nobody else's.
 
-KO's managers call it a raid on a common fund. They are not wrong. The
-calculation is that a fund with no author gets remembered as the government's,
-and a government is a thing voters can already name without us.
+**[+ kpo_partner_leader +]** calls it a raid on a common fund, in those words,
+to a camera. It is a raid on a common fund. The calculation is simply that a
+fund with no author is remembered as the government's, and a government is a
+thing voters can already name without any help from us.
+
+[+ kpo_partner_name +] does not forget it. Somewhere in the next two years there
+will be a vote we need, a ministry we have to persuade or a budget line we have
+to ask for, and the person on the other side of the table will have been in the
+room this afternoon.
 
 - @kpo_result: Claim the social file
 
 @dossier_fast_claim
 title: File quickly behind Prime Minister [+ prime_minister +]
-subtitle: Move the claim quickly and let [+ prime_minister +] own the announcement.
+subtitle: A fortnight of queue position, bought with the Chancellery's signature rather than a shared one.
 view-if: left_in_government = 1
 on-arrival: {!
 Q.kpo_milestones += 3;
 Q.kpo_delivery += 1;
 Q.kpo_deadline_pressure = Math.max(0, Q.kpo_deadline_pressure - 2);
 const leftOwnsPremiership = Q.government_party == "lewica";
+Q.kpo_owner = leftOwnsPremiership ? "lewica" : "chancellery";
+Q.kpo_owner_label = leftOwnsPremiership
+    ? "Lewica's own Chancellery signed the claim and owns it"
+    : Q.prime_minister + "'s Chancellery signed the claim alone";
 if (leftOwnsPremiership) {
     Q.kpo_public_credit += 3;
     Q.government_delivery += 2;
@@ -170,24 +255,19 @@ Q.news_headline = Q.prime_minister + " submits a rapid common KPO claim";
 !}
 
 The claim goes to Brussels inside a fortnight, unamended, with the Chancellery's
-covering letter on top of it. Speed is worth something real: the Commission's
-desk officers are working through a queue, and a file that arrives early and
-tidy is a file that gets read.
+covering letter on top of it. Speed is worth something real and unglamorous: the
+Commission's desk officers are working a queue, and a file that arrives early
+and tidy is a file that gets read in March instead of June.
 
-[? if government_party = "lewica": The letter is signed by our own prime
-minister, so the tidiness and the queue position both belong to us. Razem
-notes, without much warmth, that the fastest way to look like a party of
-government is to behave like one.?]
-[? if government_party != "lewica": **[+ prime_minister +]** announces it alone,
-because the letter went out under the Chancellery's name and nobody thought to
-ask for a second signature. Razem asks what exactly we bought with the fortnight
-we saved.?]
+[? if government_party = "lewica": The letter is signed by our own prime minister, so the tidiness and the queue position both belong to us. **[+ razem_leader +]** notes, without much warmth, that the quickest way to look like a party of government is to behave like one, and that this is not a compliment. **[+ kpo_partner_leader +]** wanted two more weeks and an amendment; [+ kpo_partner_name +] has been told it can have the amendment in the next request.?]
+[? if government_party != "lewica": **[+ prime_minister +]** announces it alone from the Chancellery steps, because the letter went out under the Chancellery's name and nobody in our delegation thought to ask for a second signature on it. The signature was the only thing on offer that we could have kept.?]
+[? if government_party != "lewica": **[+ razem_leader +]** asks what exactly we bought with the fortnight. The honest answer is a queue position in Brussels that will be invisible to every voter in Poland and will still, in April, be the reason the money arrives at all.?]
 
 - @kpo_result: Send the rapid claim
 
 @dossier_opposition_audit
-title: Publish a social-investment and milestone audit
-subtitle: Cost: 1 resource. Expose the missing social ledger without claiming cabinet powers.
+title: Stand up a permanent social-investment and milestone audit
+subtitle: Cost: 1 resource. Three staff and a standing brief — the team survives into the 2025 contract fights.
 view-if: left_in_government = 0
 choose-if: resources >= 1
 unavailable-subtitle: Opposition scrutiny needs staff, data work and legal capacity.
@@ -199,52 +279,69 @@ Q.media_capacity += 2;
 Q.labor_credibility += 2;
 Q.public_trust += 2;
 Q.ko_relation -= 2;
+Q.kpo_opposition_file = 1;
+Q.kpo_owner = "none";
+Q.kpo_owner_label =
+    "The file belongs to the cabinet; Lewica keeps a standing audit team on it";
 Q.kpo_last_credit_change = 3;
 Q.kpo_last_delivery_change = 0;
 Q.kpo_last_summary = "Opposition scrutiny wins credit without pretending to control the payment.";
 Q.news_headline = "The Left publishes the missing social side of the KPO ledger";
 !}
 
-Two researchers and a lawyer spend the month reading annexes nobody in the
-press gallery has opened. What they publish is not an accusation but a
-comparison: the milestones the plan promises, and the housing, care and local
-lines that were quietly dropped between draft and submission.
+Two researchers and a lawyer spend the month inside annexes nobody in the press
+gallery has opened. What they publish is not an accusation but a comparison: the
+milestones the plan promises against the housing, care and local lines that went
+missing somewhere between the draft and the submission, with the date each one
+disappeared.
 
-The government does not have to answer an opposition document. It does have to
-answer the mayors who read it and recognised their own withdrawn projects. We
-have changed nothing about the payment and a good deal about who is asking
-questions in the committee corridor.
+**[+ prime_minister +]**'s government is not obliged to answer an opposition
+document, and does not. It is obliged to answer the mayors who read it and
+recognised their own withdrawn projects in the second table, and three of them
+say so on regional television inside a week.
+
+The audit's real value is that it does not end. Three people now hold a
+standing brief on this fund, and they will still be holding it when the
+contracts start being signed — which is the point at which a monitoring team is
+worth ten press conferences.
 
 - @kpo_result: Publish the audit
 
 @dossier_opposition_record
 title: Table written questions and record the missing milestones
-subtitle: Always available in opposition. A parliamentary paper records the gap but cannot replace a staffed audit.
+subtitle: Always available in opposition. A numbered paper trail, no staff, and nothing that survives past the answer deadline.
 view-if: left_in_government = 0
 on-arrival: {!
 Q.kpo_scrutiny += 1;
 Q.kpo_public_credit += 1;
+Q.kpo_owner = "none";
+Q.kpo_owner_label = "The file belongs to the cabinet and Lewica watches it from the chamber";
 Q.kpo_last_credit_change = 1;
 Q.kpo_last_delivery_change = 0;
 Q.kpo_last_summary = "Written questions preserve an opposition record without claiming to complete a milestone audit.";
 Q.news_headline = "Lewica records the missing KPO milestones in Parliament";
 !}
 
-The questions go in under parliamentary rules: numbered, dated, requiring an
-answer within thirty days. It costs the club a morning and produces no
-headline whatsoever.
+The questions go in under parliamentary rules: numbered, dated, requiring a
+signed answer within thirty days. It costs the club one morning and produces no
+headline whatsoever. Nobody outside the chamber notices, including the ministry,
+which answers three of the seven properly.
 
-What it produces is a record. When a minister later says the social lines were
-never part of the plan, there will be a signed reply on file saying something
-else. It is the cheapest instrument we have and the slowest.
+What it produces is a record. When a minister stands up in 2026 and says the
+social lines were never in the plan, there will be a signed reply on file saying
+something else, over that minister's own name.
+
+It is the cheapest instrument available to us and the slowest, and it builds
+nothing. Next year, when the contracts are being signed and somebody needs to
+read four thousand of them, we will still have nobody whose job that is.
 
 - @kpo_result: File the questions
 
 
 @kpo_first_payment_2024
-# prose-audit: Grade B — Authorised payment and repaired courts stay properly distinct, and each of the six routes now lands somewhere concrete — open calls, ribbon-cutting flagships, an invisible co-financing reserve, a published correction file. The premise itself is still two conditional sentences where the branches beneath it are three paragraphs.
+# prose-audit: Grade A — Authorised payment and repaired courts stay properly distinct, the €6.3 billion arrives into a named argument between the Chancellery, the finance ministry and the party that signed February's file, and each of the six routes lands somewhere concrete: open calls, ribbon-cutting flagships, an invisible co-financing reserve, a published correction file.
 title: The first KPO payment
-subtitle: European confidence creates capacity, not a blank cheque.
+subtitle: €6.3 billion lands, and the coalition has ten days to decide who it belongs to.
 face-image: img/poland/events/kpo.webp
 new-page: true
 tags: poland_event
@@ -267,6 +364,38 @@ Q.kpo_funds_delayed = kpoNum24(Q.kpo_funds_delayed, 0);
 const kpoLegitimacy24 = kpoNum24(Q.judicial_legitimacy, 35);
 const kpoRestraint24 = kpoNum24(Q.government_procedural_restraint, 45);
 const kpoDualism24 = kpoNum24(Q.legal_dualism, 50);
+const kpoNames24b = {
+    ko: "KO",
+    p2050: "Poland 2050",
+    psl: "PSL",
+    pis: "PiS",
+    konf: "Konfederacja"
+};
+const kpoSeats24b = function(code) {
+    return Q["ministry_" + code + "_in_cabinet"]
+        ? Math.max(0, Number(Q[code + "_seats"]) || 0)
+        : 0;
+};
+Q.kpo_partner_code = Object.keys(kpoNames24b)
+    .filter(function(code) { return kpoSeats24b(code) > 0; })
+    .sort(function(first, second) {
+        return (second == Q.government_party ? 1e6 : kpoSeats24b(second)) -
+            (first == Q.government_party ? 1e6 : kpoSeats24b(first));
+    })[0] || "";
+Q.kpo_partner_name =
+    kpoNames24b[Q.kpo_partner_code] || "the coalition's other parties";
+Q.kpo_partner_leader =
+    String(Q[Q.kpo_partner_code + "_leader"] || "").trim() ||
+    String(Q.prime_minister || "the senior partner");
+Q.kpo_ledger_public = Q.kpo_ledger_public ? 1 : 0;
+Q.kpo_prior_ledger = Q.kpo_ledger_public;
+Q.kpo_opposition_file = Q.kpo_opposition_file ? 1 : 0;
+Q.kpo_owner = String(Q.kpo_owner || "none");
+Q.kpo_prior_owner = Q.kpo_owner;
+Q.kpo_grudge_active = Q.kpo_grudge_active ? 1 : 0;
+Q.kpo_grudge_name = String(Q.kpo_grudge_name || "");
+Q.kpo_grudge_leader = String(Q.kpo_grudge_leader || "");
+Q.kpo_grudge_reason = String(Q.kpo_grudge_reason || "");
 // January 2023: the price Lewica put on the disciplinary bill. Lending votes
 // for money the Commission had not yet promised moved the file faster and
 // left an unverified milestone behind it; that debt is what the October 2025
@@ -318,24 +447,17 @@ Q.kpo_uncommitted = Math.max(
 
 = April 2024 — Payment brings obligations
 
-[? if kpo_first_payment_paid: The first recovery payment is authorised.
-Domestic courts are not thereby repaired; the coalition has received money
-and a monitored implementation schedule.?]
-[? if not kpo_first_payment_paid: The payment file is returned for correction.
-This requires an extreme alternate record of legal dualism and weak
-implementation—the government can repair the file or politicise the delay.?]
+[? if kpo_first_payment_paid: **€6.3 billion** is authorised and moves on 15 April. It is the first recovery money to reach Poland since the plan was written, and it arrives as a transfer with an implementation schedule attached, not as a verdict: no Polish court has been repaired by it, no appointment has been undone, and the next tranche is conditional on work nobody has yet done.?]
+[? if not kpo_first_payment_paid: The file comes back. The Commission's letter is four pages, courteous, and specific about which milestones it cannot certify; the transfer does not move. This takes an exceptional record — legal dualism deep enough and implementation thin enough that the assessment had nowhere to go — and it leaves the coalition two options, repair the file or blame Brussels for it.?]
 
-[? if kpo_bill_quality = 2 and kpo_bill_2023_done = 1: The Commission's
-auditors reach the January 2023 disciplinary bill we voted for before anyone
-had promised a euro. It moved the money then. It is an unverified milestone
-now, and it stays on the file until somebody closes it.?]
-[? if kpo_bill_quality = 3 and kpo_bill_2023_done = 1: The independent
-verification we made the price of our votes in January 2023 is already in the
-file. The auditors read a milestone that has been checked by somebody other
-than the ministry that wrote it, and move on.?]
-[? if kpo_bill_quality = 0 and kpo_bill_2023_done = 1: We refused the renamed
-disciplinary system in January 2023 and the fund stayed frozen for another
-year. The record is clean and the deadline is a year closer.?]
+[? if kpo_ledger_public = 1: February's public ledger is already doing work nobody enjoys. Journalists have the column headings, so the first question at the ministry briefing is not what the money is for but which of the fourteen lines due this quarter are late — and two of the late ones are ours.?]
+[? if kpo_owner = "chancellery": The claim went in under [+ prime_minister +]'s signature and the announcement follows the same route. Our ministers learn the disbursement date from the wires.?]
+[? if kpo_owner = "lewica" and left_in_government = 1: The social annexes have our name on them, which means the housing and care lines will be read as Lewica's success or Lewica's failure, and nobody else will be standing there when either happens.?]
+[? if kpo_grudge_active: Across the table, [+ kpo_grudge_name +] has not moved on from [+ kpo_grudge_reason +]. **[+ kpo_grudge_leader +]** is pleasant about it in public and is counting.?]
+
+[? if kpo_bill_quality = 2 and kpo_bill_2023_done = 1: The Commission's auditors reach the January 2023 disciplinary bill — the one we voted for before anybody in Brussels had promised a euro. It moved the money then. It is an unverified milestone now, sitting in the file with a query against it, and it will sit there until somebody spends a year closing it.?]
+[? if kpo_bill_quality = 3 and kpo_bill_2023_done = 1: The independent verification we made the price of our votes in January 2023 is already in the file. The auditors read a milestone that was checked by somebody other than the ministry that wrote it, make no note, and move to the next page. It is the cheapest thing in the dossier and it cost us a year of abuse.?]
+[? if kpo_bill_quality = 0 and kpo_bill_2023_done = 1: We refused the renamed disciplinary system in January 2023 and the fund stayed frozen for another year. The record is clean. The deadline is a year closer and every project office in the country knows exactly how many months it has lost.?]
 
 - @payment_social_capacity
 - @payment_prime_minister
@@ -356,31 +478,45 @@ Q.government_delivery += 4;
 Q.local_network += 3;
 Q.public_trust += 3;
 Q.psl_relation += 2;
+Q.kpo_owner = "lewica";
+Q.kpo_owner_label =
+    "Lewica's ministry wrote the open calls and will answer for the scoring";
 Q.kpo_last_credit_change += 4;
 Q.kpo_last_delivery_change = 5;
 Q.kpo_last_summary = "Open calls turn the first transfer into visible local capacity.";
 Q.news_headline = "The first KPO calls fund care, housing and local links";
 !}
 
-The calls go out unrestricted: any municipality with a site and a signature
-can bid, and the scoring sheet is published with them. Housing associations,
-care providers and two dozen transport authorities discover they are allowed to
-want something.
+The calls go out unrestricted. Any municipality with a site and a signature can
+bid, the scoring sheet is published alongside the call, and the deadline is the
+same for a city of eight hundred thousand and a gmina of four. Housing
+associations, care providers and two dozen county transport authorities discover
+that they are allowed to want something.
 
-The ministries dislike open competition because it produces winners they did
-not choose. That is the point. Within a year there will be work in counties
-that have never once been the beneficiary of a national programme.
+**[+ economy_minister +]**'s officials argue against open competition for three
+days, in writing, and their argument is not corrupt: open calls produce winners
+nobody in the ministry chose, on timetables nobody in the ministry set, and the
+department will be answerable for all of them. That is precisely the point.
+
+Hajnówka bids for a bus contract it has been unable to fund since 2019. So do
+forty other places that have never once been the named beneficiary of a national
+programme, and roughly half of them will be turned down — this time with a
+published score beside their name instead of a silence.
 
 - @kpo_result: Open the first calls
 
 @payment_prime_minister
 title: Concentrate the first tranche in government flagships
-subtitle: Spends three released tranches on flagships the Chancellery will open.
+subtitle: Spends three released tranches on schemes big enough to be opened with a ribbon, and small enough in number to be opened by one person.
 view-if: left_in_government = 1 and kpo_first_payment_paid = 1
 on-arrival: {!
 Q.kpo_funds_spent += 3;
 Q.kpo_delivery += 4;
 Q.government_delivery += 5;
+Q.kpo_owner = Q.government_party == "lewica" ? "lewica" : "chancellery";
+Q.kpo_owner_label = Q.government_party == "lewica"
+    ? "Lewica's Chancellery picked the flagships and owns every one of them"
+    : Q.prime_minister + "'s Chancellery owns the flagships and the photographs";
 if (Q.government_party == "lewica") {
     Q.kpo_public_credit += 3;
     Q.party_unity += 2;
@@ -416,16 +552,15 @@ Q.news_headline =
     Q.prime_minister + " concentrates the first recovery projects";
 !}
 
-The money goes into a short list of large schemes that can be opened by a
-minister with a ribbon and a camera. They are real projects and they will be
-finished; nobody chose them for their ability to reach the places with the
-worst bus timetables.
+The money goes into eleven large schemes, each of which can be opened by a
+minister holding scissors. They are real projects, they will be finished, and
+they were selected for the size of the hoarding rather than for the state of the
+bus timetable in the county they sit in. Hajnówka is not on the list. Hajnówka
+was never going to be on this kind of list.
 
-[? if government_party = "lewica": Our own Chancellery took the decision, which
-spares us a coalition argument and hands us the whole of the criticism.?][? if
-government_party != "lewica": **[+ prime_minister +]** takes the podium.
-Lewica's ministers are in the second row of the photograph, having supplied the
-votes that made the fund available.?]
+[? if government_party = "lewica": Our own Chancellery took the decision, which spares us a coalition argument and hands us every word of the criticism. **[+ kpo_partner_leader +]** is generous in public and privately delighted: [+ kpo_partner_name +] gets three of the eleven ribbons without having had to defend the selection to anybody.?]
+[? if government_party != "lewica": **[+ prime_minister +]** takes the podium at the first opening. Lewica's ministers are in the second row of the photograph, having supplied the votes that made the fund available and the officials who wrote two of the eleven files.?]
+[? if government_party != "lewica" and kpo_prior_owner = "lewica": The February annexes carried our name. This photograph does not, and by June the two facts will have merged in the public record into a single government achievement.?]
 
 - @kpo_result: Concentrate the tranche
 
@@ -440,6 +575,8 @@ Q.kpo_delivery += 1;
 Q.kpo_public_credit += 1;
 Q.fiscal_stress = Math.max(0, Q.fiscal_stress - 2);
 Q.ko_relation += 2;
+Q.kpo_grudge_active = 0;
+Q.kpo_grudge_reason = "";
 Q.kpo_last_credit_change += 1;
 Q.kpo_last_delivery_change = 1;
 Q.kpo_last_summary = "A reserve creates budget capacity, though few voters can see it yet.";
@@ -447,19 +584,25 @@ Q.news_headline = "KPO co-financing gives the coalition room before the budget";
 !}
 
 The tranche is not spent. It is parked against the co-financing the December
-budget will need, where it will quietly prevent a fight about the deficit that
-would otherwise cost us a social line.
+budget will need, where it will prevent, quietly and in advance, a fight about
+the deficit that would otherwise be settled by removing a social line.
 
-It is the most useful thing available and the least visible. No ribbon, no
-site, no announcement — just a number in the Finance Ministry that makes next
-winter survivable. Our organisers ask, reasonably, what they are supposed to
-say at the door.
+**[+ finance_minister +]** is the only person in the building who fully
+understands what has just been handed over, and behaves accordingly. Whatever we
+have taken from this coalition since February is now, in the ministry's ledger,
+paid back with interest — and a finance minister who owes you a favour is worth
+more in December than a ribbon is worth in April.
+
+It is the most useful thing available and the least visible: no site, no
+opening, no photograph, just a number in one spreadsheet that makes next winter
+survivable. Our organisers ask, reasonably, what they are supposed to say at the
+door.
 
 - @kpo_result: Hold the reserve
 
 @payment_correction
 title: Concede the defects and publish a sixty-day correction file
-subtitle: Admit the defects, repair the file and make KO share the embarrassment.
+subtitle: Name the weak annexes, name who signed them, and make [+ kpo_partner_name +] stand next to the admission.
 view-if: left_in_government = 1 and kpo_first_payment_paid = 0
 on-arrival: {!
 Q.kpo_milestones += 4;
@@ -469,53 +612,74 @@ Q.kpo_public_credit += 1;
 Q.government_procedural_restraint += 3;
 Q.public_trust += 2;
 Q.ko_relation -= 2;
+Q.kpo_owner = "shared";
+Q.kpo_owner_label =
+    "Every cabinet party signed the correction file, so every one of them owns the defects";
 Q.kpo_last_credit_change = 1;
 Q.kpo_last_delivery_change = 2;
 Q.kpo_last_summary = "Owning the delay limits the panic and creates a credible correction route.";
 Q.news_headline = "The government publishes the defects in its own KPO file";
 !}
 
-We put the defects in writing before a Commission letter forces us to: which
-annexes were weak, who signed them off, and the sixty days in which each will
-be repaired. It is an unpleasant document to publish under your own government.
+We put the defects in writing before the Commission's second letter can force
+us to: which annexes were weak, which official signed each one off, and the
+sixty days inside which each will be repaired. It is a deeply unpleasant
+document to publish under your own government's masthead, and the first draft
+comes back from three ministries with the names removed.
 
-The unpleasantness is the value. A file that admits its faults on schedule is a
-file Brussels can keep working with, and KO — which drafted several of the weak
-annexes — cannot now let us carry the admission alone.
+The names go back in. That is the entire value of the exercise — a file that
+admits its faults on a published schedule is a file Brussels can keep working
+with, and one that admits them anonymously is a press release.
+
+**[+ kpo_partner_leader +]** signs at the second meeting, after establishing
+that [+ kpo_partner_name +] drafted four of the weak annexes and that this fact
+is already in the document. Nobody is carrying this one alone, which is the
+nearest thing to solidarity a coalition produces in a bad month.
 
 - @kpo_result: Publish the correction file
 
 @payment_opposition_dashboard
 title: Track contracts, milestones and beneficiaries outside government
-subtitle: Cost: 1 resource for a public contracts dashboard.
+subtitle: [? if kpo_opposition_file = 1: February's audit team already has the data pipeline; the dashboard costs nothing further.?][? if kpo_opposition_file = 0: Cost: 1 resource to build the contracts database from nothing.?]
 view-if: left_in_government = 0
-choose-if: resources >= 1
-unavailable-subtitle: The opposition cannot maintain the contracts database.
+choose-if: resources >= 1 or kpo_opposition_file = 1
+unavailable-subtitle: With no standing audit team, the opposition cannot fund the contracts database.
 on-arrival: {!
-Q.resources -= 1;
-Q.kpo_public_credit += 3;
+// February's standing audit team is the difference between extending a data
+// pipeline and building one; without it the dashboard costs a resource.
+const dashboardTeamExists = Q.kpo_opposition_file ? 1 : 0;
+if (!dashboardTeamExists) Q.resources -= 1;
+Q.kpo_public_credit += dashboardTeamExists ? 4 : 3;
 Q.media_capacity += 3;
 Q.public_trust += 2;
 Q.local_network += 2;
-Q.kpo_last_credit_change += 3;
+Q.kpo_scrutiny += dashboardTeamExists ? 2 : 1;
+Q.kpo_opposition_file = 1;
+Q.kpo_last_credit_change += dashboardTeamExists ? 4 : 3;
 Q.kpo_last_delivery_change = 0;
 Q.kpo_last_summary = "The Left cannot allocate the transfer, but it can make ownership harder to fake.";
 Q.news_headline = "An opposition KPO dashboard follows every contract";
 !}
 
-Contracts, beneficiaries and milestone dates go onto a public page that
-updates whenever the government publishes anything. It is unglamorous work: two
-staff, a spreadsheet and a great deal of patience with procurement portals.
+Contracts, beneficiaries and milestone dates go onto a public page that updates
+whenever the government publishes anything at all. It is unglamorous work: two
+staff, a spreadsheet with fourteen thousand rows, and an inexhaustible patience
+with procurement portals that time out at four in the afternoon.
 
-Journalists start using it because nothing else assembles the same information
-in one place. We cannot direct a złoty of this money. We can make it
-significantly harder for anyone to claim a project that has not started.
+[? if kpo_opposition_file = 1: February's audit team already knew where the data lived, which is the whole difference between a launch and a rebuild. They had the beneficiary map scraped before the ministry published its own version of it.?]
+[? if kpo_opposition_file = 0: Everything is built from nothing, in eight weeks, by people who had other jobs in March. Half the delay is spent discovering which of the ministry's three registers is the one that is actually maintained.?]
+
+Journalists start using it inside a month, because nothing else assembles the
+same information in one place, and **[+ prime_minister +]**'s press office
+begins pre-empting the awkward rows before we publish them. We cannot direct a
+złoty of this money. We can make it very much harder for anybody to stand in
+front of a project that has not started.
 
 - @kpo_result: Open the dashboard
 
 @payment_opposition_record
 title: Request the public contracts register and record unanswered questions
-subtitle: Always available in opposition. Uses existing disclosures; no permanent dashboard or implementation credit.
+subtitle: Always available in opposition. Existing disclosures only — no team, no database, no capacity that outlives the month.
 view-if: left_in_government = 0
 on-arrival: {!
 Q.kpo_scrutiny += 1;
@@ -526,21 +690,23 @@ Q.kpo_last_summary = "A basic parliamentary record exposes unanswered contract q
 Q.news_headline = "Lewica files a basic public record of the first KPO contracts";
 !}
 
-We request the contracts register through the ordinary disclosure route and
-log every question the ministry declines to answer. There is no dashboard, no
-staff and no launch — only a numbered paper trail.
+We request the contracts register through the ordinary disclosure route and log
+every question the ministry declines to answer. There is no dashboard, no staff
+and no launch — only a numbered paper trail and, eventually, a partial reply
+citing commercial confidentiality over eleven of the entries.
 
-It is the version of scrutiny available to a party that cannot fund a
-monitoring team. Thin, but a thin record still contradicts a confident minister
-eighteen months from now.
+It is the version of scrutiny available to a party that cannot fund a monitoring
+team. Thin, but a thin record still contradicts a confident minister eighteen
+months from now, and eighteen months from now is exactly when this fund becomes
+interesting to everybody else.
 
 - @kpo_result: File the register request
 
 
 @kpo_article7_credit_2024
-# prose-audit: Grade A — Closure is never confused with repair, the surviving-PiS fork gives the frozen file a competence argument rather than a sovereignty one, and all six responses now name who banks the credit and what it will be spent on in December.
+# prose-audit: Grade A — Closure is never confused with repair, the surviving-PiS fork gives the frozen file a competence argument rather than a sovereignty one, February's ledger decides whether a shared scoreboard can exist at all, and all six responses name who banks the credit and what it will be spent on in December.
 title: Who owns European normalisation?
-subtitle: Closure rewards reform; a surviving PiS cabinet remains stalled.
+subtitle: Six years of Article 7 close in an afternoon, and the coalition spends the evening arguing about a photograph.
 face-image: img/poland/events/kpo.webp
 new-page: true
 tags: poland_event
@@ -571,6 +737,38 @@ Q.kpo_milestones =
     Number.isFinite(Number(Q.kpo_milestones))
         ? Number(Q.kpo_milestones)
         : 0;
+const kpoNames24c = {
+    ko: "KO",
+    p2050: "Poland 2050",
+    psl: "PSL",
+    pis: "PiS",
+    konf: "Konfederacja"
+};
+const kpoSeats24c = function(code) {
+    return Q["ministry_" + code + "_in_cabinet"]
+        ? Math.max(0, Number(Q[code + "_seats"]) || 0)
+        : 0;
+};
+Q.kpo_partner_code = Object.keys(kpoNames24c)
+    .filter(function(code) { return kpoSeats24c(code) > 0; })
+    .sort(function(first, second) {
+        return (second == Q.government_party ? 1e6 : kpoSeats24c(second)) -
+            (first == Q.government_party ? 1e6 : kpoSeats24c(first));
+    })[0] || "";
+Q.kpo_partner_name =
+    kpoNames24c[Q.kpo_partner_code] || "the coalition's other parties";
+Q.kpo_partner_leader =
+    String(Q[Q.kpo_partner_code + "_leader"] || "").trim() ||
+    String(Q.prime_minister || "the senior partner");
+Q.kpo_ledger_public = Q.kpo_ledger_public ? 1 : 0;
+Q.kpo_prior_ledger = Q.kpo_ledger_public;
+Q.kpo_opposition_file = Q.kpo_opposition_file ? 1 : 0;
+Q.kpo_owner = String(Q.kpo_owner || "none");
+Q.kpo_prior_owner = Q.kpo_owner;
+Q.kpo_grudge_active = Q.kpo_grudge_active ? 1 : 0;
+Q.kpo_grudge_name = String(Q.kpo_grudge_name || "");
+Q.kpo_grudge_leader = String(Q.kpo_grudge_leader || "");
+Q.kpo_grudge_reason = String(Q.kpo_grudge_reason || "");
 Q.kpo_uncommitted = Math.max(
     0,
     Q.kpo_funds_available - Q.kpo_funds_spent
@@ -593,19 +791,14 @@ if (Q.kpo_article7_reward) {
 
 = May 2024 — Europe judges the legal record
 
-[? if kpo_article7_reward: Europe closes the Article 7 procedure after the
-action plan and first payment. That is a diplomatic and fiscal reward, not a
-certificate that every Polish court, prosecutor and appointment is settled.?]
-[? if not kpo_article7_reward: The surviving PiS cabinet has supplied neither
-the political change nor the legal milestones required for closure. Article 7
-stays open and the first payment remains unavailable; Lewica can document the
-failure, but cannot manufacture European approval from opposition.?]
+[? if kpo_article7_reward: The Council closes the Article 7 procedure. It has been open against Poland since December 2017; it closes in an afternoon, in a room in Brussels, with a short statement and no ceremony. That is a diplomatic and fiscal reward for a changed political situation. It is not a certificate that any particular Polish court, prosecutor or appointment has been put right, and the people who will have to live with the ones that have not are not in the room either.?]
+[? if not kpo_article7_reward: The surviving PiS cabinet has supplied neither the political change nor the legal milestones that closure requires. Article 7 stays open, the payment stays unavailable, and **[+ pis_leader +]** describes the procedure to a party congress as proof that Poland is being punished for existing. Lewica can document the failure precisely. Lewica cannot manufacture European approval from the opposition benches, and should stop implying otherwise.?]
 
-[? if kpo_article7_reward and kpo_public_credit >= 5: The Left already has a
-recognisable KPO claim. Partners now want the scoreboard blurred.?]
-[? if kpo_article7_reward and kpo_public_credit < 5: The government has the
-European headline; the Left still needs to connect it to something people
-use.?]
+[? if kpo_article7_reward: By the evening the argument has already stopped being about courts. **[+ prime_minister +]** is at the microphone; the question is which parties get to stand behind it, in what order, and whose ministries are named when the money is mentioned in the same sentence.?]
+[? if kpo_article7_reward and kpo_public_credit >= 5: Lewica has a recognisable claim on this fund and everybody in the coalition knows it. Which is exactly why [+ kpo_partner_name +] now wants a single government scoreboard with no columns on it.?]
+[? if kpo_article7_reward and kpo_public_credit < 5: The government has the European headline and we have supplied votes for it. Nothing yet connects that headline to an object a voter has used, and a headline nobody can touch belongs, by default, to whoever spoke first.?]
+[? if kpo_article7_reward and kpo_ledger_public = 1: February's ledger is still the only document in Poland that says which party is answerable for which line, which makes it the only possible basis for an honest scoreboard this week.?]
+[? if kpo_article7_reward and kpo_grudge_active: **[+ kpo_grudge_leader +]** has been waiting since February for a week in which [+ kpo_grudge_name +] holds the microphone and we need something. This is that week.?]
 
 - @article7_shared_scoreboard
 - @article7_left_delivery
@@ -616,8 +809,10 @@ use.?]
 
 @article7_shared_scoreboard
 title: Publish one coalition scoreboard and one unresolved-courts annex
-subtitle: Share the European win while keeping unfinished courts on the record.
+subtitle: Requires February's ledger. Every party gets a column; the courts nobody repaired get a page of their own.
 view-if: left_in_government = 1 and kpo_article7_reward = 1
+choose-if: kpo_ledger_public = 1
+unavailable-subtitle: No common ledger exists. There is nothing to put columns on, and no agreed record of who owed which line.
 on-arrival: {!
 Q.kpo_public_credit += 2;
 Q.kpo_delivery += 2;
@@ -625,57 +820,93 @@ Q.public_trust += 4;
 Q.ko_relation += 3;
 Q.psl_relation += 2;
 Q.government_coalition_dissent -= 3;
+Q.kpo_grudge_active = 0;
+Q.kpo_grudge_reason = "";
+Q.kpo_owner = "shared";
+Q.kpo_owner_label =
+    "Credit is divided by column, and the unrepaired courts have a page of their own";
 Q.kpo_last_credit_change = 2;
 Q.kpo_last_delivery_change = 2;
 Q.kpo_last_summary = "Shared credit buys calm while the annex prevents a false claim of legal completion.";
 Q.news_headline = "The coalition separates KPO delivery from unfinished court repair";
 !}
 
-Every governing party gets a column and the annex gets its own page: the
-courts, the prosecutors and the appointments that European closure did not
-touch. The coalition can celebrate together as long as it also admits together
-what remains unrepaired.
+February's ledger becomes May's scoreboard: one column per governing party,
+each with its delivered lines and its late ones, and behind it an annex that
+gets a page to itself — the courts, the prosecutors and the appointments that
+Article 7 closure did not touch and was never going to touch.
 
-KO would have preferred the celebration without the annex. PSL would have
-preferred neither. The document survives because refusing to sign it would have
-been the only newsworthy thing about the week.
+**[+ kpo_partner_leader +]** would have taken the celebration without the annex
+and says so in the meeting, twice. **[+ psl_leader +]** would have preferred
+neither document to exist. The scoreboard survives because at this point
+refusing to sign it is the only thing that could possibly become the story of
+the week, and nobody in the room wants to be that story.
+
+What it buys is calm, which is not nothing: whatever we took from a partner in
+February is settled by a document that also credits them. What it costs is the
+clean claim. Our lines are in a column beside three other columns, and a column
+is not a headline.
 
 - @kpo_result: Publish the scoreboard
 
 @article7_left_delivery
 title: Claim the reward through wages, care and public investment
-subtitle: Give normalisation a social price tag and invite partners to contest our claim.
+subtitle: [? if kpo_prior_owner = "chancellery": Take the story back off [+ prime_minister +], in public, four weeks after conceding it.?][? if kpo_prior_owner != "chancellery": Put a price in złoty on normalisation and dare [+ kpo_partner_name +] to argue with the figure.?]
 view-if: left_in_government = 1 and kpo_article7_reward = 1
 on-arrival: {!
-Q.kpo_public_credit += 6;
+// Taking the claim back from a Chancellery we handed it to in February costs
+// more inside the coalition and returns less; a claim we never surrendered is
+// simply extended.
+const reclaimingFromChancellery = Q.kpo_prior_owner == "chancellery" ? 1 : 0;
+Q.kpo_public_credit += reclaimingFromChancellery ? 4 : 6;
 Q.kpo_delivery += 3;
 Q.labor_credibility += 4;
 Q.public_sector_support += 3;
-Q.ko_relation -= 4;
+Q.ko_relation -= reclaimingFromChancellery ? 6 : 4;
 Q.psl_relation -= 2;
-Q.government_coalition_dissent += 3;
-Q.kpo_last_credit_change = 6;
+Q.government_coalition_dissent += reclaimingFromChancellery ? 5 : 3;
+Q.kpo_owner = "lewica";
+Q.kpo_owner_label =
+    "Lewica has priced normalisation in wages and care places and signed the invoice";
+Q.kpo_grudge_active = 1;
+Q.kpo_grudge_code = Q.kpo_partner_code;
+Q.kpo_grudge_name = Q.kpo_partner_name;
+Q.kpo_grudge_leader = Q.kpo_partner_leader;
+Q.kpo_grudge_reason = "the May 2024 social invoice on Article 7 closure";
+Q.kpo_last_credit_change = reclaimingFromChancellery ? 4 : 6;
 Q.kpo_last_delivery_change = 3;
 Q.kpo_last_summary = "A clear Left claim travels, and coalition partners immediately contest it.";
 Q.news_headline = "Lewica gives European normalisation a social price tag";
 !}
 
-We refuse to let normalisation be a diplomatic abstraction and put a number
-beside it: what restored access is worth in wages, care places and public
-investment, and which of those we intend to collect first.
+We refuse to let normalisation stay a diplomatic abstraction and put a number
+next to it: what restored access is worth in wages, in care places, in public
+investment — and which of the three we intend to collect first, this year, with
+a date.
 
-The claim travels because it is concrete. It is contested within the hour, by
-partners who spent two years on the legal file and do not intend to watch the
-Left convert their work into a social invoice.
+The claim travels, because it is the only version of this week's news that can
+be repeated by somebody who does not know what Article 7 was. It is contested
+inside the hour by partners who spent two years grinding through the legal file
+and have no intention of watching the Left convert their work into a social
+invoice with our letterhead on it.
+
+[? if kpo_prior_owner = "chancellery": Taking it back is worse than never having conceded it. In February we let the Chancellery sign alone; today we are explaining to journalists why the party that stood in the second row is suddenly presenting the bill, and **[+ kpo_partner_leader +]** does not have to say a single word to make that look opportunistic.?]
+[? if kpo_prior_owner != "chancellery": **[+ kpo_partner_leader +]** goes on air the same evening to say that the recovery fund is not a Lewica programme. This is entirely true, and it is now the second most repeated sentence of the week, which was the whole objective.?]
 
 - @kpo_result: Attach the price tag
 
 @article7_pm_credit
 title: Let [+ prime_minister +] bank the European win for later coalition concessions
-subtitle: Centralise the win around the serving prime minister and accept who gains the leverage.
+subtitle: Hand the whole win to the Chancellery and accept that it will be spent, in December, on somebody's priorities.
 view-if: left_in_government = 1 and kpo_article7_reward = 1
 on-arrival: {!
 Q.kpo_delivery += 1;
+Q.kpo_owner = Q.government_party == "lewica" ? "lewica" : "chancellery";
+Q.kpo_owner_label = Q.government_party == "lewica"
+    ? "Lewica's prime minister banked European normalisation"
+    : Q.prime_minister + " banked European normalisation and the leverage with it";
+Q.kpo_grudge_active = 0;
+Q.kpo_grudge_reason = "";
 if (Q.government_party == "lewica") {
     Q.kpo_public_credit += 4;
     Q.government_delivery += 2;
@@ -712,19 +943,19 @@ Q.news_headline =
     Q.prime_minister + " owns the return to Europe's first rank";
 !}
 
-The win is banked centrally. **[+ prime_minister +]** takes it to Brussels,
-takes it to the cameras and — more importantly — takes it into the next
-coalition negotiation, where a leader who has just restored Poland's European
-standing is a leader who is owed something.
+The win is banked centrally and without argument. **[+ prime_minister +]** takes
+it to Brussels, takes it to the cameras, and — the part that matters — takes it
+into the next coalition negotiation, where a leader who has just closed Article
+7 is a leader who is owed something by everyone at the table.
 
-Whoever holds the Chancellery now holds that credit. If it is not us, we have
-strengthened the hand that will be used against our own demands in December.
+[? if government_party = "lewica": The Chancellery is ours, so the debt is ours to call in. Our negotiators start the December list that afternoon: the care lines first, the housing programme second, and a note beside each one recording what it was traded for.?]
+[? if government_party != "lewica": The Chancellery is not ours. We have spent our share of a European achievement buying goodwill for **[+ prime_minister +]**, and in December, when that goodwill is converted into a budget, it will be converted into somebody else's priorities. We knew this when we agreed to it; it was still the cheapest way to keep the cabinet standing.?]
 
 - @kpo_result: Bank the European win
 
 @article7_opposition_truth
 title: Welcome the money and list every unresolved domestic institution
-subtitle: Welcome the money without certifying every domestic institution as repaired.
+subtitle: Applaud the transfer and publish, on the same page, the appointments Article 7 closure did not touch.
 view-if: left_in_government = 0 and kpo_article7_reward = 1
 on-arrival: {!
 Q.kpo_public_credit += 3;
@@ -732,19 +963,24 @@ Q.public_trust += 2;
 Q.media_capacity += 2;
 Q.ko_relation -= 2;
 Q.pis_relation -= 1;
+Q.kpo_owner_label =
+    "The government owns the European win; Lewica owns the list of what it did not fix";
 Q.kpo_last_credit_change = 3;
 Q.kpo_last_delivery_change = 0;
 Q.kpo_last_summary = "The opposition accepts the European reward without certifying the government's legal record.";
 Q.news_headline = "The Left welcomes KPO money and keeps the court ledger open";
 !}
 
-We welcome the money without pretending it certifies anything. Article 7 closed
-because the political conflict changed, not because a Polish court was repaired,
-and the list of what remains unrepaired goes out beside our welcome.
+We welcome the money and refuse to pretend it certifies anything. Article 7
+closed because the political situation changed, not because a Polish court was
+put right, and the list of what remains unrepaired goes out on the same page as
+the welcome, in the same typeface, at the same hour.
 
-It is a harder position to hold than either applause or denunciation. Judges'
-associations recognise it immediately; the government finds an opposition it
-cannot accuse of wanting Poland to fail.
+It is a much harder position to hold than either applause or denunciation, and
+it is unusable as a slogan. The judges' associations recognise it within a day
+and say so. **[+ prime_minister +]** finds an opposition that cannot be accused
+of wanting Poland to fail, which is a genuine inconvenience to a government
+whose main line about us is precisely that.
 
 - @kpo_result: Welcome it honestly
 
@@ -768,11 +1004,14 @@ Q.news_headline =
 
 We set out exactly what closure would require: the statutes, the appointments
 and the disciplinary rules, each with the article number that would have to
-change. It is a route map for a government that has no intention of walking it.
+change and the length of the amendment that would change it. Most of them are
+under a page. It is a route map for a government that has no intention whatever
+of walking it.
 
-The point is not to persuade the cabinet. It is to ensure that when the money
-stays frozen, nobody in the country can honestly claim the conditions were
-secret or impossible.
+The point is not to persuade **[+ pis_leader +]**, who is not persuadable on
+this and has built four years of politics on not being. The point is that when
+the money stays frozen, nobody in Poland will be able to claim honestly that the
+conditions were secret, moving, or impossible to meet.
 
 - @kpo_result: Publish the benchmarks
 
@@ -795,21 +1034,27 @@ Q.news_headline =
 !}
 
 We stop arguing about sovereignty and start arguing about arithmetic: the
-billions not drawn down, the projects not started, the counties that watched
-Czech and Slovak neighbours build things. The file is frozen because ministers
-chose a fight, and the bill arrives in places that did not.
+billions not drawn down, the projects that never opened a site office, the
+counties that spent two years watching Czech and Slovak neighbours pour
+concrete. The file is frozen because ministers in Warsaw chose a fight, and the
+bill for it arrives in places that were never asked.
 
-PiS is comfortable defending a constitutional principle and much less
-comfortable defending a road that was never built. Konfederacja notices the
-opening and starts making the same argument without the social half.
+**[+ pis_leader +]** is entirely comfortable defending a constitutional
+principle for six hours and visibly uncomfortable defending a road that was
+never built. The change of subject is the attack.
+
+Konfederacja notices the opening within a fortnight and starts making the same
+argument with the social half removed — the state wasted your money, rather than
+the state owes you a bus. That version travels further than ours and costs them
+nothing to hold.
 
 - @kpo_result: Make it a competence case
 
 
 @kpo_budget_gate_2024
-# prose-audit: Grade A — Ready projects against paper milestones is the right question and the branches answer it honestly: matched money reaching only counties that already had a project office, an unglamorous correction team, and a spreadsheet balanced by moving the problem into next year.
+# prose-audit: Grade A — Ready projects against paper milestones is the right question, the finance minister is a person in the room with a position rather than an abstraction, February's ledger and February's grudge both change the price, and the branches answer honestly: matched money reaching only counties that already had a project office, an unglamorous correction team, and a spreadsheet balanced by moving the problem into next year.
 title: KPO reaches the budget table
-subtitle: Unspent money is not fiscal capacity until projects can use it.
+subtitle: Unspent money is not fiscal capacity until somebody can lawfully spend it before August 2026.
 face-image: img/poland/events/kpo.webp
 new-page: true
 tags: poland_event
@@ -832,6 +1077,45 @@ Q.kpo_uncommitted = Math.max(
     0,
     Q.kpo_funds_available - Q.kpo_funds_spent
 );
+const kpoNames24d = {
+    ko: "KO",
+    p2050: "Poland 2050",
+    psl: "PSL",
+    pis: "PiS",
+    konf: "Konfederacja"
+};
+const kpoSeats24d = function(code) {
+    return Q["ministry_" + code + "_in_cabinet"]
+        ? Math.max(0, Number(Q[code + "_seats"]) || 0)
+        : 0;
+};
+Q.kpo_partner_code = Object.keys(kpoNames24d)
+    .filter(function(code) { return kpoSeats24d(code) > 0; })
+    .sort(function(first, second) {
+        return (second == Q.government_party ? 1e6 : kpoSeats24d(second)) -
+            (first == Q.government_party ? 1e6 : kpoSeats24d(first));
+    })[0] || "";
+Q.kpo_partner_name =
+    kpoNames24d[Q.kpo_partner_code] || "the coalition's other parties";
+Q.kpo_partner_leader =
+    String(Q[Q.kpo_partner_code + "_leader"] || "").trim() ||
+    String(Q.prime_minister || "the senior partner");
+Q.kpo_ledger_public = Q.kpo_ledger_public ? 1 : 0;
+Q.kpo_prior_ledger = Q.kpo_ledger_public;
+Q.kpo_owner = String(Q.kpo_owner || "none");
+Q.kpo_prior_owner = Q.kpo_owner;
+Q.kpo_grudge_active = Q.kpo_grudge_active ? 1 : 0;
+Q.kpo_grudge_code = String(Q.kpo_grudge_code || "");
+Q.kpo_grudge_name = String(Q.kpo_grudge_name || "");
+Q.kpo_grudge_leader = String(Q.kpo_grudge_leader || "");
+Q.kpo_grudge_reason = String(Q.kpo_grudge_reason || "");
+// A finance ministry held by a party we took something from is the one place
+// in the budget round where February is still being charged for.
+Q.kpo_finance_hostile =
+    Q.kpo_grudge_active && Q.kpo_grudge_code &&
+    String(Q.finance_minister_party || "").trim() ==
+        kpoNames24d[Q.kpo_grudge_code]
+        ? 1 : 0;
 const kpoBudgetReadiness24 =
     Q.kpo_milestones * 2 + Q.kpo_delivery -
     Q.kpo_deadline_pressure - Q.kpo_shortcut_debt * 2;
@@ -853,8 +1137,16 @@ Q.news_headline = "KPO co-financing enters the first full coalition budget";
 Review: **[+ kpo_review_2024 +]**. Tranches released but not yet committed:
 **[+ kpo_uncommitted +]**.
 
-The coalition can convert ready projects into budget capacity, repair a weak
-file, or count milestones on paper and move the risk into 2025.
+The budget round runs for eleven days in a room on Świętokrzyska Street, and it
+is not a debate about priorities. It is **[+ finance_minister +]**
+([+ finance_minister_party +]) reading each proposed line and asking one
+question about it: can this money legally leave the account before August 2026,
+and if it cannot, why is it in a budget rather than in a press release.
+
+[? if left_in_government = 1: Twenty months remain. Between the recovery money that has arrived and the projects able to absorb it lies the ordinary state — permits, tenders, an appeal period, a county architect on sick leave — and the budget can either buy its way through that or paper over it for a year.?]
+[? if left_in_government = 1 and kpo_ledger_public = 1: February's ledger is on the table, printed, with the late lines highlighted by somebody in the ministry who wanted them highlighted. It is much harder to promise a tranche to a project whose slipped date is already public.?]
+[? if left_in_government = 1 and kpo_finance_hostile = 1: The ministry is held by [+ kpo_grudge_name +], and [+ kpo_grudge_leader +] has neither forgotten nor forgiven [+ kpo_grudge_reason +]. Nothing is refused. Everything of ours simply requires one more document than everybody else's.?]
+[? if left_in_government = 0: We are not in the room. What we have is the printed budget, the Commission's quarterly absorption figure, and the arithmetic that connects the two — which is more than most of the people voting on it will have read.?]
 
 - @budget_gate_social
 - @budget_gate_correction
@@ -863,39 +1155,52 @@ file, or count milestones on paper and move the risk into 2025.
 
 @budget_gate_social
 title: Match KPO money with the housing, care and local-service budget
-subtitle: Spends two released tranches matching ready social projects into the budget.
+subtitle: [? if kpo_finance_hostile = 1: Spends two released tranches, and every one of them has to be argued past a finance ministry that owes us nothing.?][? if kpo_finance_hostile = 0: Spends two released tranches on the social projects that already have a start date.?]
 view-if: left_in_government = 1
 choose-if: kpo_uncommitted >= 2
 unavailable-subtitle: Too little unlocked money remains for a matched package.
 on-arrival: {!
 Q.kpo_funds_spent += 2;
-Q.budget += 2;
-Q.kpo_delivery += 5;
+Q.budget += Q.kpo_finance_hostile ? 1 : 2;
+Q.kpo_delivery += Q.kpo_finance_hostile ? 4 : 5;
 Q.kpo_public_credit += 4;
 Q.government_delivery += 4;
 Q.fiscal_stress = Math.max(0, Q.fiscal_stress - 2);
 Q.psl_relation += 2;
 Q.razem_dissent -= 3;
+if (Q.kpo_finance_hostile) {
+    Q.government_coalition_dissent += 2;
+} else {
+    Q.kpo_grudge_active = 0;
+    Q.kpo_grudge_reason = "";
+}
+Q.kpo_owner = "lewica";
+Q.kpo_owner_label =
+    "The matched social lines are Lewica's and carry Lewica's start dates";
 Q.kpo_last_credit_change = 4;
-Q.kpo_last_delivery_change = 5;
+Q.kpo_last_delivery_change = Q.kpo_finance_hostile ? 4 : 5;
 Q.kpo_last_summary = "Ready European projects add real room to the governing budget.";
 Q.news_headline = "KPO co-financing protects the coalition's social investment";
 !}
 
-Ready European projects go into the domestic budget as matched lines, which
-means housing, care and local services enter December with something no other
-demand has: a co-financing partner and a start date.
+Ready European projects go into the domestic budget as matched lines. Housing,
+care and local services enter December holding the one thing no other demand in
+the room has: a co-financing partner and a date on which work starts.
 
-The Finance Ministry accepts them because refusing free European money is
-difficult to explain. Our own negotiators note that the projects we could match
-were the ones already prepared — the counties with no project office are still
-waiting for a first one.
+[? if kpo_finance_hostile = 1: **[+ finance_minister +]** does not refuse. The ministry requests a revised cost annex, then a legal opinion on two of the schemes, then the same legal opinion in a different format, and the package clears on the tenth day with one programme trimmed and everybody's temper gone. February is being invoiced, item by item, and it is being invoiced politely.?]
+[? if kpo_finance_hostile = 0: **[+ finance_minister +]** takes them, because refusing free European money in a December budget round is a position no finance minister can hold for eleven days in public. The argument is over in an afternoon.?]
+
+What our own negotiators notice on the way out is which projects were matchable
+at all: the ones that were already prepared, in counties that already had
+somebody employed to prepare them. Hajnówka is in the package. Two dozen places
+poorer than Hajnówka are not, and their reason for not being in it is that
+nobody there had the staff to write the application.
 
 - @kpo_result: Match the money
 
 @budget_gate_correction
 title: Fund a transparent correction team before promising the tranche
-subtitle: Cost: 1 resource. Repair a weak file before promising money that has not moved.
+subtitle: Cost: 1 resource. Nine people, eight weeks, no announcement — and the tranche is not promised to anything until they report.
 view-if: left_in_government = 1
 choose-if: resources >= 1
 unavailable-subtitle: The party lacks the technical and local audit team.
@@ -904,6 +1209,7 @@ Q.resources -= 1;
 Q.kpo_milestones += 3;
 Q.kpo_delivery += 2;
 Q.kpo_deadline_pressure = Math.max(0, Q.kpo_deadline_pressure - 3);
+Q.kpo_shortcut_debt = Math.max(0, Q.kpo_shortcut_debt - 1);
 Q.kpo_public_credit += 1;
 Q.public_trust += 2;
 Q.kpo_last_credit_change = 1;
@@ -912,77 +1218,95 @@ Q.kpo_last_summary = "The correction is not glamorous, but it keeps a weak file 
 Q.news_headline = "The coalition funds a KPO correction before the budget vote";
 !}
 
-A small team of civil servants and outside auditors goes through the weak
-annexes before the tranche is promised to anything. They find what such teams
-find: optimistic timetables, double-counted co-financing and two schemes that
-cannot legally start.
+Nine civil servants and two outside auditors go through the weak annexes before
+a złoty of the tranche is promised to anything. They find exactly what such
+teams always find: timetables written by optimists, co-financing counted twice
+because two ministries each assumed the other had it, and two schemes that
+cannot lawfully start until a regulation nobody has drafted is drafted.
 
-Nobody will ever cheer for this. It is also the difference between a budget
-built on money that will arrive and one built on money that a Commission desk
-officer is about to send back.
+The report goes to **[+ finance_minister +]** rather than to the press, which
+is the only reason the ministries co-operated with it at all.
+
+Nobody will ever cheer for this and no party conference will ever hear about it.
+It is also the difference between a budget resting on money that arrives and a
+budget resting on money that a desk officer in Brussels is, at this moment,
+preparing to send back with questions.
 
 - @kpo_result: Fund the correction team
 
 @budget_gate_paper
 title: Count legal adoption as delivery and protect the ordinary budget
-subtitle: Improve the spreadsheet now and pass implementation risk into next year.
+subtitle: [? if kpo_ledger_public = 1: The spreadsheet balances tonight, against dates we published under our own names in February.?][? if kpo_ledger_public = 0: The spreadsheet balances tonight and the implementation risk moves into 2025.?]
 view-if: left_in_government = 1
 on-arrival: {!
 Q.kpo_milestones += 4;
 Q.kpo_delivery -= 2;
-Q.kpo_shortcut_debt += 4;
+Q.kpo_shortcut_debt += Q.kpo_ledger_public ? 5 : 4;
 Q.kpo_deadline_pressure += 3;
-Q.kpo_public_credit -= 2;
+Q.kpo_public_credit -= Q.kpo_ledger_public ? 4 : 2;
+Q.public_trust -= Q.kpo_ledger_public ? 3 : 0;
 Q.ko_relation += 3;
 Q.razem_dissent += 6;
 Q.labor_credibility -= 3;
-Q.kpo_last_credit_change = -2;
+Q.kpo_last_credit_change = Q.kpo_ledger_public ? -4 : -2;
 Q.kpo_last_delivery_change = -2;
 Q.kpo_last_summary = "The spreadsheet improves while implementation and later-payment risk worsen.";
 Q.news_headline = "The budget counts KPO statutes before institutions can deliver them";
 !}
 
-Legal adoption is entered as delivery, the spreadsheet balances and the
-ordinary budget survives December without a public argument. Every one of those
-statements is technically true.
+Legal adoption is entered in the delivery column. The spreadsheet balances, the
+ordinary budget survives December without a public argument, and every one of
+those three statements is, in the narrowest sense, true. The statutes were
+adopted. The column is for adopted statutes.
 
-The implementation the adoption was supposed to trigger has not begun. We have
-moved the problem into next year, where it will be larger, and where the people
-now defending the figures may not be the people who have to answer for them.
+The implementation those statutes were adopted in order to trigger has not
+begun anywhere. We have moved the problem twelve months down the road, where it
+will be bigger, and where the people currently defending these figures will
+mostly have other jobs.
+
+[? if kpo_ledger_public = 1: February's ledger makes this considerably worse than it needed to be. The dates are published, in our own columns, under our own names; the gap between what the ledger says is due and what the budget now counts as delivered is a table anybody can build in an afternoon, and by Thursday three journalists have.?]
+[? if kpo_ledger_public = 0: With no published ledger there is no document to contradict, and the manoeuvre passes almost unnoticed. That is the argument for having never published one, and it is being made, this week, by people who voted against publishing it.?]
 
 - @kpo_result: Count the adoption
 
 @budget_gate_opposition
 title: Separate KPO grants from the government's unfunded promises
-subtitle: Expose double counting without pretending the opposition controls state spending.
+subtitle: One table, two documents, and the number of promises being counted twice.
 view-if: left_in_government = 0
 on-arrival: {!
-Q.kpo_public_credit += 2;
+Q.kpo_public_credit += Q.kpo_opposition_file ? 3 : 2;
 Q.media_capacity += 2;
 Q.public_trust += 2;
 Q.ko_relation -= 3;
-Q.kpo_last_credit_change = 2;
+Q.kpo_scrutiny += 1;
+Q.kpo_last_credit_change = Q.kpo_opposition_file ? 3 : 2;
 Q.kpo_last_delivery_change = 0;
 Q.kpo_last_summary = "The shadow budget exposes double counting without taking responsibility for state spending.";
 Q.news_headline = "The Left marks every KPO grant in the opposition budget ledger";
 !}
 
-We take the government's budget apart on one point: which promises are funded
-from European grants and which are being counted twice. It requires no cabinet
-authority, only the patience to reconcile two documents the government prefers
-to present separately.
+We take the government's budget apart on exactly one point: which promises are
+funded from European grants, and which of them appear in both the grant column
+and the domestic column. It requires no cabinet authority whatsoever. It
+requires the patience to reconcile two documents that the government has very
+deliberately published a fortnight apart and in different formats.
 
-Ministers dislike it because the answer is embarrassing and difficult to
-dispute. It also commits us to nothing — we have exposed the arithmetic without
-having to say which of the double-counted promises we would drop.
+[? if kpo_opposition_file = 1: Our monitoring team has been holding one half of that reconciliation since February, so the work takes four days rather than four weeks and lands while the budget is still being voted rather than after.?]
+[? if kpo_opposition_file = 0: With no standing team, three people do it over two weekends and it lands eight days after the vote — accurate, unanswerable, and a news cycle too late to change a single line.?]
+
+**[+ finance_minister +]** dislikes it because the answer is embarrassing and
+almost impossible to dispute in public. What it costs us is that it commits us
+to nothing: we have exposed the arithmetic without ever having to say which of
+the double-counted promises a Lewica budget would drop, and that is the first
+question we will be asked if we are ever in the room.
 
 - @kpo_result: Publish the separation
 
 
 @kpo_midterm_review_2025
-# prose-audit: Grade A — The review turns on whether money follows readiness or ownership, and every route now has a loser on the page: ministries raided for reallocation, a deliberately boring protocol with close dates, a good slogan attached to projects nobody re-costed.
+# prose-audit: Grade A — The review arrives four weeks after the HoReCa beneficiary map and reads it, the question is whether money follows readiness or ownership, and every route has a named loser on the page: ministries raided for reallocation, a deliberately boring protocol with close dates, a good slogan attached to projects nobody re-costed.
 title: The KPO midterm review
-subtitle: Delivery competes with coalition self-preservation.
+subtitle: Ten months to the deadline, four weeks after the yacht photographs.
 face-image: img/poland/events/kpo.webp
 new-page: true
 tags: poland_event
@@ -1004,10 +1328,56 @@ Q.kpo_shortcut_debt = kpoMidNum(Q.kpo_shortcut_debt, 0);
 Q.kpo_funds_delayed = kpoMidNum(Q.kpo_funds_delayed, 0);
 const kpoMidRestraint = kpoMidNum(Q.government_procedural_restraint, 45);
 const kpoMidDualism = kpoMidNum(Q.legal_dualism, 50);
+const kpoNames25 = {
+    ko: "KO",
+    p2050: "Poland 2050",
+    psl: "PSL",
+    pis: "PiS",
+    konf: "Konfederacja"
+};
+const kpoSeats25 = function(code) {
+    return Q["ministry_" + code + "_in_cabinet"]
+        ? Math.max(0, Number(Q[code + "_seats"]) || 0)
+        : 0;
+};
+Q.kpo_partner_code = Object.keys(kpoNames25)
+    .filter(function(code) { return kpoSeats25(code) > 0; })
+    .sort(function(first, second) {
+        return (second == Q.government_party ? 1e6 : kpoSeats25(second)) -
+            (first == Q.government_party ? 1e6 : kpoSeats25(first));
+    })[0] || "";
+Q.kpo_partner_name =
+    kpoNames25[Q.kpo_partner_code] || "the coalition's other parties";
+Q.kpo_partner_leader =
+    String(Q[Q.kpo_partner_code + "_leader"] || "").trim() ||
+    String(Q.prime_minister || "the senior partner");
+Q.kpo_ledger_public = Q.kpo_ledger_public ? 1 : 0;
+Q.kpo_prior_ledger = Q.kpo_ledger_public;
+Q.kpo_opposition_file = Q.kpo_opposition_file ? 1 : 0;
+Q.kpo_owner = String(Q.kpo_owner || "none");
+Q.kpo_prior_owner = Q.kpo_owner;
+Q.kpo_grudge_active = Q.kpo_grudge_active ? 1 : 0;
+Q.kpo_grudge_code = String(Q.kpo_grudge_code || "");
+Q.kpo_grudge_name = String(Q.kpo_grudge_name || "");
+Q.kpo_grudge_leader = String(Q.kpo_grudge_leader || "");
+Q.kpo_grudge_reason = String(Q.kpo_grudge_reason || "");
+// September 2025: the HoReCa beneficiary map. The review lands four weeks
+// later and the auditors have read the same photographs everybody else has.
+Q.kpo_horeca_seen = Q.horeca_response_2025 ? 1 : 0;
+Q.kpo_horeca_line = Q.horeca_response_2025
+    ? String(Q.horeca_response_2025)
+    : "No recorded answer to the HoReCa beneficiary map";
+// A September answer that produced a control mechanism is worth something to
+// an October assessor; one that produced only a campaign is not.
+Q.kpo_horeca_control =
+    Q.horeca_response_2025 == "Risk-based payment freeze" ||
+    Q.horeca_response_2025 == "Beneficiary and evaluator register"
+        ? 1 : 0;
 const kpoMidScore =
     Q.kpo_milestones * 2 + Q.kpo_delivery * 2 +
     kpoMidRestraint * 0.15 - kpoMidDualism * 0.12 -
-    Q.kpo_shortcut_debt * 2 - Q.kpo_deadline_pressure;
+    Q.kpo_shortcut_debt * 2 - Q.kpo_deadline_pressure +
+    (Q.kpo_horeca_control ? 4 : 0);
 Q.kpo_last_credit_change = 0;
 Q.kpo_last_delivery_change = 0;
 Q.kpo_last_funds_change = 0;
@@ -1045,10 +1415,20 @@ Q.kpo_uncommitted = Math.max(
 Status: **[+ kpo_midterm_status +]**. Uncommitted blocks:
 **[+ kpo_uncommitted +]**.
 
-[? if kpo_midterm_status = "Additional payment cleared": The government can
-show momentum, but incomplete projects still need workers and local capacity.?]
-[? if not kpo_midterm_status = "Additional payment cleared": The review has
-converted missed work into immediate fiscal and coalition pressure.?]
+Ten months remain. Not ten months to start things — ten months to finish them,
+invoice them and have them certified, which for anything involving concrete
+means the decisions that matter are being taken now, in this room, by people who
+will not be the ones holding a trowel.
+
+[? if kpo_horeca_seen = 1: The assessors arrive four weeks after the beneficiary map put floating saunas on every front page. Nobody mentions the photographs. Everybody has seen them, and the questions about control systems are noticeably longer than last year's.?]
+[? if kpo_horeca_seen = 1: September's answer on the record: **[+ kpo_horeca_line +]**.?]
+[? if kpo_horeca_control = 1: That answer built a mechanism rather than a headline, and the mechanism is what the assessors ask to see. It is produced. It works. Four weeks of political misery buy one good afternoon.?]
+[? if kpo_horeca_seen = 1 and kpo_horeca_control = 0: What the assessors ask to see is the control system. What exists is a position. The meeting takes an hour longer than scheduled and ends with a request in writing.?]
+
+[? if kpo_midterm_status = "Additional payment cleared": The payment clears. **[+ prime_minister +]** has momentum and a number to say out loud, and neither of those things employs a site inspector in a county that has none.?]
+[? if not kpo_midterm_status = "Additional payment cleared": The review turns missed work into fiscal pressure inside a fortnight. **[+ finance_minister +]** wants to know, in writing, which programmes will be cut if the money does not come, and there is no version of that letter that stays confidential.?]
+
+[? if left_in_government = 1 and kpo_grudge_active: **[+ kpo_grudge_leader +]** sits through it saying almost nothing. [+ kpo_grudge_name +] has been waiting since [+ kpo_grudge_reason +] for a meeting where our projects are the ones under review.?]
 
 - @midterm_ready_projects
 - @midterm_correction
@@ -1058,65 +1438,104 @@ converted missed work into immediate fiscal and coalition pressure.?]
 
 @midterm_ready_projects
 title: Move money to ready municipal and social projects
-subtitle: Moves two released tranches to projects that can finish, over ministerial objections.
+subtitle: [? if kpo_ledger_public = 1: Two released tranches move to whatever can finish, and February's ledger says which schemes cannot.?][? if kpo_ledger_public = 0: Two released tranches move to projects that can finish, and every losing minister disputes that theirs cannot.?]
 view-if: left_in_government = 1
 choose-if: kpo_uncommitted >= 2
 unavailable-subtitle: No released tranche is large enough to move.
 on-arrival: {!
+// With a published ledger the reallocation is arithmetic; without one it is an
+// accusation, and every stripped ministry gets to call it that.
+const reallocationEvidenced = Q.kpo_ledger_public ? 1 : 0;
 Q.kpo_funds_spent += 2;
-Q.kpo_delivery += 5;
+Q.kpo_delivery += reallocationEvidenced ? 6 : 5;
 Q.kpo_public_credit += 4;
 Q.local_network += 3;
 Q.government_delivery += 4;
 Q.psl_relation += 2;
+Q.government_coalition_dissent += reallocationEvidenced ? 1 : 4;
+if (!reallocationEvidenced) Q.kpo_deadline_pressure += 1;
+Q.kpo_owner = "lewica";
+Q.kpo_owner_label =
+    "Lewica moved the money and will be named for every project it moved it from";
+Q.kpo_grudge_active = 1;
+Q.kpo_grudge_code = Q.kpo_partner_code;
+Q.kpo_grudge_name = Q.kpo_partner_name;
+Q.kpo_grudge_leader = Q.kpo_partner_leader;
+Q.kpo_grudge_reason = "the October 2025 reallocation";
 Q.kpo_last_credit_change = 4;
-Q.kpo_last_delivery_change = 5;
+Q.kpo_last_delivery_change = reallocationEvidenced ? 6 : 5;
 Q.kpo_last_summary = "Reallocation trades ministerial ownership for projects that can finish.";
 Q.news_headline = "KPO money moves to projects that can still be completed";
 !}
 
-Money is taken from schemes that cannot finish and given to municipal and
-social projects that can. Every reallocation has a minister on the losing end,
-and several of them are ours.
+Money is taken out of schemes that cannot finish by August and put into
+municipal and social projects that can. Every single reallocation has a minister
+on the losing end of it, and two of the losing ministers are ours, and one of
+those two does not find out until the list is circulated.
+
+[? if kpo_ledger_public = 1: The ledger does the arguing. Each stripped scheme has a published date it has already missed, printed in February over the signature of the ministry that missed it, and there is no version of the objection that does not begin by explaining that date. The meeting takes ninety minutes.?]
+[? if kpo_ledger_public = 0: With nothing published, every stripped scheme is a matter of opinion, and the opinion of the ministry losing the money is that its timetable was always achievable. **[+ kpo_partner_leader +]** takes it to the coalition council as a question of trust rather than of dates, which is exactly the argument we cannot win with a spreadsheet.?]
 
 The counties that gain are the ones with a shovel-ready file and a project
-officer who answers the telephone. The review will record more completions.
-Two ministries will record that Lewica raided their budgets to get them.
+officer who answers the telephone in October. The review will record more
+completions. Two ministries will record, permanently and to anybody who asks,
+that Lewica raided their budgets in order to get them.
 
 - @kpo_result: Move the money
 
 @midterm_correction
 title: Sign a coalition correction protocol with measurable deadlines
-subtitle: Trade an easy headline for a dated coalition repair plan.
+subtitle: [? if kpo_ledger_public = 1: February's ledger becomes the protocol's schedule; the dates are already public, so only the repairs are new.?][? if kpo_ledger_public = 0: Trade the easy headline for a dated repair plan the coalition has to negotiate from nothing.?]
 view-if: left_in_government = 1
 on-arrival: {!
-Q.kpo_milestones += 3;
+// A coalition that has already published dates is negotiating repairs; one
+// that has not spends the same fortnight negotiating what the dates were.
+const protocolHasLedger = Q.kpo_ledger_public ? 1 : 0;
+Q.kpo_milestones += protocolHasLedger ? 4 : 3;
 Q.kpo_delivery += 3;
-Q.kpo_deadline_pressure = Math.max(0, Q.kpo_deadline_pressure - 4);
-Q.kpo_shortcut_debt = Math.max(0, Q.kpo_shortcut_debt - 2);
+Q.kpo_deadline_pressure = Math.max(
+    0,
+    Q.kpo_deadline_pressure - (protocolHasLedger ? 6 : 4)
+);
+Q.kpo_shortcut_debt = Math.max(
+    0,
+    Q.kpo_shortcut_debt - (protocolHasLedger ? 3 : 2)
+);
 Q.kpo_public_credit += 1;
 Q.ko_relation += 1;
 Q.psl_relation += 1;
 Q.government_coalition_dissent -= 2;
+Q.kpo_grudge_active = 0;
+Q.kpo_grudge_reason = "";
+Q.kpo_ledger_public = 1;
+Q.kpo_owner = "shared";
+Q.kpo_owner_label =
+    "A dated coalition protocol binds every partner to a repair, ours included";
 Q.kpo_last_credit_change = 1;
 Q.kpo_last_delivery_change = 3;
 Q.kpo_last_summary = "A correction protocol steadies the file without producing an instant ribbon-cutting.";
 Q.news_headline = "The coalition signs a dated KPO correction protocol";
 !}
 
-The coalition signs a repair plan with dates against each item rather than
-announcing a rescue. It is deliberately boring, and the dates are deliberately
-close enough that missing one will be noticed.
+The coalition signs a repair plan with a date against each item instead of
+announcing a rescue. It is deliberately boring — no launch, no backdrop, a
+two-page annex — and the dates are deliberately close enough that missing one
+will be noticed by somebody outside the building.
 
-There is no ribbon to cut this month. What there is, for the first time in the
-programme, is a document against which every partner can be held in public —
-including us.
+[? if kpo_prior_ledger = 1: February's ledger supplies the schedule, so the fortnight is spent arguing about repairs rather than about what was ever promised. **[+ kpo_partner_leader +]** signs on the fourth day; the arithmetic was agreed eighteen months ago and nobody can now claim otherwise.?]
+[? if kpo_prior_ledger = 0: Half the fortnight goes on establishing what the original dates even were, because no agreed document has ever said so. Three ministries produce three timetables. The protocol that emerges is real, and it is three weeks late for what it has to do.?]
+
+There is no ribbon to cut this month, and **[+ razem_leader +]** points out that
+we have signed away the right to blame anybody else for the next ten months.
+That is accurate. What we have in exchange is the first document in the
+programme's history against which every partner can be held in public,
+ourselves included, before the deadline rather than after it.
 
 - @kpo_result: Sign the protocol
 
 @midterm_brand
 title: Centralise the rescue and promise that every project will finish
-subtitle: Give [+ prime_minister +]'s Chancellery one rescue slogan and inherit its unfinished work.
+subtitle: One slogan, one Chancellery, one promise made about projects nobody has re-costed since 2023.
 view-if: left_in_government = 1
 on-arrival: {!
 Q.kpo_milestones += 2;
@@ -1124,6 +1543,12 @@ Q.kpo_delivery += 1;
 Q.kpo_shortcut_debt += 3;
 Q.kpo_deadline_pressure += 2;
 Q.public_trust -= 2;
+Q.kpo_owner = Q.government_party == "lewica" ? "lewica" : "chancellery";
+Q.kpo_owner_label = Q.government_party == "lewica"
+    ? "Lewica's Chancellery promised every project would finish"
+    : Q.prime_minister + " promised every project would finish";
+Q.kpo_grudge_active = 0;
+Q.kpo_grudge_reason = "";
 if (Q.government_party == "lewica") {
     Q.kpo_public_credit += 2;
     Q.party_unity += 1;
@@ -1151,12 +1576,20 @@ Q.kpo_last_delivery_change = 1;
 Q.news_headline = Q.prime_minister + " takes control of the KPO rescue";
 !}
 
-One slogan, one Chancellery, one promise that every project will be finished.
-It is a good line and it travels well, which is the strongest argument for it.
+One slogan, one Chancellery, one promise: every project in the plan will be
+finished. It is a good line, it travels, and a fortnight of coalition
+recrimination stops in the afternoon it is delivered. Those are not small
+things, and they are the strongest argument anybody makes for it.
 
-It is also a promise made about projects nobody has re-costed. **[+
-prime_minister +]** now owns each of them individually, and so does every party
-that stood behind the podium while the promise was made.
+It is also a promise about projects nobody has re-costed since 2023. The
+department knows how many are behind. Nobody in the room asks for the figure,
+because the promise has already been drafted and a figure would make it
+undeliverable.
+
+**[+ prime_minister +]** now owns each of those projects individually, by name,
+and so does every party that stood behind the podium while the sentence was
+said. In July there will be a list of the ones that did not finish, and this is
+the week that decides whose list it is.
 
 - @kpo_result: Centralise the rescue
 
@@ -1177,48 +1610,59 @@ Q.kpo_last_summary = "A conditional passage vote wins practical credit; it does 
 Q.news_headline = "The Left supplies votes for a narrow KPO correction";
 !}
 
-We vote for the narrow corrective act because labour projects and municipal
-works are in it, and say plainly that we are voting for those and not for the
-government's stewardship.
+We vote for the narrow corrective act because the labour projects and the
+municipal works are inside it, and we say from the rostrum, before the vote and
+not after, that we are voting for those and not for **[+ prime_minister +]**'s
+stewardship of anything.
 
-The act passes. Implementation stays entirely with a cabinet we do not sit in,
-which means we have taken responsibility for the vote and none for the result —
-a position that is honest, useful, and impossible to put on a poster.
+The act passes with our thirty-odd votes inside it. **[+ kpo_partner_leader +]**
+thanks the chamber in general terms, and not one report the following morning
+records where the majority actually came from.
+
+Implementation stays entirely with a cabinet we do not sit in. We have taken
+responsibility for the vote and none whatever for the result — which is honest,
+which is useful to about four hundred thousand people, and which cannot be put
+on a poster in any language.
 
 - @kpo_result: Supply the votes
 
 @midterm_opposition_audit
 title: Refuse a rescue until contracts and missed milestones are published
-subtitle: Demand the contracts first and accept that the payment clock keeps running.
+subtitle: A clean demand, made at the point in the calendar where refusing costs somebody else a building.
 view-if: left_in_government = 0
 on-arrival: {!
-Q.kpo_public_credit += 4;
+Q.kpo_public_credit += Q.kpo_opposition_file ? 5 : 4;
 Q.media_capacity += 3;
 Q.ko_relation -= 5;
 Q.psl_relation -= 2;
 Q.kpo_deadline_pressure += 2;
 Q.public_trust += 1;
-Q.kpo_last_credit_change = 4;
+Q.kpo_last_credit_change = Q.kpo_opposition_file ? 5 : 4;
 Q.kpo_last_delivery_change = 0;
 Q.kpo_last_summary = "The audit line is politically clear and leaves the payment clock running.";
 Q.news_headline = "The Left demands the missing KPO contracts before a rescue vote";
 !}
 
-No rescue votes until the contracts and the missed milestones are published.
-The demand is clean, defensible and easy to explain at any doorstep in the
-country.
+No rescue votes until the contracts and the missed milestones are published in
+full. The demand is clean, entirely defensible, and explicable at any doorstep
+in the country in one sentence — which is more than can be said for anything
+else in this programme.
 
-The payment clock does not pause while we make it. Mayors with half-built
-projects understand the principle and would still rather have the money, and
-some of them say so on regional television.
+[? if kpo_opposition_file = 1: It is also credible, because our own monitoring team has been publishing a version of that list since 2024 and the government's silence is measurable against it.?]
+[? if kpo_opposition_file = 0: The weakness is that we are demanding a document we have never attempted to assemble ourselves, and **[+ prime_minister +]**'s press office says so within the hour.?]
+
+The payment clock does not pause while we hold the line. Mayors with half-built
+projects understand the principle perfectly, agree with it, and would still
+rather have the money, and two of them say exactly that on regional television
+with a foundation slab behind them.
 
 - @kpo_result: Demand the contracts
 
 
 @kpo_budget_gate_2025
-# prose-audit: Grade B — Administrative capacity is correctly identified as the binding constraint, and all four routes are now written through to their cost. It remains the most technical event in the chapter, and the premise still explains the bridge rather than showing anyone standing on it.
+# prose-audit: Grade A — The binding constraint is now a person: the county with an approved project, no building inspector and eight months left. All four routes are written through to their cost, and the premise stands somebody on the bridge instead of describing it.
 title: The recovery-fund budget bridge
-subtitle: The next budget can buy completion or disguise delay.
+subtitle: Eight months left, and the constraint is not money — it is the people who sign things.
 face-image: img/poland/events/kpo.webp
 new-page: true
 tags: poland_event
@@ -1259,6 +1703,38 @@ Q.kpo_uncommitted = Math.max(
     0,
     Q.kpo_funds_available - Q.kpo_funds_spent
 );
+const kpoNames25b = {
+    ko: "KO",
+    p2050: "Poland 2050",
+    psl: "PSL",
+    pis: "PiS",
+    konf: "Konfederacja"
+};
+const kpoSeats25b = function(code) {
+    return Q["ministry_" + code + "_in_cabinet"]
+        ? Math.max(0, Number(Q[code + "_seats"]) || 0)
+        : 0;
+};
+Q.kpo_partner_code = Object.keys(kpoNames25b)
+    .filter(function(code) { return kpoSeats25b(code) > 0; })
+    .sort(function(first, second) {
+        return (second == Q.government_party ? 1e6 : kpoSeats25b(second)) -
+            (first == Q.government_party ? 1e6 : kpoSeats25b(first));
+    })[0] || "";
+Q.kpo_partner_name =
+    kpoNames25b[Q.kpo_partner_code] || "the coalition's other parties";
+Q.kpo_partner_leader =
+    String(Q[Q.kpo_partner_code + "_leader"] || "").trim() ||
+    String(Q.prime_minister || "the senior partner");
+Q.kpo_ledger_public = Q.kpo_ledger_public ? 1 : 0;
+Q.kpo_prior_ledger = Q.kpo_ledger_public;
+Q.kpo_opposition_file = Q.kpo_opposition_file ? 1 : 0;
+Q.kpo_owner = String(Q.kpo_owner || "none");
+Q.kpo_prior_owner = Q.kpo_owner;
+Q.kpo_grudge_active = Q.kpo_grudge_active ? 1 : 0;
+Q.kpo_grudge_name = String(Q.kpo_grudge_name || "");
+Q.kpo_grudge_leader = String(Q.kpo_grudge_leader || "");
+Q.kpo_grudge_reason = String(Q.kpo_grudge_reason || "");
 Q.kpo_last_credit_change = 0;
 Q.kpo_last_delivery_change = 0;
 Q.kpo_last_funds_change = 0;
@@ -1271,6 +1747,21 @@ Q.news_headline = "KPO completion becomes a line in the 2026 budget";
 Available but uncommitted: **[+ kpo_uncommitted +]** blocks. Deadline pressure:
 **[+ kpo_deadline_pressure +]**.
 
+The 2026 budget is drafted against a wall. Eight months from now the programme
+stops, and anything not finished, invoiced and certified by then is money
+returned to Brussels with a covering letter.
+
+The constraint at this point is not the money and everybody in the room knows
+it. There are counties holding an approved grant, a signed contract and a
+building site that cannot proceed because the one person entitled to sign the
+next document works three days a week and is currently signing something else.
+That is what stands between a grant and a clinic in December 2025: a post, a
+salary, a person.
+
+[? if left_in_government = 1: **[+ finance_minister +]** would rather spend the same money on the deficit line, and the argument for that is not stupid — a reserve is certain, and an inspector hired in January is a bet that the thing being inspected gets built by August.?]
+[? if left_in_government = 1 and kpo_grudge_active: [+ kpo_grudge_name +] arrives at the table still holding [+ kpo_grudge_reason +], and prices it into every request we make this month.?]
+[? if left_in_government = 0: From outside the cabinet none of this is ours to fund. What we can do is decide what our cooperation on the budget costs, and absorption is the one number the government cannot argue with, because the Commission publishes it quarterly.?]
+
 - @bridge_enforcement
 - @bridge_reserve
 - @bridge_defer
@@ -1278,7 +1769,7 @@ Available but uncommitted: **[+ kpo_uncommitted +]** blocks. Deadline pressure:
 
 @bridge_enforcement
 title: Fund inspectors, permitting teams and local co-financing
-subtitle: Spends two released tranches on the staff who turn approvals into contracts.
+subtitle: Spends two released tranches on salaries. Nothing opens, nothing is announced, and the sites move.
 view-if: left_in_government = 1
 choose-if: kpo_uncommitted >= 2
 unavailable-subtitle: The unlocked reserve is already committed.
@@ -1290,25 +1781,34 @@ Q.kpo_deadline_pressure = Math.max(0, Q.kpo_deadline_pressure - 3);
 Q.kpo_public_credit += 3;
 Q.public_sector_support += 3;
 Q.local_network += 2;
+Q.kpo_owner_label =
+    "Lewica bought eight months of administrative capacity and no photographs";
 Q.kpo_last_credit_change = 3;
 Q.kpo_last_delivery_change = 5;
 Q.kpo_last_summary = "Administrative capacity turns European money into usable budget room.";
 Q.news_headline = "The budget funds the people required to finish KPO projects";
 !}
 
-The money goes on inspectors, permitting officers and the local co-financing
-desks that turn an approved project into a signed contract. It is the least
-photogenic possible use of a European recovery fund.
+The money goes on building inspectors, permitting officers and the local
+co-financing desks that turn an approved project into a signed contract with a
+contractor standing next to it. It is the least photogenic use of a European
+recovery fund that anybody in this coalition has yet proposed.
 
-It is also the binding constraint. Half the delay in this programme has been
-municipalities without a person qualified to complete the paperwork, and that
-is a problem money can actually solve.
+It is also the binding constraint, and it is a solvable one. A large part of the
+delay in this programme has been municipalities with a grant and no employee
+qualified to complete the next form — which is, unusually for this file, a
+problem that money genuinely fixes.
+
+**[+ finance_minister +]** signs it off on the understanding that these are
+temporary posts. They will not be temporary. The counties that get a permitting
+officer in January will fight to keep one in 2027, and they will be right to,
+and the bill for that will land on somebody who is not in this room tonight.
 
 - @kpo_result: Fund the staff
 
 @bridge_reserve
 title: Keep a smaller corrective reserve behind the budget
-subtitle: Protect a smaller fiscal reserve and leave much of the completion risk unresolved.
+subtitle: The safe option. It insures the budget against the failure instead of preventing it.
 view-if: left_in_government = 1
 on-arrival: {!
 Q.budget += 1;
@@ -1317,25 +1817,33 @@ Q.kpo_public_credit += 1;
 Q.fiscal_stress = Math.max(0, Q.fiscal_stress - 1);
 Q.ko_relation += 2;
 Q.psl_relation += 1;
+Q.kpo_grudge_active = 0;
+Q.kpo_grudge_reason = "";
 Q.kpo_last_credit_change = 1;
 Q.kpo_last_delivery_change = 1;
 Q.kpo_last_summary = "The reserve protects fiscal room, but cannot finish many projects by itself.";
 Q.news_headline = "The coalition keeps a KPO correction reserve";
 !}
 
-A smaller reserve is held back to protect the budget, which it will do. The
-completion risk it does not cover is simply left where it is.
+A smaller reserve is held back to protect the budget, and it will protect the
+budget. **[+ finance_minister +]** is satisfied and stops asking for the letter
+about which programmes would be cut. The completion risk the reserve does not
+cover is left exactly where it was found.
 
-We have chosen fiscal safety over finishing the work, and done so knowingly.
-When projects fail to complete next year, the reserve will be what prevented
-that failure from also becoming a budget crisis. It will not have prevented the
-failure.
+We have chosen fiscal safety over finishing the work, knowingly, with the
+figures in front of us. Nobody in the room pretends otherwise, which is at least
+an improvement on last year.
+
+When projects fail to complete next summer — and some will — this reserve will
+be the reason that failure does not also become a budget crisis. It will not
+have prevented a single one of the failures. It was never going to. It was
+chosen because it is certain and the alternative was a bet.
 
 - @kpo_result: Keep the reserve
 
 @bridge_defer
 title: Protect the headline budget and push implementation into 2026
-subtitle: Preserve the headline budget and send the unfinished work into the final year.
+subtitle: The last year available. Whatever moves into it cannot be moved again.
 view-if: left_in_government = 1
 on-arrival: {!
 Q.kpo_deadline_pressure += 6;
@@ -1351,18 +1859,25 @@ Q.kpo_last_summary = "The ordinary budget looks safer and the recovery deadline 
 Q.news_headline = "The coalition defers KPO implementation into its final year";
 !}
 
-The ordinary budget comes through December looking sound. The unfinished work
-goes into 2026, which is the last year available and therefore the year in
-which nothing can be deferred again.
+The ordinary budget comes through December looking sound, which was the
+objective and which is worth something in a year with an election in it. The
+unfinished work goes into 2026 — the last year available, and therefore the
+year in which nothing can be deferred a second time.
 
-Everyone in the room understands the trade. The people who will have to
-administer it are mostly not in the room.
+**[+ kpo_partner_leader +]** is relieved and says so privately.
+**[+ razem_leader +]** is not and says so on the record, at length, using the
+word that the whole coalition has spent two years avoiding, which is *returned*.
+
+Everyone at the table understands the trade precisely. The people who will
+actually have to administer it — a county architect in Podlaskie, a
+project officer on a nine-month contract — are not at the table and will read
+about it in January.
 
 - @kpo_result: Protect the headline
 
 @bridge_opposition
 title: Make KPO absorption a condition for any budget favour
-subtitle: Make absorption the price of our cooperation without claiming cabinet authority.
+subtitle: One number, published quarterly by the Commission, that the government cannot dispute or delay.
 view-if: left_in_government = 0
 on-arrival: {!
 Q.kpo_public_credit += 3;
@@ -1377,20 +1892,25 @@ Q.kpo_last_summary = "The opposition converts a technical deadline into a visibl
 Q.news_headline = "The Left ties every budget favour to KPO absorption";
 !}
 
-We make absorption the price: no cooperation on the budget until the
-government can show what proportion of the fund has actually been drawn down
-and spent. It converts a technical measure into a political test.
+We name the price and it is a number: no cooperation on any part of this budget
+until the government states what proportion of the fund has actually been drawn
+down and spent. Not committed. Not allocated. Spent.
 
-The government can refuse. It cannot refuse quietly, because the figure is
-published quarterly by the Commission and anyone can look it up.
+The choice of measure is the whole tactic. **[+ finance_minister +]** can refuse
+us, and the refusal cannot be made quietly, because the absorption figure is
+published quarterly by the Commission in a table anybody with an internet
+connection can open — including every mayor whose project is in it.
+
+What we have not done is say what we would do with the money instead, and by
+February somebody will ask.
 
 - @kpo_result: Set the condition
 
 
 @kpo_pip_milestone_2026
-# prose-audit: Grade A — The strongest chain here: vote, signature and enforcement stay distinct, and the aftermaths carry that distinction into labour courts taking the load, a specialist team with an expiry date, and a milestone that is legible in Brussels and hollow at the workplace.
+# prose-audit: Grade A — Vote, signature and enforcement stay distinct, the division list carries two years of coalition credit fights into the count, and the aftermaths follow the distinction into labour courts taking the load, a specialist team with an expiry date, and a milestone legible in Brussels and hollow at the workplace.
 title: The PIP milestone reaches its legal test
-subtitle: Passage, presidential action and enforcement are three different hurdles.
+subtitle: A bill about junk contracts, decided by a majority we spent two years spending.
 face-image: img/poland/events/kpo.webp
 new-page: true
 tags: poland_event
@@ -1420,6 +1940,38 @@ Q.kpo_shortcut_debt =
     Number.isFinite(Number(Q.kpo_shortcut_debt))
         ? Number(Q.kpo_shortcut_debt)
         : 0;
+const kpoNames26 = {
+    ko: "KO",
+    p2050: "Poland 2050",
+    psl: "PSL",
+    pis: "PiS",
+    konf: "Konfederacja"
+};
+const kpoSeats26 = function(code) {
+    return Q["ministry_" + code + "_in_cabinet"]
+        ? Math.max(0, Number(Q[code + "_seats"]) || 0)
+        : 0;
+};
+Q.kpo_partner_code = Object.keys(kpoNames26)
+    .filter(function(code) { return kpoSeats26(code) > 0; })
+    .sort(function(first, second) {
+        return (second == Q.government_party ? 1e6 : kpoSeats26(second)) -
+            (first == Q.government_party ? 1e6 : kpoSeats26(first));
+    })[0] || "";
+Q.kpo_partner_name =
+    kpoNames26[Q.kpo_partner_code] || "the coalition's other parties";
+Q.kpo_partner_leader =
+    String(Q[Q.kpo_partner_code + "_leader"] || "").trim() ||
+    String(Q.prime_minister || "the senior partner");
+Q.kpo_ledger_public = Q.kpo_ledger_public ? 1 : 0;
+Q.kpo_prior_ledger = Q.kpo_ledger_public;
+Q.kpo_opposition_file = Q.kpo_opposition_file ? 1 : 0;
+Q.kpo_owner = String(Q.kpo_owner || "none");
+Q.kpo_prior_owner = Q.kpo_owner;
+Q.kpo_grudge_active = Q.kpo_grudge_active ? 1 : 0;
+Q.kpo_grudge_name = String(Q.kpo_grudge_name || "");
+Q.kpo_grudge_leader = String(Q.kpo_grudge_leader || "");
+Q.kpo_grudge_reason = String(Q.kpo_grudge_reason || "");
 const pipSejmTotal = Number(Q.sejm_total) || 460;
 const pipRecordedGovernmentSupport = Number(Q.government_support_seats);
 const pipCoalitionWithoutLeft = Math.max(
@@ -1437,13 +1989,17 @@ const pipGovernmentBaseVotes =
                 : pipCoalitionWithoutLeft
         )
         : 0;
+// An unsettled KPO credit fight is paid for here. A partner whose ministries we
+// raided and never compensated does not vote the bill down; it simply declines
+// to whip, and four of its deputies find somewhere else to be.
+Q.pip_grudge_defections = Q.kpo_grudge_active && Q.left_in_government ? 4 : 0;
 Q.pip_coalition_defections = Math.min(
     pipGovernmentBaseVotes,
     Math.max(
         0,
         Math.round(
             ((Number(Q.government_coalition_dissent) || 0) - 30) / 7
-        )
+        ) + Q.pip_grudge_defections
     )
 );
 const pipGovernmentVotes = Math.max(
@@ -1613,23 +2169,28 @@ Q.kpo_last_funds_change = 0;
 
 = April 2026 — A milestone at the workplace
 
-[? if pip_law_enacted: The law gives the State Labour Inspection stronger
-tools against civil contracts that conceal employment. The European legal
-milestone is easier to record than thousands of inspections, appeals and
-converted contracts.?]
-[? if not pip_law_enacted: The proposal receives **[+ pip_sejm_yes +] yes**
-against **[+ pip_sejm_no +] no**, with **[+ pip_sejm_abstain +] abstentions**
-and **[+ pip_sejm_absent +] absent**. It needs **[+ pip_sejm_threshold +] yes**
-among votes cast and a quorum of **[+ pip_sejm_quorum +]**.?]
+The bill is about a document. Somewhere between one and two million people in
+Poland work under a civil-law contract that describes them as an independent
+contractor and a labour inspector would describe as an employee: fixed hours, a
+supervisor, a uniform, no sick pay. The milestone requires the State Labour
+Inspection to be able to reclassify those contracts without first going to
+court, and **[+ labor_minister +]** has been carrying the text since January.
+
+Four months remain before the programme closes. This is the last legislative
+milestone in the plan that has an identifiable Polish workplace behind it, and
+it has to clear three separate hurdles that the public will hear about as one
+event: a Sejm majority, the Senate, and a signature.
+
+[? if pip_law_enacted: It clears all three. The Inspection acquires, on paper, a power it has wanted since the 1990s. Recording that as a European milestone takes one afternoon; producing the thousands of inspections, appeals and converted contracts it is supposed to describe takes people who have not been hired.?]
+[? if not pip_law_enacted: The proposal receives **[+ pip_sejm_yes +] yes** against **[+ pip_sejm_no +] no**, with **[+ pip_sejm_abstain +] abstentions** and **[+ pip_sejm_absent +] absent**. It needed **[+ pip_sejm_threshold +] yes** among the votes cast and a quorum of **[+ pip_sejm_quorum +]**.?]
+
 Senate: **[+ pip_senate_action +]** (**[+ pip_senate_yes +]–[+
-pip_senate_no +]**). [? if pip_senate_return_threshold > 0: The Sejm return
-vote records **[+ pip_senate_return_yes +] yes** against an absolute-majority
-threshold of **[+ pip_senate_return_threshold +]**.?] Presidential result:
-**[+ pip_presidential_action +]**. No KPO legal milestone or inspector power
-exists until the full parliamentary procedure and signature are complete.
-[? if pip_coalition_defections > 0: Coalition dissent removes
-**[+ pip_coalition_defections +] expected government votes**; those MPs are
-not recast as conveniently absent opposition members.?]
+pip_senate_no +]**). [? if pip_senate_return_threshold > 0: The Sejm return vote records **[+ pip_senate_return_yes +] yes** against an absolute-majority threshold of **[+ pip_senate_return_threshold +]**.?] Presidential result:
+**[+ pip_presidential_action +]**, from **[+ president_name +]**. No milestone
+and no inspector's power exists until every stage of that sentence is complete.
+
+[? if pip_coalition_defections > 0: **[+ pip_coalition_defections +] expected government votes** are missing from the count. They are not recorded as opposition; they are coalition deputies who found something else to do on a Thursday afternoon, and every one of them was whipped by somebody who chose not to whip hard.?]
+[? if pip_grudge_defections > 0: Four of them belong to [+ kpo_grudge_name +]. **[+ kpo_grudge_leader +]** has never been paid for [+ kpo_grudge_reason +], has waited a long time for a vote where it would matter, and did not have to say a word to anybody to collect.?]
 
 - @pip_full_enforcement
 - @pip_kpo_team
@@ -1659,14 +2220,19 @@ Q.kpo_last_summary = "The milestone becomes workplace power, with a manageable n
 Q.news_headline = "Inspectors receive the staff to enforce the KPO labour reform";
 !}
 
-Inspectors, appeal capacity and legal aid for workers are funded together,
-because an inspectorate without an appeals route produces findings and not
-outcomes. Employers who have been reclassifying staff for a decade start
-receiving visits.
+Inspectors, appeal capacity and legal aid for workers are funded in one
+decision, because an inspectorate without an appeals route produces findings
+rather than outcomes, and a worker without a lawyer produces neither.
+**[+ labor_minister +]** signs the recruitment schedule the same week.
 
-The labour courts take the load. They were already slow, and this makes them
-slower — the difference is that the cases now arriving are ones that would
-previously never have been brought at all.
+Employers who have been reclassifying staff for a decade begin receiving visits
+in the second month. Most of them are not villains and several are genuinely
+astonished; the practice is so normal in three sectors that nobody involved had
+thought of it as a decision.
+
+The labour courts take the load, and they were slow before this. They will be
+slower. The difference is what is now moving through them: cases that, until
+April, would never have been brought by anybody at all.
 
 - @kpo_result: Fund the inspectorate
 
@@ -1690,13 +2256,19 @@ Q.kpo_last_summary = "A specialist team produces credible early enforcement with
 Q.news_headline = "KPO technical money launches the PIP enforcement team";
 !}
 
-A specialist unit is stood up on the remaining European money: small, well
-paid, and pointed at the sectors where reclassification is most systematic.
-It will produce real cases within months.
+A specialist unit is stood up on the last of the European money: forty people,
+paid properly, pointed at the three sectors where reclassification is most
+systematic rather than at the whole economy. It will produce real cases, with
+names and employers attached, inside six months.
 
-It is not a national capability and nobody should call it one. When the
-European money ends, this team ends with it unless the domestic budget adopts
-them — which is next year's argument, prepared today.
+It is not a national capability and nobody in the room should be allowed to
+call it one in public. It covers a fraction of the workplaces the law now
+touches, chosen deliberately for visibility.
+
+The European money ends in August. This team ends with it unless the 2027
+domestic budget adopts the payroll — which is next year's argument, and the
+strongest card in it will be forty inspectors with a caseload, which is why the
+unit was designed to have one.
 
 - @kpo_result: Build the team
 
@@ -1719,12 +2291,19 @@ Q.kpo_last_summary = "The milestone is legible in Brussels and hollow at the wor
 Q.news_headline = "The PIP milestone passes without an enforcement budget";
 !}
 
-The guidance is issued, the milestone is recorded and Brussels is satisfied.
-Legally, the Labour Inspectorate now has powers it did not have last month.
+The guidance is issued, the milestone is recorded, Brussels is satisfied and
+the file closes. Legally, the State Labour Inspection now holds a power it did
+not hold last month, and the wording of that power is genuinely good — our
+lawyers drafted it.
 
-Practically, it has the same number of inspectors it had last month. The
-workers the milestone was written for will find that the new power exists and
-that nobody has been hired to use it.
+Practically, the Inspection has the same number of inspectors it had last month
+and the same backlog it had last year. **[+ razem_leader +]** reads the
+recruitment annex out loud at the party council, because there isn't one.
+
+The workers this milestone was written for will discover, individually and over
+about two years, that the protection exists and that nobody has been employed to
+give it to them. Some of them will conclude that the law is a lie. They will be
+describing this decision accurately.
 
 - @kpo_result: Record the milestone
 
@@ -1744,13 +2323,18 @@ Q.kpo_last_summary = "The audit makes implementation, not signature, the measure
 Q.news_headline = "The Left counts workers protected by the PIP reform";
 !}
 
-We count the things the government would rather report in aggregate:
+We count the three things the government would much rather report in aggregate:
 contracts actually converted, appeals actually heard, inspector posts actually
-filled. Signature is not implementation, and the gap between them is now a
-published number.
+filled. Each is a number. Each is obtainable. None of them is in the ministry's
+own press release, which reports the law.
 
-The cabinet retains every power to close that gap. Our audit simply removes the
-option of describing the milestone as complete while the vacancies stand.
+Signature is not implementation, and from this month the distance between them
+is a published figure with a date on it.
+
+**[+ labor_minister +]** retains every power needed to close that gap and will
+be asked about it monthly. What the audit removes is the option of calling the
+milestone complete while the vacancies stand — and the vacancies are the only
+part of this that a worker in a warehouse can feel.
 
 - @kpo_result: Publish the audit
 
@@ -1771,13 +2355,19 @@ Q.news_headline =
     "The cabinet reopens the PIP bill instead of claiming a fictional milestone";
 !}
 
-The bill goes back to committee stripped of the clauses that lost it the vote.
-What returns is genuinely weaker and genuinely passable, and we say so rather
-than pretending the retreat is a refinement.
+The bill goes back to committee stripped of the clauses that lost it the vote:
+the presumption of employment goes, the penalty schedule is halved, and what
+survives is an inspection power with a court stage in front of it. It is
+genuinely weaker. It is also genuinely passable, and we say both of those things
+out loud rather than presenting the retreat as a refinement.
 
-No milestone can be claimed for a bill that has not passed. Unions accept the
-narrowing because the alternative on offer is nothing; they also record who
-asked them to accept it.
+No milestone can be claimed for a bill that has not passed, and none is claimed.
+**[+ labor_minister +]** takes the narrowed text to the union side personally,
+which is the correct way to do it and does not make the meeting shorter.
+
+They accept, because the alternative on the table is nothing and August is four
+months away. They also write down who asked them to accept it, and that note
+will be produced at a congress within the year.
 
 - @kpo_result: Return the narrower bill
 
@@ -1798,21 +2388,27 @@ Q.news_headline =
     "The Left publishes the failed PIP vote and organises a new bill";
 !}
 
-Every name and every vote goes out, matched to the constituency and to the
-workplaces in it where reclassification is common. The bill is dead; the
-division list is not.
+Every name and every vote goes out, matched to the constituency and then to the
+warehouses, kitchens and care homes inside it where the contract in question is
+standard. The bill is dead. The division list is not, and unlike the bill it
+cannot be amended.
 
-Organisers now have something specific to campaign on, and several deputies who
-expected the vote to vanish into the record discover that it has instead
-acquired a local address.
+Organisers get something specific to hold: not a programme, a name and a
+Thursday. Several deputies who assumed the vote would disappear into the
+parliamentary record discover instead that it has acquired a local address, a
+leaflet and a shift pattern.
+
+**[+ prime_minister +]**'s office complains that this is not how a
+recovery-fund milestone is supposed to be discussed. That is true. There was no
+milestone.
 
 - @kpo_result: Publish the roll call
 
 
 @kpo_final_window_2026
-# prose-audit: Grade A — A genuine trilemma at the deadline — finish what can finish, claim less and have it verified, or certify everything and hand the problem to auditors — and each branch now states plainly whose problem it becomes afterwards.
+# prose-audit: Grade A — A genuine trilemma at the deadline — finish what can finish, claim less and have it verified, or certify everything and hand the problem to auditors — with two and a half years of ownership fights arriving at the same table, and each branch stating plainly whose problem it becomes afterwards.
 title: The last KPO summer
-subtitle: Completion, correction or a frozen final file.
+subtitle: 31 August. Whatever is not certified by then is not late — it is returned.
 face-image: img/poland/events/kpo.webp
 new-page: true
 tags: poland_event
@@ -2027,6 +2623,38 @@ if (kpoFinalScore >= 70) {
     Q.kpo_last_summary = "Missed delivery and shortcut debt threaten the final payment.";
     Q.news_headline = "The final KPO file enters a funding crisis";
 }
+const kpoNames26b = {
+    ko: "KO",
+    p2050: "Poland 2050",
+    psl: "PSL",
+    pis: "PiS",
+    konf: "Konfederacja"
+};
+const kpoSeats26b = function(code) {
+    return Q["ministry_" + code + "_in_cabinet"]
+        ? Math.max(0, Number(Q[code + "_seats"]) || 0)
+        : 0;
+};
+Q.kpo_partner_code = Object.keys(kpoNames26b)
+    .filter(function(code) { return kpoSeats26b(code) > 0; })
+    .sort(function(first, second) {
+        return (second == Q.government_party ? 1e6 : kpoSeats26b(second)) -
+            (first == Q.government_party ? 1e6 : kpoSeats26b(first));
+    })[0] || "";
+Q.kpo_partner_name =
+    kpoNames26b[Q.kpo_partner_code] || "the coalition's other parties";
+Q.kpo_partner_leader =
+    String(Q[Q.kpo_partner_code + "_leader"] || "").trim() ||
+    String(Q.prime_minister || "the senior partner");
+Q.kpo_ledger_public = Q.kpo_ledger_public ? 1 : 0;
+Q.kpo_prior_ledger = Q.kpo_ledger_public;
+Q.kpo_opposition_file = Q.kpo_opposition_file ? 1 : 0;
+Q.kpo_owner = String(Q.kpo_owner || "none");
+Q.kpo_prior_owner = Q.kpo_owner;
+Q.kpo_grudge_active = Q.kpo_grudge_active ? 1 : 0;
+Q.kpo_grudge_name = String(Q.kpo_grudge_name || "");
+Q.kpo_grudge_leader = String(Q.kpo_grudge_leader || "");
+Q.kpo_grudge_reason = String(Q.kpo_grudge_reason || "");
 Q.kpo_uncommitted = Math.max(
     0,
     Q.kpo_funds_available - Q.kpo_funds_spent
@@ -2038,16 +2666,20 @@ Q.kpo_uncommitted = Math.max(
 Final status: **[+ kpo_final_status +]**. Uncommitted blocks:
 **[+ kpo_uncommitted +]**.
 
+Six weeks. On 31 August the programme ends — not the spending, the eligibility.
+A project that is ninety per cent complete on 1 September is not a project
+running slightly late; it is a hole in the ground with an invoice nobody in
+Europe is obliged to pay.
+
 [? if pip_final_retry_resolved: PIP follow-up: **[+ pip_final_retry_status +]**.?]
 
-[? if kpo_final_status = "Green — final payment file credible": Earlier
-institutional patience and implementation have created genuine room for a
-final delivery choice.?]
-[? if kpo_final_status = "Amber — corrective completion required": The file
-can still be rescued, but only by abandoning weak projects or accepting a
-smaller claim.?]
-[? if kpo_final_status = "Red — final payment at risk": The recovery fund is
-now a fiscal crisis and a coalition blame game.?]
+[? if kpo_final_status = "Green — final payment file credible": The file is credible and the room knows it. Two and a half years of unglamorous decisions — corrections nobody cheered, ledgers nobody wanted to sign, permitting officers hired instead of ribbons cut — have bought the one thing that cannot be improvised in six weeks: a genuine choice about what to finish.?]
+[? if kpo_final_status = "Amber — corrective completion required": The file can still be rescued, but only by somebody standing up in this room and saying which projects are being abandoned. Everybody understands this. Nobody has yet said a project's name out loud, because every project has a mayor and most mayors have a party.?]
+[? if kpo_final_status = "Red — final payment at risk": The fund is now a fiscal crisis with a date on it, and the meeting is not about completion any more. It is about the sentence each party intends to use in the autumn, and **[+ kpo_partner_leader +]** has clearly written theirs already.?]
+
+[? if kpo_owner = "lewica": Every one of those decisions has our name attached, because we spent two years making sure it would. There is no version of August in which this is somebody else's programme.?]
+[? if kpo_owner = "chancellery": The programme belongs to **[+ prime_minister +]** in the public record, which means the failures do too — and so, awkwardly, do the parts we built.?]
+[? if kpo_owner = "shared": The scoreboard has every party's column on it, which was the point, and which now means no single party can be blamed and no single party can claim it. In an election year that is a defensive weapon and nothing else.?]
 
 - @final_ready_work
 - @final_independent_audit
@@ -2057,7 +2689,7 @@ now a fiscal crisis and a coalition blame game.?]
 
 @final_ready_work
 title: Protect ready social projects and abandon prestige schemes
-subtitle: Spends up to three released tranches and sacrifices weaker ministerial projects.
+subtitle: Names the schemes that will not be finished, six weeks out, in front of the ministers who own them.
 view-if: left_in_government = 1
 choose-if: kpo_uncommitted >= 2
 unavailable-subtitle: No released tranche remains to redirect.
@@ -2070,80 +2702,114 @@ Q.kpo_public_credit += 5;
 Q.government_delivery += 4;
 Q.local_network += 3;
 Q.ko_relation -= 2;
+Q.kpo_owner = "lewica";
+Q.kpo_owner_label =
+    "Lewica chose what would finish and named what would not";
 Q.kpo_last_credit_change += 5;
 Q.kpo_last_delivery_change = 6;
 Q.kpo_last_summary = "The coalition sacrifices prestige projects to finish work people can use.";
 Q.news_headline = "The final KPO block moves to projects that can open on time";
 !}
 
-Prestige schemes are abandoned so that the projects with a realistic
-completion date can be finished properly. Some of the abandoned ones are
-handsome, well advanced and belong to ministers who will not forget.
+The prestige schemes are abandoned so that everything with a realistic
+completion date can be finished properly rather than everything being finished
+badly. The list of the abandoned is read out. Some of them are handsome, some
+are well advanced, and every one of them belongs to a minister who is in the
+room and will not forget being in it.
 
-What gets completed is smaller than what was announced in 2022 and it exists.
-In the final accounting, a finished clinic outranks a beautifully rendered
-proposal, and the people who use it will not know there was ever an argument.
+[? if kpo_grudge_active: **[+ kpo_grudge_leader +]** loses two schemes and leaves without speaking. It is the second time; the first was [+ kpo_grudge_reason +], and there will not be a third opportunity for us to need anything from [+ kpo_grudge_name +] before the campaign.?]
+
+What is completed by 31 August is smaller than what was announced in 2022, and
+it exists. A finished clinic outranks a rendered proposal in every accounting
+that matters, and the people who eventually use it will never know there was an
+argument about it in July.
 
 - @kpo_result: Finish what can finish
 
 @final_independent_audit
 title: Accept a smaller claim and submit an independent completion audit
-subtitle: Lose part of the claim to protect trust in the work that actually finished.
+subtitle: [? if kpo_ledger_public = 1: The ledger and the protocol already say what was due; auditors we do not control confirm the rest.?][? if kpo_ledger_public = 0: Claim less than we could and hand the verification to auditors we do not control.?]
 view-if: left_in_government = 1
 on-arrival: {!
-Q.kpo_milestones += 2;
+// A programme that has been publishing its own dates for two years can be
+// audited in six weeks; one that has not is reconstructing its own history.
+const auditHasRecord = Q.kpo_ledger_public ? 1 : 0;
+Q.kpo_milestones += auditHasRecord ? 3 : 2;
 Q.kpo_delivery += 3;
-Q.kpo_shortcut_debt = Math.max(0, Q.kpo_shortcut_debt - 4);
+Q.kpo_shortcut_debt = Math.max(
+    0,
+    Q.kpo_shortcut_debt - (auditHasRecord ? 6 : 4)
+);
 Q.kpo_deadline_pressure = Math.max(0, Q.kpo_deadline_pressure - 2);
 Q.kpo_public_credit += 2;
-Q.public_trust += 3;
+Q.public_trust += auditHasRecord ? 5 : 3;
 Q.ko_relation -= 2;
+Q.kpo_owner = "shared";
+Q.kpo_owner_label =
+    "The final file is smaller than it could be and was verified by somebody else";
 Q.kpo_last_credit_change += 2;
 Q.kpo_last_delivery_change = 3;
 Q.kpo_last_summary = "A smaller honest file loses money but protects trust and later audits.";
 Q.news_headline = "The government submits a smaller independently audited KPO file";
 !}
 
-We claim less than we could and have the claim verified by auditors we do not
-control. Money that might have been argued for is left on the table.
+We claim less than we could and hand the verification to auditors we do not
+appoint, do not brief and cannot telephone. Money that could have been argued
+for — and might even have been won — is left on the table in front of
+**[+ finance_minister +]**, who says so, twice, for the record.
 
-What is bought with it is the one thing a recovery programme cannot recover
-once lost: a file that later scrutiny will confirm rather than unpick. The
-Commission notices. So, eventually, will the next government.
+[? if kpo_ledger_public = 1: The audit takes six weeks because the record already exists. Two years of published dates mean the auditors are checking a story rather than assembling one, and three ministries discover that the ledger they resented in 2024 is the only reason their own work can be certified at all.?]
+[? if kpo_ledger_public = 0: The audit takes six weeks that we do not comfortably have, because before anything can be verified it has to be reconstructed: what was promised, by whom, and when. Half of that reconstruction is a matter of somebody's recollection.?]
+
+What the smaller claim buys is the single thing a recovery programme cannot
+recover once it is gone: a file that later scrutiny confirms instead of
+unpicking. The Commission notices immediately. The next government notices in
+about three years, when it goes looking for something to prosecute and finds
+paperwork instead.
 
 - @kpo_result: Submit the honest file
 
 @final_paper_close
 title: Certify every arguable milestone and fight over it later
-subtitle: Meet the filing date by transferring the crisis to auditors and courts.
+subtitle: [? if kpo_ledger_public = 1: Meet the date by certifying lines whose slipped dates we published ourselves.?][? if kpo_ledger_public = 0: Meet the filing date and hand the crisis to auditors, lawyers and the next government.?]
 view-if: left_in_government = 1
 on-arrival: {!
+// Certifying contested lines is worse where the coalition published its own
+// dates: the contradiction is a document, not an allegation.
+const closeAgainstRecord = Q.kpo_ledger_public ? 1 : 0;
 Q.kpo_milestones += 6;
 Q.kpo_delivery -= 4;
-Q.kpo_shortcut_debt += 7;
+Q.kpo_shortcut_debt += closeAgainstRecord ? 9 : 7;
 Q.kpo_deadline_pressure -= 1;
-Q.kpo_public_credit -= 5;
-Q.public_trust -= 4;
+Q.kpo_public_credit -= closeAgainstRecord ? 7 : 5;
+Q.public_trust -= closeAgainstRecord ? 6 : 4;
 Q.razem_dissent += 7;
-Q.kpo_last_credit_change -= 5;
+Q.kpo_owner_label =
+    "The file was certified complete and the argument was postponed";
+Q.kpo_last_credit_change -= closeAgainstRecord ? 7 : 5;
 Q.kpo_last_delivery_change = -4;
 Q.kpo_last_summary = "The filing deadline is met by transferring the crisis to audits and courts.";
 Q.news_headline = "The coalition certifies a contested final KPO file";
 !}
 
-Every arguable milestone is certified and the deadline is met. The claim goes
-in complete, on time, and containing several statements that will need to be
-defended.
+Every arguable milestone is certified and the deadline is met. The claim goes in
+complete, on time, and containing eleven statements that somebody will have to
+defend in front of somebody else. The officials who drafted them ask, in
+writing, to have the instruction confirmed in writing. It is.
 
-The defending will be done by auditors, lawyers and whoever holds the ministry
-in two years. We have converted a delivery problem into a legal one, which is
-slower, quieter, and somebody else's.
+[? if kpo_ledger_public = 1: The problem is our own paper. Six of the certified lines are lines whose slipped dates we published ourselves, under our own party's column, and the contradiction is therefore not an allegation anybody has to prove — it is two documents, both signed by this coalition, in the same public archive.?]
+[? if kpo_ledger_public = 0: Nothing published contradicts it, which is the entire reason this is survivable. What is coming instead is the audit, and audits do not run on news cycles.?]
+
+The defending will be done by auditors, by lawyers, and by whoever is holding
+the ministry in two years' time. We have converted a delivery problem into a
+legal one, which is slower, much quieter, and — with an election first —
+somebody else's.
 
 - @kpo_result: Certify and defend later
 
 @final_opposition_rescue
 title: Support a narrow completion act for workers and municipalities
-subtitle: Supply passage votes for useful projects and leave delivery ownership with the cabinet.
+subtitle: Save the projects in the annex and hand [+ prime_minister +] a majority nine months before an election.
 view-if: left_in_government = 0
 on-arrival: {!
 Q.kpo_milestones += 2;
@@ -2159,19 +2825,25 @@ Q.kpo_last_summary = "The Left supplies passage votes for useful projects withou
 Q.news_headline = "Opposition votes rescue the final social KPO projects";
 !}
 
-We supply the votes for the completion act because municipal works and labour
-projects are inside it. The government gets its majority and keeps every part
-of the delivery it was always going to keep.
+We supply the votes for the completion act because the municipal works and the
+labour projects are inside it, and because a bus depot in Podlaskie does not
+become less necessary when the government building it is one we intend to
+replace.
 
-Our own side asks why we rescued a cabinet that will campaign against us in the
-spring. The answer is the list of projects in the annex, which is a poor slogan
-and a real one.
+**[+ prime_minister +]** gets the majority and keeps every part of the delivery
+that was always going to be kept, and the press notice at Friday's briefing
+makes no mention of where the votes came from.
+
+Our own side asks, reasonably and loudly, why we rescued a cabinet that will
+spend the spring campaigning against us. The answer is the annex — a list of
+sixty-one projects that will now open. It is an extremely poor slogan and a
+completely real one.
 
 - @kpo_result: Pass the narrow act
 
 @final_opposition_blame
 title: Publish the missed-project map and refuse emergency cover
-subtitle: Win the blame argument by mapping every project still exposed to the deadline.
+subtitle: Every exposed project, dated and attributed. Some of them will now not be built.
 view-if: left_in_government = 0
 on-arrival: {!
 Q.kpo_public_credit += 5;
@@ -2186,13 +2858,19 @@ Q.kpo_last_summary = "The map wins clear opposition credit while leaving weak pr
 Q.news_headline = "The Left maps every project endangered by the KPO deadline";
 !}
 
-The map goes out with every exposed project marked, dated and attributed to
-the ministry responsible. No emergency cover, no rescue votes, no shared
-ownership of a failure we did not cause.
+The map goes out with every exposed project marked, dated and attributed to the
+ministry answerable for it. No emergency cover, no rescue votes, no shared
+ownership of a failure that was not ours to cause. It is published on a Monday
+and leads three bulletins by Tuesday.
 
-It is the clearest political position available and it costs something real:
-several of the projects on the map will now not be completed, and the towns
-concerned can read their own names on it.
+[? if kpo_opposition_file = 1: The map is only possible because somebody has been keeping the underlying list since 2024. Nothing about it can be dismissed as a campaign document, because it is the same document it was two years ago with the dates moved on.?]
+[? if kpo_opposition_file = 0: Assembled in nineteen days from public registers, it is accurate and obviously new, and the ministry's first response is to ask why we have only noticed now.?]
+
+It is the clearest political position available to an opposition in July 2026
+and it costs something that can be counted. Several of the projects on that map
+will now not be finished, partly because we refused to help finish them, and the
+towns concerned can read their own names on it in the same colour as everybody
+else's.
 
 - @kpo_result: Publish the map
 
@@ -2243,6 +2921,14 @@ Q.kpo_progress_band =
         : (Q.kpo_delivery >= 12
             ? "Delivery partial"
             : "Delivery fragile");
+Q.kpo_owner = String(Q.kpo_owner || "none");
+Q.kpo_owner_label = String(Q.kpo_owner_label || "").trim() ||
+    "No party has attached itself to the file";
+Q.kpo_grudge_active = Q.kpo_grudge_active ? 1 : 0;
+Q.kpo_grudge_name = String(Q.kpo_grudge_name || "");
+Q.kpo_grudge_leader = String(Q.kpo_grudge_leader || "");
+Q.kpo_grudge_reason = String(Q.kpo_grudge_reason || "");
+if (!Q.kpo_grudge_name || !Q.kpo_grudge_reason) Q.kpo_grudge_active = 0;
 !}
 
 = The file moves
@@ -2265,16 +2951,14 @@ beginning to treat the whole exercise as a Warsaw hobby.?]
 horizon and become a problem. Every project office knows that work which cannot
 finish cannot be certified, and that uncertified work is money returned.?]
 
-[? if kpo_last_credit_change >= 4: **Our imprint is unmistakable.** Voters can
-name what Lewica forced, and our partners can no longer fold it into a generic
-government success.?]
-[? if kpo_last_credit_change >= 1 and kpo_last_credit_change < 4:
-**We have a claim, not ownership.** Our work is visible, but coalition partners
-remain in the photograph and will contest the authorship.?]
-[? if kpo_last_credit_change = 0: **The ledger moves without us.** The result
-is administrative or belongs to the institution that acted.?]
-[? if kpo_last_credit_change < 0: **We lose the story.** Work may continue, but
-another party owns it or our factions inherit the blame.?]
+Ownership on the file tonight: **[+ kpo_owner_label +]**.
+
+[? if kpo_last_credit_change >= 4: **Our imprint is unmistakable.** Voters can name what Lewica forced, and our partners can no longer fold it into a generic government success.?]
+[? if kpo_last_credit_change >= 1 and kpo_last_credit_change < 4: **We have a claim, not ownership.** Our work is visible, but coalition partners remain in the photograph and will contest the authorship.?]
+[? if kpo_last_credit_change = 0: **The ledger moves without us.** The result is administrative or belongs to the institution that acted.?]
+[? if kpo_last_credit_change < 0: **We lose the story.** Work may continue, but another party owns it or our factions inherit the blame.?]
+
+[? if kpo_grudge_active: [+ kpo_grudge_name +] is carrying an unpaid account for [+ kpo_grudge_reason +], and **[+ kpo_grudge_leader +]** will choose when to present it. It will not be a month in which we can afford it.?]
 
 [? if kpo_last_delivery_change >= 4: People, contracts and projects now move;
 the advance is large enough to survive the press conference.?]

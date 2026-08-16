@@ -35,15 +35,15 @@ function newRun(overrides) {
 }
 
 const relaunchId =
-  'poland_events_2023_2024.p2050_exclusion_comeback_2023';
+  'poland_events_2023_12.p2050_exclusion_comeback_2023';
 const jointOppositionId =
-  'poland_events_2023_2024.p2050_excluded_with_ko_2023';
+  'poland_events_2023_12.p2050_excluded_with_ko_2023';
 const greensId =
-  'poland_events_2023_2024.p2050_greens_absorption_2024';
-const fieldId = 'poland_events_2025.left_presidential_split';
-const pollId = 'poland_events_2025.calculate_presidential_poll_2025';
-const successionId = 'poland_events_2025.holownia_succession_2025';
-const leadershipId = 'poland_events_2026.p2050_leadership_2026';
+  'poland_events_2024_03.p2050_greens_absorption_2024';
+const fieldId = 'poland_events_2025_01.left_presidential_split';
+const pollId = 'poland_events_2025_01.calculate_presidential_poll_2025';
+const successionId = 'poland_events_2025_09.holownia_succession_2025';
+const leadershipId = 'poland_events_2026_01.p2050_leadership_2026';
 for (const sceneId of [
   relaunchId, jointOppositionId, greensId, fieldId, pollId, successionId,
   leadershipId,

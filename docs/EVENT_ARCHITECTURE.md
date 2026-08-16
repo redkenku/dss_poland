@@ -1,5 +1,22 @@
 # Dated event architecture
 
+## Where the files live
+
+Every dated Polish event lives in [`source/scenes/poland_events/`](../source/scenes/poland_events/),
+one file per calendar month, named `poland_events_<year>_<month>.scene.dry`.
+An event and all of its consequence sections stay together in the file for the
+month the event fires in, so a month is a unit an author can read end to end.
+
+An arc that is gated on a flag rather than on a date gets a themed file instead,
+named `poland_events_<year>_<arc>.scene.dry` — the 2025 presidential first round
+and runoff, and the 2026 snap election, are the large ones.
+
+Because DendryNexus derives a scene id from the file's basename, a section's
+full id is `<file basename>.<section>`, and a reference that crosses into
+another month must be written out in full (`poland_events_2026_02.ambassador_rules`).
+References inside one file stay relative. Moving a section between files
+therefore changes its id: update every caller, then run `npm run manifest`.
+
 [`EVENT_MANIFEST.json`](EVENT_MANIFEST.json) is the generated editorial and
 authority index for every Polish source section that is tagged as a dated event
 or carries an explicit historical date. The scene files remain authoritative;
@@ -161,12 +178,59 @@ The links it currently protects:
 | Earlier decision | Later reader |
 | --- | --- |
 | January 2023 KPO bill price (`kpo_bill_quality`) | April 2024 payment, then the October 2025 review through `kpo_shortcut_debt` |
+| February 2024 KPO dossier route (`kpo_ledger_public`, `kpo_owner`, `kpo_grudge_*`, `kpo_opposition_file`) | the whole 2024–2026 recovery chain: the ledger gates the May 2024 shared scoreboard and prices the December 2024 paper route, the October 2025 reallocation and the July 2026 audit; an unpaid credit raid sets `kpo_finance_hostile` at the December budget table and removes four coalition votes from the April 2026 PIP division list; a standing opposition audit team makes the April 2024 contracts dashboard free to extend |
+| September 2025 HoReCa answer (`horeca_response_2025`) | the October 2025 midterm review, where an answer that built a control mechanism scores and one that built a campaign does not |
 | 2023–2024 Gaza line (`gaza_stance_score`, `gaza_chain_stage`) | February 2026 ambassador boycott: consistency, reversal, the gated committee inquiry and the procedural broker's route |
 | 2024 protest stance (`last_generation_stance`) | April 2027 repeal crackdown, where the escalating-penalty regime the party demanded is used against the Women's Strike |
 | April 2024 transport bill (`transport_bill_2024_filed`) | 2026 gmina service floor, which inherits its costing |
 | 2023 referendum answer (`pension_defence_credit`) | May 2026 SAFE veto, where it unlocks the social-floor bargain |
 | Breaking a host list at the 2023 march (`campaign_march_broke_host_discipline`) | 2023 seat arithmetic: the host cannot whip the deputies, and KO counts them only if it still trusts them |
 | November 2024 mayoral term-limit stance (`mayor_term_limit_stance`) | March 2027 Trzaskowski crossing: third-term mayors bring their machines to the party that removed the cap, and bring nothing to the party that kept it |
+| August 2027 pre-registration posture (`list_scramble_posture`) and answer to Porozumienie (`gowin_return_2027`) | September 2027 registration day, where the posture moves every marginal merger threshold and a public veto closes the centre routes so the fragment files on the right instead |
+| December 2023 answer to KO's hundred konkrety (`konkrety_line`, `konkrety_receipts`, `konkrety_ownership`) | the January fifty-day briefing, the February allowance retreat, the 22 March hundredth-day audit — which counts delivery from live state and selects KO's deflection target from the player's own record — and the April 2024 local-election campaign |
+| August 2023 answer to Giertych's list place and January 2024 answer to his chairmanship (`giertych_line`, `giertych_standing`) and the February 2025 reckoning route (`reckoning_route`, `reckoning_delivery`, `prosecutor_general_separated`) | the January 2026 courtroom, which decides how much of the flagship indictment survives and how angry that makes the Prime Minister, and the June 2026 justice-ministry crisis, where the same figures decide whether the Left can save the incumbent, impose Żurek, or is made to choose between a cabinet containing Roman Giertych and a minority government |
+
+The Giertych and reckoning chain has its own check,
+[`giertych-crisis-check.js`](../scripts/giertych-crisis-check.js)
+(`npm run check:giertych`). The chain runs from the August 2023 list place
+(`giertych_standing`, `giertych_line`) through the January 2024 chairmanship of
+KO's reckoning team, the July 2024 rights vote he does not attend, and the two
+beats in which the reckoning produces notifications and no verdict
+(`reckoning_route`, `reckoning_delivery`, `reckoning_pm_pressure`,
+`prosecutor_general_separated`), into the June 2026 decision about the Ministry
+of Justice. The check proves that the June outcome is decided by state the
+player moved rather than by a preference: that the arithmetic printed to the
+player is the live chamber (248 cabinet seats, 26 of them ours, 222 without us
+against a majority of 231), that a public veto is a lever only while that gap
+exists and KO's own wing shares have not moved past it, that each beat shifts
+`ko_social_liberal_share` rather than only `ko_cultural_position` — which the
+monthly drift model in `poland_party_ai` would otherwise erase — that staying in
+a cabinet with him and leaving it are genuinely different states, and that only
+the posture which refuses the minority cabinet a floor opens
+`ko_konf_partner_line`, and only where Konfederacja's seats actually close the
+gap.
+
+The arc is also gated on the people who would actually carry it, and the check
+asserts those gates. The list place and the chairmanship require `ko_leader` to
+be Donald Tusk or Radosław Sikorski; the June crisis additionally requires the
+same two names as `prime_minister`. Beyond the sponsor,
+`justice_crisis_appointment_possible` records whether any coalition partner would
+sign the motion: PSL in the Council of Ministers is no obstacle, Poland 2050 in
+it without PSL closes the appointment entirely — so a maximally right-wing KO
+with a strong chairman still cannot get him sworn in, and the Left's red line is
+free. The two reckoning beats are deliberately *not* behind that gate, because a
+failing reckoning is a government programme rather than his: they run in every
+KO-led timeline and name him only where `reckoning_team_active` is set.
+
+The 2027 list chain has its own check,
+[`list-registration-check.js`](../scripts/list-registration-check.js)
+(`npm run check:lists-2027`): it drives the August scramble and the September
+registration from a dozen fixtures and proves that each stranded organisation
+has more than one door, that every door is gated (a closed
+`psl_konf_partner_line`, a Kaczyński-led PiS, a cancelled CPK, a public veto),
+that a party with no committee and no representation is wound up rather than
+left as a shell, and that a committee assignment actually reaches the polling
+and count model rather than only the aftermath prose.
 
 The local-affairs desk has its own reachability check,
 [`local-affairs-check.js`](../scripts/local-affairs-check.js)

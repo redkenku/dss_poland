@@ -58,14 +58,14 @@ function pageText() {
 
 // 1. A cohesive convention produces one party and keeps the incumbent.
 let q = start('ko-consolidate');
-engine.goToScene('poland_events_2025.ko_consolidation_2025');
+engine.goToScene('poland_events_2025_10.ko_consolidation_2025');
     engine.state.qualities.ko_leader = 'Donald Tusk';
 assert.strictEqual(choices().length, 3, 'convention offers three stances');
 q.ko_cohesion = 70;
 q.ko_poll = 26;
-choose('poland_events_2025.ko_consolidation_back');
-    choose('poland_events_2025.ko_consolidation_result');
-assert.strictEqual(engine.state.sceneId, 'poland_events_2025.ko_consolidation_result');
+choose('poland_events_2025_10.ko_consolidation_back');
+    choose('poland_events_2025_10.ko_consolidation_result');
+assert.strictEqual(engine.state.sceneId, 'poland_events_2025_10.ko_consolidation_result');
 assert.strictEqual(q.ko_merger_result, 'One registered KO party');
 assert.strictEqual(q.ko_consolidated, 1);
 assert.strictEqual(q.ko_leader, 'Donald Tusk');
@@ -81,14 +81,14 @@ assert.strictEqual(group(q, 'greens').legal_status, 'allied separate party');
 
 // 2. A weak convention replaces the leader and records a shock.
 q = start('ko-succession');
-engine.goToScene('poland_events_2025.ko_consolidation_2025');
+engine.goToScene('poland_events_2025_10.ko_consolidation_2025');
     engine.state.qualities.ko_leader = 'Donald Tusk';
 q.ko_cohesion = 42;
 q.ko_poll = 18;
 q.ko_social_liberal_share = 30;
 q.ko_classical_liberal_share = 70;
-choose('poland_events_2025.ko_consolidation_abstain');
-    choose('poland_events_2025.ko_consolidation_result');
+choose('poland_events_2025_10.ko_consolidation_abstain');
+    choose('poland_events_2025_10.ko_consolidation_result');
 assert.strictEqual(q.ko_merger_result, 'Convention adjourned without a decision');
 assert.strictEqual(q.ko_convention_failed, 1);
 assert.strictEqual(q.ko_leader_changed, 1);
@@ -97,13 +97,13 @@ assert(q.ko_collapse_shock >= 22, 'shock recorded: ' + q.ko_collapse_shock);
 
 // 3. A broken convention drives the pressure meter over the collapse line.
 q = start('ko-broken');
-engine.goToScene('poland_events_2025.ko_consolidation_2025');
+engine.goToScene('poland_events_2025_10.ko_consolidation_2025');
     engine.state.qualities.ko_leader = 'Donald Tusk';
 q.ko_cohesion = 20;
 q.ko_poll = 20;
 q.ko_coalition_dissent = 30;
-choose('poland_events_2025.ko_consolidation_abstain');
-    choose('poland_events_2025.ko_consolidation_result');
+choose('poland_events_2025_10.ko_consolidation_abstain');
+    choose('poland_events_2025_10.ko_consolidation_result');
 assert.strictEqual(q.ko_merger_result, 'The convention broke up');
 engine.goToScene('poland_normalize');
 console.log('  pressure after broken convention:', q.ko_collapse_pressure,
@@ -114,11 +114,11 @@ assert(q.ko_collapse_pressure >= 68, 'broken convention must reach collapse');
 q = start('ko-open-door');
 const koBefore = q.ko_seats;
 const leftBefore = q.left_seats;
-engine.goToScene('poland_events_2025.ko_consolidation_2025');
+engine.goToScene('poland_events_2025_10.ko_consolidation_2025');
     engine.state.qualities.ko_leader = 'Donald Tusk';
 q.ko_cohesion = 50;
-choose('poland_events_2025.ko_consolidation_open_door');
-    choose('poland_events_2025.ko_consolidation_result');
+choose('poland_events_2025_10.ko_consolidation_open_door');
+    choose('poland_events_2025_10.ko_consolidation_result');
 assert(q.ko_individual_defectors > 0);
 assert.strictEqual(q.ko_seats, koBefore - q.ko_individual_defectors);
 assert.strictEqual(q.left_seats, leftBefore + q.ko_individual_defectors);
@@ -209,9 +209,9 @@ assert.strictEqual(q.left_seats, leftBeforeSettlement + splinterSeats);
 q.ko_relation = 60;
 q.president_name = q.ko_leader;
 q.government_has_confidence = 0;
-engine.goToScene('poland_events_2026.snap_formation_attempt_two');
+engine.goToScene('poland_events_2026_snap.snap_formation_attempt_two');
 assert.strictEqual(q.snap_formation_candidate, 'Monika Rosa');
-engine.goToScene('poland_events_2026.snap_sejm_nowacka');
+engine.goToScene('poland_events_2026_snap.snap_sejm_nowacka');
 assert.strictEqual(q.snap_dem_candidate, 'Monika Rosa');
 
 // 7. Ignoring a breakaway with a warm KO sends it home.
@@ -235,7 +235,7 @@ assert.strictEqual(q.snap_progressive_ko_candidate, 'Barbara Nowacka');
 
 // 8. The April 2026 channel event exists for both a live and a split KO.
 q = start('ko-2026-live');
-engine.goToScene('poland_events_2026.ko_leadership_2026');
+engine.goToScene('poland_events_2026_04.ko_leadership_2026');
 assert(choices().length >= 3);
 q = start('ko-2026-split');
 q.ko_collapsed = 1;
@@ -442,7 +442,7 @@ assert(pageText().includes('8.4%'),
 q.year = 2025;
 q.month = 10;
 q.ko_collapsed = 0;
-engine.goToScene('poland_events_2025.ko_consolidation_2025');
+engine.goToScene('poland_events_2025_10.ko_consolidation_2025');
 assert(pageText().includes('8.4%'),
   'KO\'s 2025 convention has forgotten 2020');
 q.ko_collapse_pressure = 80;

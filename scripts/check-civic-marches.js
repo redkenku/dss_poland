@@ -12,7 +12,7 @@ const setup = read("source/scenes/root.scene.dry");
 const normalize = read("source/scenes/poland_normalize.scene.dry");
 const polling = read("source/scenes/poland_polling.scene.dry");
 const legacyDesk = read("source/scenes/poland_legacy_event_desk.scene.dry");
-const extension = read("source/scenes/poland_events_2021_2023.scene.dry");
+const extension = require("./event-sources").eventSource();
 
 const occurrences = (text, pattern) => (text.match(pattern) || []).length;
 

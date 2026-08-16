@@ -77,8 +77,8 @@ The GitHub workflow performs the same broad operation and publishes
 | `source/scenes/poland_advisors.scene.dry` | Twelve directly rendered Polish adviser cards | Yes |
 | `source/scenes/poland_advisor_groups.scene.dry` | Compatibility menus for older saves | Yes, carefully |
 | `source/scenes/poland_advance.scene.dry` | Polish monthly update and dated router | Yes |
-| `source/scenes/poland_events.scene.dry` | Dated October 2019–July 2021 pivots | Yes |
-| `source/scenes/poland_events_2021_2023.scene.dry` | August 2021–July 2023 pivots and crowded-month news desks | Yes |
+| `source/scenes/poland_events/poland_events_<year>_<month>.scene.dry` | Dated pivots and crowded-month news desks, one file per calendar month from November 2019 to October 2027 | Yes |
+| `source/scenes/poland_events/poland_events_<year>_<arc>.scene.dry` | Event arcs that fire on a flag rather than a date, such as the 2025 presidential first round and the 2026 snap election | Yes |
 | `source/scenes/poland_party_ai.scene.dry` | Rival resources, actions, positions and hidden relations | Yes |
 | `source/scenes/poland_polling.scene.dry` | All-party blocs, poll sample and national seat indicator | Yes |
 | `source/scenes/poland_presidential_election.scene.dry` | Two-turn 2020 presidential contest | Yes |

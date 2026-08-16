@@ -65,10 +65,10 @@ function choiceAvailable(engine, sceneId) {
 
 function strikeAvailable(ctx) {
   ctx.Q.sikorski_labor_stage_before_repeal = 0;
-  ctx.engine.goToScene('poland_events_2027.sikorski_security_state_2027');
+  ctx.engine.goToScene('poland_events_2027_06.sikorski_security_state_2027');
   return choiceAvailable(
     ctx.engine,
-    'poland_events_2027.sikorski_security_general_strike_2027'
+    'poland_events_2027_06.sikorski_security_general_strike_2027'
   );
 }
 
@@ -188,8 +188,8 @@ for (const current of ['barons', 'razem', 'spring', 'progressives']) {
     opzz: ctx.Q.opzz_cooperation,
     conflict: ctx.Q.labor_dissent,
   };
-  ctx.engine.goToScene('poland_events_2025.collective_bargaining_2025');
-  ctx.choose('poland_events_2025.bargaining_claim');
+  ctx.engine.goToScene('poland_events_2025_12.collective_bargaining_2025');
+  ctx.choose('poland_events_2025_12.bargaining_claim');
   assert(ctx.Q.union_trust < before.trust &&
     ctx.Q.opzz_cooperation < before.opzz &&
     ctx.Q.labor_dissent > before.conflict,

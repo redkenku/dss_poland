@@ -490,7 +490,7 @@ function completeMajorReformVote(engine, choose, Q) {
     marriage_reform_settled: 1,
     marriage_reform_stage: 2,
   });
-  const event = game.scenes['poland_events_2025.marriage_eu_2025'];
+  const event = game.scenes['poland_events_2025_11.marriage_eu_2025'];
   assert(event.viewIf(engine, Q),
     'Registered partnerships should not suppress the EU marriage ruling');
   Q.marriage_reform_stage = 3;

@@ -1,0 +1,618 @@
+title: November 2025
+
+@marshal_rotation_2025
+# scenario-ledger: TD-03
+# prose-audit: Grade A — The rotation dispute now distinguishes nomination from election and gives every governing and opposition choice an authored aftermath.
+title: The Marshal's chair
+subtitle: The coalition agreement rotates the office only if both office-holders remain eligible
+face-image: img/poland/events/sejm-chamber-2024.webp
+new-page: true
+tags: poland_event
+priority: 32
+order: 5
+max-visits: 1
+view-if: continuous_campaign = 1 and year = 2025 and month = 11 and government_party != "pis" and caretaker_government = 0 and sejm_speaker = "Szymon Hołownia" and election_2027_terminal = 0
+on-arrival: sejm_rotation_crisis = 1; news_headline = "The scheduled Speakership rotation becomes a test of coalition loyalty"
+
+= November 2025 — A promise made when everyone polled higher
+
+[? if third_way_split: Poland 2050 is weaker, Third Way is gone and Hołownia's
+office is its last major national asset.?][? if third_way_active: Third Way
+survived its June deadline, but Hołownia's office remains Poland 2050's largest
+asset inside the pact.?] The written coalition agreement gives the chair to
+Lewica, and the delegation would send **[+ left_marshal_nominee +]**; enforcing
+the claim can still fracture the centre.
+
+[? if left_in_government: Lewica is a party to the governing agreement and can
+decide whether to enforce, renegotiate or waive its own coalition claim.?]
+[? if not left_in_government: Lewica is outside the cabinet. It can nominate a
+Marshal candidate and force a recorded Sejm choice, or waive its claim; it
+cannot order governing parties to execute their old coalition agreement.?]
+
+- @marshal_enforce
+- @marshal_compensate
+- @marshal_delay
+- @marshal_alternative
+- @marshal_opposition_nominate_czarzasty
+- @marshal_opposition_nominate_alternative
+- @marshal_opposition_release
+
+@marshal_enforce
+title: Put Czarzasty to a vote on the original terms
+subtitle: Nominate without paying twice and make Poland 2050 answer in the chamber.
+view-if: left_in_government = 1 and left_marshal_nominee = "Włodzimierz Czarzasty"
+on-arrival: marshal_rotation_nominee = "Włodzimierz Czarzasty"; marshal_rotation_whip_bonus = 0; p2050_relation -= 6; p2050_coalition_dissent += 6; third_way_cohesion -= 6 if third_way_active = 1; party_unity += 3; media_capacity += 2; news_headline = "Czarzasty's nomination reaches the Sejm on the original terms"
+
+We table Czarzasty under the agreement already signed and refuse a second
+price. Our factions rally around the claim; Poland 2050 prepares to make the
+Sejm vote a judgment on whether old promises survive its collapse.
+
+- @marshal_rotation_vote: Count the Marshal vote
+
+@marshal_compensate
+title: Give Poland 2050 committee and policy guarantees
+subtitle: Governing-coalition route. Cost: 1 budget capacity; improves the whip count but does not appoint the Marshal.
+choose-if: budget >= 1
+unavailable-subtitle: No compensation can be offered.
+view-if: left_marshal_nominee = "Włodzimierz Czarzasty" and left_in_government = 1
+on-arrival: {!
+Q.budget -= 1;
+Q.marshal_rotation_nominee = "Włodzimierz Czarzasty";
+Q.marshal_rotation_whip_bonus = 12;
+Q.p2050_relation += 5;
+Q.p2050_coalition_dissent -= 4;
+if (Q.third_way_active) Q.third_way_cohesion += 5;
+Q.party_unity += 1;
+Q.news_headline = "A compensation protocol precedes Czarzasty's Sejm vote";
+!}
+
+Committee places and policy guarantees give Poland 2050 a reason to honour the
+rotation. Czarzasty still needs the chamber; the bargain merely turns former
+hostages into MPs the coalition can whip.
+
+- @marshal_rotation_vote: Count the compensated Marshal vote
+
+@marshal_delay
+title: Delay the rotation to preserve coalition calm
+subtitle: Leave Hołownia in the chair and carry the breach into our own leadership.
+view-if: left_in_government = 1
+on-arrival: sejm_rotation_crisis = 1; sejm_speaker = "Szymon Hołownia"; party_unity -= 7; barons_dissent += 8; p2050_relation += 5; third_way_cohesion += 4 if third_way_active = 1; public_trust -= 3; news_headline = "The Left yields the chair and reopens its own leadership crisis"
+
+Hołownia keeps the chair and the centre calls the delay responsible. Inside
+Lewica, Czarzasty's wing treats the surrendered office as proof that coalition
+calm is always purchased from us.
+
+- @poland_event_queue: Record the delayed rotation
+
+@marshal_alternative
+title: Nominate [+ left_marshal_nominee +] under the same rotation agreement
+subtitle: The office belongs to the delegation that holds the party, not to a resurrected individual.
+view-if: left_in_government = 1 and left_marshal_nominee != "Włodzimierz Czarzasty"
+on-arrival: {!
+Q.marshal_rotation_nominee = Q.left_marshal_nominee;
+Q.marshal_rotation_whip_bonus = 3;
+Q.labor_strength += 3;
+Q.progressives_strength += 2;
+Q.barons_dissent += 5;
+Q.p2050_relation -= 3;
+if (Q.third_way_active) Q.third_way_cohesion -= 3;
+Q.public_trust += 2;
+Q.news_headline = Q.marshal_rotation_nominee +
+    " is nominated instead of restoring Czarzasty";
+!}
+
+We defend the delegation's claim without resurrecting a leader already removed.
+[? if left_marshal_nominee = "Marta Stożek": Razem controls the party, so the
+rotation carries **Marta Stożek** to the chamber rather than the founder of the
+apparatus Razem defeated. The old machine calls the chair stolen twice.?][? if
+left_marshal_nominee != "Marta Stożek": Labour and progressives gain a national
+office candidate; the old machine asks whether the rotation was ever meant for
+the party rather than Czarzasty.?]
+
+- @marshal_rotation_vote: Count the alternative nominee's vote
+
+@marshal_rotation_vote
+title: The Sejm votes on its Marshal
+subtitle: The coalition agreement supplies a nominee, not the office
+new-page: true
+call: poland_normalize
+on-arrival: {!
+const marshalTotal = Math.max(1, Number(Q.sejm_total) || 460);
+const marshalLeftBase = Math.max(
+    0,
+    Math.min(
+        marshalTotal,
+        Math.round(
+            Number(Q.left_committed_seats) || Number(Q.left_seats) || 0
+        )
+    )
+);
+let marshalNonLeftBase = Math.max(
+    0,
+    Math.round(Number(Q.government_support_seats) || 0)
+);
+if (marshalNonLeftBase <= 0) {
+    marshalNonLeftBase = Math.max(
+        0,
+        Math.round(Number(Q.coalition_seats) || 0) - marshalLeftBase
+    );
+}
+marshalNonLeftBase = Math.min(
+    marshalTotal - marshalLeftBase,
+    marshalNonLeftBase
+);
+const marshalGovernmentBase = marshalLeftBase + marshalNonLeftBase;
+const marshalWhipStress =
+    (Number(Q.government_coalition_dissent) || 0) * 0.35 +
+    (Number(Q.p2050_coalition_dissent) || 0) * 0.45 +
+    Math.max(0, 50 - (Number(Q.p2050_relation) || 0)) * 0.20 -
+    (Number(Q.marshal_rotation_whip_bonus) || 0);
+const marshalDefections = Math.min(
+    marshalNonLeftBase,
+    Math.max(0, Math.round((marshalWhipStress - 20) / 5))
+);
+const marshalOppositionPool = Math.max(
+    0,
+    marshalTotal - marshalGovernmentBase
+);
+const marshalOppositionAbsent = Math.min(6, marshalOppositionPool);
+const marshalDefectionNo = Math.ceil(marshalDefections * 0.65);
+const marshalDefectionAbstain =
+    marshalDefections - marshalDefectionNo;
+Q.marshal_rotation_left_yes = marshalLeftBase;
+Q.marshal_rotation_non_left_base = marshalNonLeftBase;
+Q.marshal_rotation_defections = marshalDefections;
+Q.marshal_rotation_yes = Math.max(
+    0,
+    marshalGovernmentBase - marshalDefections
+);
+Q.marshal_rotation_no = Math.max(
+    0,
+    marshalOppositionPool - marshalOppositionAbsent + marshalDefectionNo
+);
+Q.marshal_rotation_abstain = marshalDefectionAbstain;
+Q.marshal_rotation_absent = marshalOppositionAbsent;
+Q.marshal_rotation_present =
+    Q.marshal_rotation_yes + Q.marshal_rotation_no +
+        Q.marshal_rotation_abstain;
+Q.marshal_rotation_threshold =
+    Math.floor(Q.marshal_rotation_present / 2) + 1;
+Q.marshal_rotation_vote_passed =
+    Q.marshal_rotation_present >= Math.ceil(marshalTotal / 2) &&
+    Q.marshal_rotation_yes >= Q.marshal_rotation_threshold ? 1 : 0;
+if (Q.marshal_rotation_vote_passed) {
+    Q.sejm_speaker = Q.marshal_rotation_nominee;
+    Q.sejm_rotation_crisis = 0;
+    Q.news_headline =
+        Q.marshal_rotation_nominee + " wins the recorded Marshal vote";
+} else {
+    Q.sejm_speaker =
+        "Senior Deputy Marshal (acting after inconclusive rotation vote)";
+    Q.sejm_rotation_crisis = 1;
+    Q.government_coalition_dissent += 2;
+    Q.public_trust -= 2;
+    Q.news_headline =
+        "The rotation vote is inconclusive and an acting Marshal remains";
+}
+!}
+
+= Recorded chamber vote
+
+Nominee: **[+ marshal_rotation_nominee +]**
+
+**Yes [+ marshal_rotation_yes +] · No [+ marshal_rotation_no +] · Abstain [+
+marshal_rotation_abstain +] · Absent [+ marshal_rotation_absent +]**
+
+The declared governing base was **[+ marshal_rotation_left_yes +] Lewica + [+
+marshal_rotation_non_left_base +] non-Lewica MPs**. Coalition and Poland 2050
+dissent removed **[+ marshal_rotation_defections +]** votes after the selected
+whip agreement. With **[+ marshal_rotation_present +]** present, the required
+majority was **[+ marshal_rotation_threshold +]**.
+
+[? if marshal_rotation_vote_passed: The Sejm—not Lewica's leadership—elects [+
+marshal_rotation_nominee +] as Marshal.?][? if not marshal_rotation_vote_passed:
+The nomination fails. The acting Marshal keeps the chair while the coalition
+decides whether another candidate can command a majority.?]
+
+- @poland_event_queue: Record the vote
+
+@marshal_opposition_nominate_czarzasty
+title: Table Czarzasty's nomination and demand a recorded Sejm vote
+subtitle: Opposition can nominate, not appoint; force the former partners to vote.
+view-if: left_in_government = 0 and left_marshal_nominee = "Włodzimierz Czarzasty"
+on-arrival: sejm_rotation_crisis = 1; party_unity += 2; media_capacity += 3; public_trust += 1; p2050_relation -= 4; third_way_cohesion -= 4 if third_way_active = 1; news_headline = "Lewica tables Czarzasty and leaves KO and Poland 2050 to own the later Marshal vote"
+
+We cannot execute the old coalition agreement from opposition, but we can put
+its nominee on the record. KO and Poland 2050 must now own whether the promised
+rotation ever reaches a majority.
+
+- @poland_event_queue: Record Czarzasty's opposition nomination
+
+@marshal_opposition_nominate_alternative
+title: Table [+ left_marshal_nominee +] and demand a recorded Sejm vote
+subtitle: Preserve the delegation's claim without restoring a removed leader.
+view-if: left_in_government = 0 and left_marshal_nominee != "Włodzimierz Czarzasty"
+on-arrival: {!
+Q.sejm_rotation_crisis = 1;
+Q.labor_strength += 2;
+Q.progressives_strength += 2;
+Q.barons_dissent += 3;
+Q.media_capacity += 2;
+Q.public_trust += 1;
+Q.news_headline = "Lewica nominates " + Q.left_marshal_nominee +
+    " without pretending the opposition can appoint a Marshal";
+!}
+
+**[+ left_marshal_nominee +]** carries our claim into the chamber as a serving
+leader. Younger currents see continuity without restoration; the barons see
+their founder's promised office reassigned.
+
+- @poland_event_queue: Record the alternative opposition nomination
+
+@marshal_opposition_release
+title: Waive Lewica's old coalition claim and keep Hołownia as Marshal
+subtitle: End the opposition claim, stabilise the chair and absorb the internal breach.
+view-if: left_in_government = 0
+on-arrival: sejm_rotation_crisis = 0; sejm_speaker = "Szymon Hołownia"; p2050_relation += 4; third_way_cohesion += 3 if third_way_active = 1; party_unity -= 3; barons_dissent += 6; public_trust += 1; news_headline = "Lewica waives an old coalition claim from opposition instead of commanding the majority"
+
+We admit that an opposition party cannot command its former partners and waive
+the chair. Hołownia gains certainty; Czarzasty's wing adds the office to its
+case that coalition promises vanish when Lewica stops holding leverage.
+
+- @poland_event_queue: Record the waived claim
+
+@independence_2025
+# prose-audit: Grade B — Mentzen, Braun, PiS, Warsaw organisers and threatened minorities now contest a street with institutional memory, and every mobilisation strategy has an authored owner and cost.
+title: The 2025 Independence Day March
+subtitle: Mentzen, Braun and PiS compete for the street
+new-page: true
+tags: poland_event
+priority: 34
+order: 20
+max-visits: 1
+face-image: img/poland/cards/national-left-rally.webp
+view-if: continuous_campaign = 1 and year = 2025 and month = 11
+on-arrival: last_independence_march_year = 2025; far_right_street_capacity += 4; public_mood_pending_refugee_solidarity_support += -5; public_mood_pending_refugee_solidarity_backlash += 6; public_mood_pending_national_security_salience += 5
+
+= November 2025 — Three rivals on the right
+
+**Sławomir Mentzen's** Konfederacja, **Grzegorz Braun's** Crown movement and
+PiS all arrive in Warsaw wanting to own the same national symbols. Their
+competition does not make the street safer: nationalist organisers can push
+one another toward the slogan or confrontation most likely to dominate the
+broadcast.
+
+Lewica is no longer improvising its first response. Civic organisers remember
+the alternative celebrations we built; anti-fascists remember our counter-
+marches; lawyers, police and minority groups remember whether monitoring kept
+people safe. A social-patriotic current also wants to enter the main march and
+deny the right exclusive ownership of the flag. Whichever line we repeat will
+inherit trained people—and promises they expect us to keep.
+
+- @ind25_civic
+- @ind25_join
+- @ind25_security
+- @ind25_counter
+
+@ind25_civic
+title: Expand the civic-independence alternative
+subtitle: [? if civic_independence_investment >= 3: The permanent network now funds the march itself. No resource cost.?][? if civic_independence_investment < 3: Cost: 1 resource.?]
+choose-if: civic_independence_investment >= 3 or resources >= 1
+unavailable-subtitle: The annual operation cannot be staffed.
+on-arrival: resources -= 1 if civic_independence_investment < 3; civic_independence_investment += 1 if civic_independence_investment < 3; independence_march_strategy = "Civic tradition"; civic_independence_years += 1; civic_patriotism += 6; local_network += 2; public_trust += 2; far_right_street_capacity -= 1; news_headline = "A permanent civic tradition contests the radical-right monopoly"
+
+Municipal stages, veterans, unions and cultural organisations offer a national
+celebration that neither hides the flag nor asks families to walk through a
+radical-right column. Another year of the same route turns an alternative event
+into a tradition with its own volunteers, audience and public expectation.
+
+- @poland_event_queue: File the civic Independence Day
+
+@ind25_join
+title: March as the social-patriotic Left and force the right to share its stage
+subtitle: The caucus grows while Mentzen, Braun and nationalist organisers contest its presence.
+on-arrival: independence_march_strategy = "Join the Independence March"; independence_join_years += 1; civic_patriotism += 5; social_patriot_support += 10; left_cultural_position += 4; left_right_score += 4; rural_support += 2; progressives_dissent += 9; spring_dissent += 7; razem_dissent += 6; minority_safety -= 2; far_right_street_capacity += 2; far_right_fragmentation += 4; news_headline = "A social-patriotic Left column turns the march into a fight over ownership"
+
+The social-patriotic Left enters behind its own unions, welfare slogans and
+red-and-white banners. Mentzen's stewards, Braun's supporters and nationalist
+organisers each contest its presence, proving the march has more than one
+owner. Rural and conservative-left supporters notice; progressive and minority
+organisers ask why the party made them share a security perimeter with the far right.
+
+- @poland_event_queue: Record the Left column inside the march
+
+@ind25_security
+title: Apply a neutral security plan and deny every camp a martyr
+subtitle: Publish one assembly standard for police, organisers and people who may need protection.
+on-arrival: independence_march_strategy = "Legal monitoring"; independence_monitor_years += 1; police_trust += 4 if left_in_government = 1; media_capacity += 2 if left_in_government = 0; minority_safety += 3; constitutional_restraint += 3; braun_martyrdom -= 1; public_mood_pending_refugee_solidarity_support += 4; public_mood_pending_national_security_salience += 6; news_headline = "The march receives a published assembly standard and monitoring record"
+
+A published assembly standard governs routes, police intervention and evidence
+for every camp. [? if left_in_government: The security services know the
+government will defend proportionate enforcement rather than demand a partisan
+show.?][? if not left_in_government: Lewica's legal monitors publish the record
+the government and organisers will later have to answer.?] Braun receives less
+martyr footage; threatened communities receive clearer routes to help.
+
+- @poland_event_queue: File the monitored march
+
+@ind25_counter
+title: Mobilise the largest anti-fascist counter-march yet
+subtitle: Put a visible force beside threatened communities and give the right the confrontation frame.
+on-arrival: independence_march_strategy = "Counter-mobilisation"; independence_counter_years += 1; organiser_energy -= 3; progressive_credibility += 5; minority_safety += 3; far_right_street_capacity += 3; braun_martyrdom += 2; news_headline = "Competing marches turn Warsaw into the month's whole political frame"
+
+Anti-fascist groups, unions and minority organisations fill a second route
+through Warsaw. People threatened by the main march see a force prepared to
+stand with them. The right answers with its own mobilisation, Braun gains the
+confrontation frame, and every other meaning of Independence Day disappears
+behind two crowds and the police line between them.
+
+- @poland_event_queue: Record the counter-march
+
+@matysiak_razem_2025
+# prose-audit: Grade A — The confrontation is staged through a certified delegate roll, rival programme speeches and a two-chair vote; the three choices identify who controls Razem and who must register a successor.
+title: Razem decides Paulina Matysiak's future
+subtitle: Leadership challenge, Zandberg split or expulsion
+face-image: img/poland/events/adrian-zandberg-2020.webp
+new-page: true
+tags: poland_event
+priority: 25
+order: 20
+max-visits: 1
+view-if: continuous_campaign = 1 and year = 2025 and matysiak_resolution_done = 0 and ((month = 11 and matysiak_party = "Razem") or (social_patriot_active = 1 and month >= 9 and month <= 11 and (matysiak_party = "Razem" or matysiak_party = "Lewica Patriotyczna")))
+on-arrival: {!
+const socialPatriotBoost = Q.social_patriot_active
+    ? 8 + Math.min(8, (Number(Q.social_patriot_strength) || 0) * 0.20)
+    : 0;
+Q.matysiak_development_score = Math.round(
+    24 + (Number(Q.matysiak_development_pressure) || 0) +
+    socialPatriotBoost +
+    Math.max(
+        -10,
+        Math.min(
+            16,
+            ((Number(Q.economic_issue_salience) || 40) -
+                (Number(Q.cultural_issue_salience) || 30)) * 0.30
+        )
+    ) +
+    Math.max(0, (Number(Q.left_right_score) || 30) - 30) * 0.35 +
+    Math.max(0, (Number(Q.left_poll) || 10) - 12) * 0.7 +
+    Math.max(0, Number(Q.party_system_left_pull) || 0) * 0.08
+);
+Q.news_headline = "Razem votes on Matysiak's developmental challenge";
+!}
+
+= November 2025 — Who gets to define Razem?
+
+Razem's national council publishes the delegate roll and asks both statutory
+chairs to certify it. **Adrian Zandberg** defends a democratic-socialist party
+built around housing, public ownership and organised labour. **Paulina
+Matysiak** answers with rail, nuclear power, regional investment and economic
+sovereignty. Her programme turns Razem rightward on culture without making it
+economically liberal.
+
+[? if social_patriot_active: Lewica Patriotyczna's organisers give Matysiak an
+additional caucus beyond her original Razem network.?] If her development
+campaign has secured enough delegates, she can take the first chair or force
+Zandberg's current to leave. If it has not, Zandberg's majority can expel her
+and convert the dispute into a separate developmental party. The second chair
+remains a statutory office whichever programme wins.
+
+- @matysiak_leadership
+- @matysiak_own_party
+- @matysiak_expulsion
+
+@matysiak_leadership
+title: Replace Zandberg with Matysiak and make development the new dividing line
+subtitle: Requires a developed internal base and a less culture-led electorate.
+choose-if: matysiak_caucus_actions >= 4 or (matysiak_development_score >= 46 and cultural_issue_salience <= 50)
+unavailable-subtitle: Matysiak has a platform but not a majority inside Razem.
+on-arrival: matysiak_exit_choice = "Matysiak controls Razem"
+go-to: poland_razem_futures.matysiak_control_result
+
+@matysiak_own_party
+title: Let Zandberg's original-left wing split as Akcja Socjalistyczna
+subtitle: Matysiak keeps Razem; the defeated original-left faction leaves under Zandberg.
+choose-if: matysiak_caucus_actions >= 3 or matysiak_development_score >= 42
+unavailable-subtitle: Matysiak's camp is not strong enough to force a durable factional split.
+on-arrival: matysiak_exit_choice = "Akcja Socjalistyczna"
+go-to: matysiak_exit_result
+
+@matysiak_expulsion
+title: Enforce party discipline and expel Matysiak
+subtitle: Expulsion hardens her network into Tak! Dla Rozwoju under her own label.
+choose-if: matysiak_caucus_actions < 3
+unavailable-subtitle: Three Matysiak caucus actions have secured her leadership of Razem; the original-left faction leaves under Zandberg instead.
+on-arrival: matysiak_exit_choice = "Tak! Dla Rozwoju"
+go-to: matysiak_exit_result
+
+@matysiak_exit_result
+title: Razem's leadership split is certified
+go-to: poland_razem_futures.split_result
+
+@matysiak_exit_finish
+title: Record another splitter
+go-to: poland_event_queue
+
+@social_patriot_leadership_2025
+# prose-audit: Grade A — The three routes now differ in what the organisation becomes: a party with a leader whose cultural positions nobody voted on, a council that governs well and cannot be interviewed, or a bureau seat bought with the freedom to be simply against things.
+title: Lewica Patriotyczna chooses a national leadership
+subtitle: Matysiak, regional organisers and the common Left contest control of the new organisation
+face-image: img/poland/events/lewica-convention-2024.webp
+new-page: true
+tags: poland_event
+priority: 25
+order: 20
+max-visits: 1
+view-if: continuous_campaign = 1 and year = 2025 and month = 11 and matysiak_resolution_done = 0 and social_patriot_active = 1
+
+= November 2025 — An organisation needs a leadership
+
+Lewica Patriotyczna has branches, its own policy work and referrals from
+regional welfare organisers. <span class="party-razem"><b>Paulina Matysiak</b></span> offers a recognisable
+developmental leadership. The founding council argues that the organisation
+should not exchange SLD inheritance for another personality. The common Left
+wants a chair it can keep inside one electoral family.
+
+- @social_patriot_leader_matysiak
+- @social_patriot_leader_council
+- @social_patriot_leader_compact
+
+@social_patriot_leader_matysiak
+title: Elect Matysiak as national chair
+subtitle: A clear developmental face strengthens the organisation and alarms progressives.
+on-arrival: matysiak_resolution_done = 1; matysiak_party = "Lewica Patriotyczna"; matysiak_status = "Leader of Lewica Patriotyczna"; social_patriot_leader = "Paulina Matysiak"; social_patriot_strength += 4; social_patriot_cohesion += 5; progressive_credibility -= 3; progressives_dissent += 4; rural_support += 2; news_headline = "Matysiak becomes chair of Lewica Patriotyczna"
+
+Matysiak takes the chair and the organisation acquires a face the television
+studios already know. Within a fortnight the branch secretaries stop describing
+themselves as a network and start describing themselves as a party with a
+leader, which is a different thing to be.
+
+The regional founders who built it out of welfare offices and parish halls get
+a national profile they could not have produced themselves, and a leader whose
+positions on abortion and church schools were never voted on by any of them.
+Our progressives read the result as the developmental current acquiring a
+standing army.
+
+- @poland_event_queue: Record the leadership
+
+@social_patriot_leader_council
+title: Retain the regional founding council
+subtitle: Stronger local ownership, slower national recognition.
+on-arrival: matysiak_resolution_done = 1; matysiak_party = "Lewica Patriotyczna"; matysiak_status = "Social-Patriot organiser"; social_patriot_leader = "regional founding council"; social_patriot_local_organisation += 7; social_patriot_cohesion += 3; local_network += 3; media_capacity -= 1; news_headline = "Lewica Patriotyczna retains its regional collective leadership"
+
+The founding council keeps command, which means the organisation continues to
+be run by the people who know which county needs what. Decisions are slower and
+better grounded; nobody in Warsaw can commit the network to a position its
+branches have not discussed.
+
+It also means Lewica Patriotyczna has no single voice to put on television.
+Matysiak stays a prominent supporter rather than a chair, and every national
+argument about what the current stands for gets answered by whichever regional
+organiser a producer managed to reach.
+
+- @poland_event_queue: Record the leadership
+
+@social_patriot_leader_compact
+title: Bind its leadership into the common Left bureau
+subtitle: Unity rises, but the new organisation surrenders some autonomy.
+on-arrival: matysiak_resolution_done = 1; social_patriot_leader = "joint Lewica Patriotyczna bureau"; social_patriot_dissent -= 6; social_patriot_cohesion -= 2; social_patriot_list_dependence += 8; party_unity += 4; barons_dissent += 3; news_headline = "Lewica Patriotyczna accepts a joint leadership compact"
+
+The leadership is written into the common Left's bureau: a seat, a vote and an
+obligation to bring disputes inside rather than to the press. The current gains
+standing in the party it grew out of and gives up the freedom to be simply
+against things.
+
+Its organisers accept the trade with visible reluctance. They joined something
+that felt like a corrective to the party apparatus and have just been made part
+of it, and the first time the bureau overrules them they will remember which
+signature put them in the room.
+
+- @poland_event_queue: Record the leadership
+
+@marriage_eu_2025
+# prose-audit: Grade B — The CJEU judgment now follows married couples into registries, names Lewica's live executive limits and distinguishes recognition, equality legislation, cultural retreat and delay on every route.
+title: Europe requires recognition of EU same-sex marriages
+subtitle: Administrative recognition arrives before domestic marriage equality
+new-page: true
+tags: poland_event
+priority: 24
+order: 21
+max-visits: 1
+face-image: img/poland/cards/equality-bill.webp
+view-if: continuous_campaign = 1 and year = 2025 and month = 11 and marriage_reform_stage < 3
+on-arrival: european_judgment_compliance += 3; public_mood_pending_lgbt_equality_salience += 16; public_mood_pending_lgbt_equality_support += 8; public_mood_pending_lgbt_equality_backlash += 8; news_headline = "An EU judgment forces a practical equality decision"
+
+= November 2025 — Recognition is not a full marriage statute
+
+The Court of Justice of the European Union rules that Poland must recognise a
+same-sex marriage lawfully concluded in another member state when EU rights
+depend on it. Married couples now carry a European judgment to Polish
+registries, tax offices and benefit administrators; they still do not possess
+a Polish marriage-equality statute.
+
+[? if left_in_government: Equality Minister **[+ equality_minister +]** of
+**[+ equality_minister_party +]** can make the judgment usable through national
+guidance. Lewica can also ask PSL leader <span class="party-psl"><b>Władysław Kosiniak-Kamysz</b></span> and
+President **[+ president_name +]** whether recognition should become equal
+marriage.?][? if not left_in_government: Lewica cannot instruct national
+registries. It can publish a model, support litigation and force Parliament to
+choose whether European recognition remains the only marriage route available
+to Polish same-sex couples.?]
+
+- @marriage_implement
+- @marriage_bill
+- @marriage_registry_truce
+- @marriage_delay
+- @marriage_opposition_guidance
+
+@marriage_implement
+title: Issue immediate registry guidance and defend EU rights
+subtitle: Give couples usable documents now and take responsibility for a fight with PSL and the Palace.
+view-if: left_in_government = 1
+on-arrival: minority_safety += 5; progressive_credibility += 4; european_judgment_compliance += 5; psl_relation -= 3; president_relation -= 2; news_headline = "Registries receive a rule before Parliament finds a majority"
+
+National guidance tells registries which foreign marriages to enter and tells
+administrators which family rights follow. Couples gain documents they can use
+without beginning a new case in every office. PSL and the Palace object to the
+scope, but the government owns compliance rather than outsourcing it to litigants.
+
+- @poland_event_queue: File immediate recognition guidance
+
+@marriage_bill
+title: Use the ruling to introduce full marriage equality
+subtitle: Refuse to make cross-border recognition the final settlement and reopen the domestic equality fight.
+on-arrival: progressive_credibility += 7; feminist_trust += 3; psl_relation -= 10; government_coalition_dissent += 8; president_relation -= 5; far_right_agenda += 5; public_mood_pending_lgbt_equality_support += 14; public_mood_pending_lgbt_equality_salience += 10; public_mood_pending_lgbt_equality_backlash += 9; public_mood_pending_lgbt_equality_left_ownership += 10; public_mood_pending_lgbt_equality_support += 9 if public_climate_progressive_index >= 48; public_mood_pending_lgbt_equality_support -= 8 if public_climate_progressive_index < 48; news_headline = "The European ruling becomes the opening of a domestic marriage fight"
+
+Lewica introduces equal marriage under Polish law instead of treating a
+cross-border judgment as the destination. Equality organisations gain the bill
+they asked for; PSL and the President prepare to stop it, and the right opens a
+sovereignty campaign. Introduction begins the fight—it does not enact the right.
+
+- @poland_event_queue: File the equal-marriage bill
+
+@marriage_registry_truce
+title: Implement recognition but declare a cultural truce on wider reform
+subtitle: Legal compliance and centrist relations improve; the developmental-right path opens at a cost to progressives.
+on-arrival: european_judgment_compliance += 5; minority_safety += 2; public_mood_pending_lgbt_equality_salience -= 12; public_mood_pending_abortion_rights_salience -= 4; public_mood_pending_secular_state_salience -= 3; cultural_issue_salience -= 8; economic_issue_salience += 5; left_right_score += 6; left_cultural_position += 4; social_patriot_support += 8; razem_right_score += 8; matysiak_development_pressure += 8; psl_relation += 6; p2050_relation += 5; progressive_credibility -= 6; progressives_dissent += 10; spring_dissent += 6; razem_dissent += 7; news_headline = "Lewica implements the judgment while declaring a truce on cultural legislation"
+
+[? if left_in_government: The government orders registries to comply, then
+Lewica declares that equal marriage, abortion and church-state reform will not
+reopen this term.?][? if not left_in_government: Lewica helps willing councils
+apply the judgment but abandons a national enforcement campaign, then declares
+that equal marriage, abortion and church-state reform will not reopen this
+term.?] Couples with foreign marriages gain recognition where administrators
+comply. Social-patriotic and developmental currents gain the economic turn
+they wanted; progressive members hear their party convert a court victory into
+the boundary of its ambition.
+
+- @poland_event_queue: Record recognition and the cultural truce
+
+@marriage_delay
+title: Await detailed administrative and court guidance
+subtitle: Avoid an immediate fight and make married couples carry the uncertainty from office to office.
+on-arrival: european_judgment_compliance -= 2; progressive_credibility -= 3; psl_relation += 2; public_trust -= 1; public_mood_pending_lgbt_equality_support += -5; public_mood_pending_lgbt_equality_left_ownership += -4; news_headline = "Uncertainty shifts the cost of delay onto married couples"
+
+[? if left_in_government: The government waits for more instructions and
+leaves each registry to decide how much uncertainty it can impose. PSL avoids
+an immediate coalition fight.?][? if not left_in_government: Lewica declines
+to publish guidance or begin test litigation and waits for the government to
+act. PSL avoids an immediate parliamentary fight.?] Married couples continue
+carrying lawyers and translated certificates between offices while Poland's
+compliance is tested one refusal at a time.
+
+- @poland_event_queue: File the administrative delay
+
+@marriage_opposition_guidance
+title: Publish model registry guidance and litigate non-compliance
+subtitle: Opposition can support couples and councils, but cannot issue a national administrative instruction. Cost: 1 resource.
+view-if: left_in_government = 0
+choose-if: resources >= 1
+unavailable-subtitle: The legal-support network cannot be financed.
+on-arrival: resources -= 1; minority_safety += 3; european_judgment_compliance += 2; local_network += 3; media_capacity += 2; public_trust += 1; news_headline = "Lewica gives councils and litigants a model while ministries retain executive authority"
+
+Lewica lawyers publish sample registry forms for willing councils and finance the first
+challenges to refusal. Couples gain a usable argument and local officials gain
+cover to comply. The ministries still own national administration, so every
+success also documents the executive guidance they have failed to issue.
+
+- @poland_event_queue: Send the opposition registry model to the desk

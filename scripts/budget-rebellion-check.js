@@ -560,10 +560,10 @@ for (let year = 2019; year <= 2026; year += 1) {
 
 for (const id of [
   'poland_budget_2023_2026.limp_on',
-  'poland_events.budget_2019_sejm_vote_2020',
-  'poland_events.budget_2020',
-  'poland_events_2021_2023.budget_2021',
-  'poland_events_2021_2023.december_2022',
+  'poland_events_2020_02.budget_2019_sejm_vote_2020',
+  'poland_events_2020_11.budget_2020',
+  'poland_events_2021_12.budget_2021',
+  'poland_events_2022_11.december_2022',
   'poland_budget_2023_2026.budget_2023',
   'poland_budget_2023_2026.budget_2024',
   'poland_budget_2023_2026.budget_2025',

@@ -1,0 +1,1961 @@
+title: presidential first round (2025)
+
+@presidential_first_round_2025
+# prose-audit: Grade A — The seven-level verdict on Lewica's result is genuinely authored, and the inter-round bargain beneath it now matches: eight endorsement routes each report what was signed and what it cost, and they open a two-move support market over the electorates the first round left without a candidate.
+title: Presidential election — first round
+subtitle: [? if pres_2025_united_left: One Left campaign receives a national verdict?][? if not pres_2025_united_left: Two Left strategies receive separate verdicts?]
+face-image: img/poland/events/presidential-ballot-2025.webp
+new-page: true
+tags: poland_event
+priority: 45
+order: 1
+max-visits: 1
+view-if: continuous_campaign = 1 and year = 2025 and month >= 5 and pres_2025_round_one_done = 0
+on-arrival: {!
+const finitePres25 = function(value, fallback) {
+    return Number.isFinite(Number(value)) ? Number(value) : fallback;
+};
+const clampPres25 = function(value, low, high) {
+    return Math.max(low, Math.min(high, value));
+};
+const formatVotesPres25 = function(value) {
+    return String(Math.round(value)).replace(
+        /\B(?=(\d{3})+(?!\d))/g,
+        " "
+    );
+};
+const noise = function(scale) {
+    return (
+        (this.random.uint32() / 4294967296) * 2 - 1
+    ) * scale;
+}.bind(this);
+const leftIntent = finitePres25(Q.left_vote_intent, 8.61);
+const koIntent = finitePres25(Q.ko_vote_intent, 30.70);
+const pisIntent = finitePres25(Q.pis_vote_intent, 35.38);
+const konfIntent = finitePres25(Q.konf_vote_intent, 7.16);
+const campaign = finitePres25(Q.pres_2025_campaign_strength, 0);
+const debate = finitePres25(Q.pres_2025_debate_shift, 0);
+const candidateBaseline =
+    Q.pres_2025_left_candidate == "Adrian Zandberg" ? 4.86 :
+    (Q.pres_2025_left_candidate == "Agnieszka Dziemianowicz-Bąk"
+        ? 4.55 : 4.23);
+// Historical candidate baselines describe a small party. Once Lewica becomes
+// a major polling force, presidential support catches up instead of remaining
+// trapped behind the 2025 result. A separate Razem candidacy follows Razem's
+// own electorate rather than consuming every extra Lewica voter a second time.
+const breakthroughIntent = Math.max(0, leftIntent - 12);
+const razemIntent = Q.razem_party_formed
+    ? finitePres25(Q.razem_vote_intent, 0)
+    : 4.86;
+let governmentLeftBase;
+let razemLeftBase;
+if (Q.pres_2025_united_left) {
+    // A common ticket is a new electorate, not Biejat plus Zandberg. The
+    // nomination route can create public legitimacy or strand coerced voters.
+    governmentLeftBase =
+        7.70 +
+        (candidateBaseline - 4.23) * 0.45 +
+        (leftIntent - 8.61) * 0.55 +
+        breakthroughIntent * 1.30 +
+        campaign * 0.20 +
+        debate * 0.65 +
+        clampPres25(finitePres25(Q.pres_2025_unity_effect, 0), -1.5, 1.5);
+    razemLeftBase = 0;
+} else {
+    governmentLeftBase =
+        candidateBaseline +
+        (leftIntent - 8.61) * 0.28 +
+        breakthroughIntent * 1.80 +
+        campaign * 0.20 +
+        debate * 0.55;
+    razemLeftBase =
+        4.86 +
+        (razemIntent - 4.86) * 0.80 +
+        (finitePres25(Q.razem_strength, 20) - 20) * 0.06;
+}
+governmentLeftBase = Math.max(0.4, governmentLeftBase);
+razemLeftBase = Math.max(0, razemLeftBase);
+const governmentLeft = Math.max(
+    0.4,
+    governmentLeftBase + noise(Q.pres_2025_united_left ? 1.4 : 1.0)
+);
+const razemLeft = Math.max(
+    0,
+    razemLeftBase + (Q.pres_2025_united_left ? 0 : noise(0.9))
+);
+let koBase =
+    31.36 +
+    (koIntent - 30.70) * 0.34 +
+    (finitePres25(Q.ko_relation, 50) - 50) * 0.025 -
+    Math.max(0, governmentLeftBase + razemLeftBase - 10) * 0.18 +
+    finitePres25(Q.pres_2025_rival_shift_ko, 0);
+if (Q.pres_2025_incumbent) {
+    Q.pres_2025_incumbent_record =
+        1.2 +
+        (finitePres25(Q.public_trust, 43) - 43) * 0.035 +
+        finitePres25(Q.trz_vetoes, 0) * 0.10 +
+        (
+            finitePres25(Q.pis_cohabitation_stress, 0) -
+            finitePres25(Q.pis_cohabitation_rally, 0)
+        ) * 0.022 +
+        (Q.trz_rights_bill_outcome == "Passed and signed" ? 1.0 : 0);
+    koBase += Q.pres_2025_incumbent_record;
+}
+const ko =
+    koBase -
+    (
+        Math.max(0, governmentLeft + razemLeft - 10) -
+        Math.max(0, governmentLeftBase + razemLeftBase - 10)
+    ) * 0.18 +
+    noise(1.4);
+// The debate season leaves a mark on the rivals it was spent attacking, and on
+// whichever campaign owned the coverage when ours did not.
+const rivalShift25 = function(key) {
+    return finitePres25(Q["pres_2025_rival_shift_" + key], 0);
+};
+const rightBase =
+    29.54 +
+    (pisIntent - 35.38) * 0.25 +
+    (finitePres25(Q.far_right_agenda, 32) - 32) * 0.018 +
+    rivalShift25("right");
+const mentzenBase =
+    (Q.pres_2025_konf_candidate == "Krzysztof Bosak" ? 13.9 : 14.81) +
+    (konfIntent - 7.16) * 0.35 +
+    (Q.pres_2025_konf_candidate == "Krzysztof Bosak"
+        ? (finitePres25(Q.konf_nationalist_share, 35) - 35) * 0.03
+        : (finitePres25(Q.konf_mentzenite_share, 47) - 47) * 0.025) +
+    rivalShift25("mentzen");
+const braunBase =
+    6.34 +
+    finitePres25(Q.braun_martyrdom, 0) * 0.06 +
+    (finitePres25(Q.konf_braunist_share, 18) - 18) * 0.025 +
+    rivalShift25("braun");
+const holowniaBase =
+    4.99 +
+    (finitePres25(Q.p2050_vote_intent, 4.0) - 4.0) * 0.25 +
+    finitePres25(Q.p2050_holownia_presidential_bonus, 0) +
+    rivalShift25("holownia");
+const stanowskiBase =
+    1.24 +
+    (finitePres25(Q.kanal_zero_capacity, 12) - 12) * 0.025 +
+    finitePres25(Q.pres_2025_stanowski_surge, 0) +
+    rivalShift25("stanowski");
+const right = rightBase + noise(1.4);
+const mentzen = mentzenBase + noise(1.2);
+const braun = braunBase + noise(0.8);
+const holownia = holowniaBase + noise(0.7);
+const stanowski = stanowskiBase + noise(0.35);
+const other = 2.63;
+const expectedRaw = {
+    ko: Math.max(0.5, koBase),
+    right: Math.max(0.5, rightBase),
+    left: governmentLeftBase,
+    razem: razemLeftBase,
+    mentzen: Math.max(0.3, mentzenBase),
+    braun: Math.max(0.2, braunBase),
+    holownia: Math.max(0.2, holowniaBase),
+    stanowski: Math.max(0.1, stanowskiBase),
+    other: other
+};
+const expectedTotal = Object.keys(expectedRaw).reduce(function(sum, key) {
+    return sum + expectedRaw[key];
+}, 0);
+Q.pres_2025_candidate_expectation = Math.round(
+    expectedRaw.left * 10000 / expectedTotal
+) / 100;
+Q.pres_2025_field_expectation = Math.round(
+    (expectedRaw.left + expectedRaw.razem) * 10000 / expectedTotal
+) / 100;
+const raw = {
+    ko: Math.max(0.5, ko),
+    right: Math.max(0.5, right),
+    left: governmentLeft,
+    razem: razemLeft,
+    mentzen: Math.max(0.3, mentzen),
+    braun: Math.max(0.2, braun),
+    holownia: Math.max(0.2, holownia),
+    stanowski: Math.max(0.1, stanowski),
+    other: other
+};
+const total = Object.keys(raw).reduce(function(sum, key) {
+    return sum + raw[key];
+}, 0);
+for (const key of Object.keys(raw)) {
+    raw[key] = raw[key] * 100 / total;
+    Q["pres_2025_r1_" + key] =
+        Math.round(raw[key] * 100) / 100;
+    Q["pres_2025_r1_display_" + key] =
+        Math.round(raw[key] * 10) / 10;
+}
+const stanowskiSignal25 = Q.pres_2025_stanowski_breakout
+    ? Math.max(7, finitePres25(Q.pres_2025_r1_stanowski, 0))
+    : finitePres25(Q.pres_2025_r1_stanowski, 0);
+Q.stanowski_best_poll = Math.max(
+    finitePres25(Q.stanowski_best_poll, 1.24),
+    stanowskiSignal25
+);
+Q.stanowski_trigger_score = Math.max(
+    finitePres25(Q.stanowski_trigger_score, 0),
+    stanowskiSignal25
+);
+if (Q.pres_2025_stanowski_breakout) {
+    Q.kanal_zero_capacity += 4;
+    Q.p2050_coalition_dissent += 2;
+}
+const displayTotal = Object.keys(raw).reduce(function(sum, key) {
+    return sum + (Number(Q["pres_2025_r1_display_" + key]) || 0);
+}, 0);
+Q.pres_2025_r1_display_other = Math.round(
+    ((Number(Q.pres_2025_r1_display_other) || 0) + 100 - displayTotal) * 10
+) / 10;
+const candidateNames = {
+    ko: Q.pres_2025_ko_candidate || "Rafał Trzaskowski",
+    right: Q.pres_2025_right_candidate || "Karol Nawrocki",
+    left: Q.pres_2025_left_candidate,
+    razem: Q.pres_2025_razem_candidate || "Adrian Zandberg",
+    mentzen: Q.pres_2025_konf_candidate,
+    braun: "Grzegorz Braun",
+    holownia: Q.pres_2025_centre_candidate || "Szymon Hołownia",
+    stanowski: "Krzysztof Stanowski",
+    other: "Other candidates"
+};
+const ranked = Object.keys(raw)
+    .filter(function(key) {
+        // "Other candidates" is a reporting aggregate, not one candidacy.
+        // It contributes to the 100% denominator but can never be a finalist.
+        return key != "other" && raw[key] > 0;
+    })
+    .sort(function(a, b) {
+        return raw[b] - raw[a];
+    });
+Q.pres_2025_finalist_a_key = ranked[0];
+Q.pres_2025_finalist_b_key = ranked[1];
+Q.pres_2025_finalist_a = candidateNames[ranked[0]];
+Q.pres_2025_finalist_b = candidateNames[ranked[1]];
+const firstRoundWinnerKey = raw[ranked[0]] > 50 ? ranked[0] : "";
+Q.pres_2025_first_round_winner = firstRoundWinnerKey ? 1 : 0;
+Q.pres_2025_first_round_winner_share = firstRoundWinnerKey
+    ? Math.round(raw[firstRoundWinnerKey] * 100) / 100
+    : 0;
+if (firstRoundWinnerKey) {
+    Q.pres_2025_winner_key = firstRoundWinnerKey;
+    Q.pres_2025_winner = candidateNames[firstRoundWinnerKey];
+    Q.pres_2025_hostile_president =
+        firstRoundWinnerKey == "right" ||
+        firstRoundWinnerKey == "mentzen" ||
+        firstRoundWinnerKey == "braun" ? 1 : 0;
+    Q.pres_2025_runoff_done = 1;
+} else {
+    Q.pres_2025_runoff_done = 0;
+}
+const presWinnerImages2025 = {
+    "Rafał Trzaskowski": "img/poland/events/pres-candidate-trzaskowski-2025.webp",
+    "Radosław Sikorski": "img/poland/events/pres-candidate-sikorski.webp",
+    "Barbara Nowacka": "img/poland/events/pres-candidate-nowacka.webp",
+    "Karol Nawrocki": "img/poland/events/pres-candidate-nawrocki.webp",
+    "Mateusz Morawiecki": "img/poland/cards/advisor-morawiecki.webp",
+    "Przemysław Czarnek": "img/poland/events/pres-candidate-czarnek.webp",
+    "Tobiasz Bocheński": "img/poland/events/pres-candidate-bochenski.webp",
+    "Magdalena Biejat": "img/poland/events/pres-candidate-biejat-2025.webp",
+    "Agnieszka Dziemianowicz-Bąk": "img/poland/cards/advisor-dziemianowicz-bak.webp",
+    "Adrian Zandberg": "img/poland/events/pres-candidate-zandberg-2025.webp",
+    "Sławomir Mentzen": "img/poland/events/pres-candidate-mentzen-2025.webp",
+    "Krzysztof Bosak": "img/poland/events/pres-candidate-bosak.webp",
+    "Grzegorz Braun": "img/poland/events/grzegorz-braun-2025.webp",
+    "Szymon Hołownia": "img/poland/events/pres-candidate-holownia-2025.webp",
+    "Ryszard Petru": "img/poland/events/pres-candidate-petru.webp",
+    "Krzysztof Stanowski": "img/poland/events/pres-candidate-stanowski.webp"
+};
+this.game.scenes[
+    "poland_events_2025_presidential_first_round.presidential_first_round_2025"
+].faceImage = firstRoundWinnerKey
+    ? presWinnerImages2025[Q.pres_2025_winner] ||
+        "img/poland/events/presidential-ballot-2025.webp"
+    : "img/poland/events/presidential-ballot-2025.webp";
+Q.pres_2025_player_result = Math.round(raw.left * 100) / 100;
+Q.pres_2025_field_result =
+    Math.round((raw.left + raw.razem) * 100) / 100;
+Q.pres_2025_left_result = Q.pres_2025_field_result;
+Q.pres_2025_ko_result = Q.pres_2025_r1_ko;
+Q.pres_2025_right_result = Q.pres_2025_r1_right;
+Q.pres_2025_radical_result =
+    Math.round((raw.mentzen + raw.braun) * 100) / 100;
+Q.pres_2025_left_finalist =
+    ranked[0] == "left" || ranked[1] == "left" ||
+    ranked[0] == "razem" || ranked[1] == "razem" ? 1 : 0;
+Q.pres_2025_player_finalist =
+    ranked[0] == "left" || ranked[1] == "left" ? 1 : 0;
+Q.pres_2025_razem_finalist =
+    ranked[0] == "razem" || ranked[1] == "razem" ? 1 : 0;
+Q.pres_2025_runoff_support_target = Q.pres_2025_player_finalist
+    ? "left"
+    : (Q.pres_2025_razem_finalist
+        ? "razem"
+        : (ranked[0] == "ko" || ranked[1] == "ko" ? "ko" : ranked[0]));
+const turnout25 = clampPres25(
+    67.31 +
+        ((Number(Q.turnout_readiness) || 58) - 58) * 0.035 +
+        ((Number(Q.pres_2025_campaign_strength) || 0) - 4) * 0.08 +
+        (Number(Q.pres_2025_r1_turnout_shock) || 0),
+    58,
+    76
+);
+Q.pres_2025_r1_turnout = Math.round(turnout25 * 100) / 100;
+Q.pres_2025_r1_valid_votes = Math.round(
+    19848000 * turnout25 / 67.31
+);
+const firstRoundVotes = {};
+let allocatedVotes = 0;
+const firstRoundKeys = [
+    "ko", "right", "left", "razem", "mentzen",
+    "braun", "holownia", "stanowski", "other"
+];
+for (const key of firstRoundKeys) {
+    firstRoundVotes[key] = Math.floor(
+        Q.pres_2025_r1_valid_votes * raw[key] / 100
+    );
+    allocatedVotes += firstRoundVotes[key];
+}
+firstRoundVotes[ranked[0]] +=
+    Q.pres_2025_r1_valid_votes - allocatedVotes;
+for (const key of firstRoundKeys) {
+    Q["pres_2025_r1_votes_" + key] = firstRoundVotes[key];
+    Q["pres_2025_r1_votes_" + key + "_display"] =
+        formatVotesPres25(firstRoundVotes[key]);
+}
+Q.pres_2025_r1_valid_votes_display =
+    formatVotesPres25(Q.pres_2025_r1_valid_votes);
+Q.pres_2025_candidate_historical =
+    Q.pres_2025_left_candidate == "Magdalena Biejat" ? 4.23 :
+    (Q.pres_2025_left_candidate == "Adrian Zandberg" ? 4.86 : 4.55);
+Q.pres_2025_historical_field = 9.09;
+Q.pres_2025_candidate_expectation_gap = Math.round(
+    (Q.pres_2025_player_result - Q.pres_2025_candidate_expectation) * 100
+) / 100;
+Q.pres_2025_field_expectation_gap = Math.round(
+    (Q.pres_2025_field_result - Q.pres_2025_field_expectation) * 100
+) / 100;
+Q.pres_2025_candidate_historical_gap = Math.round(
+    (Q.pres_2025_player_result - Q.pres_2025_candidate_historical) * 100
+) / 100;
+Q.pres_2025_field_historical_gap = Math.round(
+    (Q.pres_2025_field_result - Q.pres_2025_historical_field) * 100
+) / 100;
+const performanceVerdict25 = function(result, transformed) {
+    if (transformed) {
+        return {label: "Party-system transformation", level: 4};
+    }
+    if (result < 2.5) {
+        return {label: "Shattering disaster", level: -3};
+    }
+    if (result < 4) {
+        return {label: "Severe defeat", level: -2};
+    }
+    if (result < 5.5) {
+        return {label: "Disappointing or ambiguous", level: -1};
+    }
+    if (result < 7.5) {
+        return {label: "Base held; broadly satisfying", level: 1};
+    }
+    if (result < 10) {
+        return {label: "Strong result", level: 2};
+    }
+    return {label: "Breakthrough", level: 3};
+};
+const candidateVerdict = performanceVerdict25(
+    Q.pres_2025_player_result,
+    Q.pres_2025_player_finalist
+);
+const fieldVerdict = performanceVerdict25(
+    Q.pres_2025_field_result,
+    Q.pres_2025_left_finalist
+);
+Q.pres_2025_candidate_band = candidateVerdict.label;
+Q.pres_2025_candidate_level = candidateVerdict.level;
+Q.pres_2025_field_band = fieldVerdict.label;
+Q.pres_2025_field_level = fieldVerdict.level;
+Q.pres_2025_leadership_defeat =
+    !Q.pres_2025_united_left &&
+    Q.pres_2025_left_candidate != "Adrian Zandberg" &&
+    Q.pres_2025_razem_candidate == "Adrian Zandberg" &&
+    raw.left < raw.razem ? 1 : 0;
+Q.pres_2025_zandberg_claim = Q.pres_2025_leadership_defeat;
+if (!Q.pres_2025_feedback_applied) {
+    const candidateLevel = Number(Q.pres_2025_candidate_level) || 0;
+    const fieldLevel = Number(Q.pres_2025_field_level) || 0;
+    let combinedLevel = candidateLevel * 0.72 + fieldLevel * 0.28;
+    if (Q.pres_2025_leadership_defeat) {
+        combinedLevel -= 1.4;
+    }
+    let consideration = combinedLevel * 1.45;
+    let feedbackTurnout = combinedLevel * 1.10;
+    const expectationAdjustment = clampPres25(
+        (Number(Q.pres_2025_candidate_expectation_gap) || 0) * 0.18 +
+            (Number(Q.pres_2025_field_expectation_gap) || 0) * 0.08,
+        -1.2,
+        1.2
+    );
+    consideration += expectationAdjustment;
+    feedbackTurnout += expectationAdjustment * 0.70;
+    if (candidateLevel == -3) {
+        // A two-percent candidate result remains a disaster even when another
+        // Left candidacy keeps the combined field respectable.
+        consideration = Math.min(-6, consideration);
+        feedbackTurnout = Math.min(-5, feedbackTurnout);
+    } else if (candidateLevel == 1) {
+        consideration = Math.max(0.5, consideration);
+        feedbackTurnout = Math.max(0.6, feedbackTurnout);
+    }
+    const previousFailure = Q.pres_feedback_active &&
+        (Number(Q.pres_feedback_direction) || 0) < 0 && consideration < 0;
+    let duration = candidateLevel == -3 || candidateLevel >= 3 ? 12 :
+        (Math.abs(combinedLevel) >= 1.5 ? 10 : 8);
+    if (Q.pres_2025_leadership_defeat) {
+        duration = Math.max(duration, 10);
+    }
+    if (previousFailure) {
+        duration = Math.min(12, duration + 2);
+        consideration *= 1.15;
+        feedbackTurnout *= 1.15;
+        Q.pres_feedback_reinforcements =
+            (Number(Q.pres_feedback_reinforcements) || 0) + 1;
+    }
+    Q.pres_feedback_active = 1;
+    Q.pres_feedback_source = "2025 presidential verdict";
+    Q.pres_feedback_direction = consideration < 0 ? -1 : 1;
+    Q.pres_feedback_duration = duration;
+    Q.pres_feedback_months_remaining = duration;
+    Q.pres_feedback_decay_factor = 1;
+    Q.pres_feedback_consideration =
+        Math.round(consideration * 100) / 100;
+    Q.pres_feedback_turnout =
+        Math.round(feedbackTurnout * 100) / 100;
+    Q.pres_feedback_consideration_current =
+        Q.pres_feedback_consideration;
+    Q.pres_feedback_turnout_current = Q.pres_feedback_turnout;
+    Q.pres_feedback_leadership_pressure = 0;
+    Q.pres_feedback_leadership_challenge = 0;
+    Q.pres_feedback_donor_loss = 0;
+    Q.pres_feedback_activist_loss = 0;
+    Q.pres_feedback_media_loss = 0;
+    Q.pres_feedback_faction_pressure = 0;
+    Q.pres_feedback_tactical_flight = 0;
+    Q.pres_feedback_base_certainty = 0;
+    Q.pres_feedback_squeeze_protection = 0;
+    if (candidateLevel == -3) {
+        Q.pres_feedback_leadership_pressure = 88;
+        Q.pres_feedback_leadership_challenge = 1;
+        Q.pres_feedback_donor_loss = 2;
+        Q.pres_feedback_activist_loss = 6;
+        Q.pres_feedback_media_loss = 4;
+        Q.pres_feedback_faction_pressure = 8;
+        Q.pres_feedback_tactical_flight = 6;
+        Q.resources -= 2;
+        Q.organiser_energy -= 6;
+        Q.media_capacity -= 4;
+        Q.media_access -= 5;
+        Q.leadership_authority -= 10;
+        Q.list_confidence -= 8;
+        Q.winner_reputation -= 8;
+        Q.electoral_viability -= 5;
+        Q.party_unity -= 8;
+        Q.barons_dissent += 8;
+        Q.spring_dissent += 8;
+        Q.labor_dissent += 6;
+        Q.progressives_dissent += 8;
+        Q.razem_dissent += 6;
+    } else if (Q.pres_2025_leadership_defeat) {
+        Q.pres_feedback_leadership_pressure = 75;
+        Q.pres_feedback_leadership_challenge = 1;
+        Q.pres_feedback_donor_loss = 1;
+        Q.pres_feedback_activist_loss = 3;
+        Q.pres_feedback_media_loss = 2;
+        Q.pres_feedback_faction_pressure = 7;
+        Q.pres_feedback_tactical_flight = 3;
+        Q.resources -= 1;
+        Q.organiser_energy -= 3;
+        Q.media_capacity -= 2;
+        Q.media_access -= 2;
+        Q.leadership_authority -= 9;
+        Q.list_confidence -= 5;
+        Q.winner_reputation -= 5;
+        Q.electoral_viability += fieldLevel >= 2 ? 1 : -2;
+        Q.party_unity -= 6;
+        Q.barons_dissent += 5;
+        Q.spring_dissent += 5;
+        Q.labor_dissent += 4;
+        Q.progressives_dissent += 4;
+        Q.razem_dissent -= 3;
+        Q.razem_cooperation -= 6;
+    } else if (candidateLevel == -2) {
+        Q.pres_feedback_leadership_pressure = 60;
+        Q.pres_feedback_leadership_challenge = 1;
+        Q.pres_feedback_donor_loss = 1;
+        Q.pres_feedback_activist_loss = 4;
+        Q.pres_feedback_media_loss = 3;
+        Q.pres_feedback_faction_pressure = 5;
+        Q.pres_feedback_tactical_flight = 4;
+        Q.resources -= 1;
+        Q.organiser_energy -= 4;
+        Q.media_capacity -= 3;
+        Q.media_access -= 3;
+        Q.leadership_authority -= 6;
+        Q.list_confidence -= 5;
+        Q.winner_reputation -= 4;
+        Q.electoral_viability -= 3;
+        Q.party_unity -= 5;
+        Q.barons_dissent += 4;
+        Q.spring_dissent += 5;
+        Q.progressives_dissent += 5;
+    } else if (candidateLevel == -1) {
+        Q.pres_feedback_leadership_pressure = 28;
+        Q.pres_feedback_activist_loss = 1;
+        Q.pres_feedback_media_loss = 1;
+        Q.pres_feedback_faction_pressure = 2;
+        Q.pres_feedback_tactical_flight = 1;
+        Q.organiser_energy -= 1;
+        Q.media_capacity -= 1;
+        Q.media_access -= 1;
+        Q.leadership_authority -= 2;
+        Q.list_confidence -= 2;
+        Q.winner_reputation -= 1;
+        Q.party_unity -= 2;
+        Q.spring_dissent += 2;
+        Q.progressives_dissent += 2;
+    } else {
+        Q.pres_feedback_base_certainty = candidateLevel == 1 ? 65 :
+            (candidateLevel == 2 ? 78 : 92);
+        Q.pres_feedback_squeeze_protection = 1;
+        Q.party_unity += candidateLevel == 1 ? 3 :
+            (candidateLevel == 2 ? 4 : 6);
+        Q.organiser_energy += candidateLevel == 1 ? 2 :
+            (candidateLevel == 2 ? 3 : 5);
+        Q.media_capacity += candidateLevel == 1 ? 1 :
+            (candidateLevel == 2 ? 2 : 4);
+        Q.media_access += candidateLevel == 1 ? 1 :
+            (candidateLevel == 2 ? 2 : 4);
+        Q.leadership_authority += candidateLevel == 1 ? 3 :
+            (candidateLevel == 2 ? 4 : 6);
+        Q.list_confidence += candidateLevel == 1 ? 5 :
+            (candidateLevel == 2 ? 6 : 8);
+        Q.winner_reputation += candidateLevel == 1 ? 2 :
+            (candidateLevel == 2 ? 4 : 6);
+        Q.electoral_viability += candidateLevel == 1 ? 2 :
+            (candidateLevel == 2 ? 3 : 5);
+        Q.tactical_desertion_to_ko = Math.max(
+            0,
+            Q.tactical_desertion_to_ko - (candidateLevel == 1 ? 2 : 4)
+        );
+        Q.tactical_desertion_to_abstention = Math.max(
+            0,
+            Q.tactical_desertion_to_abstention -
+                (candidateLevel == 1 ? 1 : 3)
+        );
+        Q.barons_dissent -= candidateLevel == 1 ? 1 : 2;
+        Q.spring_dissent -= candidateLevel == 1 ? 1 : 2;
+        Q.progressives_dissent -= candidateLevel == 1 ? 1 : 2;
+    }
+    Q.pres_feedback_tactical_current =
+        Q.pres_feedback_tactical_flight;
+    if (Q.pres_2025_zandberg_claim) {
+        Q.razem_strength += 2;
+    }
+    Q.pres_2025_feedback_applied = 1;
+}
+// The Status column belongs to this table, so it is written here rather than a
+// fortnight later by the runoff. The second ballot overwrites only its own two.
+for (const key of [
+    "ko", "right", "left", "razem", "mentzen",
+    "braun", "holownia", "stanowski"
+]) {
+    let status25 = "eliminated";
+    if (firstRoundWinnerKey == key) {
+        status25 = "elected";
+    } else if (!firstRoundWinnerKey &&
+        (ranked[0] == key || ranked[1] == key)) {
+        status25 = "runoff";
+    }
+    if (key == "razem" && Q.pres_2025_united_left) {
+        status25 = "no candidate";
+    }
+    Q["pres_2025_status_" + key] = status25;
+}
+Q.pres_2025_round_one_done = 1;
+const presidentialMapModel25 = (typeof window !== "undefined"
+    ? window : globalThis).polandElectionModel;
+presidentialMapModel25.archivePresident(Q,
+    presidentialMapModel25.allocatePresident({
+        state: Q,
+        key: "2025-05-r1",
+        label: "2025 presidential election — first round",
+        round: 1,
+        candidates: [
+            {id: "ko", name: Q.pres_2025_ko_candidate, family: "ko",
+                share: Q.pres_2025_r1_display_ko},
+            {id: "right", name: Q.pres_2025_right_candidate, family: "pis",
+                share: Q.pres_2025_r1_display_right},
+            {id: "left", name: Q.pres_2025_left_candidate, family: "left",
+                share: Q.pres_2025_r1_display_left},
+            {id: "razem", name: Q.pres_2025_razem_candidate, family: "left",
+                share: Q.pres_2025_united_left ? 0 : Q.pres_2025_r1_display_razem},
+            {id: "mentzen", name: Q.pres_2025_konf_candidate, family: "konf",
+                share: Q.pres_2025_r1_display_mentzen},
+            {id: "braun", name: "Grzegorz Braun", family: "konf",
+                share: Q.pres_2025_r1_display_braun},
+            {id: "holownia", name: Q.pres_2025_centre_candidate,
+                family: "p2050", share: Q.pres_2025_r1_display_holownia},
+            {id: "stanowski", name: "Krzysztof Stanowski", family: "other",
+                share: Q.pres_2025_r1_display_stanowski},
+            {id: "other", name: "Other candidates", family: "other",
+                share: Q.pres_2025_r1_display_other}
+        ]
+    })
+);
+Q.news_headline = Q.pres_2025_first_round_winner
+    ? Q.pres_2025_winner + " wins the presidency in the first round"
+    : Q.pres_2025_finalist_a + " and " +
+        Q.pres_2025_finalist_b + " reach the runoff";
+!}
+
+= 18 May 2025 — First-round result
+
+Turnout: **[+ pres_2025_r1_turnout +]%** ·
+Valid votes: **[+ pres_2025_r1_valid_votes_display +]**
+
+<div class="election-table presidential-result-table">
+<div class="election-table-head"><span>Candidate</span><span>Camp</span><span>Vote</span><span>Votes</span><span>Status</span></div>
+<div class="election-table-row"><span>[+ pres_2025_ko_candidate +]</span><span class="party party-ko">KO</span><b>[+ pres_2025_r1_display_ko +]%</b><span>[+ pres_2025_r1_votes_ko_display +]</span><span>[+ pres_2025_status_ko +]</span></div>
+<div class="election-table-row"><span>[+ pres_2025_right_candidate +]</span><span class="party party-pis">PiS-backed</span><b>[+ pres_2025_r1_display_right +]%</b><span>[+ pres_2025_r1_votes_right_display +]</span><span>[+ pres_2025_status_right +]</span></div>
+<div class="election-table-row"><span>[+ pres_2025_left_candidate +]</span><span class="party party-lewica">Lewica</span><b>[+ pres_2025_r1_display_left +]%</b><span>[+ pres_2025_r1_votes_left_display +]</span><span>[+ pres_2025_status_left +]</span></div>
+[? if not pres_2025_united_left: <div class="election-table-row"><span>[+ pres_2025_razem_candidate +]</span><span class="party party-razem">Razem</span><b>[+ pres_2025_r1_display_razem +]%</b><span>[+ pres_2025_r1_votes_razem_display +]</span><span>[+ pres_2025_status_razem +]</span></div>?]
+<div class="election-table-row"><span>[+ pres_2025_konf_candidate +]</span><span class="party party-konf">Konf.</span><b>[+ pres_2025_r1_display_mentzen +]%</b><span>[+ pres_2025_r1_votes_mentzen_display +]</span><span>[+ pres_2025_status_mentzen +]</span></div>
+<div class="election-table-row"><span>Grzegorz Braun</span><span class="party party-korona">Korona</span><b>[+ pres_2025_r1_display_braun +]%</b><span>[+ pres_2025_r1_votes_braun_display +]</span><span>[+ pres_2025_status_braun +]</span></div>
+<div class="election-table-row"><span>[+ pres_2025_centre_candidate +]</span><span class="party party-p2050">PL2050</span><b>[+ pres_2025_r1_display_holownia +]%</b><span>[+ pres_2025_r1_votes_holownia_display +]</span><span>[+ pres_2025_status_holownia +]</span></div>
+<div class="election-table-row"><span>Krzysztof Stanowski</span><span>independent</span><b>[+ pres_2025_r1_display_stanowski +]%</b><span>[+ pres_2025_r1_votes_stanowski_display +]</span><span>[+ pres_2025_status_stanowski +]</span></div>
+<div class="election-table-row"><span>Five smaller committees</span><span>combined</span><b>[+ pres_2025_r1_display_other +]%</b><span>[+ pres_2025_r1_votes_other_display +]</span><span>eliminated</span></div>
+</div>
+
+{!<div class="election-map-host" data-election-map-source="president-2025-r1"></div>!}
+
+Our candidate, **[+ pres_2025_left_candidate +]**, finishes on **[+
+pres_2025_player_result +]%**; all Left candidates together reach **[+
+pres_2025_field_result +]%**.
+
+[? if pres_2025_united_left: We entered through **[+
+pres_2025_nomination_method +]** and receive one verdict rather than an
+arithmetic promise that two electorates would combine. [? if
+pres_2025_unity_effect >= 0: Members recognise the nomination as legitimate,
+so losing factions help carry the result.?][? if pres_2025_unity_effect < 0:
+The nomination never convinced every current, and some activists sit out the
+campaign they were told was united.?]?]
+
+[? if pres_2025_candidate_level = -3: The result is a shattering defeat. Donors
+close their books, organisers stop answering calls and every New Left faction
+demands a leadership reckoning before the parliamentary campaign.?]
+[? if pres_2025_candidate_level = -2: The candidate falls below a defensible
+base. KO attracts tactical voters, local teams begin conserving resources and
+the leadership can no longer dismiss its challengers as impatient.?]
+[? if pres_2025_candidate_level = -1: The result is neither collapse nor
+vindication. We keep a presidential electorate, but faction leaders reopen the
+strategy while journalists ask which larger camp will squeeze us next.?]
+[? if pres_2025_candidate_level = 1: The base holds. Members have proof that a
+Left ballot remains useful, and the immediate tactical flight to KO slows.?]
+[? if pres_2025_candidate_level = 2: A strong result gives our organisers an
+electorate they can find again and forces coalition partners to bargain with
+the Left as a national camp.?]
+[? if pres_2025_candidate_level >= 3: The campaign breaks through the old
+ceiling. Candidate authority, volunteers and media follow; every faction now
+wants to define what the new electorate voted for.?]
+
+[? if pres_2025_leadership_defeat: **[+ pres_2025_left_candidate +]** finishes
+behind Zandberg. A strong combined Left field cannot erase the challenge to New
+Left's leadership, donors or claim to direct a future common list.?]
+[? if pres_2025_radical_result >= 20: [+ pres_2025_konf_surname +] and Braun together command a
+large radical-right electorate. Their rivalry no longer makes either one a
+side show.?]
+[? if pres_2025_stanowski_breakout = 1: Stanowski's result is no commentary
+candidacy: **[+ pres_2025_r1_display_stanowski +]%** gives Kanał Zero a
+national electorate, humiliates the centrist campaign that assumed media
+outsiders belonged to it and leaves a ready-made organisation waiting after
+the count.?]
+
+[? if pres_2025_first_round_winner: Elected in the first round: **[+
+pres_2025_winner +] — [+ pres_2025_first_round_winner_share +]%**.?]
+[? if not pres_2025_first_round_winner: Runoff: **[+ pres_2025_finalist_a +] vs
+[+ pres_2025_finalist_b +]**?]
+
+- @first_round_winner_record
+- @runoff_broker
+
+@first_round_winner_record
+title: Record the first-round election
+view-if: pres_2025_first_round_winner = 1
+
+The campaign does not bargain for transfers: the electorate has already filled
+the office. Every party now decides how to live with the winner it produced.
+
+- @poland_event_queue: Let the result reach the events desk
+
+@runoff_broker
+title: Open the inter-round support market
+new-page: true
+view-if: pres_2025_first_round_winner = 0
+
+= Two weeks, no automatic transfers
+
+[? if not pres_2025_left_finalist: The Left is eliminated. Razem voters,
+government-left voters and abstainers do not move as one bloc. The endorsement
+can buy a programme, maximise anti-right turnout, or preserve autonomy.?]
+[? if pres_2025_left_finalist: A Left candidate has reached the runoff. The
+campaign must now persuade KO, centrist and anti-system electorates without
+ceasing to be a Left candidacy.?]
+
+The fortnight has two halves. First the party settles its own line, which every
+newsroom will report within the hour. Then it spends what that line is worth on
+the electorates the first round left without a candidate.
+
+- @runoff_accord
+- @runoff_immediate
+- @runoff_free
+- @runoff_razem_accord
+- @runoff_razem_endorse
+- @runoff_razem_free
+- @runoff_insurgent
+- @runoff_broad
+
+@runoff_accord
+title: Negotiate a written accord with [+ pres_2025_finalist_a +]
+subtitle: Cost: 2 resources. Endorse finalist A only after named social, judicial and constitutional commitments.
+view-if: pres_2025_player_finalist = 0 and pres_2025_razem_finalist = 0
+choose-if: resources >= 2
+unavailable-subtitle: The party cannot finance a joint runoff operation.
+on-arrival: {!
+Q.resources -= 2;
+Q.pres_2025_runoff_support_target = Q.pres_2025_finalist_a_key;
+Q.pres_2025_transfer_strategy =
+    "Negotiated accord with " + Q.pres_2025_finalist_a;
+Q.pres_2025_transfer_strength = 1.1;
+if (Q.pres_2025_finalist_a_key == "ko") Q.ko_relation += 6;
+else if (Q.pres_2025_finalist_a_key == "right") Q.pis_relation += 4;
+else if (Q.pres_2025_finalist_a_key == "holownia") Q.p2050_relation += 6;
+else if (["mentzen", "braun"].includes(Q.pres_2025_finalist_a_key)) {
+    Q.konf_relation += 3;
+    Q.progressives_dissent += 6;
+}
+Q.party_unity += 1;
+Q.razem_dissent += 3;
+Q.labor_credibility += 2;
+Q.public_mood_pending_social_spending_support += 6;
+Q.public_mood_pending_abortion_rights_support += 5;
+Q.news_headline =
+    "The Left prices an endorsement of " + Q.pres_2025_finalist_a;
+!}
+
+The talks take four days and produce two pages. Named commitments, named
+deadlines, a published text: what the pen will sign on labour law, what it will
+refer to the courts, which appointments will be consulted before they are made.
+**[+ pres_2025_finalist_a +]** signs because a fortnight is short and our
+voters are not otherwise coming.
+
+Nothing in the document is enforceable. Its value is that it exists in public,
+so that a broken clause becomes a story rather than a private disappointment,
+and so that our own organisers can campaign for something instead of merely
+against somebody.
+
+- @pres25_support_market: Open the inter-round support market
+
+@runoff_immediate
+title: Endorse [+ pres_2025_finalist_b +] immediately
+subtitle: Ask Left voters to move at once without securing a written programme.
+view-if: pres_2025_player_finalist = 0 and pres_2025_razem_finalist = 0
+on-arrival: {!
+Q.pres_2025_runoff_support_target = Q.pres_2025_finalist_b_key;
+Q.pres_2025_transfer_strategy =
+    "Immediate endorsement of " + Q.pres_2025_finalist_b;
+Q.pres_2025_transfer_strength = 0.45;
+if (Q.pres_2025_finalist_b_key == "ko") Q.ko_relation += 4;
+else if (Q.pres_2025_finalist_b_key == "right") Q.pis_relation += 3;
+else if (Q.pres_2025_finalist_b_key == "holownia") Q.p2050_relation += 4;
+else if (["mentzen", "braun"].includes(Q.pres_2025_finalist_b_key)) {
+    Q.konf_relation += 2;
+    Q.progressives_dissent += 7;
+}
+Q.public_trust += 1;
+Q.razem_dissent += 5;
+Q.public_mood_pending_rule_of_law_support += 6;
+Q.public_mood_pending_social_spending_left_ownership += -4;
+Q.news_headline =
+    "The Left immediately endorses " + Q.pres_2025_finalist_b;
+!}
+
+The statement goes out on the Monday morning, before anybody has been asked for
+anything. It is the clean version of the argument: this is a choice between two
+presidencies, one of them would be a catastrophe for people we represent, and
+we are not going to spend the fortnight pretending otherwise.
+
+It also spends the only leverage the first round produced. **[+
+pres_2025_finalist_b +]**'s staff are polite and busy, and by Wednesday the
+question of what our voters were promised has stopped being asked in the
+building.
+
+- @pres25_support_market: Open the inter-round support market
+
+@runoff_free
+title: Release voters without an endorsement
+subtitle: Preserve the party's autonomy and surrender organised influence over the result.
+view-if: pres_2025_player_finalist = 0 and pres_2025_razem_finalist = 0
+on-arrival: pres_2025_transfer_strategy = "Free vote"; pres_2025_runoff_support_target = "none"; pres_2025_transfer_strength = 0; progressives_dissent += 3; razem_dissent -= 2; party_unity -= 2; public_mood_pending_rule_of_law_support += -5; public_mood_pending_lgbt_equality_left_ownership += -5; news_headline = "The Left refuses to command its voters between the two named finalists"
+
+The wording is careful and everyone understands it anyway: our voters are
+adults, the ballot contains no candidate of ours, and the party will not spend
+its authority telling a million people whom to prefer between two men who
+offered them nothing.
+
+Half the party thinks this is the only honest position available. The other
+half spends the fortnight being asked on television whether the Left is
+indifferent to the difference, and discovers that there is no short answer.
+
+- @pres25_support_market: Open the inter-round support market
+
+@runoff_razem_accord
+title: Negotiate a social accord with the Razem finalist
+subtitle: Cost: 1 resource. Back a rival Left campaign in exchange for written labour, housing and public-service commitments.
+view-if: pres_2025_player_finalist = 0 and pres_2025_razem_finalist = 1
+choose-if: resources >= 1
+unavailable-subtitle: The party cannot finance a joint runoff operation.
+on-arrival: resources -= 1; pres_2025_transfer_strategy = "Negotiated Left accord"; pres_2025_transfer_strength = 1.1; pres_2025_runoff_support_target = "razem"; razem_relation += 7; party_unity += 1; labor_credibility += 2; news_headline = "New Left and Razem negotiate a social programme for the runoff"
+
+The negotiation is harder than it should be, because both delegations know that
+whatever is signed will be read as a verdict on the last two years. What comes
+out is a labour, housing and public-service text that neither camp could have
+written alone, and a joint appearance nobody in either headquarters expected to
+see this year.
+
+Our people work for it. Some of them work for it in the specific manner of
+those who have just been overtaken and intend to be visible about their
+loyalty.
+
+- @pres25_support_market: Open the inter-round support market
+
+@runoff_razem_endorse
+title: Endorse the Razem finalist immediately
+subtitle: Accept Razem's lead without negotiating a joint programme or guarantee.
+view-if: pres_2025_player_finalist = 0 and pres_2025_razem_finalist = 1
+on-arrival: pres_2025_transfer_strategy = "Immediate Razem endorsement"; pres_2025_transfer_strength = 0.55; pres_2025_runoff_support_target = "razem"; razem_relation += 4; public_trust += 1; party_unity -= 1; news_headline = "New Left asks its voters to back the Razem finalist"
+
+No conditions, no text, no ceremony: the Left has a candidate in the second
+round and it is not ours, and the party says so within the hour. Outside the
+two headquarters this reads as maturity, which is worth something in a fortnight
+where every other camp is haggling in public.
+
+Inside, it is understood as the leadership declining to test whether it could
+have extracted anything. That question will be asked again at the next council
+meeting, with the result already known.
+
+- @pres25_support_market: Open the inter-round support market
+
+@runoff_razem_free
+title: Release voters without endorsing Razem
+subtitle: No organised transfer; preserves autonomy but deepens the leadership contest on the Left.
+view-if: pres_2025_player_finalist = 0 and pres_2025_razem_finalist = 1
+on-arrival: pres_2025_transfer_strategy = "Free vote with a Razem finalist"; pres_2025_transfer_strength = 0; pres_2025_runoff_support_target = "none"; razem_relation -= 7; party_unity -= 2; news_headline = "New Left refuses to endorse the Razem finalist without campaigning against it"
+
+The formula is that the party will not campaign against a Left candidate and
+will not campaign for one either. It is defensible for about a day, until a
+journalist asks whether there is any circumstance in which New Left would work
+for a president from Razem, and the answer takes too long.
+
+Razem's organisers draw the obvious conclusion and stop asking. Whatever
+happens on the first of June, the two organisations will enter it further apart
+than they left the first round.
+
+- @pres25_support_market: Open the inter-round support market
+
+@runoff_insurgent
+title: Run a worker-and-housing insurgency against both old blocs
+subtitle: Keep a distinct Left programme and refuse the easier shelter of a broad KO front.
+view-if: pres_2025_player_finalist = 1
+on-arrival: pres_2025_transfer_strategy = "Left insurgency"; pres_2025_runoff_campaign = "Left insurgency"; pres_2025_transfer_strength = 0.6; pres_2025_runoff_target_bonus += 0.55; labor_credibility += 5; ko_relation -= 5; psl_relation -= 2; turnout_readiness += 4; public_mood_pending_social_spending_support += 9; public_mood_pending_social_spending_salience += 8; public_mood_pending_refugee_solidarity_support += -4; news_headline = "The Left enters the runoff without dissolving into the democratic camp"
+
+The fortnight is run as a continuation rather than a conversion. Wages, rents,
+waiting lists; the same argument at a higher volume, in the towns where the
+first round produced numbers nobody in Warsaw expected.
+
+KO's offer of an umbrella is declined in public, which costs us their machine
+and buys something they cannot supply: a candidacy that means the same thing on
+the first of June as it meant on the eighteenth of May. Turnout among people
+who do not usually vote is now the whole strategy.
+
+- @pres25_support_market: Open the inter-round support market
+
+@runoff_broad
+title: Offer KO and the centre a constitutional unity presidency
+subtitle: Cost: 2 resources.
+view-if: pres_2025_player_finalist = 1
+choose-if: resources >= 2
+unavailable-subtitle: The joint turnout operation cannot be financed.
+on-arrival: resources -= 2; pres_2025_transfer_strategy = "Broad constitutional front"; pres_2025_runoff_campaign = "Broad constitutional front"; pres_2025_transfer_strength = 1.2; pres_2025_runoff_target_bonus += 0.75; ko_relation += 7; p2050_relation += 5; psl_relation += 3; razem_dissent += 2; turnout_readiness += 5; public_mood_pending_rule_of_law_support += 8; public_mood_pending_lgbt_equality_support += -4; news_headline = "A Left finalist offers a constitutional majority without abandoning the programme"
+
+The offer is precise about what it is not: no coalition, no programme merger,
+no promise about a future government. What it does promise is a presidency that
+every democratic party can live under — courts, appointments, the veto used by
+one published standard — and it invites KO, Poland 2050 and PSL to campaign for
+that rather than for us.
+
+They accept, with the enthusiasm of people who have run out of alternatives.
+Mayors open their offices; the centrist press discovers reasons to be calm.
+Razem's members watch a Left candidacy acquire liberal chaperones and say so.
+
+- @pres25_support_market: Open the inter-round support market
+
+@pres25_support_market
+title: Inter-round support market
+new-page: true
+
+= Two negotiations — [+ pres_2025_support_actions_remaining +] remain
+
+[? if pres_2025_runoff_support_target = "none": The party is asking nobody for
+anything, which does not mean the fortnight is empty. Organisers, turnout and
+the electorates nobody else is courting are all still available.?][? if
+pres_2025_runoff_support_target != "none": Our line is settled. What remains is
+the harder work: the eliminated electorates belong to nobody, and each of them
+has to be approached in its own language.?]
+
+Each operation can be used once. None of them delivers a bloc; they change how
+much of one electorate is reachable in fourteen days.
+
+- @pres25_support_holownia
+- @pres25_support_committees
+- @pres25_support_stanowski
+- @pres25_support_movements
+- @pres25_support_left
+- @pres25_support_radical
+- @pres25_support_turnout
+- @pres25_support_release
+
+@pres25_support_holownia
+title: Offer Poland 2050 an oversight and public-service accord
+subtitle: Cost: 1 resource. The most persuadable eliminated electorate, and the most expensive.
+view-if: pres_2025_support_holownia = 0 and pres_2025_finalist_a_key != "holownia" and pres_2025_finalist_b_key != "holownia"
+choose-if: resources >= 1
+unavailable-subtitle: No joint operation with Poland 2050 can be staffed.
+on-arrival: {!
+Q.resources -= 1;
+Q.pres_2025_support_holownia = 1;
+Q.pres_2025_support_actions_remaining -= 1;
+Q.pres_2025_trade_boost_holownia =
+    0.06 + ((Number(Q.p2050_relation) || 0) >= 35 ? 0.04 : 0);
+Q.p2050_relation += 4;
+Q.pres_2025_runoff_target_bonus += 0.12;
+Q.news_headline =
+    "Poland 2050 and the Left agree an oversight package for the second round";
+!}
+
+**[+ pres_2025_centre_surname +]** and the Poland 2050 organisers do not
+deliver voters and say so at the start of the meeting.
+What they can deliver is a text: parliamentary oversight of appointments, a
+public-service audit, a commitment that neither camp treats institutional
+reform as a bargaining chip after the ballot.
+
+It is published jointly, which is the point. Their voters are the least
+tribal electorate in the country and the most responsive to being given a
+reason rather than an instruction.
+
+- @pres25_support_next
+- @pres25_support_done
+
+@pres25_support_committees
+title: Go after the eliminated committees' secular Left voters
+subtitle: Free. Senyszyn's and the independents' voters are close to us and nobody else is asking.
+view-if: pres_2025_support_committees = 0
+on-arrival: {!
+Q.pres_2025_support_committees = 1;
+Q.pres_2025_support_actions_remaining -= 1;
+Q.pres_2025_trade_boost_other = 0.09;
+Q.organiser_energy -= 1;
+Q.pres_2025_runoff_target_bonus += 0.10;
+Q.public_mood_pending_secular_state_support += 8;
+Q.public_mood_pending_abortion_rights_support += 5;
+Q.news_headline =
+    "The Left courts the electorates the smaller committees leave behind";
+!}
+
+Senyszyn's voters are older, secular, and were voting against Lewica's
+organisation rather than against its programme. Bartoszewicz's are neither left
+nor right but comprehensively finished with parties. Between them they are
+worth more than the row they occupy in the model.
+
+The operation is unglamorous — regional radio, three interviews, a letter to
+committees that no other campaign bothered to write. It works because nobody
+else considered these people worth the postage.
+
+- @pres25_support_next
+- @pres25_support_done
+
+@pres25_support_stanowski
+title: Take the interview on Kanał Zero
+subtitle: Cost: 1 resource. Enormous reach on somebody else's terms.
+view-if: pres_2025_support_stanowski = 0 and pres_2025_finalist_a_key != "stanowski" and pres_2025_finalist_b_key != "stanowski"
+choose-if: resources >= 1
+unavailable-subtitle: The campaign cannot clear the schedule or the production costs.
+on-arrival: {!
+Q.resources -= 1;
+Q.pres_2025_support_stanowski = 1;
+Q.pres_2025_support_actions_remaining -= 1;
+Q.pres_2025_trade_boost_stanowski = Q.pres_2025_stanowski_breakout
+    ? 0.16
+    : 0.10;
+Q.media_capacity += 2;
+Q.young_support += 1;
+Q.pres_2025_runoff_target_bonus += Q.pres_2025_stanowski_breakout
+    ? 0.16
+    : 0.08;
+Q.news_headline =
+    "The Left takes the long interview in front of an audience no party owns";
+!}
+
+Two hours, no format, no agreed questions, an audience of young men who have
+never watched a party broadcast in their lives. Stanowski asks about money
+first and rights later and does not pretend to be neutral about either.
+
+There is no way to control what is clipped from it. There is also no other room
+in Poland where this many people who dislike all of us will sit still for two
+hours, and the campaign's own footage is worthless by comparison.
+
+[? if pres_2025_stanowski_breakout = 1: This time the audience is also an
+electorate. Stanowski can point to **[+ pres_2025_r1_display_stanowski +]%**,
+and the interview is bargaining with a campaign-sized constituency rather than
+borrowing reach from a broadcaster.?]
+
+- @pres25_support_next
+- @pres25_support_done
+
+@pres25_support_movements
+title: Put unions, tenants and equality organisations on a turnout committee
+subtitle: Free. Costs organisers rather than money; refused for a radical-right target.
+view-if: pres_2025_support_movements = 0
+choose-if: pres_2025_runoff_support_target != "right" and pres_2025_runoff_support_target != "mentzen" and pres_2025_runoff_support_target != "braun"
+unavailable-subtitle: The movements will not staff an operation for this candidate.
+on-arrival: {!
+Q.pres_2025_support_movements = 1;
+Q.pres_2025_support_actions_remaining -= 1;
+Q.pres_2025_trade_boost_left =
+    (Number(Q.pres_2025_trade_boost_left) || 0) + 0.07;
+Q.pres_2025_trade_boost_razem =
+    (Number(Q.pres_2025_trade_boost_razem) || 0) + 0.07;
+Q.pres_2025_runoff_target_bonus += 0.55;
+Q.organiser_energy -= 4;
+Q.turnout_readiness += 3;
+Q.feminist_trust += 2;
+Q.labor_credibility += 2;
+Q.public_mood_pending_lgbt_equality_support += 7;
+Q.public_mood_pending_abortion_rights_support += 6;
+Q.news_headline =
+    "Unions, tenants' groups and equality organisations build a runoff turnout machine";
+!}
+
+It is not an endorsement and it is not run from party headquarters. Three
+federations, a tenants' network and the abortion-rights organisations put their
+own names on a committee whose only function is getting people to a polling
+station on the first of June.
+
+They can do things a party cannot: knock on the doors of people who hate
+parties, and be believed when they say the difference matters. It empties our
+offices for a fortnight to make it possible.
+
+- @pres25_support_next
+- @pres25_support_done
+
+@pres25_support_left
+title: Bind the other Left campaign's voters into the same fortnight
+subtitle: Free. Available while two Left candidacies have to explain themselves to one electorate.
+view-if: pres_2025_support_left = 0 and pres_2025_united_left = 0
+on-arrival: {!
+Q.pres_2025_support_left = 1;
+Q.pres_2025_support_actions_remaining -= 1;
+Q.pres_2025_trade_boost_left =
+    (Number(Q.pres_2025_trade_boost_left) || 0) + 0.10;
+Q.pres_2025_trade_boost_razem =
+    (Number(Q.pres_2025_trade_boost_razem) || 0) + 0.10;
+Q.razem_cooperation += 4;
+Q.party_unity += 2;
+Q.pres_2025_runoff_target_bonus += 0.15;
+Q.news_headline =
+    "Both Left campaigns tell the same electorate the same thing about the runoff";
+!}
+
+The two headquarters that spent five months distinguishing themselves now have
+to explain to the same people why the distinction does not apply for fourteen
+days. It is done with a joint appearance rather than a document, because a
+document would take longer than the fortnight allows.
+
+Nobody pretends the argument is over. What the operation buys is that neither
+electorate hears its own campaign shrug about the second round, which is how a
+Left vote turns into an abstention.
+
+- @pres25_support_next
+- @pres25_support_done
+
+@pres25_support_radical
+title: Contest [+ pres_2025_konf_surname +]'s voters on wages, rents and the cost of the state
+subtitle: No endorsement is sought or offered. A raid on an electorate that despises us.
+view-if: pres_2025_support_radical = 0 and pres_2025_finalist_a_key != "mentzen" and pres_2025_finalist_b_key != "mentzen"
+on-arrival: {!
+Q.pres_2025_support_radical = 1;
+Q.pres_2025_support_actions_remaining -= 1;
+Q.pres_2025_trade_boost_mentzen = 0.05;
+Q.pres_2025_trade_boost_braun = 0.02;
+Q.labor_credibility += 1;
+Q.progressive_credibility -= 3;
+Q.minority_safety -= 2;
+Q.progressives_dissent += 4;
+Q.public_mood_pending_social_spending_support += 8;
+Q.public_mood_pending_refugee_solidarity_support += -4;
+Q.news_headline =
+    "The runoff campaign contests the radical right's electorate instead of conceding it";
+!}
+
+The argument is made without a single concession on rights, which is what makes
+it difficult: a young man renting a room in Rzeszów is being robbed, and the
+people telling him it is the fault of foreigners have a tax programme that will
+leave his mother's ward without the state they claim to defend.
+
+Some of them listen. The cost is paid at home, where a fortnight of campaigning
+in that vocabulary is read by our own activists as the beginning of the
+concession the leadership swore it would never make.
+
+- @pres25_support_next
+- @pres25_support_done
+
+@pres25_support_turnout
+title: Spend the slot on registration, transport and ballot protection
+subtitle: Free fallback. Creates voters instead of claiming somebody else's.
+view-if: pres_2025_support_turnout = 0
+on-arrival: pres_2025_support_turnout = 1; pres_2025_support_actions_remaining -= 1; pres_2025_runoff_target_bonus += 0.42; turnout_readiness += 3; local_network += 2; news_headline = "One bargaining slot becomes buses, certificates and precinct observers"
+
+Certificates for people voting away from home, minibuses in counties where the
+polling station is nine kilometres from the estate, and an observer in every
+precinct where the first round produced a protocol somebody had to correct.
+
+There is no negotiation and nobody to thank. It is the least interesting thing
+on the board and, in a race decided by a point, the least likely to be wasted.
+
+- @pres25_support_next
+- @pres25_support_done
+
+@pres25_support_release
+title: Close a negotiation without a deal
+subtitle: Guaranteed fallback. No transfer, no obligations, no ownership of the outcome.
+view-if: pres_2025_support_release = 0
+on-arrival: pres_2025_support_release = 1; pres_2025_support_actions_remaining -= 1; party_unity += 1; movement_autonomy += 2; news_headline = "The Left leaves one runoff negotiation deliberately empty"
+
+The meeting happens and produces nothing, which is a decision rather than a
+failure. Every organisation in the room keeps its own line, and the party keeps
+the ability to say afterwards that it promised no one anything.
+
+In a fortnight where every camp is acquiring debts, refusing one is worth
+something. It is worth nothing at all on the count.
+
+- @pres25_support_next
+- @pres25_support_done
+
+@pres25_support_next
+title: Return to the support market
+view-if: pres_2025_support_actions_remaining > 0
+go-to: pres25_support_market
+
+@pres25_support_done
+title: Close the negotiations and wait for the second ballot
+view-if: pres_2025_support_actions_remaining <= 0
+go-to: pres25_torun_democratic if (pres_2025_runoff_support_target = "ko" or pres_2025_runoff_support_target = "holownia") and pres_2025_finalist_a_key != "mentzen" and pres_2025_finalist_b_key != "mentzen"; pres25_torun_pis if pres_2025_runoff_support_target = "right" and pres_2025_finalist_a_key != "mentzen" and pres_2025_finalist_b_key != "mentzen"; poland_event_queue
+
+@pres25_torun_democratic
+title: A beer becomes the democratic camp's runoff photograph
+subtitle: Mentzen offers an audience, a pub and eight terms the Left did not negotiate
+new-page: true
+view-if: (pres_2025_runoff_support_target = "ko" or pres_2025_runoff_support_target = "holownia") and pres_2025_finalist_a_key != "mentzen" and pres_2025_finalist_b_key != "mentzen"
+on-arrival: {!
+Q.mentzen_declaration_2025_done = 1;
+Q.mentzen_kingmaker_active = 1;
+Q.pres_2025_torun_route = "democratic";
+Q.pres_2025_torun_target_key = Q.pres_2025_runoff_support_target;
+Q.pres_2025_torun_target_name = Q.pres_2025_torun_target_key == "ko"
+    ? Q.pres_2025_ko_candidate
+    : Q.pres_2025_centre_candidate;
+Q.konf_normalisation += 8;
+Q.news_headline = Q.pres_2025_torun_target_name +
+    " drinks a beer with Mentzen in the fortnight between ballots";
+!}
+
+= The fortnight between ballots — Piwo z Mentzenem
+
+[? if pres_2025_konf_candidate = "Sławomir Mentzen": <span
+class="party-konf"><b>Sławomir Mentzen</b></span>, eliminated on **[+
+pres_2025_r1_display_mentzen +]%**, invites both finalists to his Toruń pub and
+YouTube programme.?]
+
+[? if pres_2025_konf_candidate = "Krzysztof Bosak": <span
+class="party-konf"><b>Krzysztof Bosak</b></span> leaves Konfederacja with **[+
+pres_2025_r1_display_mentzen +]%** and no finalist. Party chair **Sławomir
+Mentzen** then invites both finalists to his Toruń pub and YouTube programme,
+turning Bosak's electorate into his own inter-round audience.?]
+
+**[+ pres_2025_torun_target_name +]** goes, drinks the beer
+and lets the cameras hold the glass beside Mentzen. Nationalists resent the
+visitor; the democratic camp's left flank sees its endorsement turned into
+somebody else's normalisation campaign.
+
+[? if pres_2025_torun_target_name != "Radosław Sikorski": Sikorski joins the
+table, and the three-man beer clip travels further than the refusal to sign the
+whole declaration.?]
+
+[? if pres_2025_torun_target_name = "Radosław Sikorski": The foreign minister
+needs no second KO figure in the photograph; the two-man beer clip carries his
+Atlanticist campaign into Mentzen's nationalist audience.?]
+
+[? if pres_2025_torun_target_key = "ko": Tusk approves the reach and accepts
+that the picture will anger voters who expected the democratic candidate to
+keep Mentzen at arm's length.?]
+
+[? if pres_2025_torun_target_key = "holownia": Poland 2050 approves the reach
+as proof that the centre can speak outside the old blocs; KO resents lending
+Sikorski and a democratic-camp photograph to a rival finalist.?]
+
+Mentzen puts an eight-point Toruń Declaration on the table: no tax rises, no
+Ukrainian accession to NATO, no further surrender of sovereignty and no new
+gun controls among the tests. The finalist refuses to sign all eight and agrees
+only where the campaign can defend the point. That distinction survives in the
+full recording; the beer photograph travels without it.
+
+Lewica now has three organisational positions. Each changes how much of our
+endorsement still reaches a door in the last week.
+
+- @pres25_torun_razem_withdraw
+- @pres25_torun_progressive_instruction
+- @pres25_torun_democratic_operation
+
+@pres25_torun_razem_withdraw
+title: Accept Razem's demand and withdraw the endorsement entirely
+subtitle: Recover the independent Left line and remove our field operation from the finalist.
+view-if: razem_split = 0 and (razem_in_left = 1 or (left_merger_structure = "federation" and merger_razem_present = 1 and razem_org_status != "departed"))
+on-arrival: {!
+Q.pres_2025_runoff_support_target = "none";
+Q.pres_2025_transfer_strategy =
+    "Endorsement withdrawn after Piwo z Mentzenem";
+Q.pres_2025_transfer_strength = 0;
+Q.pres_2025_runoff_target_bonus -= 0.55;
+Q.razem_cooperation += 8;
+Q.razem_dissent -= 6;
+Q.progressives_dissent -= 3;
+Q.ko_relation -= 9;
+if (Q.pres_2025_torun_target_key == "holownia") Q.p2050_relation -= 6;
+Q.party_unity += 1;
+Q.pres_2025_torun_red_line =
+    "the withdrawal: no use of Lewica's name to validate the Toruń appearance";
+Q.pres_2025_torun_breach =
+    "the finalist's campaign republishes our earlier endorsement beside the beer photograph";
+Q.news_headline =
+    "Razem keeps the Left inside one party by ending the runoff endorsement";
+!}
+
+The endorsement and canvass sheets are withdrawn in the same statement. Razem
+stays inside a party willing to enforce a boundary; organisers already working
+the finalist's lists are told that the work no longer carries Lewica's name.
+
+KO calls the reversal a gift to PiS, and the target campaign loses the only
+part of our first-round electorate that could be reached by an organised
+instruction. The Left has recovered its line by making the runoff harder to
+win.
+
+- @pres25_torun_mirror: Put the written boundary to its final test
+
+@pres25_torun_progressive_instruction
+title: Reduce support to a bare instruction to vote
+subtitle: No shared platforms and no canvassing; the endorsement survives without an operation.
+on-arrival: {!
+Q.pres_2025_transfer_strategy =
+    "Bare voting instruction after Piwo z Mentzenem";
+Q.pres_2025_transfer_strength = Math.min(
+    0.35,
+    Number(Q.pres_2025_transfer_strength) || 0
+);
+Q.pres_2025_runoff_target_bonus -= 0.25;
+Q.razem_cooperation += 2;
+Q.razem_dissent += 1;
+Q.progressives_dissent -= 3;
+Q.ko_relation -= 3;
+if (Q.pres_2025_torun_target_key == "holownia") Q.p2050_relation -= 2;
+Q.organiser_energy += 2;
+Q.pres_2025_torun_red_line =
+    "the written limit of one voting instruction, with no shared platform or canvass";
+Q.pres_2025_torun_breach =
+    "the finalist turns the beer clip into a shared platform and asks our MPs to carry it";
+Q.news_headline =
+    "Lewica keeps a voting instruction and removes its field operation";
+!}
+
+The party says whom it prefers and nothing more. MPs may give the one-sentence
+instruction; offices may not canvass, share a stage or distribute the Toruń
+clip. Progressive currents can defend the boundary, but a line without a field
+operation reaches fewer people than the endorsement negotiated after round one.
+
+The democratic partners keep the name of our preferred candidate and lose the
+organisers they expected to accompany it. They say publicly that abstention is
+now being manufactured by people who know exactly what the alternative means.
+
+- @pres25_torun_mirror: Put the written boundary to its final test
+
+@pres25_torun_democratic_operation
+title: Keep the endorsement and field operation unchanged
+subtitle: Democratic partners retain every organiser; Razem and the progressives own the public objection.
+on-arrival: {!
+Q.pres_2025_transfer_strategy =
+    "Full democratic field operation after Piwo z Mentzenem";
+Q.pres_2025_transfer_strength += 0.35;
+Q.pres_2025_runoff_target_bonus += 0.45;
+Q.razem_cooperation -= 6;
+Q.razem_dissent += 7;
+Q.progressives_dissent += 6;
+Q.ko_relation += 5;
+if (Q.pres_2025_torun_target_key == "holownia") Q.p2050_relation += 4;
+Q.organiser_energy -= 3;
+Q.pres_2025_torun_red_line =
+    "the written refusal of the Toruń Declaration and any further policy concession";
+Q.pres_2025_torun_breach =
+    "the finalist gives Mentzen a no-tax-rise line our agreement reserved for Parliament";
+Q.news_headline =
+    "The democratic runoff operation continues through the Toruń backlash";
+!}
+
+The endorsement, joint appearances and canvass lists remain where they were.
+Democratic partners receive the operation they budgeted for and say, in public,
+that nobody facing a PiS-backed presidency has the luxury of abandoning it over
+a photograph.
+
+Razem and the progressive currents answer in their own names. The field gain is
+real; so is the lesson that a larger ally may borrow nationalist theatre and
+still expect the Left to supply the doors.
+
+- @pres25_torun_mirror: Put the written boundary to its final test
+
+@pres25_torun_pis
+title: The PiS-backed finalist submits a price list to Mentzen—and receives ours
+subtitle: Campaigning for the right can buy terms, a Palace staff and a fight over its next nomination
+new-page: true
+view-if: pres_2025_runoff_support_target = "right" and pres_2025_finalist_a_key != "mentzen" and pres_2025_finalist_b_key != "mentzen"
+on-arrival: {!
+Q.mentzen_declaration_2025_done = 1;
+Q.mentzen_kingmaker_active = 1;
+Q.pres_2025_torun_route = "pis";
+Q.pres_2025_torun_target_key = "right";
+Q.pres_2025_torun_target_name = Q.pres_2025_right_candidate;
+Q.konf_normalisation += 10;
+Q.news_headline = Q.pres_2025_right_candidate +
+    " faces Mentzen's eight points while Lewica prices its runoff work";
+!}
+
+= The fortnight between ballots — Two price lists
+
+**[+ pres_2025_konf_candidate +]** brings **[+
+pres_2025_r1_display_mentzen +]%** of first-round voters; Mentzen brings the Toruń Declaration
+to his pub: no tax rises, no Ukrainian accession to NATO, sovereignty clauses
+and no new gun controls among eight points. **[+ pres_2025_right_candidate +]**
+signals readiness to sign. Mentzen withholds a formal endorsement and says
+there is no reason to vote for the democratic opponent.
+
+Lewica is already bargaining with the PiS-backed finalist. If our endorsement
+is to become campaigning, PiS must receive its own price list. One item is
+personnel: move the right toward Morawiecki's state-and-transfer politics and
+away from the harder culture-war names without pretending the ballot can still
+be changed.
+
+- @pres25_pis_morawiecki_staff
+- @pres25_pis_social_price
+- @pres25_pis_instruction_only
+
+@pres25_pis_morawiecki_staff
+title: Make Morawiecki's administrators the price of Palace campaigning
+subtitle: Secure a personnel lever and carry a PiS-backed candidate through the last week.
+on-arrival: {!
+Q.pres_2025_transfer_strength += 0.30;
+Q.pres_2025_runoff_target_bonus += 0.35;
+Q.pis_relation += 5;
+Q.razem_cooperation -= 5;
+Q.razem_dissent += 6;
+Q.progressives_dissent += 7;
+Q.pis_solidarist_share += 3;
+Q.pis_sovereigntist_strength -= 2;
+Q.far_right_agenda -= 2;
+if (Q.pres_2025_right_candidate == "Mateusz Morawiecki") {
+    Q.pres_2025_morawiecki_push =
+        "Morawiecki's own state-and-transfer team staffs the Palace";
+    Q.pres_2025_torun_red_line =
+        "the written condition that Morawiecki staff the Palace from his state-and-transfer wing and not bind it to all eight Toruń points";
+    Q.pres_2025_torun_breach =
+        "the candidate signs all eight points and announces hard-line culture-war appointments instead";
+} else {
+    Q.pres_2025_morawiecki_push =
+        "Morawiecki-aligned Palace staff and first claim on the right's next nomination";
+    Q.pres_2025_torun_red_line =
+        "the written condition of Morawiecki-aligned Palace staff, a future nomination lever and no signature binding the Palace to all eight points";
+    Q.pres_2025_torun_breach =
+        "the candidate signs all eight points, announces a hard-line Palace slate and disowns the succession bargain";
+}
+Q.news_headline =
+    "Lewica prices Palace campaigning in staff and the right's next succession";
+!}
+
+[? if pres_2025_right_candidate = "Mateusz Morawiecki": Morawiecki is already
+on the ballot. The bargain therefore governs who staffs his Palace and whether
+his own state-and-transfer wing, rather than PiS's harder factions, owns the
+presidency. Nothing is swapped retroactively.?]
+
+[? if pres_2025_right_candidate != "Mateusz Morawiecki": **[+
+pres_2025_right_candidate +]** remains on the ballot. The written price places
+Morawiecki-aligned administrators in the Palace and gives that wing the first
+claim on the next nomination; it does not replace today's candidate after the
+first round.?]
+
+Our organisers campaign on the personnel clause and the transfers it is meant
+to protect. PiS gains a field operation it could not command, while Razem and
+the progressive currents acquire evidence that the party has moved from a
+tactical vote to staffing a right-wing presidency.
+
+- @pres25_torun_mirror: Put the written personnel clause to its final test
+
+@pres25_pis_social_price
+title: Publish a social price list and leave PiS's personnel fight alone
+subtitle: Protect transfers, labour inspection and services without endorsing the succession bargain.
+on-arrival: {!
+Q.pres_2025_transfer_strength += 0.15;
+Q.pres_2025_runoff_target_bonus += 0.22;
+Q.pis_relation += 3;
+Q.labor_credibility += 2;
+Q.razem_cooperation -= 3;
+Q.razem_dissent += 4;
+Q.progressives_dissent += 5;
+Q.pres_2025_morawiecki_push =
+    "No personnel lever; a social price list only";
+Q.pres_2025_torun_red_line =
+    "the written no-cuts guarantee for transfers, labour inspection and public services";
+Q.pres_2025_torun_breach =
+    "the finalist signs every Toruń point, including the tax lock that makes our guarantees impossible";
+Q.news_headline =
+    "The Left publishes the social cost of campaigning for the PiS-backed finalist";
+!}
+
+The list is short enough to read on television: no cut to family transfers, a
+funded labour inspectorate, hospital finance protected from the tax pledge and
+no Palace veto of the agreed worker bills. PiS signs because it needs people
+who can speak to voters outside its own organisation.
+
+We keep out of the succession fight and lose the only opportunity to weaken
+the culture-war wing through personnel. Progressive organisers still have to
+explain why a written social floor justifies canvassing for a candidate who
+signed Mentzen's whole declaration.
+
+- @pres25_torun_mirror: Put the written social floor to its final test
+
+@pres25_pis_instruction_only
+title: Keep the endorsement but refuse a shared PiS campaign
+subtitle: Preserve the tactical line, abandon the price list and accept a weaker transfer.
+on-arrival: {!
+Q.pres_2025_transfer_strategy =
+    "Tactical instruction without a shared PiS campaign";
+Q.pres_2025_transfer_strength = Math.min(
+    0.25,
+    Number(Q.pres_2025_transfer_strength) || 0
+);
+Q.pres_2025_runoff_target_bonus -= 0.30;
+Q.pis_relation -= 5;
+Q.razem_cooperation += 2;
+Q.razem_dissent -= 2;
+Q.progressives_dissent -= 2;
+Q.pres_2025_morawiecki_push =
+    "Morawiecki lever proposed and refused";
+Q.pres_2025_torun_red_line =
+    "the written limit of no second meeting, shared platform or joint canvass";
+Q.pres_2025_torun_breach =
+    "the finalist takes a second meeting, signs all eight points and asks PiS offices to advertise our support";
+Q.news_headline =
+    "Lewica keeps a tactical instruction and refuses to join the PiS field campaign";
+!}
+
+The party repeats the voting instruction and supplies no stage, canvasser or
+price list. Our factions avoid becoming part of the PiS operation; the workers
+and services we might have protected receive no paper guarantee at all.
+
+PiS calls the position cowardice dressed as support. The candidate keeps our
+name in the endorsement column and loses most of the reachable voters that an
+actual joint operation might have moved.
+
+- @pres25_torun_mirror: Put the written campaign limit to its final test
+
+@pres25_torun_mirror
+title: [+ pres_2025_torun_target_name +] breaks the line we put in writing
+subtitle: The last week tests whether an endorsement is leverage or merely permission
+new-page: true
+view-if: pres_2025_torun_route = "democratic" or pres_2025_torun_route = "pis"
+on-arrival: {!
+Q.news_headline = Q.pres_2025_torun_target_name +
+    " breaches the runoff terms agreed with Lewica";
+!}
+
+= The last week — The mirror
+
+The written line was **[+ pres_2025_torun_red_line +]**. The breach is equally
+plain: **[+ pres_2025_torun_breach +]**. Headquarters receives the clip before
+the morning meeting and the explanation before noon: the finalist needed
+[+ pres_2025_konf_surname +]'s voters, the campaign moved too quickly, and reopening the endorsement
+now would only help the other person on the ballot.
+
+[? if pres_2025_torun_route = "democratic": The democratic camp that asked us
+to accept the beer as necessary now asks us to treat its own written limit as
+optional. The Left can preserve the anti-right transfer only by teaching every
+partner what our conditions cost to break.?]
+
+[? if pres_2025_torun_route = "pis": The PiS-backed camp that accepted a
+price for our canvass now treats that price as campaign stationery. A tactical
+bargain with the right has reached the exact test our factions said it would.?]
+
+- @pres25_breach_eat
+- @pres25_breach_public
+- @pres25_breach_pull
+
+@pres25_breach_eat
+title: Eat the breach and keep every organiser in the field
+subtitle: Protect the transfer; make Lewica's written conditions cheaper next time.
+on-arrival: {!
+Q.pres_2025_runoff_breach_shift = 0;
+Q.pres_2025_transfer_strength += 0.10;
+Q.razem_cooperation -= 4;
+Q.razem_dissent += 6;
+Q.progressives_dissent += 6;
+Q.party_unity -= 3;
+Q.public_trust -= 2;
+if (Q.pres_2025_torun_target_key == "right") Q.pis_relation += 2;
+else Q.ko_relation += 2;
+Q.news_headline =
+    "Lewica absorbs the runoff breach and keeps its organisers in the field";
+!}
+
+No corrective statement is issued. The field operation keeps its lists and the
+candidate keeps the full value of our endorsement. Faction representatives
+record in the minutes that a written condition has been broken and discover
+that minutes do not travel.
+
+- @poland_event_queue: Carry the swallowed breach into the count
+
+@pres25_breach_public
+title: Publish the breach and keep a reduced endorsement
+subtitle: Recover a public boundary while taking some votes and trust out of the joint operation.
+on-arrival: {!
+Q.pres_2025_runoff_breach_shift = -0.25;
+Q.pres_2025_transfer_strength -= 0.20;
+Q.pres_2025_runoff_target_bonus -= 0.15;
+Q.razem_cooperation += 2;
+Q.razem_dissent -= 2;
+Q.progressives_dissent -= 1;
+Q.party_unity -= 2;
+Q.public_trust += 2;
+Q.media_capacity += 1;
+if (Q.pres_2025_torun_target_key == "right") Q.pis_relation -= 6;
+else Q.ko_relation -= 6;
+Q.news_headline =
+    "Lewica publishes the broken runoff clause and leaves a narrower endorsement in place";
+!}
+
+The agreement, timestamp and offending clip are released together. The party
+still instructs voters to prefer the finalist, but no spokesperson describes
+the campaign as a partner and several joint appearances disappear from the
+calendar.
+
+The public can see that the line existed. The finalist can see exactly how much
+field strength survived our anger, and will remember that number in the next
+negotiation.
+
+- @poland_event_queue: Carry the published breach into the count
+
+@pres25_breach_pull
+title: Pull the endorsement in the last week
+subtitle: Enforce the agreement at the ballot box; measurably reduce the backed finalist's runoff coalition.
+on-arrival: {!
+if (Q.pres_2025_runoff_support_target == Q.pres_2025_torun_target_key) {
+    Q.pres_2025_runoff_support_target = "none";
+}
+Q.pres_2025_transfer_strategy =
+    "Endorsement pulled after a written runoff breach";
+Q.pres_2025_transfer_strength = 0;
+Q.pres_2025_runoff_target_bonus -= 0.60;
+Q.pres_2025_runoff_breach_shift = -0.85;
+Q.turnout_readiness -= 2;
+Q.razem_cooperation += 4;
+Q.razem_dissent -= 4;
+Q.progressives_dissent -= 3;
+Q.organiser_energy -= 2;
+if (Q.pres_2025_torun_target_key == "right") Q.pis_relation -= 10;
+else Q.ko_relation -= 10;
+Q.news_headline =
+    "Lewica pulls its runoff endorsement after the finalist breaks the written terms";
+!}
+
+Offices receive the stop order with days left. Printed material is pulped,
+joint canvasses are cancelled and voters who heard one instruction on Monday
+hear that the agreement behind it no longer exists on Friday.
+
+The boundary is enforceable because the candidate loses something for crossing
+it. The same fact makes the decision dangerous: the count will include people
+our organisers might have reached and now deliberately will not.
+
+- @poland_event_queue: Carry the withdrawn endorsement into the count
+
+@calculate_presidential_runoff_2025
+on-arrival: {!
+const runoffMode25 =
+    Q.pres_2025_runoff_calc_mode == "poll" ? "poll" : "result";
+if (!Q.pres_2025_transfer_strategy) {
+    Q.pres_2025_transfer_strategy = "Not chosen";
+}
+if (!Q.pres_2025_runoff_final_push) {
+    Q.pres_2025_runoff_final_push = "Not chosen";
+}
+if (!Q.pres_2025_runoff_support_name) {
+    Q.pres_2025_runoff_support_name = "No candidate";
+}
+const finalistA = Q.pres_2025_finalist_a_key;
+const finalistB = Q.pres_2025_finalist_b_key;
+const supportTarget = Q.pres_2025_runoff_support_target;
+const finalistNames = {};
+finalistNames.ko = Q.pres_2025_ko_candidate || "Rafał Trzaskowski";
+finalistNames.right = Q.pres_2025_right_candidate || "Karol Nawrocki";
+finalistNames.left = Q.pres_2025_left_candidate;
+finalistNames.razem = Q.pres_2025_razem_candidate || "Adrian Zandberg";
+finalistNames.mentzen = Q.pres_2025_konf_candidate;
+finalistNames.braun = "Grzegorz Braun";
+finalistNames.holownia =
+    Q.pres_2025_centre_candidate || "Szymon Hołownia";
+finalistNames.stanowski = "Krzysztof Stanowski";
+const historicalKoRight =
+    finalistNames.ko == "Rafał Trzaskowski" &&
+    (
+        (finalistA == "ko" && finalistB == "right") ||
+        (finalistA == "right" && finalistB == "ko")
+    );
+const resultAKey = historicalKoRight ? "ko" : finalistA;
+const resultBKey = historicalKoRight ? "right" : finalistB;
+let resultAShare;
+Q.pres_2025_runoff_historical_pair = historicalKoRight ? 1 : 0;
+Q.pres_2025_runoff_model = historicalKoRight
+    ? "Historical Trzaskowski–Nawrocki calibration"
+    : "Round-one shares and pair-specific voter alignment";
+Q.pres_2025_runoff_r1_a =
+    Number(Q["pres_2025_r1_" + resultAKey]) || 0;
+Q.pres_2025_runoff_r1_b =
+    Number(Q["pres_2025_r1_" + resultBKey]) || 0;
+Q.pres_2025_runoff_transfer_a = 0;
+Q.pres_2025_runoff_transfer_b = 0;
+// The inter-round poll and the ballot are two readings of the same campaign
+// under different noise, so the shock is drawn once at the start of the year.
+const runoffShock25 = runoffMode25 == "poll"
+    ? (Number(Q.pres_2025_runoff_poll_shock) || 0)
+    : (Number(Q.pres_2025_runoff_result_shock) || 0);
+Q.pres_2025_runoff_variance = Math.round(
+    runoffShock25 * (historicalKoRight ? 1.15 : 1.25) * 100
+) / 100;
+// Brokered support does not move a bloc: it moves the reachable fraction of
+// one eliminated electorate, and only toward the candidate we actually named.
+const tradeBoost25 = function(source) {
+    return Math.max(0, Number(Q["pres_2025_trade_boost_" + source]) || 0);
+};
+const targetBonus25 =
+    (Number(Q.pres_2025_runoff_target_bonus) || 0) +
+    (Number(Q.pres_2025_runoff_push_bonus) || 0);
+const breachShift25 =
+    Q.pres_2025_torun_target_key == resultAKey
+        ? (Number(Q.pres_2025_runoff_breach_shift) || 0)
+        : (Q.pres_2025_torun_target_key == resultBKey
+            ? -(Number(Q.pres_2025_runoff_breach_shift) || 0)
+            : 0);
+const allSourceKeys25 = [
+    "ko", "right", "left", "razem", "mentzen",
+    "braun", "holownia", "stanowski", "other"
+];
+if (historicalKoRight) {
+    let brokered25 = 0;
+    for (const source of allSourceKeys25) {
+        if (source == "ko" || source == "right") continue;
+        brokered25 +=
+            Math.max(0, Number(Q["pres_2025_r1_" + source]) || 0) *
+            tradeBoost25(source);
+    }
+    const marketShift25 = supportTarget == "ko"
+        ? brokered25 + targetBonus25
+        : (supportTarget == "right"
+            ? -(brokered25 + targetBonus25)
+            : 0);
+    const endorsementShift = supportTarget == "ko"
+        ? (Number(Q.pres_2025_transfer_strength) || 0)
+        : (supportTarget == "right"
+            ? -(Number(Q.pres_2025_transfer_strength) || 0)
+            : 0);
+    resultAShare =
+        49.11 +
+        endorsementShift +
+        marketShift25 +
+        (Q.pres_2025_incumbent
+            ? (Number(Q.pres_2025_incumbent_record) || 0) * 0.55
+            : 0) +
+        ((Number(Q.ko_relation) || 50) - 50) * 0.018 +
+        ((Number(Q.turnout_readiness) || 58) - 58) * 0.012 -
+        (Q.razem_split ? 0.28 : 0) +
+        breachShift25 +
+        Q.pres_2025_runoff_variance;
+} else {
+    const profiles = {
+        ko: [55, 68, 85],
+        right: [65, 25, 35],
+        left: [25, 85, 80],
+        razem: [15, 88, 75],
+        mentzen: [88, 28, 24],
+        braun: [75, 5, 5],
+        holownia: [55, 60, 80],
+        stanowski: [70, 42, 45],
+        other: [50, 50, 50]
+    };
+    const affinity = function(source, target) {
+        const voter = profiles[source] || profiles.other;
+        const candidate = profiles[target] || profiles.other;
+        return Math.max(
+            5,
+            100 -
+                Math.abs(voter[0] - candidate[0]) * 0.35 -
+                Math.abs(voter[1] - candidate[1]) * 0.35 -
+                Math.abs(voter[2] - candidate[2]) * 0.30
+        );
+    };
+    let votesA = Q.pres_2025_runoff_r1_a * 0.98;
+    let votesB = Q.pres_2025_runoff_r1_b * 0.98;
+    const sourceKeys = allSourceKeys25;
+    for (const source of sourceKeys) {
+        if (source == resultAKey || source == resultBKey) continue;
+        const sourceShare =
+            Math.max(0, Number(Q["pres_2025_r1_" + source]) || 0);
+        const affinityA = affinity(source, resultAKey);
+        const affinityB = affinity(source, resultBKey);
+        const transferTurnout = Math.max(
+            0.55,
+            Math.min(0.94, 0.54 + Math.max(affinityA, affinityB) / 240)
+        );
+        const transferable = sourceShare * transferTurnout;
+        let toA = transferable * affinityA / (affinityA + affinityB);
+        let toB = transferable - toA;
+        const boost25 = tradeBoost25(source);
+        const boostToTarget25 =
+            supportTarget == resultAKey || supportTarget == resultBKey;
+        if (boost25 > 0 && boostToTarget25) {
+            // Extra support first wakes people who were staying home, then
+            // takes the harder votes off the other finalist.
+            let extra25 = sourceShare * boost25;
+            const idle25 = Math.max(0, sourceShare - toA - toB);
+            if (supportTarget == resultAKey) {
+                const wakened = Math.min(idle25, extra25 * 0.7);
+                toA += wakened;
+                extra25 -= wakened;
+                const switched = Math.min(toB, extra25);
+                toB -= switched;
+                toA += switched;
+            } else {
+                const wakened = Math.min(idle25, extra25 * 0.7);
+                toB += wakened;
+                extra25 -= wakened;
+                const switched = Math.min(toA, extra25);
+                toA -= switched;
+                toB += switched;
+            }
+        }
+        votesA += toA;
+        votesB += toB;
+    }
+    Q.pres_2025_runoff_transfer_a = Math.round(
+        (votesA - Q.pres_2025_runoff_r1_a * 0.98) * 100
+    ) / 100;
+    Q.pres_2025_runoff_transfer_b = Math.round(
+        (votesB - Q.pres_2025_runoff_r1_b * 0.98) * 100
+    ) / 100;
+    const validTransferTotal = Math.max(1, votesA + votesB);
+    const endorsementShift = supportTarget == resultAKey
+        ? (Number(Q.pres_2025_transfer_strength) || 0)
+        : (supportTarget == resultBKey
+            ? -(Number(Q.pres_2025_transfer_strength) || 0)
+            : 0);
+    const turnoutShift = supportTarget == resultAKey
+        ? ((Number(Q.turnout_readiness) || 58) - 58) * 0.01
+        : (supportTarget == resultBKey
+            ? -((Number(Q.turnout_readiness) || 58) - 58) * 0.01
+            : 0);
+    const marketShift25 = supportTarget == resultAKey
+        ? targetBonus25
+        : (supportTarget == resultBKey ? -targetBonus25 : 0);
+    resultAShare =
+        votesA * 100 / validTransferTotal +
+        endorsementShift + turnoutShift + marketShift25 + breachShift25 +
+        Q.pres_2025_runoff_variance;
+}
+resultAShare = historicalKoRight
+    ? Math.max(42, Math.min(58, resultAShare))
+    : Math.max(0, Math.min(100, resultAShare));
+const resultBShare = 100 - resultAShare;
+Q.pres_2025_runoff_a_key = resultAKey;
+Q.pres_2025_runoff_b_key = resultBKey;
+Q.pres_2025_runoff_a_name = finalistNames[resultAKey];
+Q.pres_2025_runoff_b_name = finalistNames[resultBKey];
+if (runoffMode25 == "poll") {
+    Q.pres_2025_runoff_poll_a = Math.round(resultAShare * 10) / 10;
+    Q.pres_2025_runoff_poll_b = Math.round(
+        (100 - Q.pres_2025_runoff_poll_a) * 10
+    ) / 10;
+    Q.pres_2025_runoff_poll_margin = Math.round(
+        Math.abs(
+            Q.pres_2025_runoff_poll_a - Q.pres_2025_runoff_poll_b
+        ) * 10
+    ) / 10;
+    Q.pres_2025_runoff_poll_leader =
+        Q.pres_2025_runoff_poll_a >= Q.pres_2025_runoff_poll_b
+            ? Q.pres_2025_runoff_a_name
+            : Q.pres_2025_runoff_b_name;
+    Q.pres_2025_runoff_support_name = supportTarget == "none"
+        ? "No candidate"
+        : (finalistNames[supportTarget] || "No candidate");
+}
+if (runoffMode25 == "result") {
+Q.pres_2025_runoff_a_share =
+    Math.round(resultAShare * 100) / 100;
+Q.pres_2025_runoff_b_share =
+    Math.round(resultBShare * 100) / 100;
+const clampRunoffTurnout25 = function(value, low, high) {
+    return Math.max(low, Math.min(high, Number(value) || 0));
+};
+const formatRunoffVotes25 = function(value) {
+    return String(Math.round(value)).replace(
+        /\B(?=(\d{3})+(?!\d))/g,
+        " "
+    );
+};
+const turnoutRunoff25 = clampRunoffTurnout25(
+    69.2 +
+        ((Number(Q.turnout_readiness) || 58) - 58) * 0.042 +
+        (Number(Q.pres_2025_transfer_strength) || 0) * 0.28 +
+        (Number(Q.pres_2025_runoff_turnout_shock) || 0),
+    60,
+    78
+);
+Q.pres_2025_runoff_turnout = Math.round(turnoutRunoff25 * 100) / 100;
+Q.pres_2025_runoff_valid_votes = Math.round(
+    20950000 * turnoutRunoff25 / 69.2
+);
+Q.pres_2025_runoff_votes_a = Math.floor(
+    Q.pres_2025_runoff_valid_votes * resultAShare / 100
+);
+Q.pres_2025_runoff_votes_b =
+    Q.pres_2025_runoff_valid_votes - Q.pres_2025_runoff_votes_a;
+Q.pres_2025_runoff_votes_a_display =
+    formatRunoffVotes25(Q.pres_2025_runoff_votes_a);
+Q.pres_2025_runoff_votes_b_display =
+    formatRunoffVotes25(Q.pres_2025_runoff_votes_b);
+Q.pres_2025_runoff_valid_votes_display =
+    formatRunoffVotes25(Q.pres_2025_runoff_valid_votes);
+Q.pres_2025_runoff_margin = Math.round(
+    Math.abs(resultAShare - resultBShare) * 100
+) / 100;
+if (resultAShare > 50) {
+    Q.pres_2025_winner = Q.pres_2025_runoff_a_name;
+    Q.pres_2025_winner_key = resultAKey;
+} else {
+    Q.pres_2025_winner = Q.pres_2025_runoff_b_name;
+    Q.pres_2025_winner_key = resultBKey;
+}
+const presWinnerImages2025 = {
+    "Rafał Trzaskowski": "img/poland/events/pres-candidate-trzaskowski-2025.webp",
+    "Radosław Sikorski": "img/poland/events/pres-candidate-sikorski.webp",
+    "Barbara Nowacka": "img/poland/events/pres-candidate-nowacka.webp",
+    "Karol Nawrocki": "img/poland/events/pres-candidate-nawrocki.webp",
+    "Mateusz Morawiecki": "img/poland/cards/advisor-morawiecki.webp",
+    "Przemysław Czarnek": "img/poland/events/pres-candidate-czarnek.webp",
+    "Tobiasz Bocheński": "img/poland/events/pres-candidate-bochenski.webp",
+    "Magdalena Biejat": "img/poland/events/pres-candidate-biejat-2025.webp",
+    "Agnieszka Dziemianowicz-Bąk": "img/poland/cards/advisor-dziemianowicz-bak.webp",
+    "Adrian Zandberg": "img/poland/events/pres-candidate-zandberg-2025.webp",
+    "Sławomir Mentzen": "img/poland/events/pres-candidate-mentzen-2025.webp",
+    "Krzysztof Bosak": "img/poland/events/pres-candidate-bosak.webp",
+    "Grzegorz Braun": "img/poland/events/grzegorz-braun-2025.webp",
+    "Szymon Hołownia": "img/poland/events/pres-candidate-holownia-2025.webp",
+    "Ryszard Petru": "img/poland/events/pres-candidate-petru.webp",
+    "Krzysztof Stanowski": "img/poland/events/pres-candidate-stanowski.webp"
+};
+this.game.scenes[
+    "poland_events_2025_pres25_runoff_campaign.presidential_runoff_2025"
+].faceImage = ["right", "mentzen", "braun"].includes(
+    Q.pres_2025_winner_key
+)
+    ? "img/poland/events/wajda.jpg"
+    : presWinnerImages2025[Q.pres_2025_winner] ||
+        "img/poland/events/presidential-ballot-2025.webp";
+Q.pres_2025_hostile_president =
+    Q.pres_2025_winner_key == "right" ||
+    Q.pres_2025_winner_key == "mentzen" ||
+    Q.pres_2025_winner_key == "braun" ? 1 : 0;
+Q.pres_2025_runoff_done = 1;
+// A presidential verdict moves the whole climate. A hostile Palace licenses
+// the conservative side of every rights argument; a left or democratic win
+// gives the same arguments a national mandate.
+const presMoodSwing2025 = Q.pres_2025_hostile_president
+    ? -1
+    : (Q.pres_2025_winner_key == "left" || Q.pres_2025_winner_key == "razem"
+        ? 1.35
+        : 0.6);
+Q.public_mood_pending_abortion_rights_support += Math.round(12 * presMoodSwing2025);
+Q.public_mood_pending_lgbt_equality_support += Math.round(13 * presMoodSwing2025);
+Q.public_mood_pending_secular_state_support += Math.round(10 * presMoodSwing2025);
+Q.public_mood_pending_refugee_solidarity_support += Math.round(9 * presMoodSwing2025);
+Q.public_mood_pending_rule_of_law_support += Math.round(8 * presMoodSwing2025);
+Q.public_mood_pending_abortion_rights_salience += 12;
+Q.public_mood_pending_lgbt_equality_salience += 12;
+Q.public_mood_pending_secular_state_salience += 9;
+Q.public_mood_pending_refugee_solidarity_salience += 9;
+Q.public_mood_pending_lgbt_equality_backlash += Q.pres_2025_hostile_president ? 10 : 6;
+Q.public_mood_pending_abortion_rights_backlash += Q.pres_2025_hostile_president ? 9 : 5;
+Q.news_headline = Q.pres_2025_winner + " wins the presidential runoff";
+// Only the two finalists have anything left to resolve; every other row keeps
+// the status the first-round table already gave it.
+Q["pres_2025_status_" + resultAKey] =
+    Q.pres_2025_winner_key == resultAKey ? "elected" : "defeated";
+Q["pres_2025_status_" + resultBKey] =
+    Q.pres_2025_winner_key == resultBKey ? "elected" : "defeated";
+const presidentialRunoffMapModel25 = (typeof window !== "undefined"
+    ? window : globalThis).polandElectionModel;
+const presidentialFamily25 = function(id) {
+    if (id == "ko") return "ko";
+    if (id == "right") return "pis";
+    if (id == "left" || id == "razem") return "left";
+    if (id == "mentzen" || id == "braun") return "konf";
+    if (id == "holownia") return "p2050";
+    return "other";
+};
+presidentialRunoffMapModel25.archivePresident(Q,
+    presidentialRunoffMapModel25.allocatePresident({
+        state: Q,
+        key: "2025-06-r2",
+        label: "2025 presidential election — runoff",
+        round: 2,
+        candidates: [
+            {id: resultAKey, name: Q.pres_2025_runoff_a_name,
+                family: presidentialFamily25(resultAKey),
+                share: Q.pres_2025_runoff_a_share},
+            {id: resultBKey, name: Q.pres_2025_runoff_b_name,
+                family: presidentialFamily25(resultBKey),
+                share: Q.pres_2025_runoff_b_share}
+        ]
+    })
+);
+}
+!}

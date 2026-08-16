@@ -1324,6 +1324,7 @@ window.disableGrayMode = function() {
       aliases: [
         ['Civic Platform', 'Platforma Obywatelska'],
         ['Platforma Obywatelska', 'Platforma Obywatelska'],
+        ['Platforma', 'Platforma Obywatelska'],
         ['PO', 'PO']
       ]
     },
@@ -1525,7 +1526,7 @@ window.disableGrayMode = function() {
     {
       id: 'sovereign-poland',
       className: 'party-sovereign-poland',
-      explanation: 'Sovereign Poland — a right-wing party allied with Law and Justice.',
+      explanation: 'Suwerenna Polska — the 2023 renaming of Zbigniew Ziobro\u2019s Solidarna Polska. Hard-right, sovereigntist and openly hostile to EU conditionality, it holds the justice ministry and the prosecution service inside the United Right, and enough deputies to end the majority whenever it decides the price is right.',
       aliases: [
         ['Sovereign Poland', 'Suwerenna Polska'],
         ['Suwerenna Polska', 'Suwerenna Polska']
@@ -1534,7 +1535,7 @@ window.disableGrayMode = function() {
     {
       id: 'solidary-poland',
       className: 'party-solidary-poland',
-      explanation: 'Solidary Poland — the former name of Sovereign Poland.',
+      explanation: 'Solidarna Polska — Zbigniew Ziobro\u2019s hard-right party, founded in 2012 by PiS deputies who left with him and returned to government on PiS lists in 2015. It owns the justice ministry, the prosecution service and the Justice Fund, drives the judicial overhaul and the fights with Brussels, and renamed itself Suwerenna Polska in 2023.',
       aliases: [
         ['Solidary Poland', 'Solidarna Polska'],
         ['Solidarna Polska', 'Solidarna Polska']
@@ -3716,7 +3717,55 @@ window.disableGrayMode = function() {
       ? name
       : 'Lewica';
   };
+  // Korwin-Mikke's party has changed its registered name twice inside the
+  // period this game covers: KORWiN through 2015, Wolność from 2016 and Nowa
+  // Nadzieja from 2022 under Sławomir Mentzen. Its badge name and tooltip
+  // follow the date the text is describing rather than always reading
+  // "New Hope".
+  var newHopeEra = function() {
+    var engine = window.dendryUI && window.dendryUI.dendryEngine;
+    var state = engine && engine.state;
+    var qualities = state && state.qualities;
+    var sceneId = state && state.sceneId;
+    if (typeof sceneId === 'string' && sceneId.indexOf('poland_intro') === 0) {
+      return {
+        shortName: 'KORWiN',
+        longName: 'KORWiN',
+        explanation: 'KORWiN — Janusz Korwin-Mikke’s free-market and socially reactionary party. It took 4.76% in 2015 and elected nobody, renamed itself Wolność in 2016, joined Konfederacja in 2019 and became Nowa Nadzieja in 2022.'
+      };
+    }
+    // An unknown date means present-day naming, not a rewrite of the party's
+    // history: only a real campaign year before 2022 shows the Wolność name.
+    var campaignYear = Number(qualities && qualities.year);
+    if (campaignYear && campaignYear < 2022) {
+      return {
+        shortName: 'Wolność',
+        longName: 'Wolność',
+        explanation: 'Wolność — Janusz Korwin-Mikke’s free-market party, previously named KORWiN, and the libertarian component of Konfederacja. It takes the name Nowa Nadzieja in 2022 under Sławomir Mentzen.'
+      };
+    }
+    return {
+      shortName: 'NN',
+      longName: 'Nowa Nadzieja',
+      explanation: 'Nowa Nadzieja — the libertarian-right component of Konfederacja, led by Sławomir Mentzen. It was called KORWiN until 2016 and Wolność until 2022.'
+    };
+  };
+
+  var partyExplanationFor = function(definition) {
+    if (!definition) {
+      return '';
+    }
+    if (definition.id === 'new-hope') {
+      return newHopeEra().explanation;
+    }
+    return definition.explanation;
+  };
+
   var partyNamesForDefinition = function(definition) {
+    if (definition.id === 'new-hope') {
+      var era = newHopeEra();
+      return {shortName: era.shortName, longName: era.longName};
+    }
     if (definition.id !== 'lewica') {
       return {
         shortName: definition.shortName,
@@ -3892,7 +3941,7 @@ window.disableGrayMode = function() {
       : '';
     return '<span class="party party-name ' + match.definition.className +
       (prawicaMember ? ' party-prawica' : '') +
-      '" title="' + escapeAttribute(match.definition.explanation +
+      '" title="' + escapeAttribute(partyExplanationFor(match.definition) +
         (prawicaMember ? ' Founding member of Prawica.' : '')) +
       '" data-party="' + match.definition.id +
       (prawicaMember ? '" data-party-presentation="prawica' : '') +
@@ -3960,68 +4009,63 @@ window.disableGrayMode = function() {
     var engine = window.dendryUI && window.dendryUI.dendryEngine;
     var qualities = engine && engine.state && engine.state.qualities;
 
-    // The opening history briefing describes 1993–2015, when Koalicja
+    // The opening history briefing describes 1993\u20132015, when Koalicja
     // Obywatelska did not exist and several figures sat in other camps. Inside
-    // those pages they carry the party they actually belonged to at the time.
+    // those pages they carry the party they actually belonged to at the time,
+    // and a few of them changed camp between one briefing page and the next.
     var briefingScene = engine && engine.state && engine.state.sceneId;
     if (
       typeof briefingScene === 'string' &&
       briefingScene.indexOf('poland_intro') === 0
     ) {
       var historicalCamps = {
-        tusk: {
+        tusk: [{
           className: 'party-po',
           explanation: 'Donald Tusk co-founded Platforma Obywatelska in 2001, lost the 2005 presidential runoff to Lech Kaczyński, and governed as prime minister from 2007 to 2014 before leaving for the European Council.'
-        },
-        ogorek: {
+        }],
+        petru: [{
+          className: 'party-nowoczesna',
+          explanation: 'Ryszard Petru founded Nowoczesna in May 2015 as a clean liberal alternative to Platforma. It took 7.60% and 28 seats, briefly polled level with PO, and collapsed after his Madeira trip during the December 2016 occupation of the Sejm chamber.'
+        }],
+        lubnauer: [{
+          className: 'party-nowoczesna',
+          explanation: 'Katarzyna Lubnauer took over Nowoczesna in November 2017, inheriting a party already losing deputies to Platforma, and led what was left of it into Koalicja Obywatelska.'
+        }],
+        schetyna: [{
+          className: 'party-po',
+          explanation: 'Grzegorz Schetyna took over Platforma Obywatelska in January 2016 and assembled Koalicja Obywatelska for the 2018 local elections, then the losing 2019 European Coalition.'
+        }],
+        ogorek: [{
           className: 'party-sld',
           explanation: 'Magdalena Ogórek was SLD\u2019s candidate in the 2015 presidential election: an academic with no political record, nominated for television. She campaigned at arm\u2019s length from the party, took 2.38% \u2014 the worst result the Polish left has recorded \u2014 and later presented programmes on PiS-run public television.'
-        },
-        nowacka: {
-          className: 'party-sld',
-          explanation: 'Barbara Nowacka led the Zjednoczona Lewica coalition into the 2015 election. Registered as a coalition, it needed 8%, took 7.55% and elected nobody; she moved to the liberal centre afterwards.'
+        }],
+        nowacka: [
+          {
+            scene: 'poland_intro.briefing_left',
+            className: 'party-sld',
+            explanation: 'Barbara Nowacka led the Zjednoczona Lewica coalition into the 2015 election. Registered as a coalition, it needed 8%, took 7.55% and elected nobody.'
+          },
+          {
+            scene: 'poland_intro.briefing_opposition',
+            className: 'party-inicjatywa-polska',
+            explanation: 'Barbara Nowacka leads Inicjatywa Polska, the social-liberal group she brought into Koalicja Obywatelska in 2018. It is the part of KO that competes most directly with us for progressive voters.'
+          }
+        ]
+      };
+      var camps = historicalCamps[definition.id];
+      if (camps) {
+        for (var campIndex = 0; campIndex < camps.length; campIndex++) {
+          var camp = camps[campIndex];
+          if (!camp.scene || camp.scene === briefingScene) {
+            return {
+              id: definition.id,
+              className: camp.className,
+              explanation: camp.explanation,
+              aliases: definition.aliases
+            };
+          }
         }
-      };
-      var historicalCamp = historicalCamps[definition.id];
-      if (historicalCamp) {
-        return {
-          id: definition.id,
-          className: historicalCamp.className,
-          explanation: historicalCamp.explanation,
-          aliases: definition.aliases
-        };
       }
-    }
-
-    // Badges follow the organisation a politician actually belongs to at the
-    // time. Biedroń is Wiosna until the unification congress; the two Razem
-    // deputies who stayed with the Left carry Razem until Razem itself merges
-    // or walks out of the club.
-    var leftMerged =
-      Number(qualities && qualities.nowa_lewica_merger_agreed) > 0;
-    var razemGone =
-      Number(qualities && qualities.razem_merged) > 0 ||
-      Number(qualities && qualities.razem_split) > 0;
-
-    if (definition.id === 'biedron' && !leftMerged) {
-      return {
-        id: definition.id,
-        className: 'party-wiosna',
-        explanation: 'Robert Biedroń founded Wiosna in February 2019 after two terms as a deputy and four years as mayor of Słupsk. Wiosna is a separate party inside the Lewica alliance until the unification congress.',
-        aliases: definition.aliases
-      };
-    }
-
-    if (
-      (definition.id === 'biejat' || definition.id === 'dziemianowicz') &&
-      razemGone
-    ) {
-      return {
-        id: definition.id,
-        className: 'party-lewica',
-        explanation: definition.explanation,
-        aliases: definition.aliases
-      };
     }
 
     var isRazemLedMerger =
@@ -4309,7 +4353,7 @@ window.disableGrayMode = function() {
     }
     return tag.replace(
       /^<([A-Za-z][^\s/>]*)/,
-      '<$1 title="' + escapeAttribute(definition.explanation) +
+      '<$1 title="' + escapeAttribute(partyExplanationFor(definition)) +
         '" data-party="' + definition.id + '"'
     );
   };
@@ -4480,14 +4524,15 @@ window.disableGrayMode = function() {
         var canonicalNames = partyNamesForDefinition(definition);
         element.classList.add('party');
         if (!personDefinition) {
-          element.title = definition.explanation;
+          element.title = partyExplanationFor(definition);
         }
         element.setAttribute('data-party', definition.id);
         if (prawicaMember) {
           element.classList.add('party-prawica');
           element.setAttribute('data-party-presentation', 'prawica');
           element.setAttribute('data-party-logo', 'prawica');
-          element.title = definition.explanation + ' Founding member of Prawica.';
+          element.title = partyExplanationFor(definition) +
+            ' Founding member of Prawica.';
         }
         element.setAttribute('data-party-short-name', canonicalNames.shortName);
         element.setAttribute('data-party-long-name', canonicalNames.longName);
@@ -4896,8 +4941,328 @@ window.disableGrayMode = function() {
     }
   };
 
+  var introSejm2001 = [
+    ['SLD–UP', 'party-sld', 216], ['PO', 'party-po', 65],
+    ['Samoobrona', 'party-samoobrona', 53], ['PiS', 'party-pis', 44],
+    ['PSL', 'party-psl', 42], ['LPR', 'party-lpr', 38],
+    ['MN', 'party-german-minority', 2]
+  ];
+  var introSejm2007 = [
+    ['PO', 'party-po', 209], ['PiS', 'party-pis', 166],
+    ['LiD', 'party-lid', 53], ['PSL', 'party-psl', 31],
+    ['MN', 'party-german-minority', 1]
+  ];
+  var introSejm2011 = [
+    ['PO', 'party-po', 207], ['PiS', 'party-pis', 157],
+    ['Ruch Palikota', 'party-twoj-ruch', 40], ['PSL', 'party-psl', 28],
+    ['SLD', 'party-sld', 27], ['MN', 'party-german-minority', 1]
+  ];
+  var introSejm2015 = [
+    ['PiS', 'party-pis', 235], ['PO', 'party-po', 138],
+    ["Kukiz'15", 'party-kukiz', 42], ['Nowoczesna', 'party-nowoczesna', 28],
+    ['PSL', 'party-psl', 16], ['MN', 'party-german-minority', 1],
+    ['Zjednoczona Lewica', 'party-sld', 0]
+  ];
+  var introSejm2019 = [
+    ['ZP', 'party-united-right', 235], ['KO', 'party-ko', 134],
+    ['Lewica', 'party-lewica', 49], ['KP', 'party-polish-coalition', 30],
+    ['Konf.', 'party-konf', 11], ['Others', '', 1]
+  ];
+  var introSenate2019 = [
+    ['PiS', 'party-pis', 48], ['KO', 'party-ko', 43],
+    ['PSL', 'party-psl', 3], ['Lewica', 'party-lewica', 2],
+    ['Independent', '', 4]
+  ];
+  var introGovernment2019 = [
+    ['President', 'Andrzej Duda', 'party-pis'],
+    ['Prime Minister', 'Mateusz Morawiecki', 'party-pis'],
+    ['Sejm Marshal', 'Elżbieta Witek', 'party-pis'],
+    ['Mayor of Warsaw', 'Rafał Trzaskowski', 'party-ko'],
+    ['Coalition', 'PiS majority government'],
+    ["Lewica's role", 'Opposition']
+  ];
+
+  var introPulseSnapshots = {
+    briefing_sld: {
+      date: 'September 2001', condition: 'Ascendant',
+      headline: 'The SLD returns as the largest force in the Sejm',
+      party: 'SLD–UP', partyClass: 'party-sld', position: 'Governing coalition',
+      metricLabel: 'Election', poll: '41.04', seats: 216, threshold: 8,
+      signal: {label: 'Sejm', text: 'Largest club', value: '216 / 460', meter: 460},
+      cabinet: 'SLD–UP–PSL majority', governmentSummary: 'Leszek Miller',
+      government: [
+        ['President', 'Aleksander Kwaśniewski', 'party-sld'],
+        ['Prime Minister', 'Leszek Miller', 'party-sld'],
+        ['Coalition', 'SLD–UP–PSL'], ["The Left's role", 'Government'],
+        ['Next rupture', 'Rywin affair · December 2002']
+      ],
+      sejm: introSejm2001,
+      context: ['Major points', 'EU accession · 1 May 2004', [
+        ['Constitution', 'in force · 17 October 1997'],
+        ['EU referendum', '77.45% yes'],
+        ['EU accession', '1 May 2004'],
+        ['2005 SLD result', '11.31% · 55 seats']
+      ]]
+    },
+    briefing_interlude: {
+      date: 'October 2007', condition: 'Cohabitation',
+      headline: 'The PiS coalition collapses and its junior partners disappear',
+      party: 'Lewica i Demokraci', partyClass: 'party-lid',
+      position: 'Parliamentary opposition', metricLabel: 'Election',
+      poll: '13.15', seats: 53, threshold: 8,
+      signal: {label: 'Coalition', text: 'Junior partners', value: 'wiped out'},
+      cabinet: 'PO–PSL majority', governmentSummary: 'Donald Tusk',
+      government: [
+        ['President', 'Lech Kaczyński', 'party-pis'],
+        ['Prime Minister', 'Donald Tusk', 'party-po'],
+        ['Coalition', 'PO–PSL'], ["The Left's role", 'Opposition'],
+        ['Outgoing cabinet', 'PiS · Samoobrona · LPR']
+      ],
+      sejm: introSejm2007,
+      context: ['Major points', 'The Fourth Republic ends', [
+        ['2005 presidential runoff', 'Kaczyński 54.04% · Tusk 45.96%'],
+        ['Sejm dissolved', '7 September 2007'],
+        ['Samoobrona', '1.53% · 0 seats'], ['LPR', '1.30% · 0 seats']
+      ]]
+    },
+    briefing_years: {
+      date: 'October 2011', condition: 'Managed',
+      headline: 'PO–PSL wins re-election while a new anticlerical left passes SLD',
+      party: 'SLD', partyClass: 'party-sld', position: 'Parliamentary opposition',
+      metricLabel: 'Election', poll: '8.24', seats: 27, threshold: 5,
+      signal: {label: 'Rival left', text: 'Ruch Palikota', value: '10.02%'},
+      cabinet: 'PO–PSL majority', governmentSummary: 'Donald Tusk',
+      government: [
+        ['President', 'Bronisław Komorowski', 'party-po'],
+        ['Prime Minister', 'Donald Tusk', 'party-po'],
+        ['Coalition', 'PO–PSL'], ["The Left's role", 'Opposition'],
+        ['Government project', '“Warm water in the tap”']
+      ],
+      sejm: introSejm2011,
+      context: ['Major points', 'Competence without a social settlement', [
+        ['2010 runoff', 'Komorowski 53.01% · Kaczyński 46.99%'],
+        ['Napieralski first round', '13.68%'],
+        ['Retirement age', 'raised to 67'],
+        ['2015 turn', 'Duda 51.55% · Komorowski 48.45%']
+      ]]
+    },
+    briefing_left: {
+      date: 'October 2015', condition: 'Eliminated',
+      headline: 'The Left misses the coalition threshold and loses every seat',
+      party: 'Zjednoczona Lewica', partyClass: 'party-sld',
+      position: 'Outside parliament', metricLabel: 'Election',
+      poll: '7.55', seats: 0, threshold: 8,
+      signal: {label: 'Wasted vote', text: 'About one in six', value: '0 seats'},
+      cabinet: 'PiS single-party majority', governmentSummary: 'Beata Szydło',
+      government: [
+        ['President', 'Andrzej Duda', 'party-pis'],
+        ['Prime Minister', 'Beata Szydło', 'party-pis'],
+        ['Coalition', 'PiS majority government'],
+        ["The Left's role", 'Outside the Sejm'],
+        ['Decisive rule', '8% coalition threshold']
+      ],
+      sejm: introSejm2015,
+      context: ['Major points', 'A registration form changes the majority', [
+        ['Presidential candidate', 'Magdalena Ogórek · 2.38%'],
+        ['Razem', '3.62% · state subvention · 0 seats'],
+        ['KORWiN', '4.76% · 0 seats'],
+        ['PiS', '37.58% · 235 seats']
+      ]]
+    },
+    briefing_tribunal: {
+      date: 'December 2016', condition: 'Institutional capture',
+      headline: 'The institutions keep their names while control changes hands',
+      party: 'The Left', partyClass: 'party-sld', position: 'Outside parliament',
+      metricLabel: 'Last election', poll: '7.55', seats: 0, threshold: 8,
+      signal: {label: 'Court package', text: 'Two legal realities', value: '2015–2018'},
+      cabinet: 'PiS majority government', governmentSummary: 'Beata Szydło',
+      government: [
+        ['President', 'Andrzej Duda', 'party-pis'],
+        ['Prime Minister', 'Beata Szydło', 'party-pis'],
+        ['Justice / Prosecutor General', 'Zbigniew Ziobro', 'party-solidary-poland'],
+        ['Tribunal president', 'Julia Przyłębska'],
+        ["The Left's role", 'Outside the Sejm']
+      ],
+      sejm: introSejm2015,
+      context: ['Institutions', 'Judgments divide into recognised and ignored', [
+        ['Public broadcasting', 'Treasury control · December 2015'],
+        ['EU rule-of-law framework', 'opened January 2016'],
+        ['Judicial council', 'elected by the Sejm'],
+        ['Supreme Court package', 'Duda vetoed 2 of 3 bills']
+      ]]
+    },
+    briefing_streets: {
+      date: 'October 2019', condition: 'Mobilised',
+      headline: 'Movements and documents do the opposition’s work',
+      party: 'Lewica', partyClass: 'party-lewica',
+      position: 'Parliamentary opposition', metricLabel: 'Election',
+      poll: '12.56', seats: 49, threshold: 5,
+      signal: {label: 'Black Monday', text: 'Ban defeated', value: '352–58'},
+      cabinet: 'PiS–Zjednoczona Prawica majority',
+      governmentSummary: 'Mateusz Morawiecki',
+      government: introGovernment2019.concat([
+        ['Government face', 'Szydło → Morawiecki']
+      ]),
+      sejm: introSejm2019, senate: introSenate2019,
+      context: ['Public tests', 'Mobilisation is powerful but exhaustible', [
+        ['Black Monday', '≈100,000 people · 150 towns'],
+        ['Abortion ban vote', '352–58 · 18 abstained'],
+        ['Disabled carers in Sejm', '40 days'],
+        ["Teachers' strike", '3 weeks · no pay agreement']
+      ]]
+    },
+    briefing_opposition: {
+      date: 'October 2019', condition: 'Fragmented',
+      headline: 'Four opposition clubs share an enemy, not a programme',
+      party: 'Lewica', partyClass: 'party-lewica',
+      position: 'Third-largest club', metricLabel: 'Election',
+      poll: '12.56', seats: 49, threshold: 5,
+      signal: {label: 'Senate', text: 'Fragile pact', value: '51 / 100', meter: 100},
+      cabinet: 'PiS–Zjednoczona Prawica majority',
+      governmentSummary: 'Mateusz Morawiecki', government: introGovernment2019,
+      sejm: introSejm2019, senate: introSenate2019,
+      context: ['Opposition field', 'Cooperation follows electoral incentives', [
+        ['KO', '134 seats · liberal umbrella'],
+        ['PSL', '30 seats · rural hinge'],
+        ['Konfederacja', '11 seats · pressure from the right'],
+        ['Senate pact', 'opposition 51 · PiS 49']
+      ]]
+    },
+    briefing_unity: {
+      date: 'October 2019', condition: 'Negotiated',
+      headline: 'Three organisations return under one legal committee',
+      party: 'Lewica', partyClass: 'party-lewica',
+      position: 'Alliance of SLD · Wiosna · Razem', metricLabel: 'Election',
+      poll: '12.56', seats: 49, threshold: 5,
+      signal: {label: 'Alliance', text: 'Three organisations', value: 'one list'},
+      cabinet: 'PiS–Zjednoczona Prawica majority',
+      governmentSummary: 'Mateusz Morawiecki', government: introGovernment2019,
+      sejm: introSejm2019, senate: introSenate2019,
+      context: ['Alliance detail', 'The election settled nothing after election day', [
+        ['Machine and legal identity', 'SLD'], ['Public face', 'Wiosna'],
+        ['Programme and organisers', 'Razem'],
+        ['Registration', 'SLD committee · 5% threshold']
+      ]]
+    },
+    briefing_ahead: {
+      date: 'October 2019', condition: 'Precarious',
+      headline: 'Lewica prepares its return to the Sejm',
+      party: 'Lewica', partyClass: 'party-lewica',
+      position: 'Parliamentary opposition', metricLabel: 'Poll',
+      poll: '12.6', seats: 49, threshold: 5,
+      signal: {label: 'Unity', text: 'Negotiated', value: '58', meter: 100},
+      cabinet: 'PiS–Zjednoczona Prawica majority',
+      governmentSummary: 'Mateusz Morawiecki',
+      government: introGovernment2019.concat([
+        ['Mayoral term limit', 'No position'],
+        ['Coalition dissent', '16 / 100']
+      ]),
+      sejm: introSejm2019, senate: introSenate2019,
+      context: ['Economy', '4.5% growth', [
+        ['Real growth', '4.5%'], ['Inflation', '2.6%'],
+        ['Registered unemployment', '5.1%'],
+        ['Public debt', '45.7% GDP'], ['Budget balance', '-0.7% GDP']
+      ]]
+    }
+  };
+
+  var introPulseText = function(value) {
+    return escapeAttribute(String(value));
+  };
+
+  var introPulseLedgerRows = function(rows) {
+    return rows.map(function(row) {
+      return '<div class="ledger-row"><span>' + introPulseText(row[0]) +
+        '</span><b' + (row[2] ? ' class="party ' + row[2] + '"' : '') + '>' +
+        introPulseText(row[1]) + '</b></div>';
+    }).join('');
+  };
+
+  var introPulseSeatRows = function(rows) {
+    return rows.map(function(row) {
+      return '<div class="poll-row"><span' +
+        (row[1] ? ' class="party ' + row[1] + '"' : '') + '><b>' +
+        introPulseText(row[0]) + '</b></span><span></span><span>' +
+        introPulseText(row[2]) + ' seats</span></div>';
+    }).join('');
+  };
+
+  var renderIntroPulse = function(snapshot) {
+    var panel = document.getElementById('qualities');
+    if (!panel) return;
+    var signal = snapshot.signal;
+    var signalMeter = signal.meter
+      ? ' data-meter="' + introPulseText(signal.meter) + '" data-tone="positive"'
+      : '';
+    var parliament = '<div class="ledger-title">Sejm</div>' +
+      introPulseSeatRows(snapshot.sejm);
+    if (snapshot.senate) {
+      parliament += '<div class="ledger-title">Senate</div>' +
+        introPulseSeatRows(snapshot.senate);
+    }
+    panel.innerHTML = '<h1>Campaign pulse</h1>' +
+      '<div class="ledger-masthead"><b>' + introPulseText(snapshot.date) +
+      '</b><span>' + introPulseText(snapshot.condition) + '</span></div>' +
+      '<div class="ledger-headline">' + introPulseText(snapshot.headline) + '</div>' +
+      '<div class="ledger-notice">Historical snapshot for this briefing page. ' +
+      'Gameplay values resume after the introduction.</div>' +
+      '<div class="pulse-panel"><div class="pulse-heading"><span class="party ' +
+      snapshot.partyClass + ' pulse-party-name">' + introPulseText(snapshot.party) +
+      '</span><span class="role-badge">' + introPulseText(snapshot.position) +
+      '</span></div><div class="pulse-grid"><div class="pulse-card pulse-poll" ' +
+      'data-meter="100" data-tone="party" data-threshold="' + snapshot.threshold +
+      '"><span class="pulse-label">' + introPulseText(snapshot.metricLabel) +
+      '</span><div><strong class="pulse-number">' + introPulseText(snapshot.poll) +
+      '%</strong><span class="seat-badge">' + snapshot.seats + ' seats · ' +
+      snapshot.threshold + '% threshold</span></div></div>' +
+      '<div class="pulse-card"' + signalMeter + '><span class="pulse-label">' +
+      introPulseText(signal.label) + '</span><div><strong>' +
+      introPulseText(signal.text) + '</strong><span class="pulse-number">' +
+      introPulseText(signal.value) + '</span></div></div></div>' +
+      '<div class="power-strip"><span><small>Cabinet</small><b>' +
+      introPulseText(snapshot.cabinet) + '</b></span></div></div>' +
+      '<details class="ledger-disclosure government-detail" open><summary><span>' +
+      'Government detail</span><b class="disclosure-state">' +
+      introPulseText(snapshot.governmentSummary) + '</b></summary>' +
+      '<div class="disclosure-body">' + introPulseLedgerRows(snapshot.government) +
+      '</div></details><details class="ledger-disclosure" open><summary><span>' +
+      'Parliament seats</span><b class="disclosure-state">Sejm 460' +
+      (snapshot.senate ? ' · Senate 100' : '') + '</b></summary>' +
+      '<div class="disclosure-body">' + parliament + '</div></details>' +
+      '<details class="ledger-disclosure" open><summary><span>' +
+      introPulseText(snapshot.context[0]) + '</span><b class="disclosure-state">' +
+      introPulseText(snapshot.context[1]) + '</b></summary><div class="disclosure-body">' +
+      introPulseLedgerRows(snapshot.context[2]) + '</div></details>';
+  };
+
   window.updateSidebar = function() {
       $('#qualities').empty();
+      var state = dendryUI.dendryEngine.state;
+      var sceneId = state && state.sceneId;
+      var introPanelKey = typeof sceneId === 'string' &&
+        sceneId.indexOf('poland_intro.briefing_') === 0
+          ? sceneId.split('.')[1]
+          : '';
+      var introPanel = introPulseSnapshots[introPanelKey];
+      var tabs = document.querySelectorAll('#stats_sidebar .tab_button');
+      for (var tabIndex = 0; tabIndex < tabs.length; tabIndex++) {
+          var blocked = Boolean(introPanel) && tabs[tabIndex].id !== 'main_tab';
+          tabs[tabIndex].disabled = blocked;
+          tabs[tabIndex].title = blocked ? 'Available after the briefing' : '';
+          if (introPanel) {
+              var pulseTab = tabs[tabIndex].id === 'main_tab';
+              tabs[tabIndex].classList.toggle('active', pulseTab);
+              tabs[tabIndex].setAttribute('aria-selected', String(pulseTab));
+              tabs[tabIndex].setAttribute('tabindex', pulseTab ? '0' : '-1');
+          }
+      }
+      if (introPanel) {
+          window.statusTab = 'status';
+          renderIntroPulse(introPanel);
+          window.enhancePartyElements(document.getElementById('qualities'));
+          window.enhanceStatusPanel(document.getElementById('qualities'));
+          return;
+      }
       // The ledger renders in plain mode too. Stripping it was a mistake: it
       // is the only place the qualities appear as text, and a client that
       // cannot read the numbers cannot make a decision worth playtesting.

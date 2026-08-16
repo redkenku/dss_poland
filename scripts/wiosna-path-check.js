@@ -74,7 +74,7 @@ function turnSeptemberIntoOctober(ctx) {
   // monthly normalization, party AI, polling and dated-event router.
   ctx.engine.goToScene('poland_advance');
   assert.strictEqual(ctx.engine.state.sceneId,
-    'poland_events_2021_2023.october_2021_hub');
+    'poland_events_2021_10.october_2021_hub');
 }
 
 function beginMerger(ctx, outcome) {
@@ -98,8 +98,8 @@ function normalWiosnaSettlement() {
   assert.strictEqual(ctx.Q.spring_active, 1);
 
   turnSeptemberIntoOctober(ctx);
-  ctx.choose('poland_events_2021_2023.oct21_congress');
-  ctx.choose('poland_events_2021_2023.oct21_spring');
+  ctx.choose('poland_events_2021_10.oct21_congress');
+  ctx.choose('poland_events_2021_10.oct21_spring');
   assert.strictEqual(ctx.Q.spring_transfer_complete, 0,
     'ratifying Wiosna leadership must not dissolve its current');
   assert.strictEqual(ctx.Q.spring_active, 1);
@@ -129,10 +129,10 @@ function setContinuous(Q) {
   highUnity.Q.party_unity = 71;
   highUnity.Q.october_2021_pawlowska_done = 0;
   highUnity.engine.goToScene(
-    'poland_events_2021_2023.october_2021_hub'
+    'poland_events_2021_10.october_2021_hub'
   );
   assert(!highUnity.engine.getCurrentChoices().some(function(choice) {
-    return choice.id === 'poland_events_2021_2023.oct21_pawlowska';
+    return choice.id === 'poland_events_2021_10.oct21_pawlowska';
   }), 'Pawłowska must not launch above 70% unity');
 
   const threshold = newEngine();
@@ -142,9 +142,9 @@ function setContinuous(Q) {
   const leftBefore = threshold.Q.left_seats;
   const pisBefore = threshold.Q.pis_seats;
   threshold.engine.goToScene(
-    'poland_events_2021_2023.october_2021_hub'
+    'poland_events_2021_10.october_2021_hub'
   );
-  threshold.choose('poland_events_2021_2023.oct21_pawlowska');
+  threshold.choose('poland_events_2021_10.oct21_pawlowska');
   assert.strictEqual(threshold.Q.party_unity, 65,
     'the event must reduce unity at the 70% threshold');
   assert.strictEqual(threshold.Q.left_seats, leftBefore - 1);
@@ -152,7 +152,7 @@ function setContinuous(Q) {
   assert(threshold.engine.getCurrentChoices().every(function(choice) {
     return choice.title.includes("Wiosna's leadership");
   }), 'Wiosna leadership must own every response on its route');
-  threshold.choose('poland_events_2021_2023.pawlowska_audit');
+  threshold.choose('poland_events_2021_10.pawlowska_audit');
   assert.strictEqual(threshold.Q.party_unity, 66,
     'even the restorative response must leave unity below its prior level');
   assert.strictEqual(threshold.Q.pawlowska_response,
@@ -162,7 +162,7 @@ function setContinuous(Q) {
   razem.Q.party_unity = 70;
   razem.Q.left_dominant_current = 'razem';
   razem.Q.october_2021_pawlowska_done = 0;
-  razem.engine.goToScene('poland_events_2021_2023.oct21_pawlowska');
+  razem.engine.goToScene('poland_events_2021_10.oct21_pawlowska');
   assert(razem.engine.getCurrentChoices().every(function(choice) {
     return choice.title.includes("Razem's leadership");
   }), 'Razem leadership must receive its own response framing');
@@ -186,10 +186,10 @@ function setContinuous(Q) {
 
   turnSeptemberIntoOctober(ctx);
   assert(ctx.engine.getCurrentChoices().some(function(choice) {
-    return choice.id === 'poland_events_2021_2023.oct21_congress';
+    return choice.id === 'poland_events_2021_10.oct21_congress';
   }), 'normal month progression must reach the October congress');
 
-  ctx.choose('poland_events_2021_2023.oct21_congress');
+  ctx.choose('poland_events_2021_10.oct21_congress');
   const totalBefore = transferLedgerTotal(ctx.Q);
   const springBefore = ctx.Q.spring_strength;
   const laborBefore = ctx.Q.labor_strength;
@@ -197,7 +197,7 @@ function setContinuous(Q) {
   const mpsBefore = ctx.Q.spring_estimated_mps;
   const successorMpsBefore =
     ctx.Q.labor_estimated_mps + ctx.Q.progressives_estimated_mps;
-  ctx.choose('poland_events_2021_2023.oct21_dual');
+  ctx.choose('poland_events_2021_10.oct21_dual');
 
   assert.strictEqual(ctx.Q.spring_transfer_complete, 1);
   assert.strictEqual(ctx.Q.spring_active, 0);
@@ -229,7 +229,7 @@ function setContinuous(Q) {
 
   const laborAfter = ctx.Q.labor_strength;
   const progressivesAfter = ctx.Q.progressives_strength;
-  ctx.engine.goToScene('poland_events_2021_2023.oct21_dual');
+  ctx.engine.goToScene('poland_events_2021_10.oct21_dual');
   assert.strictEqual(ctx.Q.labor_strength, laborAfter,
     'a repeated settlement cannot transfer Wiosna twice');
   assert.strictEqual(ctx.Q.progressives_strength, progressivesAfter,

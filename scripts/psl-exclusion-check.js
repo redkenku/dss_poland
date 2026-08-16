@@ -35,13 +35,13 @@ function newRun(overrides) {
 }
 
 const eventId =
-  'poland_events_2023_2024.psl_exclusion_succession_2023';
+  'poland_events_2023_12.psl_exclusion_succession_2023';
 const event = game.scenes[eventId];
 assert(event, 'Compiled PSL exclusion event is missing');
 const koExclusionId =
-  'poland_events_2023_2024.ko_exclusion_radicalisation_2023';
+  'poland_events_2023_12.ko_exclusion_radicalisation_2023';
 const thirdWayExclusionId =
-  'poland_events_2023_2024.third_way_excluded_by_ko_left_2023';
+  'poland_events_2023_12.third_way_excluded_by_ko_left_2023';
 const koExclusion = game.scenes[koExclusionId];
 const thirdWayExclusion = game.scenes[thirdWayExclusionId];
 assert(koExclusion, 'Compiled KO exclusion event is missing');

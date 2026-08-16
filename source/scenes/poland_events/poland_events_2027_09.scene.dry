@@ -1,0 +1,639 @@
+title: September 2027
+
+@list_registration_2027
+# scenario-ledger: PSL-10, PIS-11, FAR-11, FAR-12
+# prose-audit: Grade A — Every migration is gated on the record the eight-year game produced, each stranded organisation is offered more than one door and can be refused all of them, and a party with no committee and no representation is wound up rather than left as a permanent shell.
+title: Registration day at the National Electoral Commission
+subtitle: Eleven organisations discover which ballot line they are on, and three discover that they no longer exist
+face-image: img/poland/events/election-2023-ballot.webp
+new-page: true
+tags: poland_event
+priority: 46
+order: 1
+max-visits: 1
+view-if: continuous_campaign = 1 and year = 2027 and month = 9 and snap_election_cycle = 0 and list_registration_done = 0 and election_2027_terminal = 0
+on-arrival: {!
+const groups = Q.rival_group_records || [];
+const get = function(id) {
+    return groups.find(function(record) { return record && record.id == id; });
+};
+const poll = function(id) {
+    return Math.max(0, Number(Q[id + "_poll"]) || 0);
+};
+const prawicaMember = function(id) {
+    return (Q.prawica_member_source_ids || []).includes(id);
+};
+const committeeOf = function(record, fallback) {
+    return String(record && record.list_committee || fallback);
+};
+// A published subsidy table makes marginal boards merge; public silence lets
+// them convince themselves for one more election.
+const nudge = {
+    shelter: 0, audit: 6, silence: -6
+}[String(Q.list_scramble_posture || "")] || 0;
+const posture = String(Q.list_scramble_posture || "");
+const moves = [];
+let joined = 0;
+let dissolved = 0;
+// A free agent is a live organisation that is still filing under its own name:
+// Prawica members, absorbed parties and existing coalition components are
+// already placed and are not touched here.
+const freeAgent = function(recordId, sourceId) {
+    const record = get(recordId);
+    if (!record || !record.active) return null;
+    if (prawicaMember(sourceId)) return null;
+    if (committeeOf(record, sourceId) != sourceId) return null;
+    return record;
+};
+const file = function(spec) {
+    if (spec.record) {
+        spec.record.list_committee = spec.committee;
+        spec.record.contesting = 1;
+        if (spec.share) spec.record.negotiated_list_share = spec.share;
+        if (spec.status) spec.record.legal_status = spec.status;
+    }
+    if (spec.quality) Q[spec.quality] = spec.committee;
+    if (spec.committee != spec.source) joined += 1;
+    moves.push("<b>" + spec.name + "</b> — " + spec.line);
+};
+const windUp = function(record, name, line) {
+    if (record) {
+        record.active = 0;
+        record.contesting = 0;
+        record.exclusive_seats = 0;
+        record.mp_count = 0;
+        record.sejm_mps = 0;
+        record.legal_status = "deregistered before the 2027 ballot";
+    }
+    dissolved += 1;
+    moves.push("<b>" + name + "</b> — " + line);
+};
+
+const konf = get("konf_committee");
+const newHope = get("nowa_nadzieja");
+const konfFamilyLive = Boolean((konf && konf.active) ||
+    (newHope && newHope.active));
+const konfHost = konf && konf.active ? "konf" : "new_hope";
+const pis = get("pis_party");
+const pisLive = Boolean(pis && pis.active && !prawicaMember("pis"));
+const pisLeader = String(Q.pis_leader || "");
+const pisHardline = pisLeader.includes("Kaczyński") ||
+    ["Przemysław Czarnek", "Patryk Jaki", "Zbigniew Ziobro"].includes(pisLeader);
+const ko = get("ko_party");
+const koLive = Boolean(ko && ko.active);
+
+// 1. PSL and Poland 2050. The Third Way is either rebuilt as a survival
+// cartel, or one of them rents a place on the other's committee, or both find
+// somewhere else to be.
+const psl = freeAgent("psl_party", "psl");
+const p2050 = freeAgent("p2050_party", "p2050");
+const pslPoll = poll("psl");
+const p2050Poll = poll("p2050");
+const pslOutside = Q.government_party != "psl" && !Q.ministry_psl_in_cabinet;
+const p2050Live = Boolean(p2050 && !Q.p2050_joined_left);
+let thirdWayRevived = 0;
+if (psl && p2050Live && (pslPoll < 5 || p2050Poll < 5) &&
+    pslPoll + p2050Poll >= 6.5 &&
+    Number(Q.third_way_cohesion || 0) + nudge >= 38) {
+    thirdWayRevived = 1;
+    Q.third_way_2027_revived = 1;
+    Q.third_way_display_name = "Trzecia Droga";
+    const pslShare = Math.max(20, Math.min(80, Math.round(
+        pslPoll * 100 / Math.max(0.1, pslPoll + p2050Poll)
+    )));
+    file({
+        record: psl, source: "psl", name: "PSL", committee: "third_way_2027",
+        share: pslShare,
+        status: "founding component of the rebuilt Third Way",
+        line: "files the rebuilt Third Way with Polska 2050 at " + pslShare +
+            "% of the list, at an eight per cent coalition threshold"
+    });
+    file({
+        record: p2050, source: "p2050", name: "Polska 2050",
+        committee: "third_way_2027", share: 100 - pslShare,
+        status: "founding component of the rebuilt Third Way",
+        line: "returns to the committee it left, at " + (100 - pslShare) +
+            "% of the list"
+    });
+} else {
+    if (p2050Live && p2050Poll < 4 && koLive && poll("ko") >= 22) {
+        const declared = Math.min(3, Math.max(0, Number(Q.p2050_seats) || 0));
+        Q.p2050_seats -= declared;
+        Q.ko_seats += declared;
+        p2050.exclusive_seats = Math.max(0,
+            Number(p2050.exclusive_seats || 0) - declared);
+        ko.exclusive_seats = Math.max(0,
+            Number(ko.exclusive_seats || 0) + declared);
+        file({
+            record: p2050, source: "p2050", name: "Polska 2050",
+            committee: "ko", status: "component of the Civic Coalition list",
+            line: "files on KO's committee with " + declared +
+                " declared deputies; the brand survives, the independent line does not"
+        });
+    } else if (p2050Live && p2050Poll < 3 && psl && pslPoll >= 4.5) {
+        file({
+            record: p2050, source: "p2050", name: "Polska 2050",
+            committee: "psl", status: "guest component on the PSL committee",
+            line: "takes places on PSL's five per cent committee rather than risk eight per cent as an equal partner"
+        });
+    } else if (p2050Live && p2050Poll < 1.5) {
+        windUp(p2050, "Polska 2050",
+            "withdraws its committee; the movement that began in 2020 does not appear on the 2027 ballot");
+        Q.p2050_seats = 0;
+    }
+    // PSL alone. A humiliated agrarian party under a conservative successor,
+    // out of office and out of the centre, has one door left on the right.
+    if (psl && pslOutside && pslPoll < 4 &&
+        konfFamilyLive && Q.psl_konf_partner_line != "closed" &&
+        (Q.psl_2023_exclusion_crisis_done || Q.psl_right_alignment_locked) &&
+        /Zgorzelski|Sawicki/.test(String(Q.psl_leader_route || "") +
+            String(Q.psl_leader || "")) &&
+        Number(Q.rival_relation_psl_konf || 0) + nudge >= 40) {
+        file({
+            record: psl, source: "psl", name: "PSL", committee: konfHost,
+            status: "agrarian component on the Konfederacja committee",
+            line: "the oldest party in Poland files on Konfederacja's list under " +
+                String(Q.psl_leader || "its conservative successor") +
+                ", against the public objection of half its own county boards"
+        });
+        Q.psl_support_mode = "opposition";
+        Q.third_way_active = 0;
+        Q.third_way_split = 1;
+    }
+}
+
+// 2. Porozumienie. The centre routes exist only if Lewica left them open.
+const porozumienie = freeAgent("porozumienie", "porozumienie");
+const porozumienieFree = Boolean(porozumienie && Q.porozumienie_active &&
+    Q.porozumienie_exit_done);
+const acceptance = Number(Q.porozumienie_acceptance || 0) + nudge;
+const gowinBlocked = String(Q.gowin_return_2027 || "").includes("blocked");
+const porozumieniePoll = poll("porozumienie");
+const porozumienieName = "Porozumienie";
+if (porozumienieFree) {
+    if (!gowinBlocked && thirdWayRevived && acceptance >= 44 &&
+        Number(Q.psl_relation || 0) >= 24) {
+        file({
+            record: porozumienie, source: "porozumienie",
+            name: porozumienieName, committee: "third_way_2027",
+            quality: "porozumienie_list_committee",
+            status: "component of the rebuilt Third Way",
+            line: "joins the rebuilt Third Way, six years after " +
+                String(Q.porozumienie_leader || "its leader") +
+                " first proposed exactly this"
+        });
+    } else if (!gowinBlocked && psl &&
+        committeeOf(psl, "psl") == "psl" && acceptance >= 50 &&
+        Number(Q.psl_relation || 0) >= 26) {
+        file({
+            record: porozumienie, source: "porozumienie",
+            name: porozumienieName, committee: "psl",
+            quality: "porozumienie_list_committee",
+            status: "guest component on the PSL committee",
+            line: "files on PSL's committee: three guaranteed places, no brand on the ballot paper"
+        });
+    } else if (!gowinBlocked && koLive && acceptance >= 40 &&
+        Number(Q.ko_relation || 0) >= 44) {
+        file({
+            record: porozumienie, source: "porozumienie",
+            name: porozumienieName, committee: "ko",
+            quality: "porozumienie_list_committee",
+            status: "guest component on the Civic Coalition list",
+            line: "files on KO's committee, which takes the individuals and declines the party"
+        });
+    } else if (pisLive && Number(Q.porozumienie_relation || 0) >= 40) {
+        file({
+            record: porozumienie, source: "porozumienie",
+            name: porozumienieName, committee: "pis",
+            quality: "porozumienie_list_committee",
+            status: "readmitted component of the PiS list",
+            line: "goes home: places on the PiS list, and no further mention of 2021"
+        });
+    } else if (porozumieniePoll < 1.2 && Number(Q.porozumienie_seats || 0) <= 0) {
+        windUp(porozumienie, porozumienieName,
+            "cannot fund a national committee and does not file; the party that broke the United Right leaves the ballot without a line");
+        Q.porozumienie_active = 0;
+    } else {
+        moves.push("<b>" + porozumienieName +
+            "</b> — files alone, with every door it approached shut in front of it");
+    }
+}
+
+// 3. Kukiz'15. The interesting outcome is the one where nothing happens.
+const kukiz = get("kukiz15");
+const kukizFree = Boolean(Q.kukiz_active && kukiz && kukiz.active &&
+    !prawicaMember("kukiz") &&
+    ["kukiz", "psl"].includes(String(Q.kukiz_list_committee || "kukiz")));
+if (kukizFree) {
+    const kukizCredit = Math.max(0, Number(Q.kukiz_programme_credit) || 0);
+    if (!Q.kukiz_left_kp) {
+        const host = thirdWayRevived ? "third_way_2027" : "psl";
+        file({
+            record: kukiz, source: "kukiz", name: "Kukiz'15", committee: host,
+            quality: "kukiz_list_committee",
+            status: "member party of the agrarian-centrist committee",
+            line: "never left Koalicja Polska and does not leave it now; " +
+                (thirdWayRevived
+                    ? "the rebuilt Third Way inherits him along with the furniture"
+                    : "he files where he has filed since 2019")
+        });
+    } else if (String(Q.kukiz_alignment || "") == "pis_current" ||
+        (Q.kukiz_pis_offer && pisLive)) {
+        file({
+            record: kukiz, source: "kukiz", name: "Kukiz'15", committee: "pis",
+            quality: "kukiz_list_committee",
+            status: "movement filing on the PiS list",
+            line: "stops pretending: the anti-system movement files on the list of the party it has voted with since 2021"
+        });
+    } else if (konfFamilyLive && kukizCredit < 30 &&
+        Number(Q.far_right_agenda || 0) + nudge >= 40) {
+        file({
+            record: kukiz, source: "kukiz", name: "Kukiz'15",
+            committee: konfHost, quality: "kukiz_list_committee",
+            status: "movement filing on the Konfederacja committee",
+            line: "takes Konfederacja's offer — single-member districts in the programme, two places on the list, and the referendum language he has used since 2015"
+        });
+    } else if (psl && committeeOf(psl, "psl") == "psl" &&
+        Number(Q.psl_relation || 0) >= 34 &&
+        Number(Q.kukiz_relation || 0) >= 20) {
+        file({
+            record: kukiz, source: "kukiz", name: "Kukiz'15", committee: "psl",
+            quality: "kukiz_list_committee",
+            status: "member party of Koalicja Polska",
+            line: "returns to Koalicja Polska on the old terms, which both sides describe as a reconciliation and neither believes"
+        });
+    } else if (poll("kukiz") < 1) {
+        windUp(kukiz, "Kukiz'15",
+            "does not register a committee; the movement ends where it started, as one man with a guitar and a referendum");
+        Q.kukiz_active = 0;
+    } else {
+        moves.push("<b>Kukiz'15</b> — files alone for the fourth time and for the last time");
+    }
+}
+
+// 4. Rozwój+. Morawiecki's developmental camp has three centre doors and no
+// route back to a party that has already excluded him.
+const rozwoj = freeAgent("rozwoj_plus", "rozwoj");
+const rozwojFree = Boolean(rozwoj && !Q.pis_morawiecki_reconciled);
+const rozwojPoll = poll("rozwoj");
+let rozwojCommittee = "rozwoj";
+if (rozwojFree && rozwojPoll < 5) {
+    if (thirdWayRevived && Number(Q.third_way_cohesion || 0) + nudge >= 40) {
+        rozwojCommittee = "third_way_2027";
+        file({
+            record: rozwoj, source: "rozwoj", name: "Rozwój+",
+            committee: rozwojCommittee,
+            status: "component of the rebuilt Third Way",
+            line: "Mateusz Morawiecki signs the rebuilt Third Way: a former PiS prime minister on a committee with the party he governed against, justified by the investment programme both of them still defend"
+        });
+    } else if (p2050Live && committeeOf(p2050, "p2050") == "p2050" &&
+        Number(Q.p2050_state_capacity_share || 0) + nudge >= 35 &&
+        p2050Poll >= 3) {
+        rozwojCommittee = "p2050";
+        file({
+            record: rozwoj, source: "rozwoj", name: "Rozwój+",
+            committee: rozwojCommittee,
+            status: "guest component on the Polska 2050 committee",
+            line: "files with Polska 2050, whose state-capacity wing has wanted a serious economics department for four years and is prepared to be embarrassed to get one"
+        });
+    } else if (psl && committeeOf(psl, "psl") == "psl" && pslOutside &&
+        /Zgorzelski|Sawicki|regional-machine/.test(
+            String(Q.psl_leader_route || "")
+        )) {
+        rozwojCommittee = "psl";
+        file({
+            record: rozwoj, source: "rozwoj", name: "Rozwój+",
+            committee: rozwojCommittee,
+            status: "guest component on the PSL committee",
+            line: "files with PSL: rural investment, local development funds, and a leadership that never personally lost anything to him"
+        });
+    } else {
+        moves.push("<b>Rozwój+</b> — files alone; the forty deputies who signed the association do not all appear on its list");
+    }
+} else if (rozwojFree) {
+    moves.push("<b>Rozwój+</b> — files alone and above the threshold, and declines every offer it receives");
+}
+
+// 5. Tak! Dla Rozwoju. Matysiak's rail-and-industry party is courted by the
+// Left it left and by the only other list that campaigns on building things.
+const takRozwoj = get("tak_rozwoj_party");
+const takFree = Boolean(Q.tak_dla_rozwoju_legal_party_formed &&
+    Q.tak_rozwoj_party_name != "Akcja Socjalistyczna" &&
+    takRozwoj && takRozwoj.active && !prawicaMember("tak_rozwoj") &&
+    String(Q.tak_rozwoj_list_committee || "tak_rozwoj") == "tak_rozwoj");
+const takName = String(Q.tak_rozwoj_party_name || "Tak! Dla Rozwoju");
+if (takFree) {
+    const takPoll = poll("tak_rozwoj");
+    if (posture == "shelter" && takPoll < 5) {
+        file({
+            record: takRozwoj, source: "tak_rozwoj", name: takName,
+            committee: "left", quality: "tak_rozwoj_list_committee",
+            status: "guest component on the Left list",
+            line: "accepts the shelter offer and files on our committee, on the rail programme and nothing else"
+        });
+    } else if (rozwojFree && rozwoj && rozwoj.active && takPoll < 3 &&
+        Number(Q.tak_rozwoj_development_credibility || 0) + nudge >= 20 &&
+        Q.cpk_cancelled) {
+        file({
+            record: takRozwoj, source: "tak_rozwoj", name: takName,
+            committee: rozwojCommittee == "rozwoj" ? "rozwoj" : rozwojCommittee,
+            quality: "tak_rozwoj_list_committee",
+            status: "component of the developmental committee",
+            line: "Paulina Matysiak files with Mateusz Morawiecki. Two politicians who agree about the railway and about nothing else discover that the railway was cancelled by our government, and that this is enough"
+        });
+    } else if (takPoll < 1) {
+        windUp(takRozwoj, takName,
+            "does not file; the association returns to being an association");
+        Q.tak_dla_rozwoju_legal_party_formed = 0;
+    } else {
+        moves.push("<b>" + takName +
+            "</b> — files alone on the rail programme, and is polite about everybody");
+    }
+}
+
+// 6. Partia Zero. A right-libertarian media party joins the family that shares
+// its economics before it joins the one that shares its enemies.
+const p0 = freeAgent("p0_party", "p0");
+const p0Free = Boolean(p0 && Q.p0_formed);
+const p0Poll = poll("p0");
+const p0Name = String(Q.p0_name || "Partia Zero");
+if (p0Free) {
+    const p0Momentum = Number(Q.p0_poll_momentum) || 0;
+    if (p0Poll >= 5 || p0Momentum > 0.4) {
+        moves.push("<b>" + p0Name + "</b> — files alone at " +
+            p0Poll.toFixed(1) +
+            "% and spends the fortnight refusing calls from both right-wing committees");
+    } else if (konfFamilyLive && p0Poll < 4.2 + nudge / 6 &&
+        Number(Q.far_right_agenda || 0) < 62 &&
+        (!Q.mentzen_bosak_split || (newHope && newHope.active))) {
+        file({
+            record: p0, source: "p0", name: p0Name, committee: konfHost,
+            status: "component of the Konfederacja committee",
+            line: "Krzysztof Stanowski takes the libertarian half of the federation's offer: flat tax, deregulation, no clerical language in the programme, and his own people in three districts"
+        });
+    } else if (pisLive && !pisHardline && poll("pis") >= 20 && p0Poll < 3) {
+        file({
+            record: p0, source: "p0", name: p0Name, committee: "pis",
+            status: "component of the Zjednoczona Prawica list",
+            line: "files on the United Right list under " + pisLeader +
+                ", which is possible only because the man he built a career mocking no longer leads it"
+        });
+    } else if (p0Poll < 1) {
+        windUp(p0, p0Name,
+            "does not register; the fastest-growing party of the term is wound up by its founder in a fourteen-minute video");
+        Q.p0_formed = 0;
+    } else {
+        moves.push("<b>" + p0Name +
+            "</b> — files alone, below the threshold, and calls it a founding campaign");
+    }
+}
+
+// 7. Suwerenna Polska. The sovereigntists have one natural home and one
+// humiliating one.
+const solidarna = freeAgent("solidarna", "suwerenna");
+const solidarnaFree = Boolean(solidarna && !Q.suwerenna_merged &&
+    (Q.suwerenna_walkout || Q.suwerenna_own_list));
+const solidarnaLeader = String(solidarna && solidarna.leader ||
+    Q.pis_sovereigntist_leader || "Zbigniew Ziobro");
+const solidarnaName = String(solidarna && solidarna.name || "Suwerenna Polska");
+if (solidarnaFree) {
+    const solidarnaPoll = poll("suwerenna");
+    if (konfFamilyLive && solidarnaPoll < 5 &&
+        ["Zbigniew Ziobro", "Patryk Jaki"].includes(solidarnaLeader) &&
+        (Number(Q.far_right_agenda || 0) + nudge >= 42 ||
+            Number(Q.cultural_issue_salience || 0) >= 55)) {
+        Q.suwerenna_own_list = 1;
+        file({
+            record: solidarna, source: "suwerenna", name: solidarnaName,
+            committee: konfHost,
+            status: "component of the Konfederacja committee",
+            line: solidarnaLeader +
+                " files with Konfederacja. The prosecutorial right and the anti-system right discover that they have the same enemies list and no remaining argument about Brussels"
+        });
+    } else if (pisLive && solidarnaPoll < 4 && pisHardline) {
+        Q.suwerenna_own_list = 0;
+        file({
+            record: solidarna, source: "suwerenna", name: solidarnaName,
+            committee: "pis",
+            status: "readmitted component of the PiS list",
+            line: "returns to the PiS list on worse terms than it left, because " +
+                pisLeader + " is willing to have it back and nobody else is"
+        });
+    } else {
+        moves.push("<b>" + solidarnaName +
+            "</b> — files its own committee and dares the rest of the right to blame it afterwards");
+    }
+}
+
+// 8. The two micro-parties of the old United Right. Neither has a campaign;
+// both have a payroll.
+for (const minor of [
+    ["republikanie", "republikanie", "Partia Republikańska", "Adam Bielan",
+        Q.republikanie_formed],
+    ["odnowa", "odnowa", "OdNowa RP", "Marcin Ociepa", Q.odnowa_formed]
+]) {
+    const record = freeAgent(minor[0], minor[1]);
+    if (!record || !minor[4]) continue;
+    if (pisLive && poll(minor[1]) < 2) {
+        file({
+            record: record, source: minor[1], name: minor[2], committee: "pis",
+            status: "component of the Zjednoczona Prawica list",
+            line: minor[3] + " takes two places on the PiS list and stops describing his party as a project"
+        });
+    } else {
+        windUp(record, minor[2],
+            "does not file a committee and is absorbed by whoever employs its staff next");
+    }
+}
+
+Q.list_registration_moves = joined;
+Q.list_registration_dissolved = dissolved;
+Q.list_registration_done = 1;
+Q.list_registration_ledger = moves.length
+    ? moves.join("<br>")
+    : "No small organisation changed its committee before the deadline";
+Q.list_registration_outcome = joined + " organisations file on somebody else's ballot line; " +
+    dissolved + " do not file at all";
+Q.poll_state_month_key = -1;
+Q.news_headline = thirdWayRevived
+    ? "The Third Way is registered again, eight weeks before the vote"
+    : Q.list_registration_outcome;
+!}
+
+= September 2027 — the deadline at Wiejska
+
+The National Electoral Commission takes committee registrations until the
+deadline and not one minute past it. What arrives in the last week is not a
+statement of political philosophy. It is a stack of signature lists, notarised
+board resolutions and bank statements, and each one records a decision that
+somebody's regional secretaries will be arguing about for a decade.
+
+**[+ list_registration_outcome +].**
+
+[+ list_registration_ledger +]
+
+[? if third_way_2027_revived = 1: The rebuilt Third Way is the headline. Two
+parties that swore in public that the experiment was finished are on one
+committee again, at an eight per cent threshold, because separately they were
+looking at nothing at all. Nobody involved calls it a reconciliation; the
+agreed word is *arithmetic*.?]
+
+[? if list_registration_dissolved > 0: The organisations that did not file are
+not defeated in October. They are simply absent from it. Offices close in the
+last week of September, staff are paid to the end of the month, and a party
+that existed for years stops existing without a single vote being cast against
+it.?]
+
+Every one of these organisations keeps its legal identity, its leader and its
+members. What moved is the line on the ballot paper — and, in six weeks, which
+committee's threshold their voters are helping to clear.
+
+- @registration_contest_2027
+- @registration_expose_2027
+- @registration_offer_2027
+
+@registration_contest_2027
+title: Campaign against the consolidated blocs as one opponent each
+subtitle: Treat every committee as a single object with a single record, and let its components explain themselves.
+on-arrival: election_2027_list_response = "Contest the blocs"; snap_campaign_left_bonus += 0.35; party_unity += 3; progressive_credibility += 2; ko_relation -= 2; psl_relation -= 3; news_headline = "Lewica campaigns against the new committees as single objects"
+
+We stop naming component parties. There is a right-wing committee, a centre
+committee and us, and every candidate on a list owns everything the other names
+on that list have ever voted for. It is a blunt instrument and it is accurate.
+
+The components hate it, because the entire purpose of a shared committee is to
+let each part campaign as though the others were not there. Six weeks is not
+long enough for any of them to build a separate story.
+
+- @poland_event_queue: Return to the campaign
+
+@registration_expose_2027
+title: Publish what each merger cost its own members
+subtitle: Cost: 1 resource. Put the negotiated list shares, the abandoned programmes and the closed offices on one page.
+choose-if: resources >= 1
+unavailable-subtitle: The comparative list audit cannot be financed.
+on-arrival: resources -= 1; election_2027_list_response = "Publish the terms"; election_information_integrity += 8; public_trust += 3; media_capacity += 2; institutional_trust += 2; news_headline = "The negotiated terms behind every merged committee are published in full"
+
+Each merger is published with its price attached: how many guaranteed places
+each component received, which programme commitments were dropped to get them,
+and which regional offices closed the week the deal was signed.
+
+Voters mostly do not read it. Journalists do, and so do the members of the
+parties concerned, several of whom learn from our document what their own board
+agreed to. It does not win us a single seat directly. It makes the next four
+years of coalition talk considerably harder to lie in.
+
+- @poland_event_queue: Publish the terms
+
+@registration_offer_2027
+title: Make one public offer to the organisations left with nothing
+subtitle: Invite the wound-up parties' organisers, not their leaders, into the Left's own campaign.
+on-arrival: election_2027_list_response = "Recruit the stranded"; local_network += 3; organiser_energy -= 2; turnout_readiness += 2; coalition_blur += 2; news_headline = "Lewica opens its campaign structures to organisers whose parties did not file"
+
+The offer goes to the people rather than the boards: the regional organisers,
+the office staff and the local councillors of the committees that did not
+register. No list places, no programme concessions, no press conference with
+anybody's former leader — campaign work, and an argument about what to do next.
+
+Some of them are conservatives who will never vote for us and take the work
+anyway because the work is what they know. In four constituencies that is the
+difference between a functioning ground campaign and a leaflet drop.
+
+- @poland_event_queue: Open the campaign structures
+
+@campaign_closes_2027
+# prose-audit: Grade B — Three genuinely different closing arguments, each with an authored consequence. The premise is a paragraph of stage direction; the last month of an eight-year game should show a rally, a poll or a candidate, not summarise that the campaign has narrowed.
+title: The parliamentary campaign closes
+subtitle: Choose the final argument before the Sejm and Senate ballots are counted.
+face-image: img/poland/events/million-hearts-march-2023.webp
+new-page: true
+tags: poland_event
+priority: 45
+order: 1
+max-visits: 1
+view-if: continuous_campaign = 1 and year = 2027 and month = 9 and snap_election_cycle = 0 and election_2027_terminal = 0
+on-arrival: {!
+Q.news_headline =
+    "The final campaign month forces Lewica to choose one closing argument";
+const warSettlement = String(Q.war_top_settlement || "Unresolved");
+const settledWar = Number(Q.war_top_stage) >= 5 &&
+    warSettlement != "Unresolved";
+Q.war_top_2027_bonus = 0;
+Q.war_top_2027_legacy = "No settled war at the top";
+if (settledWar) {
+    const sideBonus = {
+        institutions: 0.45,
+        exploit: 0.30,
+        cabinet: 0.10,
+        palace: 0.05,
+        undeclared: 0,
+        price: -0.20
+    }[String(Q.war_top_left_side || "undeclared")] || 0;
+    const splitBonus = Q.war_top_split
+        ? (Q.war_top_camp == "lewica" ? -0.80 : 0.40)
+        : 0;
+    Q.war_top_2027_bonus = Math.round(
+        (sideBonus + splitBonus) * 100
+    ) / 100;
+    // The election count consumes this quality before testing every filed
+    // committee against its threshold.
+    Q.snap_campaign_left_bonus += Q.war_top_2027_bonus;
+    const sideRecord = {
+        institutions: "a constitutional protocol that outlasted both leaders",
+        exploit: "turning another camp's rupture into an opposition case",
+        cabinet: "defending the sitting cabinet against the Palace",
+        palace: "backing the Palace in the succession fight",
+        price: "concessions extracted while the governing camp divided",
+        undeclared: "keeping its distance from both claimants"
+    }[String(Q.war_top_left_side || "undeclared")] ||
+        "keeping its distance from both claimants";
+    Q.war_top_2027_legacy = warSettlement + ". Lewica campaigns on " +
+        sideRecord + ".";
+}
+!}
+
+= September 2027 — one argument survives the noise
+
+By September, the campaign has narrowed to a single argument. The polls,
+committee thresholds and Senate arrangements are already visible; one last
+month remains to decide what the Left wants hesitant voters to remember.
+
+[? if war_top_stage >= 5: **The second war at the top:** [+
+war_top_2027_legacy +]?]
+
+- @closing_material_2027
+- @closing_democratic_2027
+- @closing_ground_2027
+
+@closing_material_2027
+title: Close on wages, housing and public services
+subtitle: Use the material programme as the distinction from every larger camp.
+on-arrival: election_2027_campaign_strategy = "Material security"; snap_campaign_strategy = election_2027_campaign_strategy; snap_campaign_left_bonus += 0.85; labor_credibility += 3; economic_issue_salience += 4; ko_relation -= 2; public_mood_pending_social_spending_support += 9; public_mood_pending_social_spending_salience += 8; news_headline = "Material security becomes Lewica's closing election argument"
+
+Candidates return to workplaces, hospitals and housing estates with a short
+programme. The choice clarifies the party's purpose, even where coalition
+partners would prefer a referendum on democratic continuity alone.
+
+- @poland_event_queue: Return the closing argument to the events desk
+
+@closing_democratic_2027
+title: Close on the majority needed to defend democratic institutions
+subtitle: Reassure tactical voters and accept that KO will receive part of the credit.
+on-arrival: election_2027_campaign_strategy = "Democratic majority"; snap_campaign_strategy = election_2027_campaign_strategy; snap_campaign_left_bonus += 0.45; ko_relation += 5; constitutional_restraint += 2; coalition_blur += 2; news_headline = "Lewica closes as the social pillar of a democratic majority"
+
+The final rallies show a possible governing majority rather than one party.
+The coalition answer is easy to understand; the distinct reason to choose a
+Left ballot is less so.
+
+- @poland_event_queue: Return the closing argument to the events desk
+
+@closing_ground_2027
+title: Give the last week to the ground campaign
+subtitle: Trade a polished national close for turnout work in the places the party still reaches.
+on-arrival: election_2027_campaign_strategy = "Organised turnout"; snap_campaign_strategy = election_2027_campaign_strategy; snap_campaign_left_bonus += 0.70; organiser_energy -= 3; turnout_readiness += 4; local_network += 1; news_headline = "The last campaign week belongs to doors, workplaces and local lists"
+
+The closing broadcast is smaller than the rivals' productions. The voter
+contact is not. Whether the organisation is large enough will be answered by
+the count rather than by another campaign promise.
+
+- @poland_event_queue: Return the closing argument to the events desk
